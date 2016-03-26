@@ -29,6 +29,7 @@ import locale
 import logging
 import getpass
 import errno
+import pprint
 from struct import unpack, pack
 from termios import TIOCGWINSZ
 from multiprocessing import Lock
@@ -108,11 +109,15 @@ class Display:
         """ Display a message to the user
 
         Note: msg *must* be a unicode string to prevent UnicodeError tracebacks.
-        """ 
+        """
 
         # FIXME: this needs to be implemented
         #msg = utils.sanitize_output(msg)
         nocolor = msg
+        not_pretty = msg
+
+        msg = pprint.pformat(msg)
+
         if color:
             msg = stringc(msg, color)
 
