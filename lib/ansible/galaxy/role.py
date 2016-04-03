@@ -61,23 +61,60 @@ class GalaxyRole(object):
         self.version = version
         self.src = src or name
         self.scm = scm
+        self.nick_name = None
 
+        # just path provided
         if path is not None:
+            # TODO: move to from_path
             if self.name not in path:
                 path = os.path.join(path, self.name)
             self.path = path
+            self.nick_name = self.path
         else:
+            # TODO: move to from_name
+            print('init with name and path is None')
+            print('g.roles_path=%s' % galaxy.roles_paths)
             for role_path_dir in galaxy.roles_paths:
                 role_path = os.path.join(role_path_dir, self.name)
+                print('role_path=%s' % role_path)
                 if os.path.exists(role_path):
                     self.path = role_path
+                    print('break self.path=%s' % self.path)
                     break
+                print('no break')
             else:
+                print('in else')
                 # use the first path by default
                 self.path = os.path.join(galaxy.roles_paths[0], self.name)
+            self.nick_name = self.name
+        print('self.path end of init=%s' % self.path)
 
     def __eq__(self, other):
         return self.name == other.name
+
+    @classmethod
+    def from_name(cls, galaxy, name):
+        role = cls(galaxy, name)
+        return role
+
+    @classmethod
+    def from_requirement(cls, galaxy, requirement):
+        if 'name' not in requirement and 'scm' not in requirement:
+            raise AnsibleError("Must specify name or src for role")
+        role = cls(galaxy, **requirement)
+        return role
+
+    @classmethod
+    def from_roles_text_file_line(cls, galaxy, line):
+        pass
+
+    @property
+    def installable_from_galaxy(self):
+        if '.' not in dep_role.name and '.' not in dep_role.src and dep_role.scm is None:
+            # we know we can skip this, as it's not going to
+            # be found on galaxy.ansible.com
+            return False
+        return True
 
     @property
     def metadata(self):
@@ -85,6 +122,8 @@ class GalaxyRole(object):
         Returns role metadata
         """
         if self._metadata is None:
+            print('self.path=%s' % self.path)
+            print('META_MAIN=%s' % self.META_MAIN)
             meta_path = os.path.join(self.path, self.META_MAIN)
             if os.path.isfile(meta_path):
                 try:
