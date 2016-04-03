@@ -491,7 +491,7 @@ class GalaxyCLI(CLI):
     def find_roles_to_list_from_names(self, role_names):
         roles_to_list = []
         for role_name in role_names:
-            gr = GalaxyRole_list(self.galaxy, role_name)
+            gr = GalaxyRole.from_name(self.galaxy, role_name)
             roles_to_list.append(gr)
         return roles_to_list
 
@@ -502,8 +502,11 @@ class GalaxyCLI(CLI):
             # TODO: collect all errors then show them at once
             self.check_roles_path_is_dir(roles_path)
             path_files = os.listdir(roles_path)
+            print('find role from path  path_files=%s' % path_files)
             for path_file in path_files:
-                gr = GalaxyRole(self.galaxy, path_file)
+                name = path_file
+                full_path = os.path.join(roles_path, name)
+                gr = GalaxyRole.from_name_and_full_path(self.galaxy, name, full_path)
                 roles_to_list.append(gr)
         return roles_to_list
 
@@ -519,10 +522,10 @@ class GalaxyCLI(CLI):
                 if not version:
                     version = "(unknown version)"
                 # show some more info about single roles here
-                role_display_msg = "- %s, %s" % (role_to_list.nick_name,
-                                                 version)
+                role_display_msg = "- %s, %s %s" % (role_to_list.name,
+                                                    version, role_to_list.path)
             else:
-                role_display_msg = "- the role %s was not found" % role_to_list.nick_name
+                role_display_msg = "- the role %s was not found" % role_to_list.name
 
             if role_display_msg:
                 role_display_msgs.append(role_display_msg)
@@ -536,25 +539,6 @@ class GalaxyCLI(CLI):
             raise AnsibleOptionsError("- the path %s does not exist. Please specify a valid path with --roles-path" % roles_path)
         elif not os.path.isdir(roles_path):
             raise AnsibleOptionsError("- %s exists, but it is not a directory. Please specify a valid path with --roles-path" % roles_path)
-            # show all valid roles in the roles_path directory
-            # The 'roles_path' option is a list
-            #roles_paths = self.get_opt('roles_path')
-            #roles_path = os.path.expanduser(roles_path)
-            # no paths
-            # only default path
-            # only a non default path
-            #   - that doesnt exist
-            #   - that isnt a dir
-            #   - etc
-            # multiple paths
-            # multiple paths with at least one bogus
-            # multiple paths with multiple bogus
-            # multiple paths with all bogus
-
-            # process list of roles_paths, do checks, build role info or error,
-            # add it to a list, return list
-            #
-            # walk over list and display results
     
     def execute_search(self):
         page_size = 1000

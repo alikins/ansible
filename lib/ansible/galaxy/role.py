@@ -61,15 +61,13 @@ class GalaxyRole(object):
         self.version = version
         self.src = src or name
         self.scm = scm
-        self.nick_name = None
 
-        # just path provided
+        # A name and path is provided...
         if path is not None:
             # TODO: move to from_path
             if self.name not in path:
                 path = os.path.join(path, self.name)
             self.path = path
-            self.nick_name = self.path
         else:
             # TODO: move to from_name
             print('init with name and path is None')
@@ -86,7 +84,6 @@ class GalaxyRole(object):
                 print('in else')
                 # use the first path by default
                 self.path = os.path.join(galaxy.roles_paths[0], self.name)
-            self.nick_name = self.name
         print('self.path end of init=%s' % self.path)
 
     def __eq__(self, other):
@@ -95,6 +92,24 @@ class GalaxyRole(object):
     @classmethod
     def from_name(cls, galaxy, name):
         role = cls(galaxy, name)
+        print('init with name and path is None')
+        print('g.roles_path=%s' % galaxy.roles_paths)
+        for role_path_dir in galaxy.roles_paths:
+            role_path = os.path.join(role_path_dir, role.name)
+            print('role_path=%s' % role_path)
+            if os.path.exists(role_path):
+                role.path = role_path
+                print('break role.path=%s' % role.path)
+                break
+            else:
+                # use the first path by default
+                role.path = os.path.join(galaxy.roles_paths[0], role.name)
+        return role
+
+    @classmethod
+    def from_name_and_full_path(cls, galaxy, name, path):
+        role = cls(galaxy, name)
+        role.path = full_path
         return role
 
     @classmethod
@@ -103,10 +118,6 @@ class GalaxyRole(object):
             raise AnsibleError("Must specify name or src for role")
         role = cls(galaxy, **requirement)
         return role
-
-    @classmethod
-    def from_roles_text_file_line(cls, galaxy, line):
-        pass
 
     @property
     def installable_from_galaxy(self):
