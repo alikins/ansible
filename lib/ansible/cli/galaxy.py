@@ -305,7 +305,7 @@ class GalaxyCLI(CLI):
         for role in self.args:
 
             role_info = {'path': roles_path}
-            gr = GalaxyRole(self.galaxy, role)
+            gr = Galaxy.from_name(self.galaxy, role)
 
             install_info = gr.install_info
             if install_info:

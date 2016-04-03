@@ -62,6 +62,10 @@ class GalaxyRole(object):
         self.src = src or name
         self.scm = scm
 
+        # 'path' can be a dir from roles_path, while full_path is the
+        # path to the role itself (ie, /etc/ansible/roles/someuser.somerole/)
+        self.full_path = None
+
         # A name and path is provided...
         if path is not None:
             # TODO: move to from_path
@@ -107,7 +111,7 @@ class GalaxyRole(object):
         return role
 
     @classmethod
-    def from_name_and_full_path(cls, galaxy, name, path):
+    def from_name_and_full_path(cls, galaxy, name, full_path):
         role = cls(galaxy, name)
         role.path = full_path
         return role
