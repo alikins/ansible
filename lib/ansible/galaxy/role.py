@@ -49,8 +49,10 @@ class GalaxyRole(object):
     ROLE_DIRS = ('defaults','files','handlers','meta','tasks','templates','vars','tests')
 
 
-    def __init__(self, galaxy, name, src=None, version=None, scm=None, path=None):
+    def __init__(self, galaxy, name, src=None, version=None, scm=None, path=None, full_path=None):
 
+        display.vvvvv("GalaxyRole __init__ galaxy=%s name=%s src=%s version=%s scm=%s path=%s full_path=%s" % 
+                      (galaxy, name, src, version, scm, path, full_path))
         self._metadata = None
         self._install_info = None
 
@@ -61,37 +63,20 @@ class GalaxyRole(object):
         self.version = version
         self.src = src or name
         self.scm = scm
-
+        self.path = path
         # 'path' can be a dir from roles_path, while full_path is the
         # path to the role itself (ie, /etc/ansible/roles/someuser.somerole/)
         self.full_path = None
 
-        # A name and path is provided...
-        if path is not None:
-            # TODO: move to from_path
-            if self.name not in path:
-                path = os.path.join(path, self.name)
-            self.path = path
-        else:
-            # TODO: move to from_name
-            print('init with name and path is None')
-            print('g.roles_path=%s' % galaxy.roles_paths)
-            for role_path_dir in galaxy.roles_paths:
-                role_path = os.path.join(role_path_dir, self.name)
-                print('role_path=%s' % role_path)
-                if os.path.exists(role_path):
-                    self.path = role_path
-                    print('break self.path=%s' % self.path)
-                    break
-                print('no break')
-            else:
-                print('in else')
-                # use the first path by default
-                self.path = os.path.join(galaxy.roles_paths[0], self.name)
         print('self.path end of init=%s' % self.path)
+        display.vvvvv('%s' % self)
 
     def __eq__(self, other):
         return self.name == other.name
+
+    def __repr__(self):
+        return "GalaxyRole(galaxy=%s, name=%s, src=%s, version=%s, scm=%s, path=%s, full_path=%s" % \
+                      (self.galaxy, self.name, self.src, self.version, self.scm, self.path, self.full_path)
 
     @classmethod
     def from_name(cls, galaxy, name):
@@ -111,9 +96,9 @@ class GalaxyRole(object):
         return role
 
     @classmethod
-    def from_name_and_full_path(cls, galaxy, name, full_path):
+    def from_name_and_path(cls, galaxy, name, path):
         role = cls(galaxy, name)
-        role.path = full_path
+        role.path = path
         return role
 
     @classmethod
@@ -159,6 +144,8 @@ class GalaxyRole(object):
         Returns role install info
         """
         if self._install_info is None:
+            if self.path is None:
+                return None
 
             info_path = os.path.join(self.path, self.META_INSTALL)
             if os.path.isfile(info_path):

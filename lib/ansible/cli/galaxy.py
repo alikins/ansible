@@ -304,9 +304,11 @@ class GalaxyCLI(CLI):
         data = ''
         for role in self.args:
 
-            role_info = {'path': roles_path}
-            gr = Galaxy.from_name(self.galaxy, role)
+            role_info = {'path_s': roles_path}
+            gr = GalaxyRole.from_name(self.galaxy, role)
+            role_info.update({'path': gr.path})
 
+            display.vvvvv('%s' % gr)
             install_info = gr.install_info
             if install_info:
                 if 'version' in install_info:
@@ -394,12 +396,15 @@ class GalaxyCLI(CLI):
             # (and their dependencies, unless the user doesn't want us to).
             for rname in self.args:
                 role = RoleRequirement.role_yaml_parse(rname.strip())
+                display.vvvvv('install role=%s' % role)
                 roles_left.append(GalaxyRole(self.galaxy, **role))
 
+        display.vvvvv('roles_left %s' % roles_left)
         for role in roles_left:
             display.vvv('Installing role %s ' % role.name)
             # query the galaxy API for the role data
 
+            display.vvvvv('installng role=%s' % role)
             if role.install_info is not None and not force:
                 display.display('- %s is already installed, skipping.' % role.name)
                 continue
@@ -449,7 +454,8 @@ class GalaxyCLI(CLI):
             raise AnsibleOptionsError('- you must specify at least one role to remove.')
 
         for role_name in self.args:
-            role = GalaxyRole(self.galaxy, role_name)
+            role = GalaxyRole.from_name(self.galaxy, role_name)
+            # TODO: If roles_path, build from_name_and_full_path
             try:
                 if role.remove():
                     display.display('- successfully removed %s' % role_name)
@@ -506,7 +512,7 @@ class GalaxyCLI(CLI):
             for path_file in path_files:
                 name = path_file
                 full_path = os.path.join(roles_path, name)
-                gr = GalaxyRole.from_name_and_full_path(self.galaxy, name, full_path)
+                gr = GalaxyRole.from_name_and_path(self.galaxy, name, full_path)
                 roles_to_list.append(gr)
         return roles_to_list
 
