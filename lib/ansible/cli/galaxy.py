@@ -27,6 +27,8 @@ import sys
 import yaml
 import time
 
+import pprint
+
 from collections import defaultdict
 from jinja2 import Environment
 
@@ -514,7 +516,7 @@ class GalaxyCLI(CLI):
         if len(self.args):
             terms = []
             for i in range(len(self.args)):
-               terms.append(self.args.pop())
+                terms.append(self.args.pop())
             search = '+'.join(terms[::-1])
 
         if not search and not self.options.platforms and not self.options.tags and not self.options.author:
@@ -543,12 +545,21 @@ class GalaxyCLI(CLI):
         data.append(format_str % (u"Name", u"Description"))
         data.append(format_str % (u"----", u"-----------"))
         for role in response['results']:
-            data.append(format_str % (u'%s.%s' % (role['username'], role['name']), role['description']))
+            data.append(self.search_output_format_details(role))
+            #data.append(format_str % (u'%s.%s' % (role['username'], role['name']), role['description']))
 
         data = u'\n'.join(data)
         self.pager(data)
 
         return True
+
+    def search_output_format(self, role, name_len=None):
+        name_len = 40
+        format_str = u" %%-%ds %%s" % name_len
+        return format_str % (u'%s.%s' % (role['username'], role['name']), role['description'])
+
+    def search_output_format_details(self, role):
+        return pprint.pformat(role)
 
     def execute_login(self):
         """
