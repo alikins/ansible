@@ -45,6 +45,9 @@
   file: path={{output_dir}}/baz.txt state=touch
   register: file3_result
 
+- name: debug file3
+  debug: msg={{ file3_result }}
+
 - name: verify that the file was marked as changed
   assert:
     that:
@@ -297,6 +300,107 @@
   assert:
     that:
       - "file21_result.changed == true"
+
+- name: create a file to be emptied
+  file: path={{output_dir}}/empty1 state=touch
+  register: emptyfile1_result
+  tags: file_empty
+
+- name: debug pre empty file
+  debug: msg={{emptyfile1_result}}
+  tags: file_empty
+
+- name: empty an already empty file
+  file: path={{output_dir}}/empty1 state=empty
+  register: emptyfile1_after_result
+  tags: file_empty
+
+- name: verify that result of empty on emptied or touched file was not marked as changed
+  assert:
+      that:
+          - 'emptyfile1_after_result.changed == false'
+  tags: file_empty
+
+- name: create a non-empty file to be emptied
+  copy: dest={{output_dir}}/to_be_emptied1 content="this is a test file.\n" mode=0666
+  register: to_be_emptied1_pre_result
+  tags: file_empty
+
+- name: debug pre empty non-empty file
+  debug: msg={{to_be_emptied1_pre_result}}
+  tags: file_empty
+
+- name: empty a non-empty file
+  file: path={{output_dir}}/to_be_emptied1 state=empty
+  register: to_be_emptied1_after_result
+  tags: file_empty
+
+- name: debug post empty non-empty file
+  debug: msg={{to_be_emptied1_after_result}}
+  tags: file_empty
+
+- name: verify that result of empty file on a non-empty file was marked as changed
+  assert:
+      that:
+          - 'to_be_emptied1_after_result.changed == true'
+          - 'to_be_emptied1_after_result.state == "file"'
+  tags: file_empty
+
+- name: empty a file already in empty state
+  file: path={{output_dir}}/to_be_emptied1 state=empty
+  register: empty_emptied_result
+  tags: file_empty
+
+- name: debug post empty emptied file
+  debug: msg={{empty_emptied_result}}
+  tags: file_empty
+
+- name: verify that result of empty file on a already emptied file was marked as changed
+  assert:
+      that:
+          - 'empty_emptied_result.changed == false'
+          - 'empty_emptied_result.state == "file"'
+  tags: file_empty
+
+- name: create a directory outside of the toplevel to be emptied
+  file: path={{output_dir}}/dir_to_empty state=directory mode=0700
+  tags: file_empty
+
+- name: create a file inside of the directory to be emptied
+  file: path={{output_dir}}/dir_to_empty/foo state=touch mode=0700
+  tags: file_empty
+
+- name: create a non-empty file in the directory to be emptied
+  copy: dest={{output_dir}}/dir_to_empty/not_empty content="this is a test file.\n" mode=0666
+  register: empty_dir_file_result
+  tags: file_empty
+
+- name: debug pre dir empty
+  debug: msg={{empty_dir_file_result}}
+  tags: file_empty
+
+- name: verify the director exists
+  file: path={{output_dir}}/dir_to_empyy state=directory
+  register: empty_dir_verify_result
+
+- name: debug directory to empty exists
+  debug: msg={{empty_dir_verify_result}}
+
+- name: empty a directory
+  file: path={{output_dir}}/dir_to_empty state=empty
+  register: empty_dir_result
+  tags: file_empty
+
+- name: debug post empty dir
+  debug: msg={{empty_dir_result}}
+  tags: file_empty
+
+- name: verify that result of empty on a dir was marked as changed
+  assert:
+      that:
+          - 'empty_dir_result.changed == true'
+          - 'empty_dir_result.state == "directory"'
+  tags: file_empty
 
 - name: test file creation with symbolic mode
   file: dest={{output_dir}}/test_symbolic state=touch mode=u=rwx,g=rwx,o=rwx
