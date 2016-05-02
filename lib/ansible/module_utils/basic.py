@@ -1670,7 +1670,8 @@ class AnsibleModule(object):
             try:
                 return json.dumps(data, encoding=encoding)
             # Old systems using old simplejson module does not support encoding keyword.
-            except TypeError:
+            except TypeError as e:
+                print('TypeError %s' % e)
                 try:
                     new_data = json_dict_bytes_to_unicode(data, encoding=encoding)
                 except UnicodeDecodeError:

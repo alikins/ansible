@@ -45,7 +45,8 @@ def get_file_parser(hostsfile, groups, loader):
 
     try:
         inv_file = open(hostsfile)
-        first_line = inv_file.readlines()[0]
+#        first_line = inv_file.readlines()[0]
+        first_line = inv_file.readline()
         inv_file.close()
         if first_line.startswith('#!'):
             shebang_present = True

@@ -33,6 +33,7 @@ from ansible.inventory.group import Group
 from ansible.module_utils.basic import json_dict_bytes_to_unicode
 from ansible.utils.unicode import to_str, to_unicode
 
+import json
 
 class InventoryScript:
     ''' Host inventory parser for ansible using external inventory scripts. '''

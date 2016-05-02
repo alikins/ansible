@@ -39,12 +39,26 @@ from ansible.utils.vars import combine_vars
 from ansible.parsing.utils.addresses import parse_address
 
 HOSTS_PATTERNS_CACHE = {}
+COMPILED_PATTERNS_REGEX_CACHE = {}
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+pattern_with_subscript = re.compile(
+    r'''^
+        (.+)                    # A pattern expression ending with...
+        \[(?:                   # A [subscript] expression comprising:
+            (-?[0-9]+)|         # A single positive or negative number
+            ([0-9]+)([:-])      # Or an x:y or x: range.
+            ([0-9]*)
+        )\]
+        $
+    ''', re.X
+)
+
 
 class Inventory(object):
     """
@@ -162,8 +176,12 @@ class Inventory(object):
         except Exception:
             raise AnsibleError('invalid host pattern: %s' % pattern_str)
 
-    def _match_list(self, items, item_attr, pattern_str):
-        results = []
+    def _get_compiled_pattern(self, pattern_str):
+        """get the compiled pattern from the cache or created it and cache."""
+
+        if pattern_str in COMPILED_PATTERNS_REGEX_CACHE:
+            return COMPILED_PATTERNS_REGEX_CACHE[pattern_str]
+        
         try:
             if not pattern_str.startswith('~'):
                 pattern = re.compile(fnmatch.translate(pattern_str))
@@ -171,6 +189,14 @@ class Inventory(object):
                 pattern = re.compile(pattern_str[1:])
         except Exception:
             raise AnsibleError('invalid host pattern: %s' % pattern_str)
+        
+        COMPILED_PATTERNS_REGEX_CACHE[pattern_str] = pattern
+        return pattern
+
+    def _match_list(self, items, item_attr, pattern_str):
+        results = []
+        
+        pattern = self._get_compiled_pattern(pattern_str)
 
         for item in items:
             if pattern.match(getattr(item, item_attr)):
@@ -381,18 +407,6 @@ class Inventory(object):
         # We want a pattern followed by an integer or range subscript.
         # (We can't be more restrictive about the expression because the
         # fnmatch semantics permit [\[:\]] to occur.)
-
-        pattern_with_subscript = re.compile(
-            r'''^
-                (.+)                    # A pattern expression ending with...
-                \[(?:                   # A [subscript] expression comprising:
-                    (-?[0-9]+)|         # A single positive or negative number
-                    ([0-9]+)([:-])      # Or an x:y or x: range.
-                    ([0-9]*)
-                )\]
-                $
-            ''', re.X
-        )
 
         subscript = None
         m = pattern_with_subscript.match(pattern)

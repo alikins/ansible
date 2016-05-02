@@ -30,7 +30,8 @@ class Group:
         self.name = name
         self.hosts = []
         self.vars = {}
-        self.child_groups = []
+        #self.child_groups = []
+        self.child_groups = set()
         self.parent_groups = []
         self._hosts_cache = None
         self.priority = 1
@@ -84,7 +85,8 @@ class Group:
 
         # don't add if it's already there
         if not group in self.child_groups:
-            self.child_groups.append(group)
+            #self.child_groups.append(group)
+            self.child_groups.add(group)
 
             # update the depth of the child
             group.depth = max([self.depth+1, group.depth])

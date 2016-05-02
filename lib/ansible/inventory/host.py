@@ -46,7 +46,8 @@ class Host:
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash(self.name)
+        return hash((self.name, self.address, self._uuid))
+        #return hash(self.name)
 
     def serialize(self):
         groups = []

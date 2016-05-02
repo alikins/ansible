@@ -63,7 +63,7 @@ def combine_vars(a, b):
         return merge_hash(a, b)
     else:
         # HASH_BEHAVIOUR == 'replace'
-        _validate_mutable_mappings(a, b)
+#        _validate_mutable_mappings(a, b)
         result = a.copy()
         result.update(b)
         return result
