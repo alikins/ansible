@@ -47,6 +47,25 @@ class Playbook:
         self._loader  = loader
         self._file_name = None
 
+    def __not_str__(self):
+        parts = []
+        parts.append('Playbook [%s]' % self._file_name)
+        parts.append('Entries:')
+        for entry in self._entries:
+            parts.append(str(entry))
+        return '\n'.join(parts)
+
+    def __repr__(self):
+        return 'Playbook(file_name=%s)' % (self._file_name)
+
+    @property
+    def basename(self):
+        if self._basedir:
+            return os.path.basename(self._basedir)
+        #if self._file_name:
+        #    return os.path.splitext(self._file_name)[0]
+        return 'dunno'
+
     @staticmethod
     def load(file_name, variable_manager=None, loader=None):
         pb = Playbook(loader=loader)

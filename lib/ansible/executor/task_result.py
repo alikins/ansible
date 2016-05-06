@@ -21,6 +21,7 @@ __metaclass__ = type
 
 from ansible.parsing.dataloader import DataLoader
 
+
 class TaskResult:
     '''
     This class is responsible for interpretting the resulting data

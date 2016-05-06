@@ -123,15 +123,18 @@ class PluginLoader:
             PLUGIN_PATH_CACHE = PLUGIN_PATH_CACHE[self.class_name],
         )
 
-    def print_paths(self):
+    def format_paths(self, paths):
         ''' Returns a string suitable for printing of the search path '''
 
         # Uses a list to get the order right
         ret = []
-        for i in self._get_paths():
+        for i in paths:
             if i not in ret:
                 ret.append(i)
         return os.pathsep.join(ret)
+
+    def print_paths(self):
+        return self.format_paths(self._get_paths())
 
     def _all_directories(self, dir):
         results = []
@@ -218,6 +221,7 @@ class PluginLoader:
 
     def find_plugin(self, name, mod_type=''):
         ''' Find a plugin named name '''
+
 
         if mod_type:
             suffix = mod_type
@@ -346,6 +350,9 @@ class PluginLoader:
                 return None
 
         if not class_only:
+            display.vvvvv('Searched for %s plugins \'%s\' in paths: %s' % \
+                          (self.class_name, name, self.format_paths(self._searched_paths)))
+            display.vvvv('loading %s plugin \'%s\' from %s' % (self.class_name, name, path))
             obj = obj(*args, **kwargs)
 
         return obj
