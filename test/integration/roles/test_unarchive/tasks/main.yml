@@ -47,11 +47,25 @@
 - name: prep our file
   copy: src=foo.txt dest={{output_dir}}/unarchive-dir/foo-unarchive.txt
 
+
 - name: prep a tar.gz file with directory
   shell: tar czvf test-unarchive-dir.tar.gz unarchive-dir  chdir={{output_dir}}
 
 - name: create our tar unarchive destination
   file: path={{output_dir}}/test-unarchive-tar state=directory
+
+- name: prep consul tarball file
+  copy: src=consul_0.6.3_linux_amd64.zip dest={{ output_dir }}/consul_0.6.3_linux_amd64.zip
+
+- name: create our tar unarchive destination
+  file: path={{output_dir}}/test-unarchive-consul state=directory
+
+- name: unarchive consul zip
+  unarchive: src={{ output_dir }}/consul_0.6.3_linux_amd64.zip mode=755 dest="{{ output_dir }}/test-unarchive-consul"
+  register: consul_result
+
+- name: debug consul zip
+  debug: var=consul_result
 
 - name: unarchive a tar file
   unarchive: src={{output_dir}}/test-unarchive.tar dest="{{output_dir | expanduser}}/test-unarchive-tar" copy=no
