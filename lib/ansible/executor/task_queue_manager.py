@@ -43,6 +43,10 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger()
+logging.basicConfig(level=logging.DEBUG)
+
 __all__ = ['TaskQueueManager']
 
 
@@ -336,6 +340,7 @@ class TaskQueueManager:
         return defunct
 
     def send_callback(self, method_name, *args, **kwargs):
+        display.v('SEND_CALLBAC: method_name=%s' % method_name)
         for callback_plugin in [self._stdout_callback] + self._callback_plugins:
             # a plugin that set self.disabled to True will not be called
             # see osx_say.py example for such a plugin

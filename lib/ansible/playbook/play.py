@@ -101,6 +101,9 @@ class Play(Base, Taggable, Become):
     def __repr__(self):
         return self.get_name()
 
+    def __str__(self):
+        return 'Play: %s' % self.get_name()
+
     def get_name(self):
         ''' return the name of the Play '''
         return self._attributes.get('name')
