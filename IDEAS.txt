@@ -1,0 +1,104 @@
+- Extract the payload module building from executor/basic and
+move it it's own tool. Possibly even a seperate repo.
+
+  - This will include module_utils/
+
+  - may make a seperate executable
+
+  - goal is to support supporting multiple ansible module
+    runtimes (ie, 2.1,2.0,1.9)
+
+    - allow newer versions of payload module runtime libs to
+      change, while also preserving old runtime api compat.
+
+    - possibly via snapshots of runtime module_utils apis
+    - possibly via clever modules
+
+    - 'ansible-payload --runtime python-2.4@ansible-1.9 --format {zip,inline}'
+
+      - would build the python module that would get delivered to the remote
+        host to run
+
+      - all logic for building the payload module would be here
+        - hopefully easier to extend in future
+          - module signing
+            - possibly via vault?
+          - frozen or 'bundled'
+
+      - could pregenerate some/all of modules.
+        - or cache generated
+        - or sign/store generated/delivered modules for auditing
+          - replay?
+
+     - ansible-payload could run in a virtualenv/container, or a 'ansible_payload'
+       module could run it on a remote machine (maybe a linux box could generate
+       payloads via a remote windows box)
+
+- ansible payload 'attach', 'deliver'
+  - attach... combine payload and connection in a way that it can be used
+    - ie, all the fiddly details required to support agentless, ssh pipelining, remote_user, become_, etc
+    - setup any use of relay/proxy/delegation
+      - for ex, going though an intermidiate ansible
+      - or using some network device specific connection
+      - ssh vs winrm vs whatever
+      - may setup compound delivery ('ssh to hostA, https from A to cloud controller api',
+                                     'ssh to ansible-delegate A, ssh from A to remote node B'
+  - deliver, the PUT/EXEC phases from connection
+  - the root 'run tasks on hosts'
+  - stays part of core
+
+- conceptually split roles that are 'canned' tasks (task_roles) from
+  roles that are used as playbook includes  (playbook_roles)?
+
+   - mostly just for docs/examples
+
+   - task_roles are roles that can be used in place of a task
+
+   - name: foo
+     git: repo=blah state=present update=true
+
+     replaceabe with
+
+   - role: blahname.git_update_kernel_repo {update=false}
+
+- can ssh agent forwarding be used to simplify credential handling?
+
+  - let remote task tell sudo, ask $ANSIBLE_SSH_AGENT_USER for my creds
+
+- does ssh pkcs11 support work for forwarded ssh-agent?
+
+  - ie, could a task running on remote machine ask a (forwared) ssh-agent for creds,
+    and have ssh end up doing creds/pki stuff by asking the controlling ssh to use pkcs11?
+    So a remote task could auth with a HSM on the controlling node?
+
+- code org, move anything useful from module_utils into 'ansible_lib' or 'ansible_base'
+  - combined with ansible-payload above, module_utils may get different versions of ansible_base
+    (py2 vs py3 primarily, but also could be module_utils ver specific if needed)
+  - ie, any code that potentially is shared between ansible core and ansible modules, needs to move
+    into a ansible_base package.
+  - goal: never ever ever require module_utils in ansible core
+  - goal: allow reuse of code without require code be compatible across py2.4-py3.5
+
+- ansible-engine
+  - event loop driven ansible execution
+    - cron and timer based events to trigger runs ('run play foo.yml at 3:00am', 'run play bar/yml every 5 minutes'
+    - idle events (queue a 'collect and cache facts from B' to run when nothing else is happening)
+    - attach tasks to event from event sources (time, idle, notifies, external events)
+  - simplest version a 'while True: if(playbooks_to_run): run_playbook else: sleep'
+    - all in process in memory
+  - tasks could 'notify' into idle loop or a specific time 
+  - if tasks are persisted, event loop would be 'reliable', but could also have multiple playbook task queue handlers
+    - one main loop, event sources could include persistant stores, event picked up and delegated to help task handler
+    - approx: TaskQueueManager driven by persistent store
+  - hack ansible-playbook cli into running a loop
+    - some event loop (asyncio, tornado, glib, etc)
+    - enbine playbook, idle.yml, timer.idle, time.idle, extend notify to specify a play?
+
+- next step after engine, distributed tasks and queues, ie, integrate celery
+
+- add 'via' keyword, for meta connections
+  - name: do foo on webserver via bastion
+    hosts: webserver
+    via: bastion
+  - need to be able to package connection plugins as modules
+
