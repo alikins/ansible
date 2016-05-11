@@ -123,6 +123,7 @@ class PlaybookCLI(CLI):
 
         # create the variable manager, which will be shared throughout
         # the code, ensuring a consistent view of global variables
+        # a main context?
         variable_manager = VariableManager()
         variable_manager.extra_vars = load_extra_vars(loader=loader, options=self.options)
 
@@ -143,6 +144,7 @@ class PlaybookCLI(CLI):
             # Empty inventory
             display.warning("provided hosts list is empty, only localhost is available")
             no_hosts = True
+        # modifies inventory?
         inventory.subset(self.options.subset)
         if len(inventory.list_hosts()) == 0 and no_hosts is False:
             # Invalid limit
@@ -151,67 +153,93 @@ class PlaybookCLI(CLI):
         # create the playbook executor, which manages running the plays via a task queue manager
         pbex = PlaybookExecutor(playbooks=self.args, inventory=inventory, variable_manager=variable_manager, loader=loader, options=self.options, passwords=passwords)
 
-        results = pbex.run()
+        pbex_results = pbex.run()
 
-        if isinstance(results, list):
-            for p in results:
 
-                display.display('\nplaybook: %s' % p['playbook'])
-                for idx, play in enumerate(p['plays']):
-                    msg = "\n  play #%d (%s): %s" % (idx + 1, ','.join(play.hosts), play.name)
-                    mytags = set(play.tags)
-                    msg += '\tTAGS: [%s]' % (','.join(mytags))
+        # The rest here looks like just reporting, if there ar eno side effects.
+        # How tied to the chose strategy is this? Maybe a PlaybookReport()?
 
-                    if self.options.listhosts:
-                        playhosts = set(inventory.get_hosts(play.hosts))
-                        msg += "\n    pattern: %s\n    hosts (%d):" % (play.hosts, len(playhosts))
-                        for host in playhosts:
-                            msg += "\n      %s" % host
+        # reporting?
+        if not isinstance(pbex_results, list):
+            return pbex_results
+        
+        for pbex_result in pbex_results:
+            display.display('\nplaybook: %s' % pbex_result['playbook'])
+            for idx, pbex_play in enumerate(pbex_result['plays']):
+                self.display_pbex_play(self, pbex_play, inventory)
+        return 0
 
-                    display.display(msg)
+    # FIXME: not just display yet
+    # build_pbex_play_report() ?
+    def display_pbex_play(self, idx, pbex_play,  inventory, variable_manager, loader):
+        
+        # reporting
+        msg = "\n  play #%d (%s): %s" % (idx + 1, ','.join(pbex_play.hosts), pbex_play.name)
+        mytags = set(pbex_play.tags)
+        msg += '\tTAGS: [%s]' % (','.join(mytags))
 
-                    all_tags = set()
-                    if self.options.listtags or self.options.listtasks:
-                        taskmsg = ''
-                        if self.options.listtasks:
-                            taskmsg = '    tasks:\n'
+        # reporting
+        if self.options.listhosts:
+            playhosts = set(inventory.get_hosts(pbex_play.hosts))
+            msg += "\n    pattern: %s\n    hosts (%d):" % (pbex_play.hosts, len(playhosts))
+            for host in playhosts:
+                msg += "\n      %s" % host
 
-                        def _process_block(b):
-                            taskmsg = ''
-                            for task in b.block:
-                                if isinstance(task, Block):
-                                    taskmsg += _process_block(task)
-                                else:
-                                    if task.action == 'meta':
-                                        continue
+        #reporting
+        display.display(msg)
 
-                                    all_tags.update(task.tags)
-                                    if self.options.listtasks:
-                                        cur_tags = list(mytags.union(set(task.tags)))
-                                        cur_tags.sort()
-                                        if task.name:
-                                            taskmsg += "      %s" % task.get_name()
-                                        else:
-                                            taskmsg += "      %s" % task.action
-                                        taskmsg += "\tTAGS: [%s]\n" % ', '.join(cur_tags)
+        all_tags = set()
+        if not self.options.listtags and not self.options.listtasks:
+            return
 
-                            return taskmsg
+        taskmsg = ''
+        if self.options.listtasks:
+            taskmsg = '    tasks:\n'
 
-                        all_vars = variable_manager.get_vars(loader=loader, play=play)
-                        play_context = PlayContext(play=play, options=self.options)
-                        for block in play.compile():
-                            block = block.filter_tagged_tasks(play_context, all_vars)
-                            if not block.has_tasks():
-                                continue
-                            taskmsg += _process_block(block)
+        def _process_block(b):
+            taskmsg = ''
+            for task in b.block:
+                if isinstance(task, Block):
+                    taskmsg += _process_block(task)
+                    continue
+                    
+                if task.action == 'meta':
+                    continue
 
-                        if self.options.listtags:
-                            cur_tags = list(mytags.union(all_tags))
-                            cur_tags.sort()
-                            taskmsg += "      TASK TAGS: [%s]\n" % ', '.join(cur_tags)
+                all_tags.update(task.tags)
+                
+                if not self.options.listtasks:
+                    continue
 
-                        display.display(taskmsg)
+                cur_tags = list(mytags.union(set(task.tags)))
+                cur_tags.sort()
+                
+                if task.name:
+                    taskmsg += "      %s" % task.get_name()
+                else:
+                    taskmsg += "      %s" % task.action
+                
+                taskmsg += "\tTAGS: [%s]\n" % ', '.join(cur_tags)
 
-            return 0
-        else:
-            return results
+            return taskmsg
+
+        # any side effects here? (facts cache population?)
+        all_vars = variable_manager.get_vars(loader=loader, play=pbex_play)
+        
+        play_context = PlayContext(play=pbex_play, options=self.options)
+        
+        # is this just for reporting? (play_iterator does this?)
+        for block in pbex_play.compile():
+            block = block.filter_tagged_tasks(play_context, all_vars)
+            if not block.has_tasks():
+                continue
+            taskmsg += _process_block(block)
+
+        # reporting
+        if self.options.listtags:
+            cur_tags = list(mytags.union(all_tags))
+            cur_tags.sort()
+            taskmsg += "      TASK TAGS: [%s]\n" % ', '.join(cur_tags)
+
+        # reporting
+        display.display(taskmsg)
