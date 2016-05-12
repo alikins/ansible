@@ -74,6 +74,10 @@ with warnings.catch_warnings():
         pass
 
 
+class AnsibleParamikoConnectionFailure(AnsibleConnectionFailure):
+    ''' the Paramiko transport connection plugin had a fatal error '''
+
+
 class MyAddPolicy(object):
     """
     Based on AutoAddPolicy in paramiko so we can determine when keys are added
@@ -241,9 +245,9 @@ class Connection(ConnectionBase):
             elif "Private key file is encrypted" in msg:
                 msg = 'ssh %s@%s:%s : %s\nTo connect as a different user, use -u <username>.' % (
                     self._play_context.remote_user, self._play_context.remote_addr, port, msg)
-                raise AnsibleConnectionFailure(msg)
+                raise AnsibleParamikoConnectionFailure(msg)
             else:
-                raise AnsibleConnectionFailure(msg)
+                raise AnsibleParamikoConnectionFailure(msg)
 
         return ssh
 
@@ -264,7 +268,7 @@ class Connection(ConnectionBase):
             msg = "Failed to open session"
             if len(str(e)) > 0:
                 msg += ": %s" % str(e)
-            raise AnsibleConnectionFailure(msg)
+            raise AnsibleParamikoConnectionFailure(msg)
 
         # sudo usually requires a PTY (cf. requiretty option), therefore
         # we give it one by default (pty=True in ansble.cfg), and we try
