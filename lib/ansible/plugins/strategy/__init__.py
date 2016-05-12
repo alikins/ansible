@@ -19,19 +19,14 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import json
 import time
-import zlib
-from collections import defaultdict
 from multiprocessing import Lock
 
 from jinja2.exceptions import UndefinedError
 
 from ansible.compat.six.moves import queue as Queue
 from ansible.compat.six import iteritems, text_type, string_types
-from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleParserError, AnsibleUndefinedVariable
-from ansible.executor.play_iterator import PlayIterator
 from ansible.executor.process.worker import WorkerProcess
 from ansible.executor.task_result import TaskResult
 from ansible.inventory.host import Host
@@ -71,6 +66,7 @@ if 'action_write_locks' not in globals():
     mods.update(('copy', 'file', 'setup', 'slurp', 'stat'))
     for mod_name in mods:
         action_write_locks[mod_name] = Lock()
+
 
 # TODO: this should probably be in the plugins/__init__.py, with
 #       a smarter mechanism to set all of the attributes based on
@@ -225,16 +221,22 @@ class StrategyBase:
                 # returned in the result/message, which has been serialized and
                 # thus had some information stripped from it to speed up the
                 # serialization process
+                
+                # FIXME: name clobbering is okay, but confusing
                 def get_original_host(host):
                     if host.name in self._inventory._hosts_cache:
-                       return self._inventory._hosts_cache[host.name]
+                        return self._inventory._hosts_cache[host.name]
                     else:
-                       return self._inventory.get_host(host.name)
+                        return self._inventory.get_host(host.name)
 
                 # all host status messages contain 2 entries: (msg, task_result)
                 if result[0] in ('host_task_ok', 'host_task_failed', 'host_task_skipped', 'host_unreachable'):
                     task_result = result[1]
                     host = get_original_host(task_result._host)
+                    
+                    # FIXME: remove
+                    display.debug('host=%s in host task result=%s' % (host, result[0]))
+                    
                     task = task_result._task
                     if result[0] == 'host_task_failed' or task_result.is_failed():
                         if not task.ignore_errors:
@@ -332,10 +334,16 @@ class StrategyBase:
                     var_value = wrap_var(result[3])
                     var_name  = task.register
 
+                    # FIXME: remove debug
+                    display.debug('host=%s result=%s' % (host, result[0]))
+
                     if task.run_once:
                         host_list = [host for host in self._inventory.get_hosts(iterator._play.hosts) if host.name not in self._tqm._unreachable_hosts]
                     else:
                         host_list = [host]
+
+                    # FIXME: remove
+                    display.debug('host=%s result=%s AFTER comprenesion' % (host, result[0]))
 
                     for target_host in host_list:
                         self._variable_manager.set_nonpersistent_facts(target_host, {var_name: var_value})
@@ -363,10 +371,16 @@ class StrategyBase:
                     else:
                         actual_host = host
 
+                    # FIXME
+                    display.debug('host=%s result=%s BEFORE COMPREHENSION' % (host, result[0]))
+                    
                     if task.run_once:
                         host_list = [host for host in self._inventory.get_hosts(iterator._play.hosts) if host.name not in self._tqm._unreachable_hosts]
                     else:
                         host_list = [actual_host]
+                    
+                    # FIXME
+                    display.debug('host=%s result=%s BEFORE COMPREHENSION' % (host, result[0]))
 
                     if result[0] == 'set_host_var':
                         var_name  = result[4]
@@ -594,7 +608,7 @@ class StrategyBase:
     def _do_handler_run(self, handler, handler_name, iterator, play_context, notified_hosts=None):
 
         # FIXME: need to use iterator.get_failed_hosts() instead?
-        #if not len(self.get_hosts_remaining(iterator._play)):
+        # if not len(self.get_hosts_remaining(iterator._play)):
         #    self._tqm.send_callback('v2_playbook_on_no_hosts_remaining')
         #    result = False
         #    break
@@ -710,7 +724,7 @@ class StrategyBase:
         elif meta_action == 'clear_facts':
             for host in iterator._host_states:
                 self._variable_manager.clear_facts(host)
-        #elif meta_action == 'reset_connection':
+        # elif meta_action == 'reset_connection':
         #    connection_info.connection.close()
         elif meta_action == 'clear_host_errors':
             self._tqm._failed_hosts = dict()
