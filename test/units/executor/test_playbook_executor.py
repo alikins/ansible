@@ -31,12 +31,89 @@ from units.mock.loader import DictDataLoader
 class TestPlaybookExecutor(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.fake_playbooks = {
+            'no_serial.yml': '''
+            - hosts: all
+              gather_facts: no
+              tasks:
+              - debug: var=inventory_hostname
+            ''',
+            'serial_int.yml': '''
+            - hosts: all
+              gather_facts: no
+              serial: 2
+              tasks:
+              - debug: var=inventory_hostname
+            ''',
+            'serial_pct.yml': '''
+            - hosts: all
+              gather_facts: no
+              serial: 20%
+              tasks:
+              - debug: var=inventory_hostname
+            ''',
+            'serial_one.yml': '''
+            - hosts: all
+              gather_facts: no
+              serial: 1
+              tasks:
+                - debug: var=inventory_hostname
+            ''',
+            'serial_unreachable_first.yml': '''
+            - hosts: this_host_is_unreachable
+              gather_facts: no
+              serial: 1
+              tasks:
+                - debug: var=inventory_hostname
+            - hosts: all
+              gather_facts: no
+              serial: 3
+              tasks:
+                - debug: var=inventory_hostname
+            '''
+        }
+        self.fake_loader = DictDataLoader(self.fake_playbooks)
 
     def tearDown(self):
         pass
 
-    def test_get_serialized_batches(self):
+    def test_playbook_serial_equals_one(self):
+
+        mock_var_manager = MagicMock()
+
+        mock_inventory = MagicMock()
+
+        # fake out options to use the syntax CLI switch, which will ensure
+        # the PlaybookExecutor doesn't create a TaskQueueManager
+        mock_options = MagicMock()
+        mock_options.syntax.value = True
+
+        pbe = PlaybookExecutor(
+            playbooks=['serial_unreachable_first.yml'],
+            inventory=mock_inventory,
+            variable_manager=mock_var_manager,
+            loader=self.fake_loader,
+            options=mock_options,
+            passwords=[],
+        )
+
+        mock_inventory.get_hosts.return_value = ['host0','host1','host2','host3','host4','host5','host6','host7','host8','host9']
+
+        playbook = Playbook.load(pbe._playbooks[0],
+                                 variable_manager=mock_var_manager,
+                                 loader=self.fake_loader)
+        play0 = playbook.get_plays()[0]
+        play1 = playbook.get_plays()[1]
+
+        print(playbook.get_plays())
+
+        expected0 =  [['host0'],['host1'],['host2'],['host3'],['host4'],['host5'],['host6'],['host7'],['host8'],['host9']]
+        self.assertEqual(pbe._get_serialized_batches(play0), expected0)
+        print(play1)
+        self.assertEqual(pbe._get_serialized_batches(play1), [['host0','host1','host2','host3','host4','host5','host6','host7','host8','host9']])
+
+
+    def test_playbook_executor__get_serialized_batches(self):
         fake_loader = DictDataLoader({
             'no_serial.yml': '''
             - hosts: all
@@ -58,20 +135,25 @@ class TestPlaybookExecutor(unittest.TestCase):
               tasks:
               - debug: var=inventory_hostname
             ''',
-            'serial_list.yml': '''
+            'serial_one.yml': '''
             - hosts: all
               gather_facts: no
-              serial: [1, 2, 3]
+              serial: 1
               tasks:
-              - debug: var=inventory_hostname
+                - debug: var=inventory_hostname
             ''',
-            'serial_list_mixed.yml': '''
+            'serial_unreachable_first.yml': '''
+            - hosts: this_host_is_unreachable
+              gather_facts: no
+              serial: 1
+              tasks:
+                - debug: var=inventory_hostname
             - hosts: all
               gather_facts: no
-              serial: [1, "20%", -1]
+              serial: 1
               tasks:
-              - debug: var=inventory_hostname
-            ''',
+                - debug: var=inventory_hostname
+            '''
         })
 
         mock_inventory = MagicMock()
@@ -85,7 +167,8 @@ class TestPlaybookExecutor(unittest.TestCase):
         templar = Templar(loader=fake_loader)
 
         pbe = PlaybookExecutor(
-            playbooks=['no_serial.yml', 'serial_int.yml', 'serial_pct.yml', 'serial_list.yml', 'serial_list_mixed.yml'],
+            playbooks=['no_serial.yml', 'serial_int.yml', 'serial_pct.yml',
+                       'serial_one.yml', 'serial_unreachable_first.yml'],
             inventory=mock_inventory,
             variable_manager=mock_var_manager,
             loader=fake_loader,
@@ -136,3 +219,13 @@ class TestPlaybookExecutor(unittest.TestCase):
         play.post_validate(templar)
         mock_inventory.get_hosts.return_value = ['host0','host1','host2','host3','host4','host5','host6','host7','host8','host9','host10']
         self.assertEqual(pbe._get_serialized_batches(play), [['host0','host1'],['host2','host3'],['host4','host5'],['host6','host7'],['host8','host9'],['host10']])
+
+        playbook = Playbook.load(pbe._playbooks[3], variable_manager=mock_var_manager, loader=fake_loader)
+        play = playbook.get_plays()[0]
+        mock_inventory.get_hosts.return_value = ['host0','host1','host2','host3','host4','host5','host6','host7','host8','host9','host10']
+        self.assertEqual(pbe._get_serialized_batches(play), [['host0'],['host1'],['host2'],['host3'],['host4'],['host5'],['host6'],['host7'],['host8'],['host9'],['host10']])
+
+        playbook = Playbook.load(pbe._playbooks[4], variable_manager=mock_var_manager, loader=fake_loader)
+        play = playbook.get_plays()[0]
+        mock_inventory.get_hosts.return_value = ['host0','host1','host2','host3','host4','host5','host6','host7','host8','host9','host10']
+        self.assertEqual(pbe._get_serialized_batches(play), [['host0'],['host1'],['host2'],['host3'],['host4'],['host5'],['host6'],['host7'],['host8'],['host9'],['host10']])
