@@ -260,10 +260,7 @@ class ActionModule(ActionBase):
         dest = self._task.args.get('dest', None)
         if not dest_is_local:
             # Private key handling
-            if use_delegate:
-                private_key = task_vars.get('ansible_ssh_private_key_file') or self._play_context.private_key_file
-            else:
-                private_key = task_vars.get('ansible_ssh_private_key_file') or self._play_context.private_key_file
+            private_key = self._play_context.private_key_file
 
             if private_key is not None:
                 private_key = os.path.expanduser(private_key)
