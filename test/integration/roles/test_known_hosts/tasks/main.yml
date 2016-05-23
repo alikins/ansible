@@ -1,0 +1,29 @@
+- name: copy our test known_hosts into outputdir
+  copy: src=test_known_hosts dest={{output_dir}}/test_known_hosts
+
+- name: create an empty known_hosts for testing
+  file: dest="{{ output_dir }}/empty_known_hosts" state=touch
+  register: create_empty_result
+
+
+- name: assert that the known_hosts file was created
+  assert:
+    that:
+    - 'create_empty_result.changed == True'
+    - 'create_empty_result.state == "file"'
+
+- name: test with just path and name with pub key as string
+  known_hosts: path="{{ output_dir }}/test_known_hosts" state=present name="ansible-test.example.com" key="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDF/ymjd7AKfGJf62vJtjmo0WEykyjJuy11MwMt6iMfy9G4RPL5rYsBQAdK8NgZeX8ccJbJzqDDv+LE1CR71+ODptGcUFVIHn2wKkt6QKn083yNI23TpaWrjFsffJPQrmGMOmBA+VNZ5DeMFHYqoORXVmLkDNx7RFAikdWwnbyPC++Gii7AAeFMtR0oy3yPc54kL4+NFSZm1LoxFZKefAuJSibyaxveiSZOfPaSQEpGai9HWdnAHR+ImpESDadMsqwOXYee3EfxdjQQksNAaNm2ovnf2QxTKuGaA+4L8Hd48OOwatJ9i+KPbTeOatuYMVZVP/5snYvqKEKGrsA82MqP test pub key for ansible known_hosts tests"
+  register: path_name_key_result
+
+- name: debug single key
+  debug: var={{ path_name_key_result }}
+
+- name: tesh with just path and name with no key
+  known_hosts: path='{{ output_dir }}/test_known_hosts'
+               name='foo.com.invalid'
+  register: path_name_no_key_result
+
+- name: debug
+  debug: var={{ path_name_no_key_result }}
+
