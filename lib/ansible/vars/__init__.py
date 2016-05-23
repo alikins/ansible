@@ -44,6 +44,10 @@ from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.vars import combine_vars
 from ansible.vars.unsafe_proxy import wrap_var
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+
 try:
     from __main__ import display
 except ImportError:
@@ -100,6 +104,8 @@ class VariableManager:
         self._hostvars = None
         self._omit_token = '__omit_place_holder__%s' % sha1(os.urandom(64)).hexdigest()
         self._options_vars = defaultdict(dict)
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log.debug('VariableManager init')
 
     def __getstate__(self):
         data = dict(
