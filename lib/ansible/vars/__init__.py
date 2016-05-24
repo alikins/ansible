@@ -44,9 +44,11 @@ from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.vars import combine_vars
 from ansible.vars.unsafe_proxy import wrap_var
 
+DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
 import logging
-logging.basicConfig(level=logging.DEBUG)
-
+logging.basicConfig(level=logging.DEBUG,
+                    format=DEBUG_LOG_FORMAT)
+import traceback
 
 try:
     from __main__ import display
@@ -106,6 +108,7 @@ class VariableManager:
         self._options_vars = defaultdict(dict)
         self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         self.log.debug('VariableManager init')
+        self.log.debug('tb=%s', traceback.format_stack())
 
     def __getstate__(self):
         data = dict(
