@@ -19,9 +19,12 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from yaml.constructor import Constructor, ConstructorError
+from yaml.constructor import SafeConstructor, ConstructorError
 from yaml.nodes import MappingNode
+from yaml import YAMLError
+
 from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode
+from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.vars.unsafe_proxy import wrap_var
 from ansible.parsing.vault import VaultLib
 
@@ -30,7 +33,6 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
-
 
 class AnsibleConstructor(SafeConstructor):
     def __init__(self, file_name=None, vault_password=None):
@@ -128,7 +130,7 @@ class AnsibleConstructor(SafeConstructor):
 
         try:
             return loader.get_single_data()
-        except YAMLError as exc:
+        except YAMLError:
             raise ConstructorError(None, None,
                     "found valid vault string but content is invalid", node.start_mark)
 
