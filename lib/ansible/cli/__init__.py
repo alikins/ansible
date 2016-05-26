@@ -44,6 +44,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class SortedOptParser(optparse.OptionParser):
     '''Optparser which sorts the options by opt before outputting --help'''
@@ -159,6 +162,7 @@ class CLI(with_metaclass(ABCMeta, object)):
                 display.display(u"Using %s as config file" % to_text(C.CONFIG_FILE))
             else:
                 display.display(u"No config file found; using defaults")
+
 
     @staticmethod
     def ask_vault_passwords():
@@ -594,9 +598,11 @@ class CLI(with_metaclass(ABCMeta, object)):
         try:
             cmd = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=sys.stdout)
             cmd.communicate(input=to_bytes(text))
-        except IOError:
+        except IOError as e:
+            log.exception(e)
             pass
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
+            log.exception(e)
             pass
 
     @classmethod

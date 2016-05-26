@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import multiprocessing
 import os
 import sys
@@ -38,6 +39,7 @@ from ansible.errors import AnsibleConnectionFailure
 from ansible.executor.task_executor import TaskExecutor
 from ansible.executor.task_result import TaskResult
 from ansible.module_utils._text import to_text
+from ansible.logger.handlers import queue_handler
 
 try:
     from __main__ import display
@@ -94,13 +96,23 @@ class WorkerProcess(multiprocessing.Process):
         #import cProfile, pstats, StringIO
         #pr = cProfile.Profile()
         #pr.enable()
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log.debug('process/worker/init to queue handler %s', os.getpid())
+#        self.log.setLevel(logging.DEBUG)
+
+        self.mplog = multiprocessing.get_logger()
+#        self.mplog.setLevel(logging.DEBUG)
+        self.mplog.propagate = True
 
         if HAS_ATFORK:
+            self.log.debug('HAS_ATFORK')
             atfork()
 
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
+            self.log.debug("running TaskExecutor() for %s/%s", self._host, self._task)
+
             executor_result = TaskExecutor(
                 self._host,
                 self._task,
@@ -113,33 +125,43 @@ class WorkerProcess(multiprocessing.Process):
             ).run()
 
             display.debug("done running TaskExecutor() for %s/%s" % (self._host, self._task))
+            self.log.debug("done running TaskExecutor() for %s/%s", self._host, self._task)
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(self._host.name, self._task._uuid, executor_result)
 
             # put the result on the result queue
             display.debug("sending task result")
+            self.log.debug("sending task result")
             self._rslt_q.put(task_result)
             display.debug("done sending task result")
+            self.log.debug("done sending task result")
 
-        except AnsibleConnectionFailure:
+        except AnsibleConnectionFailure as e:
+            self.log.exception(e)
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(self._host.name, self._task._uuid, dict(unreachable=True))
             self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
+            self.log.exception(e)
+            #if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
                 try:
                     self._host.vars = dict()
                     self._host.groups = []
                     task_result = TaskResult(self._host.name, self._task._uuid, dict(failed=True, exception=to_text(traceback.format_exc()), stdout=''))
                     self._rslt_q.put(task_result, block=False)
-                except:
+                except Exception as e:
                     display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
                     display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
+                    self.log.exception(e)
+            self.log.error('Got an exception %s and silently dropped it', e)
 
         display.debug("WORKER PROCESS EXITING")
+        self.log.debug("WORKER PROCESS EXITING")
+
 
         #pr.disable()
         #s = StringIO.StringIO()

@@ -17,14 +17,19 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
+
 from ansible.errors import AnsibleError, AnsibleParserError
 from ansible.plugins.lookup import LookupBase
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class LookupModule(LookupBase):
@@ -35,10 +40,12 @@ class LookupModule(LookupBase):
 
         for term in terms:
             display.debug("File lookup term: %s" % term)
+            log.debug("File lookup term: %s", term)
 
             # Find the file in the expected search path
             lookupfile = self.find_file_in_search_path(variables, 'files', term)
             display.vvvv(u"File lookup using %s as file" % lookupfile)
+            log.log(logger.VVVV, "File lookup using %s as file", lookupfile)
             try:
                 if lookupfile:
                     contents, show_data = self._loader._get_file_contents(lookupfile)

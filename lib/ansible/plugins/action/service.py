@@ -17,8 +17,12 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 
 from ansible.plugins.action import ActionBase
+from ansible import logger
+
+log = logging.getLogger(__name__)
 
 
 class ActionModule(ActionBase):
@@ -50,6 +54,7 @@ class ActionModule(ActionBase):
         if module == 'auto':
             facts = self._execute_module(module_name='setup', module_args=dict(gather_subset='!all', filter='ansible_service_mgr'), task_vars=task_vars)
             self._display.debug("Facts %s" % facts)
+            log.debug('Facts %s', facts)
             if 'ansible_facts' in facts and  'ansible_service_mgr' in facts['ansible_facts']:
                 module = facts['ansible_facts']['ansible_service_mgr']
 
@@ -71,8 +76,10 @@ class ActionModule(ActionBase):
                     if unused in new_module_args:
                         del new_module_args[unused]
                         self._display.warning('Ignoring "%s" as it is not used in "%s"' % (unused, module))
+                        log.warning('Ignoring "%s" as it is not used in "%s"', unused, module)
 
             self._display.vvvv("Running %s" % module)
+            log.log(logger.VVVV, "Running %s", module)
             result.update(self._execute_module(module_name=module, module_args=new_module_args, task_vars=task_vars))
         else:
             result['failed'] = True

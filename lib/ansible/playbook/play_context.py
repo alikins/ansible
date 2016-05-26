@@ -21,6 +21,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import pipes
 import pwd
@@ -43,6 +44,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 # the magic variable mapping dictionary below is used to translate
 # host/inventory variables to fields in the PlayContext
@@ -297,6 +300,8 @@ class PlayContext(Base):
         if hasattr(options, 'skip_tags'):
             self.skip_tags.update(options.skip_tags)
 
+        log.debug('After setting options play_context=%s', self)
+
     def set_task_and_variable_override(self, task, variables, templar):
         '''
         Sets attributes from the task if they are set, which will override
@@ -340,6 +345,7 @@ class PlayContext(Base):
                     break
             else:
                 display.debug("no remote address found for delegated host %s\nusing its name, so success depends on DNS resolution" % delegated_host_name)
+                log.debug("no remote address found for delegated host %s using its name, so success depends on DNS resolution", delegated_host_name)
                 delegated_vars['ansible_host'] = delegated_host_name
 
             # reset the port back to the default if none was specified, to prevent
@@ -449,7 +455,8 @@ class PlayContext(Base):
         if task.check_mode is not None:
             new_info.check_mode = task.check_mode
 
-
+        #log.info('Updating play_context with info from task and built in variables. new_info=%s', new_info)
+        log.info('Updated play_context is now: %s', repr(self))
         return new_info
 
     def make_become_cmd(self, cmd, executable=None):

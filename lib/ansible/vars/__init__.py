@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 
 from collections import defaultdict, MutableMapping
@@ -42,12 +43,15 @@ from ansible.template import Templar
 from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.vars import combine_vars
 from ansible.vars.unsafe_proxy import wrap_var
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 VARIABLE_CACHE = dict()
 HOSTVARS_CACHE = dict()
@@ -211,9 +215,11 @@ class VariableManager:
         '''
 
         display.debug("in VariableManager get_vars()")
+        log.debug("in VariableManager get_vars()")
         cache_entry = self._get_cache_entry(play=play, host=host, task=task)
         if cache_entry in VARIABLE_CACHE and use_cache:
             display.debug("vars are cached, returning them now")
+            log.debug("vars are cached, returning them now")
             return VARIABLE_CACHE[cache_entry]
 
         all_vars = dict()
@@ -319,7 +325,9 @@ class VariableManager:
                     else:
                         # we do not have a full context here, and the missing variable could be
                         # because of that, so just show a warning and continue
-                        display.vvv("skipping vars_file '%s' due to an undefined variable" % vars_file_item)
+                        msg = "skipping vars_file '%s' due to an undefined variable"
+                        display.vvv(msg % vars_file_item)
+                        log.log(logger.VVV, msg, vars_file_item)
                         continue
 
             # By default, we now merge in all vars from all roles in the play,
@@ -362,7 +370,9 @@ class VariableManager:
             if  'environment' not in all_vars:
                 all_vars['environment'] = task.environment
             else:
-                display.warning("The variable 'environment' appears to be used already, which is also used internally for environment variables set on the task/block/play. You should use a different variable name to avoid conflicts with this internal variable")
+                msg = "The variable 'environment' appears to be used already, which is also used internally for environment variables set on the task/block/play. You should use a different variable name to avoid conflicts with this internal variable"
+                display.warning(msg)
+                log.warning(msg)
 
         # if we have a task and we're delegating to another host, figure out the
         # variables for that host now so we don't have to rely on hostvars later
@@ -374,6 +384,7 @@ class VariableManager:
             all_vars['vars'] = all_vars.copy()
 
         display.debug("done with get_vars()")
+        log.debug("done with get_vars()")
         return all_vars
 
     def invalidate_hostvars_cache(self, play):
