@@ -610,7 +610,6 @@ class VaultAES256:
         # make two keys and one iv
         pbkdf2_prf = lambda p, s: HMAC.new(p, s, hash_function).digest()
 
-
         derivedkey = PBKDF2(password, salt, dkLen=(2 * keylength) + ivlength,
                             count=10000, prf=pbkdf2_prf)
         return derivedkey
@@ -639,7 +638,6 @@ class VaultAES256:
         iv = derivedkey[(keylength * 2):(keylength * 2) + ivlength]
 
         return key1, key2, hexlify(iv)
-
 
     def encrypt(self, data, password):
 

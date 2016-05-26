@@ -26,9 +26,10 @@ from six import text_type, binary_type
 from collections import Sequence, Set, Mapping
 
 from ansible.compat.tests import unittest
-from ansible.compat.tests.mock import patch
 
+from ansible import errors
 from ansible.parsing.yaml.loader import AnsibleLoader
+from ansible.parsing import vault
 
 try:
     from _yaml import ParserError
@@ -40,6 +41,7 @@ class NameStringIO(StringIO):
     """In py2.6, StringIO doesn't let you set name because a baseclass has it
     as readonly property"""
     name = None
+
     def __init__(self, *args, **kwargs):
         super(NameStringIO, self).__init__(*args, **kwargs)
 
@@ -159,6 +161,25 @@ class TestAnsibleLoaderBasic(unittest.TestCase):
         self.assertEqual(data[0][u'baz'].ansible_pos, ('myfile.yml', 2, 9))
 
 
+class TestAnsibleLoaderVault(unittest.TestCase):
+    def setUp(self):
+        self.vault_password = "hunter42"
+        self.vault = vault.VaultLib(self.vault_password)
+
+    def test_wrong_password(self):
+        plaintext = u"Ansible"
+        bob_password = "this is a different password"
+
+        bobs_vault = vault.VaultLib(bob_password)
+
+        ciphertext = bobs_vault.encrypt(plaintext)
+        try:
+            self.vault.decrypt(ciphertext)
+        except Exception as e:
+            self.assertIsInstance(e, errors.AnsibleError)
+            self.assertEqual(e.message, 'Decryption failed')
+
+
 class TestAnsibleLoaderPlay(unittest.TestCase):
 
     def setUp(self):
@@ -242,7 +263,7 @@ class TestAnsibleLoaderPlay(unittest.TestCase):
 
     def check_vars(self):
         # Numbers don't have line/col information yet
-        #self.assertEqual(self.data[0][u'vars'][u'number'].ansible_pos, (self.play_filename, 4, 21))
+        # self.assertEqual(self.data[0][u'vars'][u'number'].ansible_pos, (self.play_filename, 4, 21))
 
         self.assertEqual(self.data[0][u'vars'][u'string'].ansible_pos, (self.play_filename, 5, 29))
         self.assertEqual(self.data[0][u'vars'][u'utf8_string'].ansible_pos, (self.play_filename, 6, 34))
@@ -255,8 +276,8 @@ class TestAnsibleLoaderPlay(unittest.TestCase):
         self.assertEqual(self.data[0][u'vars'][u'list'][0].ansible_pos, (self.play_filename, 11, 25))
         self.assertEqual(self.data[0][u'vars'][u'list'][1].ansible_pos, (self.play_filename, 12, 25))
         # Numbers don't have line/col info yet
-        #self.assertEqual(self.data[0][u'vars'][u'list'][2].ansible_pos, (self.play_filename, 13, 25))
-        #self.assertEqual(self.data[0][u'vars'][u'list'][3].ansible_pos, (self.play_filename, 14, 25))
+        # self.assertEqual(self.data[0][u'vars'][u'list'][2].ansible_pos, (self.play_filename, 13, 25))
+        # self.assertEqual(self.data[0][u'vars'][u'list'][3].ansible_pos, (self.play_filename, 14, 25))
 
     def check_tasks(self):
         #
