@@ -37,7 +37,24 @@ from ansible.errors import AnsibleError
 from ansible.utils.color import stringc
 from ansible.module_utils._text import to_bytes, to_text
 
+# TODO: figure out how this works and why it deadlocks
+#       Is this here so it happens super early in cli imports?
+#       if the cli tool code all imports the same module, the
+#       lock can live in that shared module instance
+try:
+    from __main__ import debug_lock
+except ImportError:
+    # for those not using a CLI, though ...
+    # this might not work well after fork
+    # TODO: figure out if this needs to be a RLock
+    #       depends if this intends to lock across one process
+    #       or multiple (say a 'ansible' and 'ansible-playbook'
+    #       running at the same time)
+    from multiprocessing import Lock
+    debug_lock = Lock()
 
+# TODO: mv these to a version abstration class?
+#    
 try:
     # Python 2
     input = raw_input
@@ -45,17 +62,25 @@ except NameError:
     # Python 3, we already have raw_input
     pass
 
-
 logger = None
 #TODO: make this a logging callback instead
 if C.DEFAULT_LOG_PATH:
     path = C.DEFAULT_LOG_PATH
+    # TODO: use
     if (os.path.exists(path) and os.access(path, os.W_OK)) or os.access(os.path.dirname(path), os.W_OK):
         logging.basicConfig(filename=path, level=logging.DEBUG, format='%(asctime)s %(name)s %(message)s')
+        # logging handles tracking the pid
         mypid = str(os.getpid())
+        # huh, but logging doesn't have the user in log record, but something the
+        # a custom Filter or Handler can do
         user = getpass.getuser()
+        # FIXME: don't do this, use the module name or module.classname, or worse, specify a meaningful name
+        #        like 'ansible-playbook' or 'ansible.remote.%(task_name)s'
+        #        This makes it impossible to do much tweaking with log handler configuration
+        #        ie, sending 'ansible.cli.ansible' errors to stderr and 'ansible.playbook.play_context' debug to ~/.ansible-playbook.log etc
         logger = logging.getLogger("p=%s u=%s | " % (mypid, user))
     else:
+        # TODO: warning is fine, but just setup a NullHandler
         print("[WARNING]: log file at %s is not writeable and we cannot create it, aborting\n" % path, file=sys.stderr)
 
 b_COW_PATHS = (b"/usr/bin/cowsay",
@@ -104,6 +129,7 @@ class Display:
         """
 
         # FIXME: this needs to be implemented
+        # should be a loggingFilter
         #msg = utils.sanitize_output(msg)
         nocolor = msg
         if color:
@@ -147,11 +173,21 @@ class Display:
                 # characters that are invalid in the user's locale
                 msg2 = to_text(msg2, self._output_encoding(stderr=stderr))
 
+            # could potentially use logger 'extras' dict to set any per message colors that
+            # dont map to logger/level
             if color == C.COLOR_ERROR:
                 logger.error(msg2)
             else:
                 logger.info(msg2)
 
+    # caplevel/verbosity could be mapped to standard logging levels (DEBUG, etc) and/or values in between
+    # ie, OURLOG_V=18 (between INFO and DEBUG) ,OURLOG_VVV=12, OURLOG_VVVV=9 (higher than DEBUG) etc
+    # could add a logger subclass with .v() methods that call logger.log(OURLOG_V,msg, *args, *kkwargs)
+    # or just use:
+    # from ourlog import V,VV,VVV,VVVV,VVVVV,VVVVVV
+    # log = logging.getLogger(__name__)
+    # log.log(VV, 'the blah foo=%s', foo)
+    #
     def v(self, msg, host=None):
         return self.verbose(msg, host=host, caplevel=0)
 
@@ -170,19 +206,31 @@ class Display:
     def vvvvvv(self, msg, host=None):
         return self.verbose(msg, host=host, caplevel=5)
 
+    # The locking here seems prone to deadlocking with ANSIBLE_DEBUG=1
     def debug(self, msg):
         if C.DEFAULT_DEBUG:
             self.display("%6d %0.5f: %s" % (os.getpid(), time.time(), msg), color=C.COLOR_DEBUG)
 
     def verbose(self, msg, host=None, caplevel=2):
         # FIXME: this needs to be implemented
+        # could be custom logging.Filter()
+        # The advantage of doing that with logging is we that we would get a object to log,
+        # and dont str/repr it until we are emitting the log message, so have more info to
+        # base sanitizing on
+        #  unsafe or tainted object could also provide a 'public_statement' method that is
+        #  the str/repr for public consumption, that could sanitize/censor. Or potentially, encrypt,
+        #  or send to a different log handler
         #msg = utils.sanitize_output(msg)
         if self.verbosity > caplevel:
+            # host is a little tricker to get into the log record, but a custom logging.Filter with
+            # a reference to the context info with host can do it.
             if host is None:
                 self.display(msg, color=C.COLOR_VERBOSE)
             else:
                 self.display("<%s> %s" % (host, msg), color=C.COLOR_VERBOSE, screen_only=True)
 
+    # could be WARNING level logging or potentially using python warnings module which
+    # already has 'show once' support
     def deprecated(self, msg, version=None, removed=False):
         ''' used to print out a deprecation message.'''
 
@@ -198,6 +246,7 @@ class Display:
         else:
             raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % msg)
 
+        # could be up to Formatter
         wrapped = textwrap.wrap(new_msg, self.columns, replace_whitespace=False, drop_whitespace=False)
         new_msg = "\n".join(wrapped) + "\n"
 
@@ -206,7 +255,8 @@ class Display:
             self._deprecations[new_msg] = 1
 
     def warning(self, msg, formatted=False):
-
+        # TODO: verify 'formatted' is actually used somewhere, I don't see any where obvious
+        #       It's more or less in module api though...
         if not formatted:
             new_msg = "\n[WARNING]: %s" % msg
             wrapped = textwrap.wrap(new_msg, self.columns)
@@ -218,16 +268,21 @@ class Display:
             self.display(new_msg, color=C.COLOR_WARN, stderr=True)
             self._warns[new_msg] = 1
 
+    # TODO: remove? there seems to be one usage of this
     def system_warning(self, msg):
         if C.SYSTEM_WARNINGS:
             self.warning(msg)
 
+    # Could be a customer Formatter? custom log level? or just make it the default callbacks job
     def banner(self, msg, color=None):
         '''
         Prints a header-looking line with stars taking up to 80 columns
         of width (3 columns, minimum)
         '''
         if self.b_cowsay:
+        # cowsay could be a custom log handler... we would just not set it up if
+        #  cowsay is disabled by default. Or you know, just remove it...
+
             try:
                 self.banner_cowsay(msg)
                 return
@@ -241,6 +296,7 @@ class Display:
         stars = u"*" * star_len
         self.display(u"\n%s %s" % (msg, stars), color=color)
 
+    # could be Formatter or Filter
     def banner_cowsay(self, msg, color=None):
         if u": [" in msg:
             msg = msg.replace(u"[", u"")
@@ -259,8 +315,11 @@ class Display:
         self.display(u"%s\n" % to_text(out), color=color)
 
     def error(self, msg, wrap_text=True):
+        # wrap_text is used in only 5 places, 4 of which are the top level cli wrappers
         if wrap_text:
             new_msg = u"\n[ERROR]: %s" % msg
+            # TODO: see if this works with non-ascii, it's been buggy in the past
+            #       and prone to wrapping multibyte chars between bytes
             wrapped = textwrap.wrap(new_msg, self.columns)
             new_msg = u"\n".join(wrapped) + u"\n"
         else:
@@ -271,6 +330,9 @@ class Display:
 
     @staticmethod
     def prompt(msg, private=False):
+        # TODO: decouple 'prompt' from the display code
+        #       otherwise this causes the same kind of problems as all
+        #       weird ways ssh/sshpass/sftp do when reading stdout
         prompt_string = to_bytes(msg, encoding=Display._output_encoding())
         if sys.version_info >= (3,):
             # Convert back into text on python3.  We do this double conversion
@@ -306,6 +368,7 @@ class Display:
             else:
                 result = do_prompt(msg, private)
         else:
+            # TODO: there could be a non-interactive callback registered for handling this
             result = None
             self.warning("Not prompting as we are not in interactive mode")
 
@@ -322,6 +385,7 @@ class Display:
         result = to_text(result, errors='surrogate_or_strict')
         return result
 
+    # What is stderr used for?
     @staticmethod
     def _output_encoding(stderr=False):
         encoding = locale.getpreferredencoding()
@@ -337,4 +401,6 @@ class Display:
             tty_size = unpack('HHHH', fcntl.ioctl(0, TIOCGWINSZ, pack('HHHH', 0, 0, 0, 0)))[1]
         else:
             tty_size = 0
+        # if this is only used for textwrap, and textwrap breaks stuff, likely need to
+        # fix to support i18n
         self.columns = max(79, tty_size)
