@@ -124,13 +124,16 @@ class AnsibleConstructor(Constructor):
             raise ConstructorError(None, None,
                     "found vault but argument is not encrypted", node.start_mark)
 
+        print('data=%s' % data)
         data = vault.decrypt(data)
+        print('decrypted=%s' % data)
 
-        try:
-            return self.get_single_data()
-        except YAMLError:
-            raise ConstructorError(None, None,
-                    "found valid vault string but content is invalid", node.start_mark)
+        return self.construct_yaml_unsafe(data)
+        # try:
+        #    return self.get_single_data()
+        # except YAMLError:
+        #    raise ConstructorError(None, None,
+        #            "found valid vault string but content is invalid", node.start_mark)
 
 AnsibleConstructor.add_constructor(
     u'tag:yaml.org,2002:map',

@@ -160,10 +160,23 @@ class VaultLib:
             raise AnsibleError("input is not encrypted")
 
         # clean out header
+        print('b_data1=%s' % b_data)
         b_data = self._split_header(b_data)
+        print('b_data2=%s' % b_data)
 
+        #import pprint
+        #pp = pprint.pprint
         # create the cipher object
         cipher_class_name = u'Vault{0}'.format(self.cipher_name)
+        print('self.cipher_name=%s' % self.cipher_name)
+        print('c_c_n=%s' % cipher_class_name)
+#        import pdb; pdb.set_trace()
+#        print('globals=')
+        #pp(globals())
+        print('whitelist=%s' % CIPHER_WHITELIST)
+        print('cig=%s' % cipher_class_name in globals())
+        print('cn in cw=%s' % self.cipher_name in CIPHER_WHITELIST)
+
         if cipher_class_name in globals() and self.cipher_name in CIPHER_WHITELIST:
             Cipher = globals()[cipher_class_name]
             this_cipher = Cipher()

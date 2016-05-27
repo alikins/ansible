@@ -30,6 +30,7 @@ from ansible.compat.tests import unittest
 from ansible import errors
 from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.parsing import vault
+from ansible.utils.unicode import to_bytes
 
 try:
     from _yaml import ParserError
@@ -178,6 +179,28 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         except Exception as e:
             self.assertIsInstance(e, errors.AnsibleError)
             self.assertEqual(e.message, 'Decryption failed')
+
+    def test_embedded_vault(self):
+        plaintext_var = u"""A single unicode string."""
+        vaulted_var = self.vault.encrypt(plaintext_var)
+
+        # add yaml tag
+        print(type(vaulted_var))
+        tagged_vaulted_var = u"""!vault '%s'""" % vaulted_var
+        yaml_plaintext = """
+                webster: daniel
+                oed: oxford
+                the_secret: %s
+                """ % tagged_vaulted_var
+
+        print(yaml_plaintext)
+        stream = NameStringIO(yaml_plaintext)
+        stream.name = 'my.yml'
+        loader = AnsibleLoader(stream, vault_password=self.vault_password)
+
+        data_from_yaml = loader.get_single_data()
+        print(data_from_yaml)
+
 
 
 class TestAnsibleLoaderPlay(unittest.TestCase):
