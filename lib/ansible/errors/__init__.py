@@ -19,6 +19,10 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import yamllint
+import yamllint.linter
+import yamllint.config
+
 from ansible.errors.yaml_strings import ( YAML_POSITION_DETAILS,
         YAML_COMMON_UNQUOTED_VARIABLE_ERROR,
         YAML_COMMON_DICT_ERROR,
@@ -28,6 +32,14 @@ from ansible.errors.yaml_strings import ( YAML_POSITION_DETAILS,
 
 from ansible.utils.unicode import to_unicode, to_str
 
+yaml_conf = """
+extends: relaxed
+rules:
+    empty-lines:
+        max: 100
+"""
+conf = yamllint.config.YamlLintConfig(yaml_conf)
+print(conf.enabled_rules())
 
 class AnsibleError(Exception):
     '''
@@ -83,7 +95,9 @@ class AnsibleError(Exception):
             if line_number > 0:
                 prev_line = lines[line_number - 1]
 
-        return (target_line, prev_line)
+        yaml_src = '\n'.join(lines)
+        yamllint_errors = yamllint.linter.run(yaml_src, conf)
+        return (target_line, prev_line, yamllint_errors)
 
     def _get_extended_error(self):
         '''
@@ -103,9 +117,12 @@ class AnsibleError(Exception):
             (src_file, line_number, col_number) = self._obj.ansible_pos
             error_message += YAML_POSITION_DETAILS % (src_file, line_number, col_number)
             if src_file not in ('<string>', '<unicode>') and self._show_content:
-                (target_line, prev_line) = self._get_error_lines_from_file(src_file, line_number - 1)
+                (target_line, prev_line, lint_problems) = self._get_error_lines_from_file(src_file, line_number - 1)
                 target_line = to_unicode(target_line)
                 prev_line = to_unicode(prev_line)
+                error_message += "yamllint:\n"
+                for prob in lint_problems:
+                    error_message += '%s\n' % prob
                 if target_line:
                     stripped_line = target_line.replace(" ","")
                     arrow_line    = (" " * (col_number-1)) + "^ here"
@@ -142,6 +159,7 @@ class AnsibleError(Exception):
                                 error_message += YAML_COMMON_PARTIALLY_QUOTED_LINE_ERROR
                             if unbalanced:
                                 error_message += YAML_COMMON_UNBALANCED_QUOTES_ERROR
+
 
         except (IOError, TypeError):
             error_message += '\n(could not open file to display line)'
