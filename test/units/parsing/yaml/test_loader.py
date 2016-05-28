@@ -181,27 +181,36 @@ class TestAnsibleLoaderVault(unittest.TestCase):
             self.assertEqual(e.message, 'Decryption failed')
 
     def test_embedded_vault(self):
-        plaintext_var = u"""A single unicode string."""
+        plaintext_var = u"""This is the plaintext string."""
         vaulted_var = self.vault.encrypt(plaintext_var)
 
+        import yamllint
+        import yamllint.linter
+        import yamllint.config
+        conf = yamllint.config.YamlLintConfig('extends: default')
         # add yaml tag
-        print(type(vaulted_var))
-        tagged_vaulted_var = u"""!vault '%s'""" % vaulted_var
-        yaml_plaintext = """
-                webster: daniel
-                oed: oxford
-                the_secret: %s
-                """ % tagged_vaulted_var
+        lines = vaulted_var.splitlines()
+        lines2 = []
+        for line in lines:
+            lines2.append('        %s' % line)
 
-        print(yaml_plaintext)
+        vaulted_var = '\n'.join(lines2)
+        tagged_vaulted_var = u"""!vault |\n%s""" % vaulted_var
+
+        yaml_plaintext = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s""" % tagged_vaulted_var
+
+#        lint = yamllint.linter.run(yaml_plaintext, conf)
+
+#        for problem in lint:
+#            print(problem)
+
         stream = NameStringIO(yaml_plaintext)
         stream.name = 'my.yml'
+
         loader = AnsibleLoader(stream, vault_password=self.vault_password)
 
         data_from_yaml = loader.get_single_data()
-        print(data_from_yaml)
-
-
+        self.assertEquals(plaintext_var, data_from_yaml['the_secret'])
 
 class TestAnsibleLoaderPlay(unittest.TestCase):
 
