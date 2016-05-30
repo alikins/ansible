@@ -63,6 +63,7 @@ class PlaybookCLI(CLI):
             vault_opts=True,
             fork_opts=True,
             module_opts=True,
+            devtool_opts=True,
         )
 
         # ansible playbook specific opts

@@ -116,6 +116,8 @@ class CLI(with_metaclass(ABCMeta, object)):
         self.parser = None
         self.action = None
         self.callback = callback
+        # TODO: just use a class for this
+        self.setup_objs = {}
 
     def set_action(self):
         """
@@ -159,6 +161,38 @@ class CLI(with_metaclass(ABCMeta, object)):
                 display.display(u"Using %s as config file" % to_text(C.CONFIG_FILE))
             else:
                 display.display(u"No config file found; using defaults")
+
+    def setup(self):
+        self.devtool_setup()
+
+    def tear_down(self):
+        self.devtool_teardown()
+
+    def devtool_setup(self):
+        if self.options.code_coverage:
+            self.setup_code_coverage()
+
+    def devtool_teardown(self):
+        cov = self.setup_objs.get('coverage', None)
+        if cov:
+            self.tear_down_code_coverage(cov)
+
+    def setup_code_coverage(self):
+        # TODO: move to a seperate module and eventually a plugin
+        # TODO: importError handling
+
+        import coverage
+
+        cov = coverage.Coverage(branch=True,
+                                cover_pylib=True,
+                                concurrency='multiprocessing')
+        self.setup_objs['coverage'] = cov
+        cov.start()
+
+    def tear_down_code_coverage(self, cov):
+        cov.stop()
+        cov.save()
+        cov.html_report(directory='covhtml')
 
     @staticmethod
     def ask_vault_passwords(ask_new_vault_pass=False, rekey=False):
@@ -256,6 +290,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             if op.forks < 1:
                 self.parser.error("The number of processes (--forks) must be >= 1")
 
+
     @staticmethod
     def expand_tilde(option, opt, value, parser):
         setattr(parser.values, option.dest, os.path.expanduser(value))
@@ -273,8 +308,12 @@ class CLI(with_metaclass(ABCMeta, object)):
         setattr(parser.values, option.dest, expanded_path_entries)
 
     @staticmethod
-    def base_parser(usage="", output_opts=False, runas_opts=False, meta_opts=False, runtask_opts=False, vault_opts=False, module_opts=False,
-            async_opts=False, connect_opts=False, subset_opts=False, check_opts=False, inventory_opts=False, epilog=None, fork_opts=False, runas_prompt_opts=False):
+    def base_parser(usage="", output_opts=False, runas_opts=False,
+                    meta_opts=False, runtask_opts=False, vault_opts=False,
+                    module_opts=False,async_opts=False, connect_opts=False,
+                    subset_opts=False, check_opts=False, inventory_opts=False,
+                    epilog=None, fork_opts=False, runas_prompt_opts=False,
+                    devtool_opts=False):
         ''' create an options parser for most ansible scripts '''
 
         # TODO: implement epilog parsing
@@ -407,6 +446,19 @@ class CLI(with_metaclass(ABCMeta, object)):
             parser.add_option('--flush-cache', dest='flush_cache', action='store_true',
                 help="clear the fact cache")
 
+        if devtool_opts:
+            devtool_group = optparse.OptionGroup(parser, "Developer tools",
+                                                 "control use of testing, profiling, and debugging tools.")
+            devtool_group.add_option('--code-coverage', dest='code_coverage',
+                                     action='store_true', default=False,
+                                     help="Enable python code coverage collection")
+            devtool_group.add_option('--debugger-signal', dest='debugger_signal',
+                                     action='store_true', default=False,
+                                     help="Allow debugger to be triggered by a signal")
+            devtool_group.add_option('--code-profile', dest='code_profile',
+                                     action='store_true', default=False,
+                                     help="Enable python code profiling.")
+            parser.add_option_group(devtool_group)
         return parser
 
     @abstractmethod

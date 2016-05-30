@@ -100,7 +100,9 @@ if __name__ == '__main__':
         else:
             cli = mycli(args)
             cli.parse()
+            cli.setup()
             exit_code = cli.run()
+            cli.teardown()
 
     except AnsibleOptionsError as e:
         cli.parser.print_help()
