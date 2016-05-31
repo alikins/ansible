@@ -142,6 +142,16 @@ def is_encrypted_file(file_obj):
 #  VaultEnvelope  (maybe)
 #     - render / format_output
 #     - parse / split_header
+class VaultData(object):
+    vault_data = True
+    def __init__(self, data):
+        self.data = data
+
+
+
+
+
+
 class VaultLib:
 
     def __init__(self, password):
@@ -195,12 +205,7 @@ class VaultLib:
         if not self.cipher_name or self.cipher_name not in CIPHER_WRITE_WHITELIST:
             self.cipher_name = u"AES256"
 
-        try:
-            Cipher = CIPHER_MAPPING[self.cipher_name]
-        except KeyError:
-            raise AnsibleError(u"{0} cipher could not be found".format(self.cipher_name))
-
-        this_cipher = Cipher()
+        this_cipher = cipher_factory(self.cipher_name)
 
         # encrypt data
         b_ciphertext = this_cipher.encrypt(b_plaintext, self.b_password)
@@ -238,8 +243,8 @@ class VaultLib:
         cipher_class_name = u'Vault{0}'.format(self.cipher_name)
 
         if cipher_class_name in globals() and self.cipher_name in CIPHER_WHITELIST:
-            Cipher = globals()[cipher_class_name]
-            this_cipher = Cipher()
+            cipher_class = globals()[cipher_class_name]
+            this_cipher = cipher_class()
         else:
             raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
 
@@ -539,8 +544,8 @@ class VaultEditor:
             os.chown(dest, prev.st_uid, prev.st_gid)
 
     def _editor_shell_command(self, filename):
-        EDITOR = os.environ.get('EDITOR','vi')
-        editor = shlex.split(EDITOR)
+        env_editor = os.environ.get('EDITOR','vi')
+        editor = shlex.split(env_editor)
         editor.append(filename)
 
         return editor
@@ -816,9 +821,14 @@ class VaultAES256:
         return result == 0
 
 
-# Keys could be made bytes later if the code that gets the data is more
-# naturally byte-oriented
-CIPHER_MAPPING = {
-    u'AES': VaultAES,
-    u'AES256': VaultAES256,
-}
+CIPHER_MAPPING = {u'AES': VaultAES,
+                  u'AES256': VaultAES256}
+
+def cipher_factory(cipher_name):
+    # Keys could be made bytes later if the code that gets the data is more
+    # naturally byte-oriented
+    try:
+        cipher_class = CIPHER_MAPPING[cipher_name]
+    except KeyError:
+        raise AnsibleError(u"{0} cipher could not be found".format(cipher_name))
+    return cipher_class
