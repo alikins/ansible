@@ -90,7 +90,7 @@ CRYPTO_UPGRADE = "ansible-vault requires a newer version of pycrypto than the on
 
 b_HEADER = b'$ANSIBLE_VAULT'
 CIPHER_WHITELIST = frozenset((u'AES', u'AES256'))
-CIPHER_WRITE_WHITELIST=frozenset((u'AES256',))
+CIPHER_WRITE_WHITELIST = frozenset((u'AES256',))
 # See also CIPHER_MAPPING at the bottom of the file which maps cipher strings
 # (used in VaultFile header) to a cipher class
 
@@ -99,6 +99,13 @@ def check_prereqs():
 
     if not HAS_AES or not HAS_COUNTER or not HAS_ANY_PBKDF2HMAC or not HAS_HASH:
         raise AnsibleError(CRYPTO_UPGRADE)
+
+class VaultData(object):
+    vault_data = True
+    def __init__(self, data):
+        self.data = data
+
+
 
 class VaultLib:
 
@@ -142,11 +149,7 @@ class VaultLib:
         if not self.cipher_name or self.cipher_name not in CIPHER_WRITE_WHITELIST:
             self.cipher_name = u"AES256"
 
-        try:
-            Cipher = CIPHER_MAPPING[self.cipher_name]
-        except KeyError:
-            raise AnsibleError(u"{0} cipher could not be found".format(self.cipher_name))
-        this_cipher = Cipher()
+        this_cipher = cipher_factory(self.cipher_name)
 
         # encrypt data
         b_enc_data = this_cipher.encrypt(b_data, self.b_password)
@@ -179,8 +182,8 @@ class VaultLib:
         # create the cipher object
         cipher_class_name = u'Vault{0}'.format(self.cipher_name)
         if cipher_class_name in globals() and self.cipher_name in CIPHER_WHITELIST:
-            Cipher = globals()[cipher_class_name]
-            this_cipher = Cipher()
+            cipher_class = globals()[cipher_class_name]
+            this_cipher = cipher_class()
         else:
             raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
 
@@ -208,7 +211,7 @@ class VaultLib:
         header = b';'.join([b_HEADER, self.b_version,
             to_bytes(self.cipher_name, errors='strict', encoding='utf-8')])
         tmpdata = [header]
-        tmpdata += [b_data[i:i+80] for i in range(0, len(b_data), 80)]
+        tmpdata += [b_data[i:i + 80] for i in range(0, len(b_data), 80)]
         tmpdata += [b'']
         tmpdata = b'\n'.join(tmpdata)
 
@@ -259,24 +262,23 @@ class VaultEditor:
 
         file_len = os.path.getsize(tmp_path)
 
-        if file_len > 0: # avoid work when file was empty
-            max_chunk_len = min(1024*1024*2, file_len)
+        if file_len > 0:  # avoid work when file was empty
+            max_chunk_len = min(1024 * 1024 * 2, file_len)
 
             passes = 3
             with open(tmp_path,  "wb") as fh:
                 for _ in range(passes):
                     fh.seek(0,  0)
                     # get a random chunk of data, each pass with other length
-                    chunk_len = random.randint(max_chunk_len//2, max_chunk_len)
+                    chunk_len = random.randint(max_chunk_len // 2, max_chunk_len)
                     data = os.urandom(chunk_len)
 
                     for _ in range(0, file_len // chunk_len):
                         fh.write(data)
                     fh.write(data[:file_len % chunk_len])
 
-                    assert(fh.tell() == file_len) # FIXME remove this assert once we have unittests to check its accuracy
+                    assert(fh.tell() == file_len)  # FIXME remove this assert once we have unittests to check its accuracy
                     os.fsync(fh)
-
 
     def _shred_file(self, tmp_path):
         """Securely destroy a decrypted file
@@ -435,8 +437,8 @@ class VaultEditor:
 
     def write_data(self, data, filename, shred=True):
         """write data to given path
-        
-        if shred==True, make sure that the original data is first shredded so 
+
+        if shred==True, make sure that the original data is first shredded so
         that is cannot be recovered
         """
         bytes = to_bytes(data, errors='strict')
@@ -462,13 +464,13 @@ class VaultEditor:
 
         # reset permissions if needed
         if prev is not None:
-            #TODO: selinux, ACLs, xattr?
+            # TODO: selinux, ACLs, xattr?
             os.chmod(dest, prev.st_mode)
             os.chown(dest, prev.st_uid, prev.st_gid)
 
     def _editor_shell_command(self, filename):
-        EDITOR = os.environ.get('EDITOR','vi')
-        editor = shlex.split(EDITOR)
+        env_editor = os.environ.get('EDITOR','vi')
+        editor = shlex.split(env_editor)
         editor.append(filename)
 
         return editor
@@ -488,7 +490,7 @@ class VaultFile(object):
 
         _, self.tmpfile = tempfile.mkstemp()
 
-    ### TODO:
+    # TODO:
     # __del__ can be problematic in python... For this use case, make
     # VaultFile a context manager instead (implement __enter__ and __exit__)
     def __del__(self):
@@ -624,7 +626,6 @@ class VaultAES256:
     def create_key(self, password, salt, keylength, ivlength):
         hash_function = SHA256
 
-        # make two keys and one iv
         pbkdf2_prf = lambda p, s: HMAC.new(p, s, hash_function).digest()
 
 
@@ -657,7 +658,6 @@ class VaultAES256:
 
         return key1, key2, hexlify(iv)
 
-
     def encrypt(self, data, password):
 
         salt = os.urandom(32)
@@ -682,11 +682,11 @@ class VaultAES256:
         cipher = AES.new(key1, AES.MODE_CTR, counter=ctr)
 
         # ENCRYPT PADDED DATA
-        cryptedData = cipher.encrypt(data)
+        crypted_data = cipher.encrypt(data)
 
         # COMBINE SALT, DIGEST AND DATA
-        hmac = HMAC.new(key2, cryptedData, SHA256)
-        message = b'\n'.join([hexlify(salt), to_bytes(hmac.hexdigest()), hexlify(cryptedData)])
+        hmac = HMAC.new(key2, crypted_data, SHA256)
+        message = b'\n'.join([hexlify(salt), to_bytes(hmac.hexdigest()), hexlify(crypted_data)])
         message = hexlify(message)
         return message
 
@@ -743,9 +743,14 @@ class VaultAES256:
         return result == 0
 
 
-# Keys could be made bytes later if the code that gets the data is more
-# naturally byte-oriented
-CIPHER_MAPPING = {
-        u'AES': VaultAES,
-        u'AES256': VaultAES256,
-    }
+CIPHER_MAPPING = {u'AES': VaultAES,
+                  u'AES256': VaultAES256}
+
+def cipher_factory(cipher_name):
+    # Keys could be made bytes later if the code that gets the data is more
+    # naturally byte-oriented
+    try:
+        cipher_class = CIPHER_MAPPING[cipher_name]
+    except KeyError:
+        raise AnsibleError(u"{0} cipher could not be found".format(cipher_name))
+    return cipher_class
