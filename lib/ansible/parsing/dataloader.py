@@ -69,10 +69,15 @@ class DataLoader():
         self._tempfiles = set()
 
         # initialize the vault stuff with an empty password
+        # TODO: replace with a ref to something that can get the password
+        #       a creds/auth provider
         self.set_vault_password(None)
 
     def set_vault_password(self, vault_password):
         self._vault_password = vault_password
+        # TODO: Replace with a ref to Vaults for looking up the particular vault when needed
+        # NOTE: instead of passing in a password or cred ref, maybe pass in a callback that will
+        #       be used when needed?
         self._vault = VaultLib(password=vault_password)
 
     def load(self, data, file_name='<string>', show_content=True):
@@ -386,6 +391,11 @@ class DataLoader():
         Temporary files are cleanup in the destructor
         """
 
+        # TODO: get rid of tmp files if possible
+        #       That may require connection objects knowing how to deal with file objects instead of
+        #       of paths.
+        # IDEA: all code that takes file paths as strings to get uri style paths, with the
+        #       uri info hinting where to get it from. ie, vault://.known_hosts
         if not file_path or not isinstance(file_path, string_types):
             raise AnsibleParserError("Invalid filename: '%s'" % to_native(file_path))
 
