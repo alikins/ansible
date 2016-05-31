@@ -565,8 +565,8 @@ class VaultEditor:
             os.chown(dest, prev.st_uid, prev.st_gid)
 
     def _editor_shell_command(self, filename):
-        EDITOR = os.environ.get('EDITOR', 'vi')
-        editor = shlex.split(EDITOR)
+        env_editor = os.environ.get('EDITOR','vi')
+        editor = shlex.split(env_editor)
         editor.append(filename)
 
         return editor

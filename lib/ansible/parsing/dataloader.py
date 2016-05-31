@@ -26,7 +26,8 @@ import re
 import tempfile
 from yaml import YAMLError
 
-from ansible.errors import AnsibleFileNotFound, AnsibleParserError
+from ansible.compat.six import text_type, string_types
+from ansible.errors import AnsibleFileNotFound, AnsibleParserError, AnsibleError
 from ansible.errors.yaml_strings import YAML_SYNTAX_ERROR
 from ansible.module_utils.basic import is_executable
 from ansible.module_utils.six import text_type, string_types
@@ -77,6 +78,9 @@ class DataLoader:
 
     def set_vault_password(self, b_vault_password):
         self._b_vault_password = b_vault_password
+        # TODO: Replace with a ref to Vaults for looking up the particular vault when needed
+        # NOTE: instead of passing in a password or cred ref, maybe pass in a callback that will
+        #       be used when needed?
         self._vault = VaultLib(b_password=b_vault_password)
 
     def load(self, data, file_name='<string>', show_content=True):
@@ -170,7 +174,7 @@ class DataLoader:
     def _safe_load(self, stream, file_name=None):
         ''' Implements yaml.safe_load(), except using our custom loader class. '''
 
-        loader = AnsibleLoader(stream, file_name, self._b_vault_password)
+        loader = AnsibleLoader(stream, file_name, self._vault_password)
         try:
             return loader.get_single_data()
         finally:
@@ -315,7 +319,7 @@ class DataLoader:
 
         return candidate
 
-    def path_dwim_relative_stack(self, paths, dirname, source, is_role=False):
+    def path_dwim_relative_stack(self, paths, dirname, source):
         '''
         find one file in first path in stack taking roles into account and adding play basedir as fallback
 
@@ -346,7 +350,6 @@ class DataLoader:
                 b_upath = to_bytes(upath, errors='surrogate_or_strict')
                 b_mydir = os.path.dirname(b_upath)
 
-                # FIXME: this detection fails with non main.yml roles
                 # if path is in role and 'tasks' not there already, add it into the search
                 if is_role or self._is_role(path):
                     if b_mydir.endswith(b'tasks'):
@@ -411,7 +414,7 @@ class DataLoader:
             raise AnsibleFileNotFound(file_name=file_path)
 
         if not self._vault:
-            self._vault = VaultLib(b_password="")
+            self._vault = VaultLib(password="")
 
         real_path = self.path_dwim(file_path)
 
