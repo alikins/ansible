@@ -100,6 +100,7 @@ class VariableManager:
         self._hostvars = None
         self._omit_token = '__omit_place_holder__%s' % sha1(os.urandom(64)).hexdigest()
         self._options_vars = defaultdict(dict)
+        self._all_vars = None
 
     def __getstate__(self):
         data = dict(
@@ -358,8 +359,17 @@ class VariableManager:
         if task or play:
             all_vars['vars'] = all_vars.copy()
 
+        self._all_vars = all_vars.copy()
         display.debug("done with get_vars()")
         return all_vars
+
+    def __repr__(self):
+        rep = ['VariableManager']
+        rep.append('  hostvars=%s' % self._hostvars)
+        rep.append('  options_vars=%s' % self.options_vars)
+        rep.append('  extra_vars=%s' % self.extra_vars)
+        rep.append('_all_vars=%s' % self._all_vars)
+        return '\n'.join(rep)
 
     def invalidate_hostvars_cache(self, play):
         hostvars_cache_entry = self._get_cache_entry(play=play)

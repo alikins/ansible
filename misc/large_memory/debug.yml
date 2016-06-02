@@ -1,0 +1,6 @@
+---
+- name: debug all vars
+  hosts: all
+  tasks:
+    - name: show all vars task
+      debug: var=hostvars
