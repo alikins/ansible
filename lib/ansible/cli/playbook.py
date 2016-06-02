@@ -89,10 +89,17 @@ class PlaybookCLI(CLI):
         display.verbosity = self.options.verbosity
         self.validate_conflicts(runas_opts=True, vault_opts=True, fork_opts=True)
 
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowth')
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
+
     def run(self):
 
         super(PlaybookCLI, self).run()
 
+        self.showgrowth(msg='start or run')
         # Note: slightly wrong, this is written so that implicit localhost
         # Manage passwords
         sshpass    = None
@@ -107,6 +114,7 @@ class PlaybookCLI(CLI):
             passwords = { 'conn_pass': sshpass, 'become_pass': becomepass }
 
         loader = DataLoader()
+
 
         if self.options.vault_password_file:
             # read vault_pass from a file
@@ -126,14 +134,19 @@ class PlaybookCLI(CLI):
 
         # create the variable manager, which will be shared throughout
         # the code, ensuring a consistent view of global variables
+        self.showgrowth(msg='before VariableManager()')
         variable_manager = VariableManager()
+        self.showgrowth(msg='after VariableManager')
         variable_manager.extra_vars = load_extra_vars(loader=loader, options=self.options)
 
         variable_manager.options_vars = load_options_vars(self.options)
 
         # create the inventory, and filter it based on the subset specified (if any)
+        self.showgrowth(msg='before Inventory()')
         inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=self.options.inventory)
+        self.showgrowth(msg='before set_inventory')
         variable_manager.set_inventory(inventory)
+        self.showgrowth(msg='after set_inventory')
 
         print('variable_manager=%s' % variable_manager)
         # (which is not returned in list_hosts()) is taken into account for
@@ -153,9 +166,12 @@ class PlaybookCLI(CLI):
             raise AnsibleError("Specified --limit does not match any hosts")
 
         # create the playbook executor, which manages running the plays via a task queue manager
+        self.showgrowth(msg='before PlaybookExecutor()')
         pbex = PlaybookExecutor(playbooks=self.args, inventory=inventory, variable_manager=variable_manager, loader=loader, options=self.options, passwords=passwords)
 
+        self.showgrowth(msg='after PlaybookExecutor(), before pbex.run()')
         results = pbex.run()
+        self.showgrowth(msg='after  pbex.run()')
 
         self.refs(filename="pre-graph-1", objs=[variable_manager, inventory, pbex, results, self])
         if isinstance(results, list):
@@ -201,11 +217,13 @@ class PlaybookCLI(CLI):
                                         taskmsg += "\tTAGS: [%s]\n" % ', '.join(cur_tags)
 
                             return taskmsg
-
+                        self.showgrowth(msg='before var_ma.get_vars in pb index=%s' % index)
                         all_vars = variable_manager.get_vars(loader=loader, play=play)
+                        self.showgrowth(msg='after var_ma.get_vars in pb index=%s' % index)
 
                         print('variable_manager2=%s' % variable_manager)
                         play_context = PlayContext(play=play, options=self.options)
+                        self.showgrowth(msg='after PlayContext()  pb index=%s' % index)
                         for block in play.compile():
                             block = block.filter_tagged_tasks(play_context, all_vars)
                             if not block.has_tasks():
@@ -221,12 +239,12 @@ class PlaybookCLI(CLI):
 
             # self.refs(filename="post-1-index", objs=[variable_manager, inventory, pbex, results, self])
             self.refs(filename="post-1-index", objs=locals())
-            pprint.pprint(locals())
+            self.showgrowth(msg='after pbex')
             return 0
         else:
-            pprint.pprint(locals())
             # self.refs(filename="post-no-plays-", objs=[variable_manager, inventory, pbex, results, self])
             self.refs(filename="post-no-plays-", objs=locals())
+            self.showgrowth(msg='afterall')
             return results
 
     def refs(self, filename=None, objs=None):
