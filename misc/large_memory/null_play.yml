@@ -1,6 +1,6 @@
 ---
 - name: nothing
-  hosts: all
+  hosts: 1_some_host-1
   gather_facts: false
   tasks:
     - name: show all vars task
