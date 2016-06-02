@@ -113,9 +113,11 @@ class PlaybookCLI(CLI):
             (sshpass, becomepass) = self.ask_passwords()
             passwords = {'conn_pass': sshpass, 'become_pass': becomepass}
 
+        self.showgrowth(msg='before _play_prereqs')
         loader, inventory, variable_manager = self._play_prereqs(self.options)
+        self.showgrowth(msg='after _play_prereqa')
 
-        print('variable_manager=%s' % variable_manager)
+        #print('variable_manager=%s' % variable_manager)
         # (which is not returned in list_hosts()) is taken into account for
         # warning if inventory is empty.  But it can't be taken into account for
         # checking if limit doesn't match any hosts.  Instead we don't worry about
@@ -229,7 +231,7 @@ class PlaybookCLI(CLI):
             variable_manager.clear_facts(hostname)
 
     def refs(self, filename=None, objs=None):
-        SKIP = False
+        SKIP = True
         if SKIP:
             return
         filename = filename or "object-graph"
