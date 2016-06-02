@@ -1,0 +1,10 @@
+---
+- name: nothing
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: show all vars task
+      debug: msg="foo"
+
+
+
