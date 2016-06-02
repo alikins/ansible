@@ -1,10 +1,20 @@
 ---
-- name: nothing
-  hosts: 1_some_host-1
+- name: nothing play number 0
+  #hosts: 1_some_host-1
+  hosts: 10_some_host*
   gather_facts: false
   tasks:
-    - name: show all vars task
-      debug: msg="foo"
+    - name: this is the first play
+      debug: msg="play 0"
 
+
+- name: nothing number 1
+  hosts: 10_some_host*
+  gather_facts: false
+  tasks:
+    - name: this is the second play
+      debug: msg="play 1"
+  #    - name: fail for fun
+  #     fail: msg="failing for the fun of it"
 
 

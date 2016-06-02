@@ -144,11 +144,11 @@ class PlaybookCLI(CLI):
         # create the inventory, and filter it based on the subset specified (if any)
         self.showgrowth(msg='before Inventory()')
         inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=self.options.inventory)
-        self.showgrowth(msg='before set_inventory')
+        self.showgrowth(msg='after Invetory(), before set_inventory()')
         variable_manager.set_inventory(inventory)
-        self.showgrowth(msg='after set_inventory')
+        self.showgrowth(msg='after set_inventory()')
 
-        print('variable_manager=%s' % variable_manager)
+        #print('variable_manager=%s' % variable_manager)
         # (which is not returned in list_hosts()) is taken into account for
         # warning if inventory is empty.  But it can't be taken into account for
         # checking if limit doesn't match any hosts.  Instead we don't worry about
@@ -248,7 +248,7 @@ class PlaybookCLI(CLI):
             return results
 
     def refs(self, filename=None, objs=None):
-        SKIP = False
+        SKIP = True
         if SKIP:
             return
         filename = filename or "object-graph"

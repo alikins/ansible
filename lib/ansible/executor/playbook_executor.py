@@ -35,6 +35,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import objgraph
 
 class PlaybookExecutor:
 
@@ -68,9 +69,13 @@ class PlaybookExecutor:
         entrylist = []
         entry = {}
         try:
+            self.showgrowth(msg='before first playbook')
             for playbook_path in self._playbooks:
+                self.showgrowth(msg='before PLaybook.load() for %s' % playbook_path)
                 pb = Playbook.load(playbook_path, variable_manager=self._variable_manager, loader=self._loader)
+                self.showgrowth(msg='after PLaybook.load() for %s, before inv.set_playbook' % playbook_path)
                 self._inventory.set_playbook_basedir(os.path.dirname(playbook_path))
+                self.showgrowth(msg='after before inv.set_playbook %s' % playbook_path)
 
                 if self._tqm is None: # we are doing a listing
                     entry = {'playbook': playbook_path}
@@ -81,17 +86,23 @@ class PlaybookExecutor:
                     self._tqm.send_callback('v2_playbook_on_start', pb)
 
                 i = 1
+                self.showgrowth(msg='before pb.get_plays()')
                 plays = pb.get_plays()
+                self.showgrowth(msg='after pb.get_plays()')
                 display.vv(u'%d plays in %s' % (len(plays), to_unicode(playbook_path)))
 
-                for play in plays:
+                self.showgrowth(msg='before iterating over the plays in playbook=%s' % playbook_path)
+                for p_index, play in enumerate(plays):
+                    self.showgrowth(msg='before running play=%s' % p_index)
                     if play._included_path is not None:
                         self._loader.set_basedir(play._included_path)
                     else:
                         self._loader.set_basedir(pb._basedir)
 
                     # clear any filters which may have been applied to the inventory
+                    self.showgrowth(msg='before remove_restriction play=%s' % p_index)
                     self._inventory.remove_restriction()
+                    self.showgrowth(msg='after remove_restriction play=%s' % p_index)
 
                     if play.vars_prompt:
                         for var in play.vars_prompt:
@@ -113,9 +124,13 @@ class PlaybookExecutor:
 
                     # Create a temporary copy of the play here, so we can run post_validate
                     # on it without the templating changes affecting the original object.
+                    self.showgrowth(msg='before all_vars play=%s' % p_index)
                     all_vars = self._variable_manager.get_vars(loader=self._loader, play=play)
+                    self.showgrowth(msg='after all_vars, before Templar play=%s' % p_index)
                     templar = Templar(loader=self._loader, variables=all_vars)
+                    self.showgrowth(msg='after Templar play=%s' % p_index)
                     new_play = play.copy()
+                    self.showgrowth(msg='after play.copy() play=%s' % p_index)
                     new_play.post_validate(templar)
 
                     if self._options.syntax:
@@ -207,6 +222,12 @@ class PlaybookExecutor:
             return result
 
         return result
+
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowth')
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
 
     def _get_serialized_batches(self, play):
         '''
