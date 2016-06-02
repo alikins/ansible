@@ -1,0 +1,1 @@
+some_host-[0001:1000] ansible_connection=local

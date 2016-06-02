@@ -103,6 +103,7 @@ class PlaybookCLI(CLI):
 
         loader, inventory, variable_manager = self._play_prereqs(self.options)
 
+        print('variable_manager=%s' % variable_manager)
         # (which is not returned in list_hosts()) is taken into account for
         # warning if inventory is empty.  But it can't be taken into account for
         # checking if limit doesn't match any hosts.  Instead we don't worry about
@@ -172,6 +173,7 @@ class PlaybookCLI(CLI):
                             return taskmsg
 
                         all_vars = variable_manager.get_vars(play=play)
+                        print('variable_manager2=%s' % variable_manager)
                         play_context = PlayContext(play=play, options=self.options)
                         for block in play.compile():
                             block = block.filter_tagged_tasks(play_context, all_vars)
