@@ -82,10 +82,17 @@ class PlaybookCLI(CLI):
         display.verbosity = self.options.verbosity
         self.validate_conflicts(runas_opts=True, vault_opts=True, fork_opts=True)
 
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowth')
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
+
     def run(self):
 
         super(PlaybookCLI, self).run()
 
+        self.showgrowth(msg='start or run')
         # Note: slightly wrong, this is written so that implicit localhost
         # Manage passwords
         sshpass = None
@@ -125,7 +132,9 @@ class PlaybookCLI(CLI):
         pbex = PlaybookExecutor(playbooks=self.args, inventory=inventory, variable_manager=variable_manager, loader=loader, options=self.options,
                                 passwords=passwords)
 
+        self.showgrowth(msg='after PlaybookExecutor(), before pbex.run()')
         results = pbex.run()
+        self.showgrowth(msg='after  pbex.run()')
 
         self.refs(filename="pre-graph-1", objs=[variable_manager, inventory, pbex, results, self])
         if isinstance(results, list):
@@ -177,10 +186,12 @@ class PlaybookCLI(CLI):
                                         taskmsg += "\tTAGS: [%s]\n" % ', '.join(cur_tags)
 
                             return taskmsg
-
+                        self.showgrowth(msg='before var_ma.get_vars in pb index=%s' % index)
                         all_vars = variable_manager.get_vars(play=play)
+                        self.showgrowth(msg='after var_ma.get_vars in pb index=%s' % index)
                         print('variable_manager2=%s' % variable_manager)
                         play_context = PlayContext(play=play, options=self.options)
+                        self.showgrowth(msg='after PlayContext()  pb index=%s' % index)
                         for block in play.compile():
                             block = block.filter_tagged_tasks(play_context, all_vars)
                             if not block.has_tasks():
@@ -196,12 +207,12 @@ class PlaybookCLI(CLI):
 
             # self.refs(filename="post-1-index", objs=[variable_manager, inventory, pbex, results, self])
             self.refs(filename="post-1-index", objs=locals())
-            pprint.pprint(locals())
+            self.showgrowth(msg='after pbex')
             return 0
         else:
-            pprint.pprint(locals())
             # self.refs(filename="post-no-plays-", objs=[variable_manager, inventory, pbex, results, self])
             self.refs(filename="post-no-plays-", objs=locals())
+            self.showgrowth(msg='afterall')
             return results
 
     def _flush_cache(self, inventory, variable_manager):
