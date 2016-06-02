@@ -1,1 +1,6 @@
-some_host-[0001:1000] ansible_connection=local
+
+1_some_host-0001 ansible_connection=local
+10_some_host-[0001:0010] ansible_connection=local
+100_some_host-[0001:0100] ansible_connection=local
+1000_some_host-[0001:1000] ansible_connection=local
+
