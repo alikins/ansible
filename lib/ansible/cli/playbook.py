@@ -29,12 +29,17 @@ from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.playbook.block import Block
 from ansible.playbook.play_context import PlayContext
 
+import objgraph
+import pprint
+
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+SKIP = True
+#---------------------------------------------------------------------------------------------------
 
 class PlaybookCLI(CLI):
     ''' the tool to run *Ansible playbooks*, which are a configuration and multinode deployment system.
@@ -130,8 +135,9 @@ class PlaybookCLI(CLI):
 
         results = pbex.run()
 
+        self.refs(filename="pre-graph-1", objs=[variable_manager, inventory, pbex, results, self])
         if isinstance(results, list):
-            for p in results:
+            for index, p in enumerate(results):
 
                 display.display('\nplaybook: %s' % p['playbook'])
                 for idx, play in enumerate(p['plays']):
@@ -196,11 +202,40 @@ class PlaybookCLI(CLI):
 
                         display.display(taskmsg)
 
+            # self.refs(filename="post-1-index", objs=[variable_manager, inventory, pbex, results, self])
+            self.refs(filename="post-1-index", objs=locals())
+            pprint.pprint(locals())
             return 0
         else:
+            pprint.pprint(locals())
+            # self.refs(filename="post-no-plays-", objs=[variable_manager, inventory, pbex, results, self])
+            self.refs(filename="post-no-plays-", objs=locals())
             return results
 
     def _flush_cache(self, inventory, variable_manager):
         for host in inventory.list_hosts():
             hostname = host.get_name()
             variable_manager.clear_facts(hostname)
+
+    def refs(self, filename=None, objs=None):
+        SKIP = False
+        if SKIP:
+            return
+        filename = filename or "object-graph"
+        refs_full_fn = "%s-refs.png" % filename
+        backrefs_full_fn = "%s-backrefs.png" % filename
+        print('refs: filename=%s' % (filename))
+        objs = objs or []
+        objgraph.show_refs(objs,
+                           filename=refs_full_fn,
+                           refcounts=True,
+                           shortnames=False,
+                           max_depth=5)
+        objgraph.show_backrefs(objs,
+                               refcounts=True,
+                               shortnames=False,
+                               filename=backrefs_full_fn,
+                               max_depth=5)
+                               shortnames=False,
+                               filename=backrefs_full_fn,
+                               max_depth=5)
