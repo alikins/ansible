@@ -33,7 +33,21 @@ from ansible.utils.unicode import to_bytes
 class ActionModule(ActionBase):
 
     def run(self, tmp=None, task_vars=None):
-        ''' handler for file transfer operations '''
+        ''' handler for file transfer operations
+
+        The args on the self.task object have to be:
+        :arg src: string with the path to the file to copy.
+        :arg content: string or bytes to put into 'dest' path
+        :arg dest: string with path to the destination. Required.
+        :arg raw:
+        :arg force:
+
+
+        :returns: dictionary of results from the module
+                  can include keys: ['failed', 'msg', 'instantiation',
+                                     'src', 'dest', 'diff','changed'] as
+                                     well return values from the 'copy' module.
+        '''
         if task_vars is None:
             task_vars = dict()
 

@@ -1,0 +1,49 @@
+ansible package
+===============
+
+.. automodule:: ansible
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+
+    ansible.cli
+    ansible.compat
+    ansible.config
+    ansible.errors
+    ansible.executor
+    ansible.galaxy
+    ansible.inventory
+    ansible.module_utils
+    ansible.new_inventory
+    ansible.parsing
+    ansible.playbook
+    ansible.plugins
+    ansible.template
+    ansible.utils
+    ansible.vars
+
+Submodules
+----------
+
+ansible.constants module
+------------------------
+
+.. automodule:: ansible.constants
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ansible.release module
+----------------------
+
+.. automodule:: ansible.release
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
