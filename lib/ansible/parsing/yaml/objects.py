@@ -59,7 +59,13 @@ class AnsibleUnicode(AnsibleBaseYAMLObject, text_type):
     ''' sub class for unicode objects '''
     pass
 
+class AnsibleByteString(AnsibleBaseYAMLObject, bytes):
+    ''' sub class for bystream data objects '''
+    pass
 
 class AnsibleSequence(AnsibleBaseYAMLObject, list):
     ''' sub class for lists '''
+    pass
+
+class AnsibleVault(AnsibleBaseYAMLObject, bytes):
     pass
