@@ -21,8 +21,13 @@ __metaclass__ = type
 
 from yaml.constructor import Constructor, ConstructorError
 from yaml.nodes import MappingNode
-from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode
+from yaml import YAMLError
+
+from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode, AnsibleByteString
 from ansible.vars.unsafe_proxy import wrap_var
+from ansible.parsing.vault import VaultLib
+from ansible.utils import unicode
+
 
 try:
     from __main__ import display
@@ -30,9 +35,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
-
 class AnsibleConstructor(Constructor):
-    def __init__(self, file_name=None):
+    def __init__(self, file_name=None, vault_password=None):
+        self._vault_password = vault_password
         self._ansible_file_name = file_name
         super(AnsibleConstructor, self).__init__()
 
@@ -86,6 +91,19 @@ class AnsibleConstructor(Constructor):
 
         return ret
 
+    def construct_yaml_bytestring(self, node, unsafe=False):
+        value = self.construct_scalar(node)
+
+        return value
+
+        ret = AnsibleByteString(value)
+        ret.ansible_pos = self._node_position_info(node)
+
+        if unsafe:
+            ret = wrap_var(ret)
+
+        return ret
+
     def construct_yaml_seq(self, node):
         data = AnsibleSequence()
         yield data
@@ -109,6 +127,23 @@ class AnsibleConstructor(Constructor):
 
         return (datasource, line, column)
 
+    def construct_vault(self, node):
+
+        ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
+
+        if self._vault_password is None:
+            raise ConstructorError(None, None,
+                    "found vault but no vault password provided", node.start_mark)
+
+        vault = VaultLib(password=self._vault_password)
+        if not vault.is_encrypted(ciphertext_data):
+            raise ConstructorError(None, None,
+                    "found vault but argument is not encrypted", node.start_mark)
+
+        plaintext_data = vault.decrypt(ciphertext_data)
+
+        return plaintext_data
+
 AnsibleConstructor.add_constructor(
     u'tag:yaml.org,2002:map',
     AnsibleConstructor.construct_yaml_map)
@@ -128,6 +163,10 @@ AnsibleConstructor.add_constructor(
 AnsibleConstructor.add_constructor(
     u'tag:yaml.org,2002:seq',
     AnsibleConstructor.construct_yaml_seq)
+
+AnsibleConstructor.add_constructor(
+    u'!vault',
+    AnsibleConstructor.construct_vault)
 
 AnsibleConstructor.add_constructor(
     u'!unsafe',
