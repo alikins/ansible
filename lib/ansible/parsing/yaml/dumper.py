@@ -22,7 +22,8 @@ __metaclass__ = type
 import yaml
 from ansible.compat.six import PY3
 
-from ansible.parsing.yaml.objects import AnsibleUnicode, AnsibleSequence, AnsibleMapping
+from ansible.parsing.yaml.objects import AnsibleUnicode, AnsibleSequence, AnsibleMapping, AnsibleByteString
+from ansible.parsing.yaml.objects import AnsibleVault
 from ansible.vars.hostvars import HostVars
 
 class AnsibleDumper(yaml.SafeDumper):
@@ -34,6 +35,9 @@ class AnsibleDumper(yaml.SafeDumper):
 
 def represent_hostvars(self, data):
     return self.represent_dict(dict(data))
+
+def represent_vault(self, data):
+    return self.represent_scalar(data)
 
 if PY3:
     represent_unicode = yaml.representer.SafeRepresenter.represent_str
@@ -60,3 +64,12 @@ AnsibleDumper.add_representer(
     yaml.representer.SafeRepresenter.represent_dict,
 )
 
+AnsibleDumper.add_representer(
+    AnsibleByteString,
+    yaml.representer.SafeRepresenter.represent_str,
+)
+
+AnsibleDumper.add_representer(
+    AnsibleVault,
+    represent_vault,
+)

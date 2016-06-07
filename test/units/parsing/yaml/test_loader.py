@@ -26,9 +26,11 @@ from six import text_type, binary_type
 from collections import Sequence, Set, Mapping
 
 from ansible.compat.tests import unittest
-from ansible.compat.tests.mock import patch
 
+from ansible import errors
 from ansible.parsing.yaml.loader import AnsibleLoader
+from ansible.parsing import vault
+from ansible.utils.unicode import to_bytes
 
 try:
     from _yaml import ParserError
@@ -40,6 +42,7 @@ class NameStringIO(StringIO):
     """In py2.6, StringIO doesn't let you set name because a baseclass has it
     as readonly property"""
     name = None
+
     def __init__(self, *args, **kwargs):
         super(NameStringIO, self).__init__(*args, **kwargs)
 
@@ -159,6 +162,56 @@ class TestAnsibleLoaderBasic(unittest.TestCase):
         self.assertEqual(data[0][u'baz'].ansible_pos, ('myfile.yml', 2, 9))
 
 
+class TestAnsibleLoaderVault(unittest.TestCase):
+    def setUp(self):
+        self.vault_password = "hunter42"
+        self.vault = vault.VaultLib(self.vault_password)
+
+    def test_wrong_password(self):
+        plaintext = u"Ansible"
+        bob_password = "this is a different password"
+
+        bobs_vault = vault.VaultLib(bob_password)
+
+        ciphertext = bobs_vault.encrypt(plaintext)
+        try:
+            self.vault.decrypt(ciphertext)
+        except Exception as e:
+            self.assertIsInstance(e, errors.AnsibleError)
+            self.assertEqual(e.message, 'Decryption failed')
+
+    def test_embedded_vault(self):
+        plaintext_var = u"""This is the plaintext string."""
+        vaulted_var = self.vault.encrypt(plaintext_var)
+
+        import yamllint
+        import yamllint.linter
+        import yamllint.config
+        conf = yamllint.config.YamlLintConfig('extends: default')
+        # add yaml tag
+        lines = vaulted_var.splitlines()
+        lines2 = []
+        for line in lines:
+            lines2.append('        %s' % line)
+
+        vaulted_var = '\n'.join(lines2)
+        tagged_vaulted_var = u"""!vault |\n%s""" % vaulted_var
+
+        yaml_plaintext = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s""" % tagged_vaulted_var
+
+#        lint = yamllint.linter.run(yaml_plaintext, conf)
+
+#        for problem in lint:
+#            print(problem)
+
+        stream = NameStringIO(yaml_plaintext)
+        stream.name = 'my.yml'
+
+        loader = AnsibleLoader(stream, vault_password=self.vault_password)
+
+        data_from_yaml = loader.get_single_data()
+        self.assertEquals(plaintext_var, data_from_yaml['the_secret'])
+
 class TestAnsibleLoaderPlay(unittest.TestCase):
 
     def setUp(self):
@@ -242,7 +295,7 @@ class TestAnsibleLoaderPlay(unittest.TestCase):
 
     def check_vars(self):
         # Numbers don't have line/col information yet
-        #self.assertEqual(self.data[0][u'vars'][u'number'].ansible_pos, (self.play_filename, 4, 21))
+        # self.assertEqual(self.data[0][u'vars'][u'number'].ansible_pos, (self.play_filename, 4, 21))
 
         self.assertEqual(self.data[0][u'vars'][u'string'].ansible_pos, (self.play_filename, 5, 29))
         self.assertEqual(self.data[0][u'vars'][u'utf8_string'].ansible_pos, (self.play_filename, 6, 34))
@@ -255,8 +308,8 @@ class TestAnsibleLoaderPlay(unittest.TestCase):
         self.assertEqual(self.data[0][u'vars'][u'list'][0].ansible_pos, (self.play_filename, 11, 25))
         self.assertEqual(self.data[0][u'vars'][u'list'][1].ansible_pos, (self.play_filename, 12, 25))
         # Numbers don't have line/col info yet
-        #self.assertEqual(self.data[0][u'vars'][u'list'][2].ansible_pos, (self.play_filename, 13, 25))
-        #self.assertEqual(self.data[0][u'vars'][u'list'][3].ansible_pos, (self.play_filename, 14, 25))
+        # self.assertEqual(self.data[0][u'vars'][u'list'][2].ansible_pos, (self.play_filename, 13, 25))
+        # self.assertEqual(self.data[0][u'vars'][u'list'][3].ansible_pos, (self.play_filename, 14, 25))
 
     def check_tasks(self):
         #
