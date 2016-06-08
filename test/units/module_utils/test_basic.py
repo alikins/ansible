@@ -432,19 +432,20 @@ class TestModuleUtilsBasicSelinux(BaseTestModuleUtilsBasic):
                 self.assertEqual(am.selinux_mls_enabled(), True)
         delattr(basic, 'selinux')
 
-    def test_module_utils_basic_ansible_module_selinux_initial_context(self):
-        from ansible.module_utils import basic
-        basic._ANSIBLE_ARGS = None
+    @patch('ansible.module_utils.basic.selinux.is_selinux_mls_enabled', return_value=False)
+    @patch('ansible.module_utils.basic._ANSIBLE_ARGS', return_value=None)
+    def test_module_selinux_initial_context(self, mock_basic_args, mock_mls_enabled):
 
-        am = basic.AnsibleModule(
-            argument_spec = dict(),
-        )
+        #am = basic.AnsibleModule(
+        #    argument_spec = dict(),
+        #)
 
-        am.selinux_mls_enabled = MagicMock()
-        am.selinux_mls_enabled.return_value = False
-        self.assertEqual(am.selinux_initial_context(), [None, None, None])
-        am.selinux_mls_enabled.return_value = True
-        self.assertEqual(am.selinux_initial_context(), [None, None, None, None])
+        #am.selinux_mls_enabled = MagicMock()
+        #am.selinux_mls_enabled.return_value = False
+        self.assertEqual(basic.selinux_initial_context(), [None, None, None])
+
+        mock_mls_enabled.return_value = True
+        self.assertEqual(basic.selinux_initial_context(), [None, None, None, None])
 
     def test_module_utils_basic_ansible_module_selinux_enabled(self):
         from ansible.module_utils import basic
@@ -556,8 +557,7 @@ class TestModuleUtilsBasicSelinux(BaseTestModuleUtilsBasic):
 
         delattr(basic, 'selinux')
 
-    def test_module_utils_basic_ansible_module_is_special_selinux_path(self):
-        from ansible.module_utils import basic
+    def test_ansible_module_is_special_selinux_path(self):
         basic._ANSIBLE_ARGS = None
 
         args = json.dumps(dict(ANSIBLE_MODULE_ARGS={'_ansible_selinux_special_fs': "nfs,nfsd,foos"}))
@@ -690,7 +690,7 @@ class TestModuleUtilsBasicFileSystem(BaseTestModuleUtilsBasic):
                 self.assertRaises(SystemExit, am.set_context_if_different, '/path/to/file', ['foo_u', 'foo_r', 'foo_t', 's0'], True)
 
             am.is_special_selinux_path = MagicMock(return_value=(True, ['sp_u', 'sp_r', 'sp_t', 's0']))
-            
+
             with patch('selinux.lsetfilecon', return_value=0) as m:
                 self.assertEqual(am.set_context_if_different('/path/to/file', ['foo_u', 'foo_r', 'foo_t', 's0'], False), True)
                 m.assert_called_with(b'/path/to/file', 'sp_u:sp_r:sp_t:s0')
