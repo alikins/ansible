@@ -99,6 +99,9 @@ NOSETESTS3 ?= nosetests-3.4
 
 all: clean python
 
+justtests:
+	PYTHONPATH=./lib $(NOSETESTS) -d -w test/units -v
+
 tests:
 	PYTHONPATH=./lib $(NOSETESTS) -d -w test/units -v --with-coverage --cover-package=ansible --cover-branches
 
