@@ -50,6 +50,48 @@ class TestCensorArgs(unittest.TestCase):
         log.debug('ca=%s', ca)
         assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
 
+    def test_password(self):
+        to_hide = 'hunter42'
+        no_log_values = set([])
+        ca = basic.censor_args(['some', 'args', 'password', 'maybe', '--password', 'hunter42'], no_log_values)
+        log.debug('ca=%s', ca)
+        assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
+
+    def test_password_equals(self):
+        to_hide = 'hunter42'
+        no_log_values = set([])
+        ca = basic.censor_args(['password=hunter42', 'some', 'args', 'password', 'maybe', '--password', '=', 'hunter42'], no_log_values)
+        assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
+
+    def test_just_password(self):
+        to_hide = 'hunter42'
+        no_log_values = set([])
+        ca = basic.censor_args(['--password', 'hunter42'], no_log_values)
+        assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
+
+    def test_string_and_unicode(self):
+        to_hide = u'hunter42'
+        no_log_values = set(['blip', to_hide])
+        ca = basic.censor_args(['--password', 'hunter42'], no_log_values)
+        log.debug('ca=%s', ca)
+        assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
+
+
+    def test_args_string(self):
+        to_hide = 'thx1138'
+        no_log_values = set([to_hide])
+        ca = basic.censor_args('The secret key is thx1138', no_log_values)
+        log.debug('ca=%s', ca)
+        assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
+
+    def test_args_unicode(self):
+        to_hide = 'thx1138'
+        no_log_values = set([to_hide])
+        ca = basic.censor_args(u'The secret key is thx1138', no_log_values)
+        log.debug('ca=%s', ca)
+        assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
+
+
 class TestModuleUtilsBasic(unittest.TestCase):
 
     def setUp(self):
