@@ -636,7 +636,7 @@ def env_fallback(*args, **kwargs):
     else:
         raise AnsibleFallbackNotFound
 
-
+# TODO: add wrapper methods into AnsibleModule class for compat
 # Detect whether using selinux that is MLS-aware.
 # While this means you can set the level/range with
 # selinux.lsetfilecon(), it may or may not mean that you
