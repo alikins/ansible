@@ -57,14 +57,16 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
         self.stdin_swap.__enter__()
         self._imports_before = []
         self._wrapped_imports = []
-        self.mod_to_fail = None
+        self.mods_to_fail = []
+        self.mods_to_fake = []
 
     def tearDown(self):
         # unittest doesn't have a clean place to use a context manager, so we have to enter/exit manually
         self.stdin_swap.__exit__(None, None, None)
         self.clear_modules(self._wrapped_imports)
         self._wrapped_imports = []
-        self.mod_to_fail = None
+        self.mods_to_fail = None
+        self.mods_to_fake = []
 
     def clear_modules(self, mods):
         for mod in mods:
@@ -78,20 +80,24 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
         return realimport(name, *args, **kwargs)
 
     def _mock_import(self, name, *args, **kwargs):
-        if self.mod_to_fail and (name == self.mod_to_fail):
+        if name in self.mods_to_fail:
             raise ImportError
+        if name in self.mods_to_fake:
+            mock_module = Mock()
+            return mock_module
         return self._import_wrapper(name, *args, **kwargs)
 
     @patch('__builtin__.__import__')
     def test_import_syslog_has_syslog(self, mock_import):
         mock_import.side_effect = self._mock_import
+        self.mods_to_fake = ['syslog']
 
         import ansible.module_utils.basic as mod
         self.assertTrue(mod.HAS_SYSLOG)
 
     @patch('__builtin__.__import__')
     def test_import_syslog_no_syslog(self, mock_import):
-        self.mod_to_fail = 'syslog'
+        self.mods_to_fail = ['syslog']
         mock_import.side_effect = self._mock_import
 
         import ansible.module_utils.basic as mod
@@ -110,7 +116,7 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
     @patch('__builtin__.__import__')
     def test_import_selinux_no_selinux(self, mock_import):
         mock_import.side_effect = self._mock_import
-        self.mod_to_fail = "selinux"
+        self.mods_to_fail = ["selinux"]
 
         import ansible.module_utils.basic as mod
         self.assertFalse(mod.HAVE_SELINUX)
@@ -125,7 +131,7 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
     @patch('__builtin__.__import__')
     def test_import_json_no_json(self, mock_import):
         mock_import.side_effect = self._mock_import
-        self.mod_to_fail = 'json'
+        self.mods_to_fail = ['json']
 
         try:
             import ansible.module_utils.basic as mod
@@ -170,24 +176,17 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
 
     @patch('__builtin__.__import__')
     def test_import_has_systemd_journal(self, mock_import):
-        def _mock_import(name, *args, **kwargs):
-            try:
-                fromlist = kwargs.get('fromlist', args[2])
-            except IndexError:
-                fromlist = []
-            if name == 'systemd' and 'journal' in fromlist:
-                raise ImportError
-            return realimport(name, *args, **kwargs)
-
-        mock_import.side_effect = _mock_import
+        mock_import.side_effect = self._mock_import
+        self.mods_to_fake = ['systemd', 'systemd.journal']
         import ansible.module_utils.basic as mod
         log.debug('mod=%s', dir(mod))
+        log.debug('mod.has_journal=%s', mod.has_journal)
         self.assertTrue(mod.has_journal)
 
     @patch('__builtin__.__import__')
     def test_import_no_systemd_journal(self, mock_import):
         mock_import.side_effect = self._mock_import
-        self.mod_to_fail = 'systemd'
+        self.mods_to_fail = ['systemd']
 
         import ansible.module_utils.basic as mod
         log.debug('mod=%s', mod)
