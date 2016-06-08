@@ -91,6 +91,128 @@ class TestCensorArgs(unittest.TestCase):
         log.debug('ca=%s', ca)
         assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
 
+class TestReturnValues(unittest.TestCase):
+    """Tests for module_utils.basic.return_values()."""
+    def test(self):
+        in_value = 'sdf'
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('rv=%s', rv)
+
+    def test_none(self):
+        in_value = None
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+            assert False,  ('The return_value from return_value(None) should be an empty generator.')
+
+    def test_empty_string(self):
+        in_value = ''
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_empty_bytes(self):
+        in_value = b''
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_empty_unicode(self):
+        in_value = u''
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_empty_list(self):
+        in_value = []
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_string_list(self):
+        in_value = ['foo', 'bar']
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_bytes_list(self):
+        in_value = [b'foo', b'bar']
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_unicode_list(self):
+        in_value = [u'foo', u'bar']
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_none_list(self):
+        in_value = [None, None]
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_empty_map(self):
+        in_value = {}
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_mixed_map(self):
+        in_value = {'a': None,
+                    'b': [],
+                    'c': {},
+                    'd': '',
+                    'e': b'',
+                    'f': u'',
+                    'g': ['foo', 'bar', 'baz'],
+                    'h': False,
+                    'i': True,
+                    'j': [False, True],
+                    'k': {'A':[], 'B':{}},
+                    }
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_bool_false(self):
+        in_value = False
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_bool_true(self):
+        in_value = True
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_number_int(self):
+        in_value = 11
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_number_float(self):
+        in_value = 11.11
+        rvg = basic.return_values(in_value)
+        for rv in rvg:
+            log.debug('None rv=%s', rv)
+
+    def test_unknown_obj_ellipsis(self):
+        # Just an obvious 'unknown' type
+        in_value = Ellipsis
+
+        rvg = basic.return_values(in_value)
+        try:
+            for rv in rvg:
+                log.debug('None rv=%s', rv)
+        except TypeError:
+            return
+        self.AssertionError('Expected an Ellipsis to raise a TypeError but return_values did not.')
+
 
 class BaseTestModuleUtilsBasic(unittest.TestCase):
 
