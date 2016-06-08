@@ -432,19 +432,14 @@ class TestModuleUtilsBasicSelinux(BaseTestModuleUtilsBasic):
                 self.assertEqual(am.selinux_mls_enabled(), True)
         delattr(basic, 'selinux')
 
-    @patch('ansible.module_utils.basic.selinux.is_selinux_mls_enabled', return_value=False)
-    @patch('ansible.module_utils.basic._ANSIBLE_ARGS', return_value=None)
-    def test_module_selinux_initial_context(self, mock_basic_args, mock_mls_enabled):
+    @patch('ansible.module_utils.basic.selinux_mls_enabled', return_value=False)
+    #@patch('ansible.module_utils.basic._ANSIBLE_ARGS', return_value=None)
+    def test_module_selinux_initial_context(self, mock_selinux_mls_enabled):
 
-        #am = basic.AnsibleModule(
-        #    argument_spec = dict(),
-        #)
-
-        #am.selinux_mls_enabled = MagicMock()
-        #am.selinux_mls_enabled.return_value = False
+        mock_selinux_mls_enabled.return_value = False
         self.assertEqual(basic.selinux_initial_context(), [None, None, None])
 
-        mock_mls_enabled.return_value = True
+        mock_selinux_mls_enabled.return_value = True
         self.assertEqual(basic.selinux_initial_context(), [None, None, None, None])
 
     def test_module_utils_basic_ansible_module_selinux_enabled(self):
