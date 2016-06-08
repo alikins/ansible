@@ -59,11 +59,20 @@ from itertools import repeat, chain
 
 log = logging.getLogger(__name__)
 
+log.debug('BASIC sys.stdin=%s', sys.stdin)
+log.debug('sys.stdout=%s', sys.stdout)
+log.debug('HAS_SYSLOG=%s', 'HAS_SYSLOG' in locals())
+log.debug('syslog in sys.modules=%s', 'syslog' in sys.modules)
+#import ptpdb; ptpdb.set_trace()
+
 try:
     import syslog
     HAS_SYSLOG=True
 except ImportError:
     HAS_SYSLOG=False
+
+log.debug('2 syslog in sys.modules=%s', 'syslog' in sys.modules)
+#log.debug('syslog=%s', sys.modules['syslog'])
 
 try:
     # Python 2

@@ -14,6 +14,7 @@ realimport = __import__
 
 
 class TestModuleUtilsBasicImporting(unittest.TestCase):
+    builtin_import_name = '__builtin__.__import__'
 
     def setUp(self):
         args = json.dumps(dict(ANSIBLE_MODULE_ARGS={}))
@@ -24,6 +25,7 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
         self._wrapped_imports = []
         self.mods_to_fail = []
         self.mods_to_fake = []
+        self.clear_basic()
 
     def tearDown(self):
         # unittest doesn't have a clean place to use a context manager, so we have to enter/exit manually
@@ -32,21 +34,23 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
         self._wrapped_imports = []
         self.mods_to_fail = []
         self.mods_to_fake = []
+        self.clear_basic()
 
     def clear_modules(self, mods):
         for mod in mods:
             if mod in sys.modules or mod in self.mods_to_fake:
-                log.debug('deleting module=%s', mod)
                 del sys.modules[mod]
 
+    def clear_basic(self):
+        return self.clear_modules(['ansible.module_utils.basic'])
+
     def _import_wrapper(self, name, *args, **kwargs):
-        log.debug('%s', name)
         if name not in sys.modules:
             self._wrapped_imports.append(name)
+
         return realimport(name, *args, **kwargs)
 
     def _mock_import(self, name, *args, **kwargs):
-        log.debug('%s', name)
         if name in self.mods_to_fail:
             raise ImportError
         if name in self.mods_to_fake:
@@ -64,8 +68,8 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
 
     @patch('__builtin__.__import__')
     def test_import_syslog_no_syslog(self, mock_import):
-        self.mods_to_fail = ['syslog']
         mock_import.side_effect = self._mock_import
+        self.mods_to_fail = ['syslog']
 
         import ansible.module_utils.basic as mod
         self.assertFalse(mod.HAS_SYSLOG)
@@ -128,13 +132,11 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
         self.assertEqual(mod.literal_eval("1"), 1)
         self.assertEqual(mod.literal_eval("-1"), -1)
         self.assertRaises(ValueError, mod.literal_eval, "asdfasdfasdf")
-        return
-
-        self.assertEqual(mod.module_utils.basic.literal_eval("(1,2,3)"), (1,2,3))
-        self.assertEqual(mod.module_utils.basic.literal_eval("[1]"), [1])
-        self.assertEqual(mod.module_utils.basic.literal_eval("True"), True)
-        self.assertEqual(mod.module_utils.basic.literal_eval("False"), False)
-        self.assertEqual(mod.module_utils.basic.literal_eval("None"), None)
+        self.assertEqual(mod.literal_eval("(1,2,3)"), (1,2,3))
+        self.assertEqual(mod.literal_eval("[1]"), [1])
+        self.assertEqual(mod.literal_eval("True"), True)
+        self.assertEqual(mod.literal_eval("False"), False)
+        self.assertEqual(mod.literal_eval("None"), None)
         # self.assertEqual(mod.module_utils.basic.literal_eval('{"a": 1}'), dict(a=1))
 
     @patch('__builtin__.__import__')
@@ -142,8 +144,6 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
         mock_import.side_effect = self._mock_import
         self.mods_to_fake = ['systemd', 'systemd.journal']
         import ansible.module_utils.basic as mod
-    #    log.debug('mod=%s', dir(mod))
-        log.debug('mod.has_journal=%s', mod.has_journal)
         self.assertTrue(mod.has_journal)
 
     @patch('__builtin__.__import__')
@@ -152,5 +152,4 @@ class TestModuleUtilsBasicImporting(unittest.TestCase):
         self.mods_to_fail = ['systemd']
 
         import ansible.module_utils.basic as mod
-    #    log.debug('mod=%s', mod)
         self.assertFalse(mod.has_journal)
