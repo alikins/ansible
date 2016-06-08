@@ -637,6 +637,26 @@ def env_fallback(*args, **kwargs):
         raise AnsibleFallbackNotFound
 
 
+# Detect whether using selinux that is MLS-aware.
+# While this means you can set the level/range with
+# selinux.lsetfilecon(), it may or may not mean that you
+# will get the selevel as part of the context returned
+# by selinux.lgetfilecon().
+def selinux_mls_enabled():
+    if not HAVE_SELINUX:
+        return False
+    if selinux.is_selinux_mls_enabled() == 1:
+        return True
+    else:
+        return False
+
+# Determine whether we need a placeholder for selevel/mls
+def selinux_initial_context():
+    context = [None, None, None]
+    if selinux_mls_enabled():
+        context.append(None)
+    return context
+
 class AnsibleFallbackNotFound(Exception):
     pass
 
@@ -780,19 +800,6 @@ class AnsibleModule(object):
         )
 
 
-    # Detect whether using selinux that is MLS-aware.
-    # While this means you can set the level/range with
-    # selinux.lsetfilecon(), it may or may not mean that you
-    # will get the selevel as part of the context returned
-    # by selinux.lgetfilecon().
-
-    def selinux_mls_enabled(self):
-        if not HAVE_SELINUX:
-            return False
-        if selinux.is_selinux_mls_enabled() == 1:
-            return True
-        else:
-            return False
 
     def selinux_enabled(self):
         if not HAVE_SELINUX:
@@ -807,12 +814,6 @@ class AnsibleModule(object):
         else:
             return False
 
-    # Determine whether we need a placeholder for selevel/mls
-    def selinux_initial_context(self):
-        context = [None, None, None]
-        if self.selinux_mls_enabled():
-            context.append(None)
-        return context
 
     def _to_filesystem_str(self, path):
         '''Returns filesystem path as a str, if it wasn't already.
@@ -829,7 +830,7 @@ class AnsibleModule(object):
 
     # If selinux fails to find a default, return an array of None
     def selinux_default_context(self, path, mode=0):
-        context = self.selinux_initial_context()
+        context = selinux_initial_context()
         if not HAVE_SELINUX or not self.selinux_enabled():
             return context
         try:
@@ -844,7 +845,7 @@ class AnsibleModule(object):
         return context
 
     def selinux_context(self, path):
-        context = self.selinux_initial_context()
+        context = selinux_initial_context()
         if not HAVE_SELINUX or not self.selinux_enabled():
             return context
         try:
