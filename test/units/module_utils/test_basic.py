@@ -92,7 +92,7 @@ class TestCensorArgs(unittest.TestCase):
         assert ca.find(to_hide), 'failed to remove %s from %s' % (to_hide, ca)
 
 
-class TestModuleUtilsBasic(unittest.TestCase):
+class BaseTestModuleUtilsBasic(unittest.TestCase):
 
     def setUp(self):
         args = json.dumps(dict(ANSIBLE_MODULE_ARGS={}))
@@ -103,6 +103,9 @@ class TestModuleUtilsBasic(unittest.TestCase):
     def tearDown(self):
         # unittest doesn't have a clean place to use a context manager, so we have to enter/exit manually
         self.stdin_swap.__exit__(None, None, None)
+
+
+class TestModuleUtilsBasic(BaseTestModuleUtilsBasic):
 
     def clear_modules(self, mods):
         for mod in mods:
@@ -139,10 +142,10 @@ class TestModuleUtilsBasic(unittest.TestCase):
                         return ("Bar", "2", "Two")
                     else:
                         return ("", "", "")
-                
+
                 with patch('platform.linux_distribution', side_effect=_dist):
                     self.assertEqual(get_distribution(), "Bar")
-                
+
             with patch('platform.linux_distribution', side_effect=Exception("boo")):
                 with patch('platform.dist', return_value=("bar", "2", "Two")):
                     self.assertEqual(get_distribution(), "Bar")
@@ -351,6 +354,9 @@ class TestModuleUtilsBasic(unittest.TestCase):
                 res = am.load_file_common_arguments(params=extended_params)
                 self.assertEqual(res, final_params)
 
+
+class TestModuleUtilsBasicSelinux(BaseTestModuleUtilsBasic):
+
     def test_module_utils_basic_ansible_module_selinux_mls_enabled(self):
         from ansible.module_utils import basic
         basic._ANSIBLE_ARGS = None
@@ -538,6 +544,9 @@ class TestModuleUtilsBasic(unittest.TestCase):
                 self.assertEqual(am.is_special_selinux_path('/some/random/path'), (False, None))
                 self.assertEqual(am.is_special_selinux_path('/some/path/that/should/be/nfs'), (True, ['foo_u', 'foo_r', 'foo_t', 's0']))
                 self.assertEqual(am.is_special_selinux_path('/weird/random/fstype/path'), (True, ['foo_u', 'foo_r', 'foo_t', 's0']))
+
+
+class TestModuleUtilsBasicFileSystem(BaseTestModuleUtilsBasic):
 
     def test_module_utils_basic_ansible_module_to_filesystem_str(self):
         from ansible.module_utils import basic
