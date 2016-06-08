@@ -792,7 +792,11 @@ class AnsibleModule(object):
             selevel=selevel, secontext=secontext,
         )
 
+    def selinux_mls_enabled(self):
+        return selinux_mls_enabled()
 
+    def selinux_initial_context(self):
+        return selinux_initial_context()
 
     def selinux_enabled(self):
         if not HAVE_SELINUX:
@@ -806,7 +810,6 @@ class AnsibleModule(object):
             return True
         else:
             return False
-
 
     def _to_filesystem_str(self, path):
         '''Returns filesystem path as a str, if it wasn't already.
@@ -823,11 +826,16 @@ class AnsibleModule(object):
 
     # If selinux fails to find a default, return an array of None
     def selinux_default_context(self, path, mode=0):
+        log.debug('path=%s, mode=%s', path, mode)
         context = selinux_initial_context()
+        log.debug('context=%s', context)
+        log.debug('H_AS=%s selinu_enabled=%s', HAVE_SELINUX, self.selinux_enabled())
+
         if not HAVE_SELINUX or not self.selinux_enabled():
             return context
         try:
             ret = selinux.matchpathcon(self._to_filesystem_str(path), mode)
+            log.debug('ret=%s', ret)
         except OSError:
             return context
         if ret[0] == -1:
@@ -839,8 +847,10 @@ class AnsibleModule(object):
 
     def selinux_context(self, path):
         context = selinux_initial_context()
+        log.debug('H_S=%s selinux_enabled()=%s', not HAVE_SELINUX, not self.selinux_enabled())
         if not HAVE_SELINUX or not self.selinux_enabled():
             return context
+        log.debug('cotext=%s', context)
         try:
             ret = selinux.lgetfilecon_raw(self._to_filesystem_str(path))
         except OSError:
@@ -849,11 +859,13 @@ class AnsibleModule(object):
                 self.fail_json(path=path, msg='path %s does not exist' % path)
             else:
                 self.fail_json(path=path, msg='failed to retrieve selinux context')
+        log.debug('ret=%s', ret)
         if ret[0] == -1:
             return context
         # Limit split to 4 because the selevel, the last in the list,
         # may contain ':' characters
         context = ret[1].split(':', 3)
+        log.debug('context2=%s', context)
         return context
 
     def user_and_group(self, filename):
