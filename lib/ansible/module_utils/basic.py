@@ -541,7 +541,6 @@ def censor_args(args, no_log_values):
 
         if PASSWD_ARG_RE.match(arg):
             sep_idx = arg.find('=')
-
             if sep_idx > -1:
                 clean_args.append('%s=********' % arg[:sep_idx])
                 continue
