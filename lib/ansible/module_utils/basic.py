@@ -36,6 +36,7 @@ BOOLEANS = BOOLEANS_TRUE + BOOLEANS_FALSE
 # be used to do many common tasks
 
 import locale
+import logging
 import os
 import re
 import pipes
@@ -55,6 +56,8 @@ import platform
 import errno
 import datetime
 from itertools import repeat, chain
+
+log = logging.getLogger(__name__)
 
 try:
     import syslog
@@ -677,6 +680,7 @@ class AnsibleModule(object):
                 if no_log_object:
                     self.no_log_values.update(return_values(no_log_object))
 
+        log.debug('no_log_values=%s', self.no_log_values)
         # check the locale as set by the current environment, and reset to
         # a known valid (LANG=C) if it's an invalid/unavailable locale
         self._check_locale()
@@ -867,6 +871,7 @@ class AnsibleModule(object):
             f.close()
         except:
             return (False, None)
+
         path_mount_point = self.find_mount_point(path)
         for line in mount_data:
             (device, mount_point, fstype, options, rest) = line.split(' ', 4)
