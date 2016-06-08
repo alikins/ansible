@@ -412,29 +412,23 @@ class TestModuleUtilsBasic(BaseTestModuleUtilsBasic):
 
 class TestModuleUtilsBasicSelinux(BaseTestModuleUtilsBasic):
 
-    def test_module_utils_basic_ansible_module_selinux_mls_enabled(self):
-        from ansible.module_utils import basic
-        basic._ANSIBLE_ARGS = None
+    @patch('ansible.module_utils.basic.HAVE_SELINUX', return_value=False)
+    @patch.object(basic, 'selinux', return_value=False, create=True)
+    def test_selinux_mls_enabled(self, mock_selinux_module, mock_HAVE_SELINUX):
+        self.assertEqual(basic.selinux_mls_enabled(), False)
 
-        am = basic.AnsibleModule(
-            argument_spec = dict(),
-        )
+        log.debug('m_hs %s', mock_HAVE_SELINUX)
+        mock_HAVE_SELINUX.return_value = True
+        mock_selinux_module.is_selinux_mls_enabled = MagicMock()
 
-        basic.HAVE_SELINUX = False
-        self.assertEqual(am.selinux_mls_enabled(), False)
+        mock_selinux_module.is_selinux_mls_enabled.return_value = 0
+        self.assertEqual(basic.selinux_mls_enabled(), False)
 
-        basic.HAVE_SELINUX = True
-        basic.selinux = Mock()
-        with patch.dict('sys.modules', {'selinux': basic.selinux}):
-            with patch('selinux.is_selinux_mls_enabled', return_value=0):
-                self.assertEqual(am.selinux_mls_enabled(), False)
-            with patch('selinux.is_selinux_mls_enabled', return_value=1):
-                self.assertEqual(am.selinux_mls_enabled(), True)
-        delattr(basic, 'selinux')
+        mock_selinux_module.is_selinux_mls_enabled.return_value = 1
+        self.assertEqual(basic.selinux_mls_enabled(), True)
 
     @patch('ansible.module_utils.basic.selinux_mls_enabled', return_value=False)
-    #@patch('ansible.module_utils.basic._ANSIBLE_ARGS', return_value=None)
-    def test_module_selinux_initial_context(self, mock_selinux_mls_enabled):
+    def test_selinux_initial_context(self, mock_selinux_mls_enabled):
 
         mock_selinux_mls_enabled.return_value = False
         self.assertEqual(basic.selinux_initial_context(), [None, None, None])
