@@ -813,7 +813,6 @@ class AnsibleModule(object):
             log.debug('H_S1=%s', HAVE_SELINUX)
         else:
             log.debug('H_S_else=%s', HAVE_SELINUX)
-        log.debug('selinux=%s', selinux)
         if not HAVE_SELINUX:
             seenabled = self.get_bin_path('selinuxenabled')
             if seenabled is not None:
