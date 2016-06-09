@@ -162,72 +162,76 @@ class BaseTestModuleUtilsBasic(unittest.TestCase):
 
 class TestModuleUtilsBasic(BaseTestModuleUtilsBasic):
 
-    def clear_modules(self, mods):
-        for mod in mods:
-            if mod in sys.modules:
-                del sys.modules[mod]
+    @patch('platform.system', return_value='foo')
+    def test_get_platform(self, mock_platform_system):
+            self.assertEqual(basic.get_platform(), 'foo')
 
-    def test_get_platform(self):
-        with patch('platform.system', return_value='foo'):
-            from ansible.module_utils.basic import get_platform
-            self.assertEqual(get_platform(), 'foo')
+    @patch('ansible.module_utils.basic.os.path.isfile')
+    @patch('platform.linux_distribution')
+    @patch('platform.dist')
+    @patch('platform.system', return_value='Foo')
+    def test_module_utils_basic_get_distribution(self, mock_platform_system,
+                                                 mock_platform_dist,
+                                                 mock_linux_distribution,
+                                                 mock_isfile):
+        self.assertEqual(basic.get_distribution(), None)
 
-    def test_module_utils_basic_get_distribution(self):
-        from ansible.module_utils.basic import get_distribution
+        mock_platform_system.return_value = 'Linux'
+        mock_linux_distribution.return_value = ["foo"]
+        self.assertEqual(basic.get_distribution(), "Foo")
 
-        with patch('platform.system', return_value='Foo'):
-            self.assertEqual(get_distribution(), None)
+        mock_isfile.return_value = True
+        mock_linux_distribution.side_effect = [("AmazonFooBar",)]
+        self.assertEqual(basic.get_distribution(), "Amazonfoobar")
 
-        with patch('platform.system', return_value='Linux'):
-            with patch('platform.linux_distribution', return_value=["foo"]):
-                self.assertEqual(get_distribution(), "Foo")
+        mock_linux_distribution.side_effect = (("",), ("AmazonFooBam",))
+        self.assertEqual(basic.get_distribution(), "Amazon")
 
-            with patch('os.path.isfile', return_value=True):
-                with patch('platform.linux_distribution', side_effect=[("AmazonFooBar",)]):
-                    self.assertEqual(get_distribution(), "Amazonfoobar")
+        mock_linux_distribution.side_effect = [("",),("",)]
+        self.assertEqual(basic.get_distribution(), "OtherLinux")
 
-                with patch('platform.linux_distribution', side_effect=(("",), ("AmazonFooBam",))):
-                    self.assertEqual(get_distribution(), "Amazon")
+        def _dist(distname='', version='', id='', supported_dists=(), full_distribution_name=1):
+            if supported_dists != ():
+                return ("Bar", "2", "Two")
+            else:
+                return ("", "", "")
 
-                with patch('platform.linux_distribution', side_effect=[("",),("",)]):
-                    self.assertEqual(get_distribution(), "OtherLinux")
+        mock_linux_distribution.side_effect = _dist
+        self.assertEqual(basic.get_distribution(), "Bar")
 
-                def _dist(distname='', version='', id='', supported_dists=(), full_distribution_name=1):
-                    if supported_dists != ():
-                        return ("Bar", "2", "Two")
-                    else:
-                        return ("", "", "")
+        mock_linux_distribution.side_effect = Exception("boo")
+        mock_platform_dist.return_value = ("bar", "2", "Two")
+        self.assertEqual(basic.get_distribution(), "Bar")
 
-                with patch('platform.linux_distribution', side_effect=_dist):
-                    self.assertEqual(get_distribution(), "Bar")
+    @patch('ansible.module_utils.basic.os.path.isfile')
+    @patch('platform.linux_distribution')
+    @patch('platform.dist')
+    @patch('platform.system', return_value='Foo')
+    def test_module_utils_basic_get_distribution_version(self, mock_platform_system,
+                                                         mock_platform_dist,
+                                                         mock_linux_distribution,
+                                                         mock_isfile):
+        mock_platform_system.return_value = 'Foo'
+        self.assertEqual(basic.get_distribution_version(), None)
 
-            with patch('platform.linux_distribution', side_effect=Exception("boo")):
-                with patch('platform.dist', return_value=("bar", "2", "Two")):
-                    self.assertEqual(get_distribution(), "Bar")
+        mock_platform_system.return_value = 'Linux'
+        mock_linux_distribution.return_value = ("foo", "1", "One")
+        self.assertEqual(basic.get_distribution_version(), "1")
 
-    def test_module_utils_basic_get_distribution_version(self):
-        from ansible.module_utils.basic import get_distribution_version
+        mock_isfile.return_value = True
 
-        with patch('platform.system', return_value='Foo'):
-            self.assertEqual(get_distribution_version(), None)
+        def _dist(distname='', version='', id='', supported_dists=(), full_distribution_name=1):
+            if supported_dists != ():
+                return ("AmazonFooBar", "2", "")
+            else:
+                return ("", "", "")
 
-        with patch('platform.system', return_value='Linux'):
-            with patch('platform.linux_distribution', return_value=("foo", "1", "One")):
-                self.assertEqual(get_distribution_version(), "1")
+        mock_linux_distribution.side_effect = _dist
+        self.assertEqual(basic.get_distribution_version(), "2")
 
-            with patch('os.path.isfile', return_value=True):
-                def _dist(distname='', version='', id='', supported_dists=(), full_distribution_name=1):
-                    if supported_dists != ():
-                        return ("AmazonFooBar", "2", "")
-                    else:
-                        return ("", "", "")
-
-                with patch('platform.linux_distribution', side_effect=_dist):
-                    self.assertEqual(get_distribution_version(), "2")
-
-            with patch('platform.linux_distribution', side_effect=Exception("boo")):
-                with patch('platform.dist', return_value=("bar", "3", "Three")):
-                    self.assertEqual(get_distribution_version(), "3")
+        mock_linux_distribution.side_effect = Exception("boo")
+        mock_platform_dist.return_value = ("bar", "3", "Three")
+        self.assertEqual(basic.get_distribution_version(), "3")
 
     def test_module_utils_basic_load_platform_subclass(self):
         class LinuxTest:
@@ -437,8 +441,14 @@ class TestModuleUtilsBasicSelinux(BaseTestModuleUtilsBasic):
 
 
 class TestModuleUtilsBasicAnsibleModuleSelinux(BaseTestModuleUtilsBasic):
-    def test_selinux_enabled_no_selinux_module(self):
+    @patch('ansible.module_utils.basic.HAVE_SELINUX', new_callable=Mock, return_value=False)
+    @patch('ansible.module_utils.basic.AnsibleModule.get_bin_path')
+    @patch('ansible.module_utils.basic.AnsibleModule.run_command')
+    def test_selinux_enabled_no_selinux_module(self, mock_run_command,
+                                               mock_get_bin_path, mock_HAVE_SELINUX):
         basic._ANSIBLE_ARGS = None
+
+        log.debug('%s, %s, %s', mock_run_command, mock_get_bin_path, mock_HAVE_SELINUX)
 
         am = basic.AnsibleModule(
             argument_spec = dict(),
@@ -448,17 +458,18 @@ class TestModuleUtilsBasicAnsibleModuleSelinux(BaseTestModuleUtilsBasic):
         # not installed, which has two paths: one in which the system
         # does have selinux installed (and the selinuxenabled command
         # is present and returns 0 when run), or selinux is not installed
-        basic.HAVE_SELINUX = False
-        am.get_bin_path = MagicMock()
-        am.get_bin_path.return_value = '/path/to/selinuxenabled'
-        am.run_command = MagicMock()
-        am.run_command.return_value = (0, '', '')
+        #mock_HAVE_SELINUX = False
+        mock_get_bin_path.return_value = '/path/to/selinuxenabled'
+        mock_run_command.return_value = (0, '', '')
+
         self.assertRaises(SystemExit, am.selinux_enabled)
 
-        am.get_bin_path.return_value = None
+        mock_get_bin_path.return_value = None
         self.assertEqual(am.selinux_enabled(), False)
 
-    def test_selinux_enabled_with_selinux_module(self):
+    @patch.object(basic, 'selinux', create=True)
+    @patch('ansible.module_utils.basic.HAVE_SELINUX', return_value=True)
+    def test_selinux_enabled_with_selinux_module(self, mock_HAVE_SELINUX, mock_selinux_module):
         basic._ANSIBLE_ARGS = None
 
         am = basic.AnsibleModule(
@@ -467,14 +478,12 @@ class TestModuleUtilsBasicAnsibleModuleSelinux(BaseTestModuleUtilsBasic):
 
         # finally we test the case where the python selinux lib is installed,
         # and both possibilities there (enabled vs. disabled)
-        basic.HAVE_SELINUX = True
-        basic.selinux = Mock()
-        with patch.dict('sys.modules', {'selinux': basic.selinux}):
-            with patch('selinux.is_selinux_enabled', return_value=0):
-                self.assertEqual(am.selinux_enabled(), False)
-            with patch('selinux.is_selinux_enabled', return_value=1):
-                self.assertEqual(am.selinux_enabled(), True)
-        delattr(basic, 'selinux')
+
+        mock_selinux_module.is_selinux_enabled = MagicMock(return_value=0)
+        self.assertEqual(am.selinux_enabled(), False)
+
+        mock_selinux_module.is_selinux_enabled = MagicMock(return_value=1)
+        self.assertEqual(am.selinux_enabled(), True)
 
     @patch('ansible.module_utils.basic.AnsibleModule.selinux_enabled', return_value=False)
     @patch('ansible.module_utils.basic.selinux_initial_context', return_value=False)
@@ -536,8 +545,7 @@ class TestModuleUtilsBasicAnsibleModuleSelinux(BaseTestModuleUtilsBasic):
     @patch('ansible.module_utils.basic.HAVE_SELINUX', return_value=False)
     @patch('ansible.module_utils.basic.AnsibleModule.selinux_enabled', return_value=True)
     @patch('ansible.module_utils.basic.selinux_initial_context', return_value=False)
-    @patch.object(basic, 'selinux', create=True)
-    def test_selinux_context_with_selinux_module(self, mock_selinux_module,
+    def test_selinux_context_without_selinux_module(self,
                                                  mock_selinux_initial_context,
                                                  mock_selinux_enabled,
                                                  mock_HAVE_SELINUX):
@@ -550,13 +558,23 @@ class TestModuleUtilsBasicAnsibleModuleSelinux(BaseTestModuleUtilsBasic):
         mock_selinux_initial_context.return_value = [None, None, None, None]
 
         # we first test the cases where the python selinux lib is not installed
-        mock_HAVE_SELINUX.return_value = False
-        basic.HAVE_SELINUX = False
         self.assertEqual(am.selinux_context(path='/foo/bar'), [None, None, None, None])
 
-        # all following tests assume the python selinux bindings are installed
-        mock_HAVE_SELINUX.return_value = True
+    @patch('ansible.module_utils.basic.HAVE_SELINUX', return_value=True)
+    @patch('ansible.module_utils.basic.AnsibleModule.selinux_enabled', return_value=True)
+    @patch('ansible.module_utils.basic.selinux_initial_context', return_value=False)
+    @patch.object(basic, 'selinux', create=True)
+    def test_selinux_context_with_selinux_module(self, mock_selinux_module,
+                                                 mock_selinux_initial_context,
+                                                 mock_selinux_enabled,
+                                                 mock_HAVE_SELINUX):
+        basic._ANSIBLE_ARGS = None
 
+        am = basic.AnsibleModule(
+            argument_spec = dict(),
+        )
+
+        mock_selinux_initial_context.return_value = [None, None, None, None]
         # next, we test with a mocked implementation of selinux.lgetfilecon_raw to simulate
         # an actual context being found
         mock_selinux_module.lgetfilecon_raw = MagicMock()
@@ -570,13 +588,13 @@ class TestModuleUtilsBasicAnsibleModuleSelinux(BaseTestModuleUtilsBasic):
                          [None, None, None, None])
 
         # finally, we test where an OSError occurred during matchpathcon's call
-        mock_selinux_module.lgetfilecon_raw.side_effect = OSError(errno=errno.ENOENT)
+        mock_selinux_module.lgetfilecon_raw.side_effect = OSError(errno.ENOENT, 'uh oh, no such file')
         self.assertRaises(SystemExit, am.selinux_context, path='/foo/bar')
 
         mock_selinux_module.lgetfilecon_raw.side_effect = OSError()
         self.assertRaises(SystemExit, am.selinux_context, path='/foo/bar')
 
-    def test_is_special_selinux_path(self):
+    def not_a_thing_is_special_selinux_path(self):
         basic._ANSIBLE_ARGS = None
 
         args = json.dumps(dict(ANSIBLE_MODULE_ARGS={'_ansible_selinux_special_fs': "nfs,nfsd,foos"}))
