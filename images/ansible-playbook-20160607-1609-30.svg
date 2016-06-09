@@ -1,0 +1,1747 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="3200" height="578" onload="init(evt)" viewBox="0 0 3200 578" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<defs >
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	.func_g:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	var details, searchbtn, matchedtxt, svg;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+	}
+
+	// mouse-over for info
+	function s(node) {		// show
+		info = g_to_text(node);
+		details.nodeValue = "Function: " + info;
+	}
+	function c() {			// clear
+		details.nodeValue = ' ';
+	}
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	})
+
+	// functions
+	function find_child(parent, name, attr) {
+		var children = parent.childNodes;
+		for (var i=0; i<children.length;i++) {
+			if (children[i].tagName == name)
+				return (attr != undefined) ? children[i].attributes[attr].value : children[i];
+		}
+		return;
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_"+attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_"+attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_"+attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		if (func != null)
+			func = func.replace(/ .*/, "");
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes["width"].value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes["x"].value = parseFloat(r.attributes["x"].value) +3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2*12*0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x=txt.length-2; x>0; x--) {
+			if (t.getSubStringLength(0, x+2) <= w) {
+				t.textContent = txt.substring(0,x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes["x"] != undefined) {
+				orig_save(e, "x");
+				e.attributes["x"].value = (parseFloat(e.attributes["x"].value) - x - 10) * ratio + 10;
+				if(e.tagName == "text") e.attributes["x"].value = find_child(e.parentNode, "rect", "x") + 3;
+			}
+			if (e.attributes["width"] != undefined) {
+				orig_save(e, "width");
+				e.attributes["width"].value = parseFloat(e.attributes["width"].value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_child(c[i], x-10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes["x"] != undefined) {
+				orig_save(e, "x");
+				e.attributes["x"].value = 10;
+			}
+			if (e.attributes["width"] != undefined) {
+				orig_save(e, "width");
+				e.attributes["width"].value = parseInt(svg.width.baseVal.value) - (10*2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr["width"].value);
+		var xmin = parseFloat(attr["x"].value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr["y"].value);
+		var ratio = (svg.width.baseVal.value - 2*10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		var unzoombtn = document.getElementById("unzoom");
+		unzoombtn.style["opacity"] = "1.0";
+
+		var el = document.getElementsByTagName("g");
+		for(var i=0;i<el.length;i++){
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a["x"].value);
+			var ew = parseFloat(a["width"].value);
+			// Is it an ancestor
+			if (0 == 0) {
+				var upstack = parseFloat(a["y"].value) > ymin;
+			} else {
+				var upstack = parseFloat(a["y"].value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.style["opacity"] = "0.5";
+					zoom_parent(e);
+					e.onclick = function(e){unzoom(); zoom(this);};
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.style["display"] = "none";
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.style["display"] = "none";
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					e.onclick = function(e){zoom(this);};
+					update_text(e);
+				}
+			}
+		}
+	}
+	function unzoom() {
+		var unzoombtn = document.getElementById("unzoom");
+		unzoombtn.style["opacity"] = "0.0";
+
+		var el = document.getElementsByTagName("g");
+		for(i=0;i<el.length;i++) {
+			el[i].style["display"] = "block";
+			el[i].style["opacity"] = "1";
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+	}
+
+	// search
+	function reset_search() {
+		var el = document.getElementsByTagName("rect");
+		for (var i=0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)", "");
+			if (term != null) {
+				search(term)
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			searchbtn.style["opacity"] = "0.1";
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.style["opacity"] = "0.0";
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		var re = new RegExp(term);
+		var el = document.getElementsByTagName("g");
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			if (e.attributes["class"].value != "func_g")
+				continue;
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (rect == null) {
+				// the rect might be wrapped in an anchor
+				// if nameattr href is being used
+				if (rect = find_child(e, "a")) {
+				    rect = find_child(r, "rect");
+				}
+			}
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes["width"].value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes["x"].value);
+				orig_save(rect, "fill");
+				rect.attributes["fill"].value =
+				    "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.style["opacity"] = "1.0";
+		searchbtn.firstChild.nodeValue = "Reset Search"
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+				return a - b;
+			if (a < b || a > b)
+				return a - b;
+			return matches[b] - matches[a];
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.style["opacity"] = "1.0";
+		pct = 100 * count / maxwidth;
+		if (pct == 100)
+			pct = "100"
+		else
+			pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+	function searchover(e) {
+		searchbtn.style["opacity"] = "1.0";
+	}
+	function searchout(e) {
+		if (searching) {
+			searchbtn.style["opacity"] = "1.0";
+		} else {
+			searchbtn.style["opacity"] = "0.1";
+		}
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="3200.0" height="578.0" fill="url(#background)"  />
+<text text-anchor="middle" x="1600.00" y="24" font-size="17" font-family="Verdana" fill="rgb(0,0,0)"  >Flame Graph</text>
+<text text-anchor="" x="10.00" y="561" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="details" > </text>
+<text text-anchor="" x="10.00" y="24" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="unzoom" onclick="unzoom()" style="opacity:0.0;cursor:pointer" >Reset Zoom</text>
+<text text-anchor="" x="3090.00" y="24" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="search" onmouseover="searchover()" onmouseout="searchout()" onclick="search_prompt()" style="opacity:0.1;cursor:pointer" >Search</text>
+<text text-anchor="" x="3090.00" y="561" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="matched" > </text>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_base_attributes (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:148) (169 samples, 0.04%)</title><rect x="228.5" y="225" width="1.2" height="15.0" fill="rgb(220,113,40)" rx="2" ry="2" />
+<text text-anchor="" x="231.53" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>find_plugin (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:219) (22 samples, 0.00%)</title><rect x="18.8" y="129" width="0.2" height="15.0" fill="rgb(235,178,21)" rx="2" ry="2" />
+<text text-anchor="" x="21.81" y="139.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/executor/process/worker.py:67) (1,128 samples, 0.25%)</title><rect x="346.2" y="321" width="8.0" height="15.0" fill="rgb(220,14,33)" rx="2" ry="2" />
+<text text-anchor="" x="349.23" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load_data (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:194) (24 samples, 0.01%)</title><rect x="18.8" y="257" width="0.2" height="15.0" fill="rgb(235,94,47)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>to_bytes (/Users/adrian/src/ansible/lib/ansible/utils/unicode.py:140) (141 samples, 0.03%)</title><rect x="294.4" y="273" width="1.0" height="15.0" fill="rgb(218,140,8)" rx="2" ry="2" />
+<text text-anchor="" x="297.43" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>encode (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:186) (1,128 samples, 0.25%)</title><rect x="251.7" y="257" width="8.0" height="15.0" fill="rgb(231,89,13)" rx="2" ry="2" />
+<text text-anchor="" x="254.71" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:182) (11,271 samples, 2.52%)</title><rect x="736.3" y="305" width="80.1" height="15.0" fill="rgb(212,221,32)" rx="2" ry="2" />
+<text text-anchor="" x="739.30" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get_hosts..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/_abcoll.py:379) (51 samples, 0.01%)</title><rect x="3169.0" y="321" width="0.3" height="15.0" fill="rgb(215,152,38)" rx="2" ry="2" />
+<text text-anchor="" x="3171.96" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_attr_environment (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:343) (222 samples, 0.05%)</title><rect x="830.7" y="257" width="1.6" height="15.0" fill="rgb(235,49,11)" rx="2" ry="2" />
+<text text-anchor="" x="833.74" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_load_tasks (/Users/adrian/src/ansible/lib/ansible/playbook/play.py:161) (24 samples, 0.01%)</title><rect x="18.8" y="305" width="0.2" height="15.0" fill="rgb(219,87,5)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/playbook/play.py:19) (65 samples, 0.01%)</title><rect x="11.1" y="321" width="0.4" height="15.0" fill="rgb(220,30,49)" rx="2" ry="2" />
+<text text-anchor="" x="14.05" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_name (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:99) (40 samples, 0.01%)</title><rect x="834.2" y="305" width="0.3" height="15.0" fill="rgb(207,195,16)" rx="2" ry="2" />
+<text text-anchor="" x="837.21" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:194) (331,678 samples, 74.16%)</title><rect x="824.3" y="337" width="2358.1" height="15.0" fill="rgb(219,217,2)" rx="2" ry="2" />
+<text text-anchor="" x="827.26" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get_vars (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:194)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/module_utils/urls.py:84) (29 samples, 0.01%)</title><rect x="19.1" y="305" width="0.2" height="15.0" fill="rgb(206,218,52)" rx="2" ry="2" />
+<text text-anchor="" x="22.07" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>deserialize (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:433) (398 samples, 0.09%)</title><rect x="231.3" y="273" width="2.8" height="15.0" fill="rgb(244,158,52)" rx="2" ry="2" />
+<text text-anchor="" x="234.28" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_host_state (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:218) (226 samples, 0.05%)</title><rect x="91.8" y="289" width="1.6" height="15.0" fill="rgb(232,31,34)" rx="2" ry="2" />
+<text text-anchor="" x="94.76" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_environment_sanity_check (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/environment.py:90) (85 samples, 0.02%)</title><rect x="80.2" y="305" width="0.6" height="15.0" fill="rgb(224,184,0)" rx="2" ry="2" />
+<text text-anchor="" x="83.21" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>info (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1155) (3,073 samples, 0.69%)</title><rect x="271.9" y="273" width="21.9" height="15.0" fill="rgb(234,74,8)" rx="2" ry="2" />
+<text text-anchor="" x="274.91" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >i..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>send_callback (/Users/adrian/src/ansible/lib/ansible/executor/task_queue_manager.py:304) (7,700 samples, 1.72%)</title><rect x="240.7" y="321" width="54.7" height="15.0" fill="rgb(217,133,48)" rx="2" ry="2" />
+<text text-anchor="" x="243.69" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >send_..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>set_playbook_basedir (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:686) (160 samples, 0.04%)</title><rect x="3188.9" y="369" width="1.1" height="15.0" fill="rgb(219,175,46)" rx="2" ry="2" />
+<text text-anchor="" x="3191.86" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:27) (28 samples, 0.01%)</title><rect x="11.9" y="305" width="0.2" height="15.0" fill="rgb(208,184,53)" rx="2" ry="2" />
+<text text-anchor="" x="14.95" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>empty (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/queues.py:145) (371 samples, 0.08%)</title><rect x="109.0" y="321" width="2.6" height="15.0" fill="rgb(224,150,39)" rx="2" ry="2" />
+<text text-anchor="" x="111.97" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (54 samples, 0.01%)</title><rect x="96.1" y="289" width="0.4" height="15.0" fill="rgb(234,146,17)" rx="2" ry="2" />
+<text text-anchor="" x="99.13" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>exists (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:23) (142 samples, 0.03%)</title><rect x="17.5" y="321" width="1.0" height="15.0" fill="rgb(250,15,15)" rx="2" ry="2" />
+<text text-anchor="" x="20.47" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(genexpr) (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/process.py:107) (28 samples, 0.01%)</title><rect x="354.0" y="289" width="0.2" height="15.0" fill="rgb(245,81,21)" rx="2" ry="2" />
+<text text-anchor="" x="357.05" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>to_unicode (/Users/adrian/src/ansible/lib/ansible/utils/unicode.py:43) (9,731 samples, 2.18%)</title><rect x="747.2" y="289" width="69.2" height="15.0" fill="rgb(234,197,5)" rx="2" ry="2" />
+<text text-anchor="" x="750.25" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >to_unic..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>handle (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1286) (327 samples, 0.07%)</title><rect x="3186.5" y="289" width="2.3" height="15.0" fill="rgb(221,47,35)" rx="2" ry="2" />
+<text text-anchor="" x="3189.52" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>isfile (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:34) (222 samples, 0.05%)</title><rect x="2901.1" y="273" width="1.6" height="15.0" fill="rgb(236,15,16)" rx="2" ry="2" />
+<text text-anchor="" x="2904.15" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_check_key (/Users/adrian/src/ansible/lib/ansible/executor/task_result.py:64) (45 samples, 0.01%)</title><rect x="240.4" y="305" width="0.3" height="15.0" fill="rgb(226,201,42)" rx="2" ry="2" />
+<text text-anchor="" x="243.37" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:75) (24 samples, 0.01%)</title><rect x="18.8" y="273" width="0.2" height="15.0" fill="rgb(226,75,27)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>v2_playbook_on_stats (/Users/adrian/src/ansible/lib/ansible/plugins/callback/default.py:213) (702 samples, 0.16%)</title><rect x="3183.9" y="353" width="5.0" height="15.0" fill="rgb(241,75,52)" rx="2" ry="2" />
+<text text-anchor="" x="3186.87" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:182) (37 samples, 0.01%)</title><rect x="18.5" y="353" width="0.2" height="15.0" fill="rgb(223,66,50)" rx="2" ry="2" />
+<text text-anchor="" x="21.48" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_ancestors (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:157) (64 samples, 0.01%)</title><rect x="2904.9" y="273" width="0.5" height="15.0" fill="rgb(244,135,14)" rx="2" ry="2" />
+<text text-anchor="" x="2907.93" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>emit (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:847) (658 samples, 0.15%)</title><rect x="278.5" y="177" width="4.7" height="15.0" fill="rgb(212,122,28)" rx="2" ry="2" />
+<text text-anchor="" x="281.53" y="187.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/forking.py:116) (9,975 samples, 2.23%)</title><rect x="392.7" y="305" width="70.9" height="15.0" fill="rgb(217,37,48)" rx="2" ry="2" />
+<text text-anchor="" x="395.66" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__init__..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:322) (1,066 samples, 0.24%)</title><rect x="816.6" y="337" width="7.6" height="15.0" fill="rgb(216,175,50)" rx="2" ry="2" />
+<text text-anchor="" x="819.59" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_group_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:720) (95 samples, 0.02%)</title><rect x="15.8" y="321" width="0.7" height="15.0" fill="rgb(241,36,47)" rx="2" ry="2" />
+<text text-anchor="" x="18.84" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(genexpr) (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:247) (194 samples, 0.04%)</title><rect x="822.8" y="305" width="1.3" height="15.0" fill="rgb(250,165,39)" rx="2" ry="2" />
+<text text-anchor="" x="825.77" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:81) (2,294 samples, 0.51%)</title><rect x="124.0" y="273" width="16.3" height="15.0" fill="rgb(234,95,32)" rx="2" ry="2" />
+<text text-anchor="" x="127.01" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/inventory/script.py:40) (568 samples, 0.13%)</title><rect x="11.8" y="337" width="4.0" height="15.0" fill="rgb(249,69,35)" rx="2" ry="2" />
+<text text-anchor="" x="14.77" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_ancestors (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:165) (26 samples, 0.01%)</title><rect x="3174.4" y="289" width="0.2" height="15.0" fill="rgb(229,150,11)" rx="2" ry="2" />
+<text text-anchor="" x="3177.38" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>main (/Users/adrian/Library/Python/2.7/lib/python/site-packages/plop/collector.py:128) (447,272 samples, 100.00%)</title><rect x="10.0" y="465" width="3180.0" height="15.0" fill="rgb(225,212,8)" rx="2" ry="2" />
+<text text-anchor="" x="13.01" y="475.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >main (/Users/adrian/Library/Python/2.7/lib/python/site-packages/plop/collector.py:128)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:19) (20 samples, 0.00%)</title><rect x="11.3" y="241" width="0.2" height="15.0" fill="rgb(217,173,47)" rx="2" ry="2" />
+<text text-anchor="" x="14.34" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>send_callback (/Users/adrian/src/ansible/lib/ansible/executor/task_queue_manager.py:304) (702 samples, 0.16%)</title><rect x="3183.9" y="369" width="5.0" height="15.0" fill="rgb(212,134,4)" rx="2" ry="2" />
+<text text-anchor="" x="3186.87" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>setlocale (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/locale.py:564) (372 samples, 0.08%)</title><rect x="269.3" y="241" width="2.6" height="15.0" fill="rgb(222,60,21)" rx="2" ry="2" />
+<text text-anchor="" x="272.26" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:101) (123 samples, 0.03%)</title><rect x="217.4" y="241" width="0.8" height="15.0" fill="rgb(222,182,50)" rx="2" ry="2" />
+<text text-anchor="" x="220.36" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>to_unicode (/Users/adrian/src/ansible/lib/ansible/utils/unicode.py:43) (9,506 samples, 2.13%)</title><rect x="558.5" y="289" width="67.6" height="15.0" fill="rgb(208,225,33)" rx="2" ry="2" />
+<text text-anchor="" x="561.50" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >to_unic..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_note (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py:64) (59 samples, 0.01%)</title><rect x="283.2" y="161" width="0.4" height="15.0" fill="rgb(222,28,30)" rx="2" ry="2" />
+<text text-anchor="" x="286.21" y="171.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_host_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:716) (78 samples, 0.02%)</title><rect x="3189.4" y="353" width="0.6" height="15.0" fill="rgb(210,88,40)" rx="2" ry="2" />
+<text text-anchor="" x="3192.45" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (26 samples, 0.01%)</title><rect x="3178.1" y="305" width="0.2" height="15.0" fill="rgb(210,165,37)" rx="2" ry="2" />
+<text text-anchor="" x="3181.13" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_hostgroup_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:744) (78 samples, 0.02%)</title><rect x="3189.4" y="337" width="0.6" height="15.0" fill="rgb(221,163,35)" rx="2" ry="2" />
+<text text-anchor="" x="3192.45" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:60) (297 samples, 0.07%)</title><rect x="3178.3" y="305" width="2.1" height="15.0" fill="rgb(205,109,41)" rx="2" ry="2" />
+<text text-anchor="" x="3181.32" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__str__ (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:64) (148 samples, 0.03%)</title><rect x="90.5" y="289" width="1.1" height="15.0" fill="rgb(246,168,17)" rx="2" ry="2" />
+<text text-anchor="" x="93.53" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_splitext (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:93) (84 samples, 0.02%)</title><rect x="292.1" y="193" width="0.6" height="15.0" fill="rgb(243,82,25)" rx="2" ry="2" />
+<text text-anchor="" x="295.11" y="203.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars (/Users/adrian/src/ansible/lib/ansible/playbook/play.py:301) (102 samples, 0.02%)</title><rect x="3176.9" y="321" width="0.8" height="15.0" fill="rgb(250,49,12)" rx="2" ry="2" />
+<text text-anchor="" x="3179.95" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_validate_mutable_mappings (/Users/adrian/src/ansible/lib/ansible/utils/vars.py:34) (97 samples, 0.02%)</title><rect x="3173.5" y="289" width="0.7" height="15.0" fill="rgb(240,168,53)" rx="2" ry="2" />
+<text text-anchor="" x="3176.53" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>findCaller (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1231) (330 samples, 0.07%)</title><rect x="273.1" y="241" width="2.3" height="15.0" fill="rgb(234,147,27)" rx="2" ry="2" />
+<text text-anchor="" x="276.09" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load_callbacks (/Users/adrian/src/ansible/lib/ansible/executor/task_queue_manager.py:139) (50 samples, 0.01%)</title><rect x="19.0" y="369" width="0.3" height="15.0" fill="rgb(220,167,11)" rx="2" ry="2" />
+<text text-anchor="" x="21.99" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load (/Users/adrian/src/ansible/lib/ansible/playbook/__init__.py:50) (27 samples, 0.01%)</title><rect x="18.8" y="369" width="0.2" height="15.0" fill="rgb(243,41,7)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:19) (18 samples, 0.00%)</title><rect x="11.3" y="225" width="0.2" height="15.0" fill="rgb(234,87,7)" rx="2" ry="2" />
+<text text-anchor="" x="14.34" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load (/Users/adrian/src/ansible/lib/ansible/playbook/play.py:107) (25 samples, 0.01%)</title><rect x="18.8" y="337" width="0.2" height="15.0" fill="rgb(238,221,17)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>basename (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/posixpath.py:112) (39 samples, 0.01%)</title><rect x="289.0" y="209" width="0.3" height="15.0" fill="rgb(218,139,50)" rx="2" ry="2" />
+<text text-anchor="" x="292.04" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>all (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:353) (47 samples, 0.01%)</title><rect x="19.0" y="353" width="0.3" height="15.0" fill="rgb(213,38,26)" rx="2" ry="2" />
+<text text-anchor="" x="21.99" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_extend_value (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:485) (160 samples, 0.04%)</title><rect x="830.7" y="225" width="1.2" height="15.0" fill="rgb(224,29,13)" rx="2" ry="2" />
+<text text-anchor="" x="833.75" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_output_encoding (/Users/adrian/src/ansible/lib/ansible/utils/display.py:339) (561 samples, 0.13%)</title><rect x="267.9" y="273" width="4.0" height="15.0" fill="rgb(240,29,32)" rx="2" ry="2" />
+<text text-anchor="" x="270.92" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:44) (37 samples, 0.01%)</title><rect x="19.5" y="337" width="0.3" height="15.0" fill="rgb(220,177,10)" rx="2" ry="2" />
+<text text-anchor="" x="22.49" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_name (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:105) (31 samples, 0.01%)</title><rect x="94.0" y="289" width="0.2" height="15.0" fill="rgb(241,21,33)" rx="2" ry="2" />
+<text text-anchor="" x="96.96" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>run (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/linear.py:152) (444,661 samples, 99.42%)</title><rect x="22.4" y="353" width="3161.5" height="15.0" fill="rgb(228,207,36)" rx="2" ry="2" />
+<text text-anchor="" x="25.43" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >run (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/linear.py:152)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:322) (18 samples, 0.00%)</title><rect x="19.9" y="353" width="0.1" height="15.0" fill="rgb(249,142,54)" rx="2" ry="2" />
+<text text-anchor="" x="22.87" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>formatTime (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:411) (274 samples, 0.06%)</title><rect x="281.3" y="129" width="1.9" height="15.0" fill="rgb(248,15,48)" rx="2" ry="2" />
+<text text-anchor="" x="284.26" y="139.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load_list_of_tasks (/Users/adrian/src/ansible/lib/ansible/playbook/helpers.py:73) (24 samples, 0.01%)</title><rect x="18.8" y="225" width="0.2" height="15.0" fill="rgb(222,56,51)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_enumerate_matches (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:432) (33 samples, 0.01%)</title><rect x="18.5" y="305" width="0.2" height="15.0" fill="rgb(249,123,34)" rx="2" ry="2" />
+<text text-anchor="" x="21.51" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_package_paths (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:145) (16 samples, 0.00%)</title><rect x="19.9" y="305" width="0.1" height="15.0" fill="rgb(243,46,31)" rx="2" ry="2" />
+<text text-anchor="" x="22.88" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/email/feedparser.py:20) (15 samples, 0.00%)</title><rect x="10.4" y="273" width="0.1" height="15.0" fill="rgb(247,207,5)" rx="2" ry="2" />
+<text text-anchor="" x="13.36" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_dump_results (/Users/adrian/src/ansible/lib/ansible/plugins/callback/__init__.py:88) (1,818 samples, 0.41%)</title><rect x="247.8" y="289" width="13.0" height="15.0" fill="rgb(218,69,48)" rx="2" ry="2" />
+<text text-anchor="" x="250.83" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>version_info (/Users/adrian/src/ansible/lib/ansible/cli/__init__.py:381) (348 samples, 0.08%)</title><rect x="3165.4" y="305" width="2.5" height="15.0" fill="rgb(240,141,28)" rx="2" ry="2" />
+<text text-anchor="" x="3168.44" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__str__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:197) (133 samples, 0.03%)</title><rect x="833.3" y="305" width="0.9" height="15.0" fill="rgb(252,73,6)" rx="2" ry="2" />
+<text text-anchor="" x="836.27" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>deserialize (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:356) (2,617 samples, 0.59%)</title><rect x="218.2" y="289" width="18.6" height="15.0" fill="rgb(219,44,14)" rx="2" ry="2" />
+<text text-anchor="" x="221.23" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_iterencode (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:417) (504 samples, 0.11%)</title><rect x="253.1" y="241" width="3.6" height="15.0" fill="rgb(246,27,38)" rx="2" ry="2" />
+<text text-anchor="" x="256.10" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__contains__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/_weakrefset.py:70) (80 samples, 0.02%)</title><rect x="821.1" y="305" width="0.5" height="15.0" fill="rgb(227,221,12)" rx="2" ry="2" />
+<text text-anchor="" x="824.07" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>parse (/Users/adrian/src/ansible/lib/ansible/parsing/mod_args.py:248) (22 samples, 0.00%)</title><rect x="18.8" y="161" width="0.2" height="15.0" fill="rgb(233,70,43)" rx="2" ry="2" />
+<text text-anchor="" x="21.81" y="171.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_parent_attribute (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:409) (228 samples, 0.05%)</title><rect x="260.8" y="273" width="1.6" height="15.0" fill="rgb(209,200,17)" rx="2" ry="2" />
+<text text-anchor="" x="263.77" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_name (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:99) (123 samples, 0.03%)</title><rect x="364.1" y="305" width="0.9" height="15.0" fill="rgb(205,90,32)" rx="2" ry="2" />
+<text text-anchor="" x="367.12" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_iterencode_dict (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:341) (327 samples, 0.07%)</title><rect x="254.4" y="225" width="2.3" height="15.0" fill="rgb(210,110,9)" rx="2" ry="2" />
+<text text-anchor="" x="257.36" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_load_playbook_data (/Users/adrian/src/ansible/lib/ansible/playbook/__init__.py:56) (27 samples, 0.01%)</title><rect x="18.8" y="353" width="0.2" height="15.0" fill="rgb(237,63,43)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>stringc (/Users/adrian/src/ansible/lib/ansible/utils/color.py:69) (95 samples, 0.02%)</title><rect x="293.8" y="273" width="0.6" height="15.0" fill="rgb(226,218,38)" rx="2" ry="2" />
+<text text-anchor="" x="296.76" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_load_block (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:105) (24 samples, 0.01%)</title><rect x="18.8" y="241" width="0.2" height="15.0" fill="rgb(246,129,17)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>release (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:708) (59 samples, 0.01%)</title><rect x="283.2" y="193" width="0.4" height="15.0" fill="rgb(249,152,45)" rx="2" ry="2" />
+<text text-anchor="" x="286.21" y="203.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>flush (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:836) (158 samples, 0.04%)</title><rect x="279.1" y="161" width="1.1" height="15.0" fill="rgb(249,58,9)" rx="2" ry="2" />
+<text text-anchor="" x="282.12" y="171.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_all_directories (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:136) (17 samples, 0.00%)</title><rect x="18.8" y="81" width="0.2" height="15.0" fill="rgb(246,124,7)" rx="2" ry="2" />
+<text text-anchor="" x="21.84" y="91.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:19) (60 samples, 0.01%)</title><rect x="11.1" y="305" width="0.4" height="15.0" fill="rgb(219,147,38)" rx="2" ry="2" />
+<text text-anchor="" x="14.06" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>splitext (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/posixpath.py:97) (135 samples, 0.03%)</title><rect x="291.8" y="209" width="0.9" height="15.0" fill="rgb(233,134,48)" rx="2" ry="2" />
+<text text-anchor="" x="294.75" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (61 samples, 0.01%)</title><rect x="831.9" y="225" width="0.4" height="15.0" fill="rgb(214,195,15)" rx="2" ry="2" />
+<text text-anchor="" x="834.89" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>exists (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:23) (25 samples, 0.01%)</title><rect x="10.5" y="289" width="0.2" height="15.0" fill="rgb(235,153,27)" rx="2" ry="2" />
+<text text-anchor="" x="13.49" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_evaluate_patterns (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:293) (35 samples, 0.01%)</title><rect x="18.5" y="337" width="0.2" height="15.0" fill="rgb(241,175,51)" rx="2" ry="2" />
+<text text-anchor="" x="21.50" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__repr__ (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:137) (45 samples, 0.01%)</title><rect x="93.9" y="305" width="0.3" height="15.0" fill="rgb(251,93,6)" rx="2" ry="2" />
+<text text-anchor="" x="96.86" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_failed_hosts (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:148) (16,299 samples, 3.64%)</title><rect x="510.2" y="321" width="115.9" height="15.0" fill="rgb(230,35,20)" rx="2" ry="2" />
+<text text-anchor="" x="513.20" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get_failed_hos..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>abspath (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/posixpath.py:358) (230 samples, 0.05%)</title><rect x="2893.6" y="289" width="1.7" height="15.0" fill="rgb(208,104,1)" rx="2" ry="2" />
+<text text-anchor="" x="2896.64" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>isdir (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:46) (580 samples, 0.13%)</title><rect x="2897.0" y="273" width="4.1" height="15.0" fill="rgb(246,25,46)" rx="2" ry="2" />
+<text text-anchor="" x="2899.99" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_load_module_source (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:312) (47 samples, 0.01%)</title><rect x="19.0" y="337" width="0.3" height="15.0" fill="rgb(234,0,54)" rx="2" ry="2" />
+<text text-anchor="" x="21.99" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_initialize_base_attributes (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:168) (8,766 samples, 1.96%)</title><rect x="154.1" y="257" width="62.3" height="15.0" fill="rgb(251,59,6)" rx="2" ry="2" />
+<text text-anchor="" x="157.09" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_initi..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_compute_dependencies (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:2532) (20 samples, 0.00%)</title><rect x="10.3" y="321" width="0.2" height="15.0" fill="rgb(241,176,19)" rx="2" ry="2" />
+<text text-anchor="" x="13.33" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (326 samples, 0.07%)</title><rect x="830.1" y="321" width="2.3" height="15.0" fill="rgb(253,100,52)" rx="2" ry="2" />
+<text text-anchor="" x="833.07" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:101) (68 samples, 0.02%)</title><rect x="141.1" y="257" width="0.5" height="15.0" fill="rgb(230,79,34)" rx="2" ry="2" />
+<text text-anchor="" x="144.11" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:73) (1,614 samples, 0.36%)</title><rect x="219.8" y="257" width="11.5" height="15.0" fill="rgb(209,166,12)" rx="2" ry="2" />
+<text text-anchor="" x="222.81" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:14) (113 samples, 0.03%)</title><rect x="10.0" y="401" width="0.8" height="15.0" fill="rgb(250,0,25)" rx="2" ry="2" />
+<text text-anchor="" x="13.02" y="411.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_magic_variables (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:385) (328,200 samples, 73.38%)</title><rect x="834.5" y="321" width="2333.4" height="15.0" fill="rgb(252,79,9)" rx="2" ry="2" />
+<text text-anchor="" x="837.50" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_get_magic_variables (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:385)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>name (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/process.py:161) (71 samples, 0.02%)</title><rect x="290.5" y="209" width="0.5" height="15.0" fill="rgb(247,222,16)" rx="2" ry="2" />
+<text text-anchor="" x="293.54" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>copy (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:115) (224 samples, 0.05%)</title><rect x="91.8" y="273" width="1.6" height="15.0" fill="rgb(244,108,4)" rx="2" ry="2" />
+<text text-anchor="" x="94.78" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>v2_on_any (/Users/adrian/src/ansible/lib/ansible/plugins/callback/__init__.py:259) (41 samples, 0.01%)</title><rect x="243.5" y="305" width="0.3" height="15.0" fill="rgb(225,18,34)" rx="2" ry="2" />
+<text text-anchor="" x="246.47" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/playbook/__init__.py:19) (67 samples, 0.01%)</title><rect x="11.0" y="337" width="0.5" height="15.0" fill="rgb(236,204,24)" rx="2" ry="2" />
+<text text-anchor="" x="14.04" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_group_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:720) (81 samples, 0.02%)</title><rect x="3188.9" y="353" width="0.5" height="15.0" fill="rgb(222,124,47)" rx="2" ry="2" />
+<text text-anchor="" x="3191.87" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/executor/playbook_executor.py:19) (78 samples, 0.02%)</title><rect x="11.0" y="385" width="0.6" height="15.0" fill="rgb(252,184,44)" rx="2" ry="2" />
+<text text-anchor="" x="14.02" y="395.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>run (/Users/adrian/src/ansible/lib/ansible/executor/task_queue_manager.py:185) (445,096 samples, 99.51%)</title><rect x="19.3" y="369" width="3164.6" height="15.0" fill="rgb(240,7,44)" rx="2" ry="2" />
+<text text-anchor="" x="22.35" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >run (/Users/adrian/src/ansible/lib/ansible/executor/task_queue_manager.py:185)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_next_task_for_host (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:227) (734 samples, 0.16%)</title><rect x="93.4" y="321" width="5.2" height="15.0" fill="rgb(240,124,28)" rx="2" ry="2" />
+<text text-anchor="" x="96.37" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_host_state (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:218) (290 samples, 0.06%)</title><rect x="96.5" y="305" width="2.1" height="15.0" fill="rgb(213,158,52)" rx="2" ry="2" />
+<text text-anchor="" x="99.53" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_hostgroup_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:744) (95 samples, 0.02%)</title><rect x="15.8" y="305" width="0.7" height="15.0" fill="rgb(207,226,12)" rx="2" ry="2" />
+<text text-anchor="" x="18.84" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_ancestors (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:157) (33 samples, 0.01%)</title><rect x="2905.1" y="257" width="0.3" height="15.0" fill="rgb(254,209,5)" rx="2" ry="2" />
+<text text-anchor="" x="2908.15" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_match_one_pattern (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:317) (33 samples, 0.01%)</title><rect x="18.5" y="321" width="0.2" height="15.0" fill="rgb(210,27,26)" rx="2" ry="2" />
+<text text-anchor="" x="21.51" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_package_paths (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:145) (18 samples, 0.00%)</title><rect x="18.8" y="97" width="0.2" height="15.0" fill="rgb(241,134,16)" rx="2" ry="2" />
+<text text-anchor="" x="21.84" y="107.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_next_task_for_host (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:227) (810 samples, 0.18%)</title><rect x="87.6" y="305" width="5.8" height="15.0" fill="rgb(247,62,50)" rx="2" ry="2" />
+<text text-anchor="" x="90.61" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_run_state_to_string (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:65) (217 samples, 0.05%)</title><rect x="94.4" y="289" width="1.5" height="15.0" fill="rgb(241,72,49)" rx="2" ry="2" />
+<text text-anchor="" x="97.36" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>format (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:458) (417 samples, 0.09%)</title><rect x="280.2" y="145" width="3.0" height="15.0" fill="rgb(251,140,38)" rx="2" ry="2" />
+<text text-anchor="" x="283.24" y="155.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_log (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1265) (2,810 samples, 0.63%)</title><rect x="272.7" y="257" width="20.0" height="15.0" fill="rgb(214,82,0)" rx="2" ry="2" />
+<text text-anchor="" x="275.73" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:54) (985 samples, 0.22%)</title><rect x="11.7" y="385" width="7.0" height="15.0" fill="rgb(214,101,47)" rx="2" ry="2" />
+<text text-anchor="" x="14.74" y="395.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_group_variables (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:520) (99 samples, 0.02%)</title><rect x="15.8" y="353" width="0.7" height="15.0" fill="rgb(234,95,39)" rx="2" ry="2" />
+<text text-anchor="" x="18.81" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>walk (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/os.py:209) (17 samples, 0.00%)</title><rect x="18.8" y="49" width="0.2" height="15.0" fill="rgb(225,148,14)" rx="2" ry="2" />
+<text text-anchor="" x="21.84" y="59.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>emit (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:946) (326 samples, 0.07%)</title><rect x="3186.5" y="241" width="2.3" height="15.0" fill="rgb(210,175,10)" rx="2" ry="2" />
+<text text-anchor="" x="3189.53" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>src (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:676) (332 samples, 0.07%)</title><rect x="3163.1" y="305" width="2.3" height="15.0" fill="rgb(253,29,7)" rx="2" ry="2" />
+<text text-anchor="" x="3166.08" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/environment.py:249) (1,070 samples, 0.24%)</title><rect x="73.9" y="321" width="7.6" height="15.0" fill="rgb(252,216,23)" rx="2" ry="2" />
+<text text-anchor="" x="76.90" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_attr_environment (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:434) (316 samples, 0.07%)</title><rect x="830.1" y="305" width="2.2" height="15.0" fill="rgb(206,172,18)" rx="2" ry="2" />
+<text text-anchor="" x="833.07" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (297 samples, 0.07%)</title><rect x="3178.3" y="289" width="2.1" height="15.0" fill="rgb(244,161,41)" rx="2" ry="2" />
+<text text-anchor="" x="3181.32" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>handle (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:744) (1,069 samples, 0.24%)</title><rect x="276.0" y="209" width="7.6" height="15.0" fill="rgb(221,36,6)" rx="2" ry="2" />
+<text text-anchor="" x="279.03" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>uuid4 (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:579) (219 samples, 0.05%)</title><rect x="229.7" y="241" width="1.6" height="15.0" fill="rgb(242,93,9)" rx="2" ry="2" />
+<text text-anchor="" x="232.73" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>encode_basestring (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:33) (224 samples, 0.05%)</title><rect x="255.1" y="209" width="1.6" height="15.0" fill="rgb(207,157,1)" rx="2" ry="2" />
+<text text-anchor="" x="258.09" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:127) (29 samples, 0.01%)</title><rect x="18.5" y="289" width="0.2" height="15.0" fill="rgb(227,88,22)" rx="2" ry="2" />
+<text text-anchor="" x="21.54" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>uuid4 (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:579) (124 samples, 0.03%)</title><rect x="12.5" y="289" width="0.8" height="15.0" fill="rgb(249,33,8)" rx="2" ry="2" />
+<text text-anchor="" x="15.47" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_groups (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:117) (231 samples, 0.05%)</title><rect x="2903.7" y="305" width="1.7" height="15.0" fill="rgb(226,66,26)" rx="2" ry="2" />
+<text text-anchor="" x="2906.74" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__contains__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/_weakrefset.py:70) (58 samples, 0.01%)</title><rect x="3173.8" y="257" width="0.4" height="15.0" fill="rgb(211,157,15)" rx="2" ry="2" />
+<text text-anchor="" x="3176.80" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>S_ISDIR (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/stat.py:40) (140 samples, 0.03%)</title><rect x="2900.1" y="257" width="1.0" height="15.0" fill="rgb(249,69,42)" rx="2" ry="2" />
+<text text-anchor="" x="2903.12" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>communicate (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/subprocess.py:768) (15 samples, 0.00%)</title><rect x="15.7" y="321" width="0.1" height="15.0" fill="rgb(226,69,53)" rx="2" ry="2" />
+<text text-anchor="" x="18.69" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_s (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:140) (559 samples, 0.12%)</title><rect x="211.7" y="241" width="4.0" height="15.0" fill="rgb(243,86,33)" rx="2" ry="2" />
+<text text-anchor="" x="214.73" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>subscribe (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:680) (49 samples, 0.01%)</title><rect x="10.5" y="385" width="0.3" height="15.0" fill="rgb(225,182,44)" rx="2" ry="2" />
+<text text-anchor="" x="13.48" y="395.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_parent_attribute (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:292) (49 samples, 0.01%)</title><rect x="262.0" y="241" width="0.4" height="15.0" fill="rgb(233,97,30)" rx="2" ry="2" />
+<text text-anchor="" x="265.04" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:73) (9,234 samples, 2.06%)</title><rect x="152.6" y="273" width="65.6" height="15.0" fill="rgb(229,150,44)" rx="2" ry="2" />
+<text text-anchor="" x="155.58" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__init_..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:243) (1,106 samples, 0.25%)</title><rect x="284.8" y="225" width="7.9" height="15.0" fill="rgb(241,47,47)" rx="2" ry="2" />
+<text text-anchor="" x="287.85" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>require (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:664) (23 samples, 0.01%)</title><rect x="10.3" y="385" width="0.2" height="15.0" fill="rgb(236,213,21)" rx="2" ry="2" />
+<text text-anchor="" x="13.31" y="395.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__setstate__ (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:37) (3,548 samples, 0.79%)</title><rect x="116.4" y="305" width="25.2" height="15.0" fill="rgb(252,90,51)" rx="2" ry="2" />
+<text text-anchor="" x="119.37" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_ancestors (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:165) (87 samples, 0.02%)</title><rect x="2904.8" y="289" width="0.6" height="15.0" fill="rgb(207,218,31)" rx="2" ry="2" />
+<text text-anchor="" x="2907.76" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:101) (688 samples, 0.15%)</title><rect x="135.4" y="241" width="4.9" height="15.0" fill="rgb(233,34,34)" rx="2" ry="2" />
+<text text-anchor="" x="138.43" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__setstate__ (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:503) (13,396 samples, 3.00%)</title><rect x="141.6" y="305" width="95.2" height="15.0" fill="rgb(241,14,29)" rx="2" ry="2" />
+<text text-anchor="" x="144.59" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__setstate_..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>iteritems ((string):598) (58 samples, 0.01%)</title><rect x="233.7" y="257" width="0.4" height="15.0" fill="rgb(237,136,49)" rx="2" ry="2" />
+<text text-anchor="" x="236.70" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:90) (9,459 samples, 2.11%)</title><rect x="151.0" y="289" width="67.2" height="15.0" fill="rgb(231,32,12)" rx="2" ry="2" />
+<text text-anchor="" x="153.98" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__init_..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(lambda) (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:139) (430 samples, 0.10%)</title><rect x="3169.7" y="305" width="3.1" height="15.0" fill="rgb(205,171,32)" rx="2" ry="2" />
+<text text-anchor="" x="3172.71" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>find_plugin (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:219) (18 samples, 0.00%)</title><rect x="19.9" y="337" width="0.1" height="15.0" fill="rgb(254,182,2)" rx="2" ry="2" />
+<text text-anchor="" x="22.87" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/template/__init__.py:133) (2,000 samples, 0.45%)</title><rect x="73.0" y="337" width="14.2" height="15.0" fill="rgb(250,100,34)" rx="2" ry="2" />
+<text text-anchor="" x="76.02" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:44) (222 samples, 0.05%)</title><rect x="91.8" y="257" width="1.6" height="15.0" fill="rgb(245,127,11)" rx="2" ry="2" />
+<text text-anchor="" x="94.79" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_handle_warnings (/Users/adrian/src/ansible/lib/ansible/plugins/callback/__init__.py:112) (69 samples, 0.02%)</title><rect x="262.4" y="289" width="0.5" height="15.0" fill="rgb(235,116,37)" rx="2" ry="2" />
+<text text-anchor="" x="265.39" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>emit (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:847) (326 samples, 0.07%)</title><rect x="3186.5" y="225" width="2.3" height="15.0" fill="rgb(211,70,43)" rx="2" ry="2" />
+<text text-anchor="" x="3189.53" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>v2_runner_on_ok (/Users/adrian/src/ansible/lib/ansible/plugins/callback/default.py:61) (7,268 samples, 1.62%)</title><rect x="243.8" y="305" width="51.6" height="15.0" fill="rgb(232,43,33)" rx="2" ry="2" />
+<text text-anchor="" x="246.76" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >v2_ru..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:44) (255 samples, 0.06%)</title><rect x="96.8" y="273" width="1.8" height="15.0" fill="rgb(211,178,38)" rx="2" ry="2" />
+<text text-anchor="" x="99.77" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>copy (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:115) (268 samples, 0.06%)</title><rect x="96.7" y="289" width="1.9" height="15.0" fill="rgb(214,228,18)" rx="2" ry="2" />
+<text text-anchor="" x="99.68" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_original_host (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:228) (189 samples, 0.04%)</title><rect x="236.8" y="321" width="1.4" height="15.0" fill="rgb(212,12,3)" rx="2" ry="2" />
+<text text-anchor="" x="239.84" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:19) (69 samples, 0.02%)</title><rect x="11.0" y="353" width="0.5" height="15.0" fill="rgb(239,221,1)" rx="2" ry="2" />
+<text text-anchor="" x="14.03" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>resolve (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:539) (23 samples, 0.01%)</title><rect x="10.3" y="369" width="0.2" height="15.0" fill="rgb(249,19,0)" rx="2" ry="2" />
+<text text-anchor="" x="13.31" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>process_include_results (/Users/adrian/src/ansible/lib/ansible/playbook/included_file.py:51) (26 samples, 0.01%)</title><rect x="3182.5" y="337" width="0.2" height="15.0" fill="rgb(253,2,24)" rx="2" ry="2" />
+<text text-anchor="" x="3185.47" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:301) (388 samples, 0.09%)</title><rect x="3177.7" y="321" width="2.7" height="15.0" fill="rgb(223,114,16)" rx="2" ry="2" />
+<text text-anchor="" x="3180.67" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_next_task_from_state (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:262) (26 samples, 0.01%)</title><rect x="91.6" y="289" width="0.2" height="15.0" fill="rgb(216,139,1)" rx="2" ry="2" />
+<text text-anchor="" x="94.58" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_dep_map (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:2512) (20 samples, 0.00%)</title><rect x="10.3" y="337" width="0.2" height="15.0" fill="rgb(244,138,23)" rx="2" ry="2" />
+<text text-anchor="" x="13.33" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_paths (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:158) (18 samples, 0.00%)</title><rect x="18.8" y="113" width="0.2" height="15.0" fill="rgb(250,92,36)" rx="2" ry="2" />
+<text text-anchor="" x="21.84" y="123.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:153) (68 samples, 0.02%)</title><rect x="19.3" y="353" width="0.5" height="15.0" fill="rgb(211,128,0)" rx="2" ry="2" />
+<text text-anchor="" x="22.35" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>exists (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:23) (95 samples, 0.02%)</title><rect x="15.8" y="289" width="0.7" height="15.0" fill="rgb(206,88,46)" rx="2" ry="2" />
+<text text-anchor="" x="18.84" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_run_state_to_string (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:65) (136 samples, 0.03%)</title><rect x="90.6" y="273" width="1.0" height="15.0" fill="rgb(206,197,39)" rx="2" ry="2" />
+<text text-anchor="" x="93.61" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_group_variables (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:525) (99 samples, 0.02%)</title><rect x="15.8" y="337" width="0.7" height="15.0" fill="rgb(228,45,52)" rx="2" ry="2" />
+<text text-anchor="" x="18.81" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>isEnabledFor (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1358) (147 samples, 0.03%)</title><rect x="292.7" y="257" width="1.1" height="15.0" fill="rgb(234,70,49)" rx="2" ry="2" />
+<text text-anchor="" x="295.71" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_hostgroup_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:744) (123 samples, 0.03%)</title><rect x="16.5" y="337" width="0.9" height="15.0" fill="rgb(242,103,31)" rx="2" ry="2" />
+<text text-anchor="" x="19.51" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/executor/task_queue_manager.py:19) (78 samples, 0.02%)</title><rect x="11.0" y="369" width="0.6" height="15.0" fill="rgb(235,27,34)" rx="2" ry="2" />
+<text text-anchor="" x="14.02" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_file_parser (/Users/adrian/src/ansible/lib/ansible/inventory/dir.py:36) (568 samples, 0.13%)</title><rect x="11.8" y="353" width="4.0" height="15.0" fill="rgb(206,96,31)" rx="2" ry="2" />
+<text text-anchor="" x="14.77" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>name (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py:967) (99 samples, 0.02%)</title><rect x="291.0" y="209" width="0.8" height="15.0" fill="rgb(250,9,43)" rx="2" ry="2" />
+<text text-anchor="" x="294.05" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>poll (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/forking.py:131) (537 samples, 0.12%)</title><rect x="464.6" y="289" width="3.8" height="15.0" fill="rgb(227,91,2)" rx="2" ry="2" />
+<text text-anchor="" x="467.59" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>parse_inventory (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:100) (984 samples, 0.22%)</title><rect x="11.7" y="369" width="7.0" height="15.0" fill="rgb(240,100,20)" rx="2" ry="2" />
+<text text-anchor="" x="14.75" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>all (447,273 samples, 100%)</title><rect x="10.0" y="529" width="3180.0" height="15.0" fill="rgb(205,122,50)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="539.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>is_file (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:641) (227 samples, 0.05%)</title><rect x="3163.8" y="289" width="1.6" height="15.0" fill="rgb(218,221,22)" rx="2" ry="2" />
+<text text-anchor="" x="3166.83" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>debug (/Users/adrian/src/ansible/lib/ansible/utils/display.py:185) (188 samples, 0.04%)</title><rect x="380.6" y="321" width="1.3" height="15.0" fill="rgb(218,83,2)" rx="2" ry="2" />
+<text text-anchor="" x="383.58" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>exists (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:23) (81 samples, 0.02%)</title><rect x="3188.9" y="321" width="0.5" height="15.0" fill="rgb(240,191,53)" rx="2" ry="2" />
+<text text-anchor="" x="3191.87" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>release (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py:187) (59 samples, 0.01%)</title><rect x="283.2" y="177" width="0.4" height="15.0" fill="rgb(251,74,26)" rx="2" ry="2" />
+<text text-anchor="" x="286.21" y="187.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:101) (89 samples, 0.02%)</title><rect x="230.7" y="225" width="0.6" height="15.0" fill="rgb(240,186,34)" rx="2" ry="2" />
+<text text-anchor="" x="233.65" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>filter (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:605) (124 samples, 0.03%)</title><rect x="283.6" y="225" width="0.9" height="15.0" fill="rgb(220,118,41)" rx="2" ry="2" />
+<text text-anchor="" x="286.63" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>callHandlers (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1318) (1,152 samples, 0.26%)</title><rect x="275.4" y="225" width="8.2" height="15.0" fill="rgb(238,206,24)" rx="2" ry="2" />
+<text text-anchor="" x="278.44" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:182) (21,648 samples, 4.84%)</title><rect x="2905.4" y="305" width="153.9" height="15.0" fill="rgb(205,134,0)" rx="2" ry="2" />
+<text text-anchor="" x="2908.38" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get_hosts (/Users/a..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_clean_results (/Users/adrian/src/ansible/lib/ansible/plugins/callback/__init__.py:186) (142 samples, 0.03%)</title><rect x="246.8" y="289" width="1.0" height="15.0" fill="rgb(247,100,41)" rx="2" ry="2" />
+<text text-anchor="" x="249.82" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:134) (29 samples, 0.01%)</title><rect x="18.5" y="273" width="0.2" height="15.0" fill="rgb(212,79,0)" rx="2" ry="2" />
+<text text-anchor="" x="21.54" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_groups (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:117) (49 samples, 0.01%)</title><rect x="3174.2" y="305" width="0.4" height="15.0" fill="rgb(253,211,11)" rx="2" ry="2" />
+<text text-anchor="" x="3177.22" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load_extensions (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/environment.py:78) (29 samples, 0.01%)</title><rect x="81.3" y="305" width="0.2" height="15.0" fill="rgb(210,151,50)" rx="2" ry="2" />
+<text text-anchor="" x="84.30" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_run_code (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py:62) (447,272 samples, 100.00%)</title><rect x="10.0" y="497" width="3180.0" height="15.0" fill="rgb(243,215,53)" rx="2" ry="2" />
+<text text-anchor="" x="13.01" y="507.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_run_code (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py:62)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>add_child_group (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:80) (327 samples, 0.07%)</title><rect x="13.3" y="305" width="2.4" height="15.0" fill="rgb(227,192,44)" rx="2" ry="2" />
+<text text-anchor="" x="16.35" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/Library/Python/2.7/lib/python/site-packages/plop/collector.py:1) (447,272 samples, 100.00%)</title><rect x="10.0" y="481" width="3180.0" height="15.0" fill="rgb(222,178,18)" rx="2" ry="2" />
+<text text-anchor="" x="13.01" y="491.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >(module) (/Users/adrian/Library/Python/2.7/lib/python/site-packages/plop/collector.py:1)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>getEffectiveLevel (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1344) (83 samples, 0.02%)</title><rect x="293.2" y="241" width="0.6" height="15.0" fill="rgb(250,68,16)" rx="2" ry="2" />
+<text text-anchor="" x="296.17" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:44) (1,718 samples, 0.38%)</title><rect x="219.1" y="273" width="12.2" height="15.0" fill="rgb(206,69,26)" rx="2" ry="2" />
+<text text-anchor="" x="222.07" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__subclasscheck__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/abc.py:148) (235 samples, 0.05%)</title><rect x="820.0" y="321" width="1.6" height="15.0" fill="rgb(232,83,46)" rx="2" ry="2" />
+<text text-anchor="" x="822.96" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/utils.py:312) (66 samples, 0.01%)</title><rect x="80.8" y="289" width="0.5" height="15.0" fill="rgb(228,106,14)" rx="2" ry="2" />
+<text text-anchor="" x="83.83" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>find_plugin (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:219) (355 samples, 0.08%)</title><rect x="821.6" y="321" width="2.6" height="15.0" fill="rgb(217,3,4)" rx="2" ry="2" />
+<text text-anchor="" x="824.64" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:81) (169 samples, 0.04%)</title><rect x="12.1" y="305" width="1.2" height="15.0" fill="rgb(240,182,37)" rx="2" ry="2" />
+<text text-anchor="" x="15.15" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_parent_attribute (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:409) (223 samples, 0.05%)</title><rect x="830.7" y="289" width="1.6" height="15.0" fill="rgb(234,177,24)" rx="2" ry="2" />
+<text text-anchor="" x="833.74" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>emit (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:946) (729 samples, 0.16%)</title><rect x="278.0" y="193" width="5.2" height="15.0" fill="rgb(242,64,37)" rx="2" ry="2" />
+<text text-anchor="" x="281.02" y="203.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_extensions (/Users/adrian/src/ansible/lib/ansible/template/__init__.py:211) (441 samples, 0.10%)</title><rect x="82.1" y="321" width="3.2" height="15.0" fill="rgb(211,109,51)" rx="2" ry="2" />
+<text text-anchor="" x="85.12" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>create_cache (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/environment.py:60) (69 samples, 0.02%)</title><rect x="80.8" y="305" width="0.5" height="15.0" fill="rgb(216,9,3)" rx="2" ry="2" />
+<text text-anchor="" x="83.81" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>display (/Users/adrian/src/ansible/lib/ansible/utils/display.py:112) (698 samples, 0.16%)</title><rect x="3183.9" y="337" width="5.0" height="15.0" fill="rgb(211,52,54)" rx="2" ry="2" />
+<text text-anchor="" x="3186.89" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>is_directory (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:652) (822 samples, 0.18%)</title><rect x="2895.3" y="289" width="5.8" height="15.0" fill="rgb(213,130,3)" rx="2" ry="2" />
+<text text-anchor="" x="2898.27" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_next_task_lockstep (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/linear.py:43) (1,581 samples, 0.35%)</title><rect x="87.3" y="337" width="11.3" height="15.0" fill="rgb(220,138,13)" rx="2" ry="2" />
+<text text-anchor="" x="90.35" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/__init__.py:28) (17 samples, 0.00%)</title><rect x="11.1" y="289" width="0.2" height="15.0" fill="rgb(224,177,11)" rx="2" ry="2" />
+<text text-anchor="" x="14.14" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/parsing/dataloader.py:19) (32 samples, 0.01%)</title><rect x="11.3" y="289" width="0.2" height="15.0" fill="rgb(245,170,24)" rx="2" ry="2" />
+<text text-anchor="" x="14.26" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (73 samples, 0.02%)</title><rect x="546.2" y="305" width="0.5" height="15.0" fill="rgb(241,168,22)" rx="2" ry="2" />
+<text text-anchor="" x="549.21" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (226 samples, 0.05%)</title><rect x="260.8" y="257" width="1.6" height="15.0" fill="rgb(231,57,31)" rx="2" ry="2" />
+<text text-anchor="" x="263.78" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>is_alive (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/process.py:149) (508 samples, 0.11%)</title><rect x="381.9" y="321" width="3.6" height="15.0" fill="rgb(247,41,2)" rx="2" ry="2" />
+<text text-anchor="" x="384.92" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/queues.py:113) (17,613 samples, 3.94%)</title><rect x="111.6" y="321" width="125.2" height="15.0" fill="rgb(235,135,0)" rx="2" ry="2" />
+<text text-anchor="" x="114.61" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get (/System/Li..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>template (/Users/adrian/src/ansible/lib/ansible/template/__init__.py:280) (170 samples, 0.04%)</title><rect x="3182.7" y="337" width="1.2" height="15.0" fill="rgb(206,132,30)" rx="2" ry="2" />
+<text text-anchor="" x="3185.66" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_basedir (/Users/adrian/src/ansible/lib/ansible/parsing/dataloader.py:197) (143 samples, 0.03%)</title><rect x="2902.7" y="305" width="1.0" height="15.0" fill="rgb(211,117,17)" rx="2" ry="2" />
+<text text-anchor="" x="2905.72" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:83) (29 samples, 0.01%)</title><rect x="354.2" y="321" width="0.3" height="15.0" fill="rgb(212,39,47)" rx="2" ry="2" />
+<text text-anchor="" x="357.25" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) ((string):1) (447,271 samples, 100.00%)</title><rect x="10.0" y="433" width="3180.0" height="15.0" fill="rgb(229,22,36)" rx="2" ry="2" />
+<text text-anchor="" x="13.01" y="443.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >(module) ((string):1)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_advance_selected_hosts (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/linear.py:97) (817 samples, 0.18%)</title><rect x="87.6" y="321" width="5.8" height="15.0" fill="rgb(248,26,22)" rx="2" ry="2" />
+<text text-anchor="" x="90.56" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_log (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1265) (327 samples, 0.07%)</title><rect x="3186.5" y="305" width="2.3" height="15.0" fill="rgb(213,158,31)" rx="2" ry="2" />
+<text text-anchor="" x="3189.52" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__getitem__ (/Users/adrian/src/ansible/lib/ansible/plugins/cache/__init__.py:43) (19 samples, 0.00%)</title><rect x="3169.2" y="305" width="0.1" height="15.0" fill="rgb(235,202,6)" rx="2" ry="2" />
+<text text-anchor="" x="3172.19" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>format (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:721) (417 samples, 0.09%)</title><rect x="280.2" y="161" width="3.0" height="15.0" fill="rgb(250,143,27)" rx="2" ry="2" />
+<text text-anchor="" x="283.24" y="171.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>exists (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:23) (123 samples, 0.03%)</title><rect x="16.5" y="321" width="0.9" height="15.0" fill="rgb(230,188,30)" rx="2" ry="2" />
+<text text-anchor="" x="19.51" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_hostgroup_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:744) (81 samples, 0.02%)</title><rect x="3188.9" y="337" width="0.5" height="15.0" fill="rgb(225,125,29)" rx="2" ry="2" />
+<text text-anchor="" x="3191.87" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_metadata (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:2335) (27 samples, 0.01%)</title><rect x="10.5" y="337" width="0.2" height="15.0" fill="rgb(251,23,1)" rx="2" ry="2" />
+<text text-anchor="" x="13.48" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:127) (237 samples, 0.05%)</title><rect x="3175.3" y="321" width="1.6" height="15.0" fill="rgb(241,122,31)" rx="2" ry="2" />
+<text text-anchor="" x="3178.26" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>getpreferredencoding (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/locale.py:608) (444 samples, 0.10%)</title><rect x="268.8" y="257" width="3.1" height="15.0" fill="rgb(215,43,31)" rx="2" ry="2" />
+<text text-anchor="" x="271.75" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_note (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py:64) (68 samples, 0.02%)</title><rect x="277.5" y="161" width="0.5" height="15.0" fill="rgb(240,116,23)" rx="2" ry="2" />
+<text text-anchor="" x="280.54" y="171.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>acquire (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py:147) (176 samples, 0.04%)</title><rect x="276.8" y="177" width="1.2" height="15.0" fill="rgb(217,6,21)" rx="2" ry="2" />
+<text text-anchor="" x="279.77" y="187.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (278 samples, 0.06%)</title><rect x="3180.4" y="305" width="2.0" height="15.0" fill="rgb(230,140,9)" rx="2" ry="2" />
+<text text-anchor="" x="3183.43" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (23 samples, 0.01%)</title><rect x="94.0" y="273" width="0.2" height="15.0" fill="rgb(248,152,28)" rx="2" ry="2" />
+<text text-anchor="" x="97.02" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>release (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py:187) (108 samples, 0.02%)</title><rect x="279.5" y="129" width="0.7" height="15.0" fill="rgb(239,18,42)" rx="2" ry="2" />
+<text text-anchor="" x="282.47" y="139.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>has_plugin (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:305) (22 samples, 0.00%)</title><rect x="18.8" y="145" width="0.2" height="15.0" fill="rgb(243,96,8)" rx="2" ry="2" />
+<text text-anchor="" x="21.81" y="155.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>flush (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:836) (323 samples, 0.07%)</title><rect x="3186.5" y="209" width="2.3" height="15.0" fill="rgb(208,50,29)" rx="2" ry="2" />
+<text text-anchor="" x="3189.53" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_s (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:140) (236 samples, 0.05%)</title><rect x="226.8" y="225" width="1.7" height="15.0" fill="rgb(214,28,12)" rx="2" ry="2" />
+<text text-anchor="" x="229.85" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (222 samples, 0.05%)</title><rect x="830.7" y="273" width="1.6" height="15.0" fill="rgb(237,124,23)" rx="2" ry="2" />
+<text text-anchor="" x="833.74" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>deserialize (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:223) (383 samples, 0.09%)</title><rect x="234.1" y="273" width="2.7" height="15.0" fill="rgb(233,58,44)" rx="2" ry="2" />
+<text text-anchor="" x="237.11" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>normpath (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/posixpath.py:329) (210 samples, 0.05%)</title><rect x="2893.8" y="273" width="1.5" height="15.0" fill="rgb(224,15,46)" rx="2" ry="2" />
+<text text-anchor="" x="2896.78" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (101 samples, 0.02%)</title><rect x="3177.0" y="305" width="0.7" height="15.0" fill="rgb(251,77,43)" rx="2" ry="2" />
+<text text-anchor="" x="3179.95" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_compile (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/re.py:230) (201 samples, 0.04%)</title><rect x="85.8" y="305" width="1.4" height="15.0" fill="rgb(219,141,11)" rx="2" ry="2" />
+<text text-anchor="" x="88.80" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>callHandlers (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1318) (327 samples, 0.07%)</title><rect x="3186.5" y="273" width="2.3" height="15.0" fill="rgb(254,103,17)" rx="2" ry="2" />
+<text text-anchor="" x="3189.52" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__repr__ (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:137) (2,192 samples, 0.49%)</title><rect x="365.0" y="321" width="15.6" height="15.0" fill="rgb(227,120,22)" rx="2" ry="2" />
+<text text-anchor="" x="368.00" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_group_vars (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:136) (813 samples, 0.18%)</title><rect x="3169.3" y="321" width="5.8" height="15.0" fill="rgb(224,143,1)" rx="2" ry="2" />
+<text text-anchor="" x="3172.32" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_s (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:140) (167 samples, 0.04%)</title><rect x="232.5" y="257" width="1.2" height="15.0" fill="rgb(240,109,54)" rx="2" ry="2" />
+<text text-anchor="" x="235.50" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>is_failed (/Users/adrian/src/ansible/lib/ansible/executor/task_result.py:54) (116 samples, 0.03%)</title><rect x="239.9" y="321" width="0.8" height="15.0" fill="rgb(226,134,43)" rx="2" ry="2" />
+<text text-anchor="" x="242.87" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>activate (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:2340) (49 samples, 0.01%)</title><rect x="10.5" y="353" width="0.3" height="15.0" fill="rgb(230,60,16)" rx="2" ry="2" />
+<text text-anchor="" x="13.48" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>compile (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/re.py:192) (278 samples, 0.06%)</title><rect x="85.3" y="321" width="1.9" height="15.0" fill="rgb(248,164,13)" rx="2" ry="2" />
+<text text-anchor="" x="88.26" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:182) (340 samples, 0.08%)</title><rect x="20.0" y="321" width="2.4" height="15.0" fill="rgb(238,91,39)" rx="2" ry="2" />
+<text text-anchor="" x="23.02" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_queue_task (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:159) (24,329 samples, 5.44%)</title><rect x="295.4" y="337" width="173.0" height="15.0" fill="rgb(244,92,32)" rx="2" ry="2" />
+<text text-anchor="" x="298.44" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_queue_task (/Users/ad..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/parsing/yaml/constructor.py:19) (21 samples, 0.00%)</title><rect x="11.3" y="257" width="0.2" height="15.0" fill="rgb(217,189,31)" rx="2" ry="2" />
+<text text-anchor="" x="14.33" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__repr__ (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:96) (1,483 samples, 0.33%)</title><rect x="354.5" y="321" width="10.5" height="15.0" fill="rgb(248,85,19)" rx="2" ry="2" />
+<text text-anchor="" x="357.45" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts_remaining (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:144) (26,773 samples, 5.99%)</title><rect x="626.1" y="321" width="190.3" height="15.0" fill="rgb(247,80,34)" rx="2" ry="2" />
+<text text-anchor="" x="629.08" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get_hosts_remaining (/Us..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>acquire (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:701) (258 samples, 0.06%)</title><rect x="276.2" y="193" width="1.8" height="15.0" fill="rgb(227,148,5)" rx="2" ry="2" />
+<text text-anchor="" x="279.19" y="203.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>is_file (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:641) (226 samples, 0.05%)</title><rect x="2901.1" y="289" width="1.6" height="15.0" fill="rgb(247,70,2)" rx="2" ry="2" />
+<text text-anchor="" x="2904.12" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>walk (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/os.py:209) (17 samples, 0.00%)</title><rect x="18.8" y="65" width="0.2" height="15.0" fill="rgb(233,104,19)" rx="2" ry="2" />
+<text text-anchor="" x="21.84" y="75.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load_data (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:194) (25 samples, 0.01%)</title><rect x="18.8" y="321" width="0.2" height="15.0" fill="rgb(241,219,25)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>find_module (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/pkgutil.py:176) (17 samples, 0.00%)</title><rect x="10.7" y="305" width="0.1" height="15.0" fill="rgb(220,10,18)" rx="2" ry="2" />
+<text text-anchor="" x="13.70" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_communicate (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/subprocess.py:1400) (15 samples, 0.00%)</title><rect x="15.7" y="305" width="0.1" height="15.0" fill="rgb(230,83,16)" rx="2" ry="2" />
+<text text-anchor="" x="18.69" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__str__ (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:64) (243 samples, 0.05%)</title><rect x="94.2" y="305" width="1.7" height="15.0" fill="rgb(224,28,36)" rx="2" ry="2" />
+<text text-anchor="" x="97.18" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>dumps (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/__init__.py:193) (1,368 samples, 0.31%)</title><rect x="250.0" y="273" width="9.7" height="15.0" fill="rgb(220,66,0)" rx="2" ry="2" />
+<text text-anchor="" x="253.00" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/cli/__init__.py:19) (21 samples, 0.00%)</title><rect x="10.9" y="401" width="0.1" height="15.0" fill="rgb(206,178,27)" rx="2" ry="2" />
+<text text-anchor="" x="13.87" y="411.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:19) (16 samples, 0.00%)</title><rect x="19.9" y="289" width="0.1" height="15.0" fill="rgb(246,141,23)" rx="2" ry="2" />
+<text text-anchor="" x="22.88" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_cleanup (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/process.py:76) (679 samples, 0.15%)</title><rect x="463.6" y="305" width="4.8" height="15.0" fill="rgb(254,223,30)" rx="2" ry="2" />
+<text text-anchor="" x="466.58" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>iterencode (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:212) (429 samples, 0.10%)</title><rect x="256.7" y="241" width="3.0" height="15.0" fill="rgb(220,62,51)" rx="2" ry="2" />
+<text text-anchor="" x="259.68" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_parsed_pkg_info (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:2502) (17 samples, 0.00%)</title><rect x="10.4" y="305" width="0.1" height="15.0" fill="rgb(242,58,11)" rx="2" ry="2" />
+<text text-anchor="" x="13.36" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>uuid4 (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:579) (179 samples, 0.04%)</title><rect x="140.3" y="273" width="1.3" height="15.0" fill="rgb(235,72,28)" rx="2" ry="2" />
+<text text-anchor="" x="143.32" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>makeRecord (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1252) (1,154 samples, 0.26%)</title><rect x="284.5" y="241" width="8.2" height="15.0" fill="rgb(226,17,49)" rx="2" ry="2" />
+<text text-anchor="" x="287.51" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:154) (76 samples, 0.02%)</title><rect x="3174.6" y="305" width="0.5" height="15.0" fill="rgb(247,30,50)" rx="2" ry="2" />
+<text text-anchor="" x="3177.56" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>run (/Users/adrian/src/ansible/lib/ansible/executor/playbook_executor.py:60) (446,040 samples, 99.72%)</title><rect x="18.8" y="385" width="3171.2" height="15.0" fill="rgb(225,77,18)" rx="2" ry="2" />
+<text text-anchor="" x="21.77" y="395.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >run (/Users/adrian/src/ansible/lib/ansible/executor/playbook_executor.py:60)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/inventory/dir.py:20) (15 samples, 0.00%)</title><rect x="11.4" y="209" width="0.1" height="15.0" fill="rgb(244,182,37)" rx="2" ry="2" />
+<text text-anchor="" x="14.35" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>release (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:708) (108 samples, 0.02%)</title><rect x="279.5" y="145" width="0.7" height="15.0" fill="rgb(239,89,52)" rx="2" ry="2" />
+<text text-anchor="" x="282.47" y="155.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>combine_vars (/Users/adrian/src/ansible/lib/ansible/utils/vars.py:57) (83 samples, 0.02%)</title><rect x="3167.9" y="321" width="0.6" height="15.0" fill="rgb(248,200,23)" rx="2" ry="2" />
+<text text-anchor="" x="3170.92" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>deserialize (/Users/adrian/src/ansible/lib/ansible/inventory/host.py:66) (2,535 samples, 0.57%)</title><rect x="123.6" y="289" width="18.0" height="15.0" fill="rgb(235,160,6)" rx="2" ry="2" />
+<text text-anchor="" x="126.57" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_has (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:1413) (25 samples, 0.01%)</title><rect x="10.5" y="305" width="0.2" height="15.0" fill="rgb(253,72,14)" rx="2" ry="2" />
+<text text-anchor="" x="13.49" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_parse (/Users/adrian/src/ansible/lib/ansible/inventory/script.py:72) (550 samples, 0.12%)</title><rect x="11.8" y="321" width="3.9" height="15.0" fill="rgb(239,20,31)" rx="2" ry="2" />
+<text text-anchor="" x="14.78" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:101) (160 samples, 0.04%)</title><rect x="250.6" y="257" width="1.1" height="15.0" fill="rgb(217,198,11)" rx="2" ry="2" />
+<text text-anchor="" x="253.57" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Library/Python/2.7/site-packages/requests/__init__.py:42) (23 samples, 0.01%)</title><rect x="19.1" y="289" width="0.1" height="15.0" fill="rgb(252,226,32)" rx="2" ry="2" />
+<text text-anchor="" x="22.08" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_make_iterencode (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:272) (219 samples, 0.05%)</title><rect x="258.2" y="225" width="1.5" height="15.0" fill="rgb(220,47,14)" rx="2" ry="2" />
+<text text-anchor="" x="261.17" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>add_entry (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:436) (17 samples, 0.00%)</title><rect x="10.1" y="369" width="0.1" height="15.0" fill="rgb(251,47,40)" rx="2" ry="2" />
+<text text-anchor="" x="13.12" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load_data (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:194) (22 samples, 0.00%)</title><rect x="18.8" y="193" width="0.2" height="15.0" fill="rgb(228,78,53)" rx="2" ry="2" />
+<text text-anchor="" x="21.81" y="203.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>fixup_namespace_packages (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:1947) (18 samples, 0.00%)</title><rect x="10.7" y="337" width="0.1" height="15.0" fill="rgb(228,212,14)" rx="2" ry="2" />
+<text text-anchor="" x="13.70" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>combine_vars (/Users/adrian/src/ansible/lib/ansible/utils/vars.py:57) (204 samples, 0.05%)</title><rect x="3172.8" y="305" width="1.4" height="15.0" fill="rgb(212,181,31)" rx="2" ry="2" />
+<text text-anchor="" x="3175.77" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>info (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1155) (327 samples, 0.07%)</title><rect x="3186.5" y="321" width="2.3" height="15.0" fill="rgb(230,1,9)" rx="2" ry="2" />
+<text text-anchor="" x="3189.52" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/email/parser.py:5) (15 samples, 0.00%)</title><rect x="10.4" y="289" width="0.1" height="15.0" fill="rgb(251,211,38)" rx="2" ry="2" />
+<text text-anchor="" x="13.36" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(lambda) (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:2813) (49 samples, 0.01%)</title><rect x="10.5" y="369" width="0.3" height="15.0" fill="rgb(214,144,1)" rx="2" ry="2" />
+<text text-anchor="" x="13.48" y="379.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>uuid4 (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:579) (1,951 samples, 0.44%)</title><rect x="126.5" y="257" width="13.8" height="15.0" fill="rgb(253,98,45)" rx="2" ry="2" />
+<text text-anchor="" x="129.45" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(lambda) (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:82) (59 samples, 0.01%)</title><rect x="274.6" y="225" width="0.5" height="15.0" fill="rgb(243,80,15)" rx="2" ry="2" />
+<text text-anchor="" x="277.63" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>currentThread (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/threading.py:1152) (109 samples, 0.02%)</title><rect x="289.3" y="209" width="0.8" height="15.0" fill="rgb(245,95,50)" rx="2" ry="2" />
+<text text-anchor="" x="292.32" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_handle_ns (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:1894) (18 samples, 0.00%)</title><rect x="10.7" y="321" width="0.1" height="15.0" fill="rgb(234,146,27)" rx="2" ry="2" />
+<text text-anchor="" x="13.70" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>display (/Users/adrian/src/ansible/lib/ansible/utils/display.py:112) (4,579 samples, 1.02%)</title><rect x="262.9" y="289" width="32.5" height="15.0" fill="rgb(221,7,16)" rx="2" ry="2" />
+<text text-anchor="" x="265.88" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >di..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_postinit (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/utils.py:318) (39 samples, 0.01%)</title><rect x="81.0" y="273" width="0.3" height="15.0" fill="rgb(247,190,39)" rx="2" ry="2" />
+<text text-anchor="" x="84.03" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>add_tqm_variables (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:151) (48,948 samples, 10.94%)</title><rect x="468.4" y="337" width="348.0" height="15.0" fill="rgb(211,34,19)" rx="2" ry="2" />
+<text text-anchor="" x="471.42" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >add_tqm_variables (/Users/adrian/src/ansible/li..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_initialize_base_attributes (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:168) (1,354 samples, 0.30%)</title><rect x="220.1" y="241" width="9.6" height="15.0" fill="rgb(235,220,7)" rx="2" ry="2" />
+<text text-anchor="" x="223.10" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_process_pending_results (/Users/adrian/src/ansible/lib/ansible/plugins/strategy/__init__.py:211) (27,687 samples, 6.19%)</title><rect x="98.6" y="337" width="196.8" height="15.0" fill="rgb(205,157,2)" rx="2" ry="2" />
+<text text-anchor="" x="101.59" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_process_pending_results ..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_parent_attribute (/Users/adrian/src/ansible/lib/ansible/playbook/block.py:292) (221 samples, 0.05%)</title><rect x="830.7" y="241" width="1.6" height="15.0" fill="rgb(238,126,23)" rx="2" ry="2" />
+<text text-anchor="" x="833.75" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>requires (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:2321) (23 samples, 0.01%)</title><rect x="10.3" y="353" width="0.2" height="15.0" fill="rgb(246,52,5)" rx="2" ry="2" />
+<text text-anchor="" x="13.31" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>strip_internal_keys (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:81) (144 samples, 0.03%)</title><rect x="259.7" y="273" width="1.1" height="15.0" fill="rgb(248,211,44)" rx="2" ry="2" />
+<text text-anchor="" x="262.73" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/cli/playbook.py:22) (79 samples, 0.02%)</title><rect x="11.0" y="401" width="0.6" height="15.0" fill="rgb(214,191,21)" rx="2" ry="2" />
+<text text-anchor="" x="14.02" y="411.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>uuid4 (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/uuid.py:579) (256 samples, 0.06%)</title><rect x="216.4" y="257" width="1.8" height="15.0" fill="rgb(214,100,3)" rx="2" ry="2" />
+<text text-anchor="" x="219.41" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>to_unicode (/Users/adrian/src/ansible/lib/ansible/utils/unicode.py:43) (17,823 samples, 3.98%)</title><rect x="2932.6" y="289" width="126.7" height="15.0" fill="rgb(226,83,14)" rx="2" ry="2" />
+<text text-anchor="" x="2935.58" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >to_unicode (/Us..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_group_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:720) (123 samples, 0.03%)</title><rect x="16.5" y="353" width="0.9" height="15.0" fill="rgb(208,136,54)" rx="2" ry="2" />
+<text text-anchor="" x="19.51" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__instancecheck__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/abc.py:128) (58 samples, 0.01%)</title><rect x="3173.8" y="273" width="0.4" height="15.0" fill="rgb(228,228,35)" rx="2" ry="2" />
+<text text-anchor="" x="3176.80" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>exists (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:23) (78 samples, 0.02%)</title><rect x="3189.4" y="321" width="0.6" height="15.0" fill="rgb(210,33,27)" rx="2" ry="2" />
+<text text-anchor="" x="3192.45" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>debug (/Users/adrian/src/ansible/lib/ansible/utils/display.py:185) (64 samples, 0.01%)</title><rect x="3168.5" y="321" width="0.5" height="15.0" fill="rgb(252,32,49)" rx="2" ry="2" />
+<text text-anchor="" x="3171.51" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_run_module_as_main (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py:136) (447,272 samples, 100.00%)</title><rect x="10.0" y="513" width="3180.0" height="15.0" fill="rgb(247,145,7)" rx="2" ry="2" />
+<text text-anchor="" x="13.01" y="523.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_run_module_as_main (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/runpy.py:136)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>S_ISREG (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/stat.py:49) (161 samples, 0.04%)</title><rect x="2901.6" y="257" width="1.1" height="15.0" fill="rgb(219,161,1)" rx="2" ry="2" />
+<text text-anchor="" x="2904.58" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:132) (22 samples, 0.00%)</title><rect x="18.8" y="209" width="0.2" height="15.0" fill="rgb(233,146,27)" rx="2" ry="2" />
+<text text-anchor="" x="21.81" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>isdir (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:46) (194 samples, 0.04%)</title><rect x="822.8" y="289" width="1.3" height="15.0" fill="rgb(248,74,7)" rx="2" ry="2" />
+<text text-anchor="" x="825.77" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_s (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:140) (67 samples, 0.01%)</title><rect x="236.4" y="257" width="0.4" height="15.0" fill="rgb(241,204,34)" rx="2" ry="2" />
+<text text-anchor="" x="239.35" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:423) (17 samples, 0.00%)</title><rect x="10.1" y="385" width="0.1" height="15.0" fill="rgb(236,88,13)" rx="2" ry="2" />
+<text text-anchor="" x="13.12" y="395.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_hostgroup_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:744) (143 samples, 0.03%)</title><rect x="17.5" y="337" width="1.0" height="15.0" fill="rgb(222,41,35)" rx="2" ry="2" />
+<text text-anchor="" x="20.47" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_paths (/Users/adrian/src/ansible/lib/ansible/plugins/__init__.py:158) (17 samples, 0.00%)</title><rect x="19.9" y="321" width="0.1" height="15.0" fill="rgb(242,37,37)" rx="2" ry="2" />
+<text text-anchor="" x="22.88" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (1,032 samples, 0.23%)</title><rect x="373.2" y="289" width="7.4" height="15.0" fill="rgb(250,30,33)" rx="2" ry="2" />
+<text text-anchor="" x="376.24" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_next_task_from_state (/Users/adrian/src/ansible/lib/ansible/executor/play_iterator.py:262) (85 samples, 0.02%)</title><rect x="95.9" y="305" width="0.6" height="15.0" fill="rgb(224,72,46)" rx="2" ry="2" />
+<text text-anchor="" x="98.91" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>walk (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/os.py:209) (17 samples, 0.00%)</title><rect x="18.8" y="33" width="0.2" height="15.0" fill="rgb(207,163,33)" rx="2" ry="2" />
+<text text-anchor="" x="21.84" y="43.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>normcase (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/posixpath.py:44) (54 samples, 0.01%)</title><rect x="275.1" y="225" width="0.3" height="15.0" fill="rgb(234,122,4)" rx="2" ry="2" />
+<text text-anchor="" x="278.05" y="235.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars_files (/Users/adrian/src/ansible/lib/ansible/playbook/play.py:304) (278 samples, 0.06%)</title><rect x="3180.4" y="321" width="2.0" height="15.0" fill="rgb(222,103,45)" rx="2" ry="2" />
+<text text-anchor="" x="3183.43" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (207 samples, 0.05%)</title><rect x="2882.1" y="305" width="1.5" height="15.0" fill="rgb(216,176,8)" rx="2" ry="2" />
+<text text-anchor="" x="2885.13" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) ((string):21) (447,271 samples, 100.00%)</title><rect x="10.0" y="417" width="3180.0" height="15.0" fill="rgb(225,80,4)" rx="2" ry="2" />
+<text text-anchor="" x="13.01" y="427.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >(module) ((string):21)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>increment (/Users/adrian/src/ansible/lib/ansible/executor/stats.py:34) (237 samples, 0.05%)</title><rect x="238.2" y="321" width="1.7" height="15.0" fill="rgb(215,14,52)" rx="2" ry="2" />
+<text text-anchor="" x="241.18" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_base_attributes (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:148) (99 samples, 0.02%)</title><rect x="215.7" y="241" width="0.7" height="15.0" fill="rgb(226,185,7)" rx="2" ry="2" />
+<text text-anchor="" x="218.71" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_vars (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:194) (342 samples, 0.08%)</title><rect x="20.0" y="353" width="2.4" height="15.0" fill="rgb(241,172,25)" rx="2" ry="2" />
+<text text-anchor="" x="23.00" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>isfile (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/genericpath.py:34) (226 samples, 0.05%)</title><rect x="3163.8" y="273" width="1.6" height="15.0" fill="rgb(214,223,52)" rx="2" ry="2" />
+<text text-anchor="" x="3166.84" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/loaders.py:160) (86 samples, 0.02%)</title><rect x="81.5" y="321" width="0.6" height="15.0" fill="rgb(232,227,38)" rx="2" ry="2" />
+<text text-anchor="" x="84.51" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>has_metadata (/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/pkg_resources.py:1310) (25 samples, 0.01%)</title><rect x="10.5" y="321" width="0.2" height="15.0" fill="rgb(239,110,53)" rx="2" ry="2" />
+<text text-anchor="" x="13.49" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>run (/Users/adrian/src/ansible/lib/ansible/cli/playbook.py:89) (447,032 samples, 99.95%)</title><rect x="11.7" y="401" width="3178.3" height="15.0" fill="rgb(228,104,36)" rx="2" ry="2" />
+<text text-anchor="" x="14.71" y="411.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >run (/Users/adrian/src/ansible/lib/ansible/cli/playbook.py:89)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/group.py:127) (14,598 samples, 3.26%)</title><rect x="3059.3" y="305" width="103.8" height="15.0" fill="rgb(218,100,25)" rx="2" ry="2" />
+<text text-anchor="" x="3062.29" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get_hosts (/..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>exec_ (/Users/adrian/Library/Python/2.7/lib/python/site-packages/six-1.10.0-py2.7.egg/six.py:689) (447,271 samples, 100.00%)</title><rect x="10.0" y="449" width="3180.0" height="15.0" fill="rgb(206,5,10)" rx="2" ry="2" />
+<text text-anchor="" x="13.01" y="459.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >exec_ (/Users/adrian/Library/Python/2.7/lib/python/site-packages/six-1.10.0-py2.7.egg/six.py:689)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_magic_variables (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:385) (342 samples, 0.08%)</title><rect x="20.0" y="337" width="2.4" height="15.0" fill="rgb(252,191,30)" rx="2" ry="2" />
+<text text-anchor="" x="23.00" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_name (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:105) (1,427 samples, 0.32%)</title><rect x="370.4" y="305" width="10.2" height="15.0" fill="rgb(229,70,7)" rx="2" ry="2" />
+<text text-anchor="" x="373.44" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_get_cache_entry (/Users/adrian/src/ansible/lib/ansible/vars/__init__.py:134) (297 samples, 0.07%)</title><rect x="832.4" y="321" width="2.1" height="15.0" fill="rgb(225,197,10)" rx="2" ry="2" />
+<text text-anchor="" x="835.38" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_hosts (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:182) (11,161 samples, 2.50%)</title><rect x="546.7" y="305" width="79.4" height="15.0" fill="rgb(249,22,30)" rx="2" ry="2" />
+<text text-anchor="" x="549.73" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >get_hosts..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__repr__ (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:137) (24 samples, 0.01%)</title><rect x="90.4" y="289" width="0.1" height="15.0" fill="rgb(213,4,16)" rx="2" ry="2" />
+<text text-anchor="" x="93.35" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__init__ (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/process.py:94) (417 samples, 0.09%)</title><rect x="351.3" y="305" width="2.9" height="15.0" fill="rgb(227,39,52)" rx="2" ry="2" />
+<text text-anchor="" x="354.28" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/parsing/yaml/loader.py:19) (21 samples, 0.00%)</title><rect x="11.3" y="273" width="0.2" height="15.0" fill="rgb(220,17,11)" rx="2" ry="2" />
+<text text-anchor="" x="14.33" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>current_process (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/process.py:59) (63 samples, 0.01%)</title><rect x="290.1" y="209" width="0.4" height="15.0" fill="rgb(213,213,39)" rx="2" ry="2" />
+<text text-anchor="" x="293.10" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>load_list_of_blocks (/Users/adrian/src/ansible/lib/ansible/playbook/helpers.py:35) (24 samples, 0.01%)</title><rect x="18.8" y="289" width="0.2" height="15.0" fill="rgb(208,200,21)" rx="2" ry="2" />
+<text text-anchor="" x="21.79" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>handle (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:1286) (1,276 samples, 0.29%)</title><rect x="275.4" y="241" width="9.1" height="15.0" fill="rgb(231,87,13)" rx="2" ry="2" />
+<text text-anchor="" x="278.44" y="251.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(lambda) (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/json/encoder.py:361) (99 samples, 0.02%)</title><rect x="254.4" y="209" width="0.7" height="15.0" fill="rgb(229,193,36)" rx="2" ry="2" />
+<text text-anchor="" x="257.38" y="219.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>handle (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/logging/__init__.py:744) (327 samples, 0.07%)</title><rect x="3186.5" y="257" width="2.3" height="15.0" fill="rgb(252,155,46)" rx="2" ry="2" />
+<text text-anchor="" x="3189.52" y="267.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>basedir (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:661) (2,690 samples, 0.60%)</title><rect x="2883.6" y="305" width="19.1" height="15.0" fill="rgb(239,223,40)" rx="2" ry="2" />
+<text text-anchor="" x="2886.60" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/Library/Python/2.7/lib/python/site-packages/jinja2/environment.py:10) (15 samples, 0.00%)</title><rect x="11.1" y="273" width="0.2" height="15.0" fill="rgb(220,124,46)" rx="2" ry="2" />
+<text text-anchor="" x="14.14" y="283.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>poll (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/forking.py:131) (304 samples, 0.07%)</title><rect x="383.4" y="305" width="2.1" height="15.0" fill="rgb(234,37,6)" rx="2" ry="2" />
+<text text-anchor="" x="386.37" y="315.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_generic_g (/Users/adrian/src/ansible/lib/ansible/playbook/base.py:109) (230 samples, 0.05%)</title><rect x="260.8" y="289" width="1.6" height="15.0" fill="rgb(243,68,49)" rx="2" ry="2" />
+<text text-anchor="" x="263.75" y="299.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>debug (/Users/adrian/src/ansible/lib/ansible/utils/display.py:185) (22 samples, 0.00%)</title><rect x="816.4" y="337" width="0.2" height="15.0" fill="rgb(233,35,18)" rx="2" ry="2" />
+<text text-anchor="" x="819.43" y="347.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>get_host_vars (/Users/adrian/src/ansible/lib/ansible/inventory/__init__.py:716) (143 samples, 0.03%)</title><rect x="17.5" y="353" width="1.0" height="15.0" fill="rgb(241,162,7)" rx="2" ry="2" />
+<text text-anchor="" x="20.47" y="363.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>preprocess_data (/Users/adrian/src/ansible/lib/ansible/playbook/task.py:155) (22 samples, 0.00%)</title><rect x="18.8" y="177" width="0.2" height="15.0" fill="rgb(227,179,8)" rx="2" ry="2" />
+<text text-anchor="" x="21.81" y="187.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/src/ansible/lib/ansible/plugins/callback/hipchat.py:19) (39 samples, 0.01%)</title><rect x="19.0" y="321" width="0.3" height="15.0" fill="rgb(238,67,47)" rx="2" ry="2" />
+<text text-anchor="" x="22.00" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>start (/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/multiprocessing/process.py:116) (11,657 samples, 2.61%)</title><rect x="385.5" y="321" width="82.9" height="15.0" fill="rgb(240,213,50)" rx="2" ry="2" />
+<text text-anchor="" x="388.53" y="331.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >start (/S..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>(module) (/Users/adrian/Library/Python/2.7/lib/python/site-packages/yaml/__init__.py:2) (18 samples, 0.00%)</title><rect x="10.9" y="385" width="0.1" height="15.0" fill="rgb(245,122,11)" rx="2" ry="2" />
+<text text-anchor="" x="13.89" y="395.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+</svg>
