@@ -263,8 +263,6 @@ class TestModuleUtilsBasic(BaseTestModuleUtilsBasic):
                 self.assertIs(type(load_platform_subclass(LinuxTest)), LinuxTest)
 
     def test_module_utils_basic_json_dict_converters(self):
-        from ansible.module_utils.basic import json_dict_unicode_to_bytes, json_dict_bytes_to_unicode
-
         test_data = dict(
             item1 = u"Fóo",
             item2 = [u"Bár", u"Bam"],
@@ -272,8 +270,8 @@ class TestModuleUtilsBasic(BaseTestModuleUtilsBasic):
             item4 = (u"föo", u"bär", u"©"),
             item5 = 42,
         )
-        res = json_dict_unicode_to_bytes(test_data)
-        res2 = json_dict_bytes_to_unicode(res)
+        res = basic.json_dict_unicode_to_bytes(test_data)
+        res2 = basic.json_dict_bytes_to_unicode(res)
 
         self.assertEqual(test_data, res2)
 
