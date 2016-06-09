@@ -166,7 +166,9 @@ HAVE_SELINUX=False
 try:
     import selinux
     HAVE_SELINUX=True
+    log.debug('setting HAVE_SELINUX=True')
 except ImportError:
+    log.debug("import selinux failed")
     pass
 
 try:
@@ -652,6 +654,7 @@ def selinux_mls_enabled():
 
 # Determine whether we need a placeholder for selevel/mls
 def selinux_initial_context():
+    log.debug('s_i_c')
     context = [None, None, None]
     if selinux_mls_enabled():
         context.append(None)
@@ -807,6 +810,11 @@ class AnsibleModule(object):
 
     def selinux_enabled(self):
         if not HAVE_SELINUX:
+            log.debug('H_S1=%s', HAVE_SELINUX)
+        else:
+            log.debug('H_S_else=%s', HAVE_SELINUX)
+        log.debug('selinux=%s', selinux)
+        if not HAVE_SELINUX:
             seenabled = self.get_bin_path('selinuxenabled')
             if seenabled is not None:
                 (rc,out,err) = self.run_command(seenabled)
@@ -854,10 +862,13 @@ class AnsibleModule(object):
 
     def selinux_context(self, path):
         context = selinux_initial_context()
+        log.debug('context1=%s', context)
         log.debug('H_S=%s selinux_enabled()=%s', not HAVE_SELINUX, not self.selinux_enabled())
+        log.debug('H_S=%s %s', HAVE_SELINUX, HAVE_SELINUX or None)
+
         if not HAVE_SELINUX or not self.selinux_enabled():
             return context
-        log.debug('cotext=%s', context)
+        log.debug('context1=%s', context)
         try:
             ret = selinux.lgetfilecon_raw(self._to_filesystem_str(path))
         except OSError:
@@ -872,7 +883,7 @@ class AnsibleModule(object):
         # Limit split to 4 because the selevel, the last in the list,
         # may contain ':' characters
         context = ret[1].split(':', 3)
-        log.debug('context2=%s', context)
+        log.debug('context3=%s', context)
         return context
 
     def user_and_group(self, filename):
