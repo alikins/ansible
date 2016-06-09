@@ -276,12 +276,11 @@ class TestModuleUtilsBasic(BaseTestModuleUtilsBasic):
         self.assertEqual(test_data, res2)
 
     def test_module_utils_basic_get_module_path(self):
-        from ansible.module_utils.basic import get_module_path
         with patch('os.path.realpath', return_value='/path/to/foo/'):
-            self.assertEqual(get_module_path(), '/path/to/foo')
+            self.assertEqual(basic.get_module_path(), '/path/to/foo')
 
-    def test_module_utils_basic_ansible_module_creation(self):
-        from ansible.module_utils import basic
+class TestModuleUtilsBasicAnsibleModuleCreation(BaseTestModuleUtilsBasic):
+    def test_ansible_module_creation(self):
 
         am = basic.AnsibleModule(
             argument_spec=dict(),
@@ -362,18 +361,18 @@ class TestModuleUtilsBasic(BaseTestModuleUtilsBasic):
                 supports_check_mode=True,
             )
 
-    def test_module_utils_basic_ansible_module_load_file_common_arguments(self):
-        from ansible.module_utils import basic
+    @patch('ansible.module_utils.basic.selinux_default_context')
+    @patch('ansible.module_utils.basic.selinux_mls_enabled', return_value=False)
+    def test_load_file_common_arguments(self, mock_selinux_mls_enabled,
+                                        mock_selinux_default_context):
         basic._ANSIBLE_ARGS = None
 
         am = basic.AnsibleModule(
             argument_spec = dict(),
         )
 
-        am.selinux_mls_enabled = MagicMock()
-        am.selinux_mls_enabled.return_value = True
-        am.selinux_default_context = MagicMock()
-        am.selinux_default_context.return_value = 'unconfined_u:object_r:default_t:s0'.split(':', 3)
+        mock_selinux_mls_enabled.return_value = True
+        mock_selinux_default_context.return_value = 'unconfined_u:object_r:default_t:s0'.split(':', 3)
 
         # with no params, the result should be an empty dict
         res = am.load_file_common_arguments(params=dict())
