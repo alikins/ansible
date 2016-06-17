@@ -2062,35 +2062,38 @@ class LinuxNetwork(Network):
         #     ip -4 route get 8.8.8.8                     -> Google public DNS
         #     ip -6 route get 2404:6800:400a:800::1012    -> ipv6.google.com
         # to find out the default outgoing interface, address, and gateway
-        command = dict(
-            v4 = [ip_path, '-4', 'route', 'get', '8.8.8.8'],
-            v6 = [ip_path, '-6', 'route', 'get', '2404:6800:400a:800::1012']
-        )
-        interface = dict(v4 = {}, v6 = {})
-        for v in 'v4', 'v6':
-            if v == 'v6' and self.facts['os_family'] == 'RedHat' \
-                and (self.facts['distribution_version'].startswith('4.') \
-                     or (self.facts['distribution_version'].startswith('4') \
-                         and self.facts['kernel'].startswith('2.6.9-'))):
-                continue
-            if v == 'v6' and not socket.has_ipv6:
-                continue
-            rc, out, err = self.module.run_command(command[v])
+        ip_v4_command = [ip_path, '-4', 'route', 'get', '8.8.8.8']
+        ip_v6_command = [ip_path, '-6', 'route', 'get', '2404:6800:400a:800::1012']
+
+    
+        commands = dict(v4 = ip_v4_command)
+
+        # Check ip v6 if we have ipv6 and won't crash
+        if self._ok_to_run_ip_v6_command():
+            commands['v6'] = ip_v6_command
+
+        interfaces = {}
+    
+        for ip_version, ip_command in commands.items():
+            interface = {}
+            rc, out, err = self.module.run_command(ip_command)
             if not out:
                 # v6 routing may result in
                 #   RTNETLINK answers: Invalid argument
                 continue
             words = out.split('\n')[0].split()
             # A valid output starts with the queried address on the first line
-            if len(words) > 0 and words[0] == command[v][-1]:
+            if len(words) > 0 and words[0] == ip_command[-1]:
                 for i in range(len(words) - 1):
                     if words[i] == 'dev':
-                        interface[v]['interface'] = words[i+1]
+                        interface['interface'] = words[i+1]
                     elif words[i] == 'src':
-                        interface[v]['address'] = words[i+1]
-                    elif words[i] == 'via' and words[i+1] != command[v][-1]:
-                        interface[v]['gateway'] = words[i+1]
-        return interface['v4'], interface['v6']
+                        interface['address'] = words[i+1]
+                    elif words[i] == 'via' and words[i+1] != ip_command[-1]:
+                        interface['gateway'] = words[i+1]
+            interfaces[ip_version] = interface
+
+        return interfaces.get('v4', {}), interfaces.get('v6', {})
 
     def get_interfaces_info(self, ip_path, default_ipv4, default_ipv6):
         interfaces = {}
@@ -2254,6 +2257,25 @@ class LinuxNetwork(Network):
             else:
                 new_interfaces[i] = interfaces[i]
         return new_interfaces, ips
+
+    def _ok_to_run_ip_v6_command(self):
+        if not socket.has_ipv6:
+            return False
+        
+        # Attempt to detect RHEL 4 systems that kernel panic if 'ipv6' command is run.
+        if self.facts['os_family'] != 'RedHat':
+            return True
+
+        # Try to weed out any potential RedHat 4.x in the future by checking for
+        # the RHEL4 kernel version.
+        if not self.facts['kernel'].startswith('2.6.9-'):
+            return True
+
+        if not self.facts['distribution_version'].startswith('4'):
+            return True
+
+        return False
+
 
 class GenericBsdIfconfigNetwork(Network):
     """
