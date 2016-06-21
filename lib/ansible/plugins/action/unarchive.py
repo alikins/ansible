@@ -66,10 +66,9 @@ class ActionModule(ActionBase):
         source = os.path.expanduser(source)
 
         if copy:
-            if self._task._role is not None:
-                source = self._loader.path_dwim_relative(self._task._role._role_path, 'files', source)
-            else:
-                source = self._loader.path_dwim_relative(self._loader.get_basedir(), 'files', source)
+            source, info = self._find_needle('files', source)
+            if source is None:
+                return result.update(info)
 
         remote_checksum = self._remote_checksum(dest, all_vars=task_vars, follow=True)
         if remote_checksum == '4':

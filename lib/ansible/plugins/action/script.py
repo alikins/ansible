@@ -69,10 +69,9 @@ class ActionModule(ActionBase):
         source = parts[0]
         args   = ' '.join(parts[1:])
 
-        if self._task._role is not None:
-            source = self._loader.path_dwim_relative(self._task._role._role_path, 'files', source)
-        else:
-            source = self._loader.path_dwim_relative(self._loader.get_basedir(), 'files', source)
+        source, info = self._find_needle('files', source)
+        if source is None:
+            return result.update(info)
 
         # transfer the file to a remote tmp location
         tmp_src = self._connection._shell.join_path(tmp, os.path.basename(source))

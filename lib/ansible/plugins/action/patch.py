@@ -46,10 +46,9 @@ class ActionModule(ActionBase):
             result.update(self._execute_module(task_vars=task_vars))
             return result
 
-        if self._task._role is not None:
-            src = self._loader.path_dwim_relative(self._task._role._role_path, 'files', src)
-        else:
-            src = self._loader.path_dwim_relative(self._loader.get_basedir(), 'files', src)
+        src, info = self._find_needle('files', src)
+        if src is None:
+            return result.update(info)
 
         # create the remote tmp dir if needed, and put the source file there
         if tmp is None or "-tmp-" not in tmp:

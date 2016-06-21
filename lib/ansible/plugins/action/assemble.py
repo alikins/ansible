@@ -106,19 +106,19 @@ class ActionModule(ActionBase):
             result.update(self._execute_module(tmp=tmp, task_vars=task_vars, delete_remote_tmp=False))
             self._remove_tmp_path(tmp)
             return result
-        elif self._task._role is not None:
-            src = self._loader.path_dwim_relative(self._task._role._role_path, 'files', src)
         else:
-            src = self._loader.path_dwim_relative(self._loader.get_basedir(), 'files', src)
+            src, info =  self._find_needle('files', src)
+
+        if src is None:
+            return result.update(info)
+        elif not os.path.isdir(src):
+            result['failed'] = True
+            result['msg'] = "Source (%s) is not a directory" % src
+            return result
 
         _re = None
         if regexp is not None:
             _re = re.compile(regexp)
-
-        if not os.path.isdir(src):
-            result['failed'] = True
-            result['msg'] = "Source (%s) is not a directory" % src
-            return result
 
         # Does all work assembling the file
         path = self._assemble_from_fragments(src, delimiter, _re, ignore_hidden)

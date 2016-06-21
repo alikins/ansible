@@ -69,6 +69,7 @@ class ActionModule(ActionBase):
         # Define content_tempfile in case we set it after finding content populated.
         content_tempfile = None
 
+        info = {}
         # If content is defined make a temp file and write the content into it.
         if content is not None:
             try:
@@ -88,20 +89,14 @@ class ActionModule(ActionBase):
         # look up the files and use the first one we find as src
         elif faf:
             source = self._get_first_available_file(faf, task_vars.get('_original_file', None))
-            if source is None:
-                result['failed'] = True
-                result['msg'] = "could not find src in first_available_file list"
-                return result
-
         elif remote_src:
             result.update(self._execute_module(module_name='copy', module_args=self._task.args, task_vars=task_vars, delete_remote_tmp=False))
             return result
+        else: # find in expected paths
+            source, info = self._find_needle('files', source)
 
-        else:
-            if self._task._role is not None:
-                source = self._loader.path_dwim_relative(self._task._role._role_path, 'files', source)
-            else:
-                source = self._loader.path_dwim_relative(self._loader.get_basedir(), 'files', source)
+        if source is None:
+            return result.update(info)
 
         # A list of source file tuples (full_path, relative_path) which will try to copy to the destination
         source_files = []

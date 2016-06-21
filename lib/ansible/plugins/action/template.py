@@ -76,10 +76,9 @@ class ActionModule(ActionBase):
                 result['msg'] = "could not find src in first_available_file list"
                 return result
         else:
-            if self._task._role is not None:
-                source = self._loader.path_dwim_relative(self._task._role._role_path, 'templates', source)
-            else:
-                source = self._loader.path_dwim_relative(self._loader.get_basedir(), 'templates', source)
+            source, info = self._find_needle('templates', source)
+            if source is None:
+                return result.update(info)
 
         # Expand any user home dir specification
         dest = self._remote_expand_user(dest)
