@@ -109,6 +109,13 @@ if platform.system() != 'SunOS':
     from distutils.version import LooseVersion
 
 
+class PsPid1Command(object):
+    cmd = 'ps'
+    cmd_args = ['-p', '1', '-o', 'comm']
+    
+    def result(self):
+        pass
+
 # --------------------------------------------------------------
 # timeout function to make sure some fact gathering
 # steps do not exceed a time limit
@@ -349,6 +356,9 @@ class Facts(object):
         # try various forms of querying pid 1
         proc_1 = get_file_content('/proc/1/comm')
         if proc_1 is None:
+            ps_pid1 = PsPid1Command()
+            proc_1 = pd_pid1.result
+
             rc, proc_1, err = self.module.run_command("ps -p 1 -o comm|tail -n 1", use_unsafe_shell=True)
         else:
             proc_1 = os.path.basename(proc_1)
