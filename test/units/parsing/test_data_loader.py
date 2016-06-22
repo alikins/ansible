@@ -20,14 +20,13 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from six import PY3
-from yaml.scanner import ScannerError
 
 from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import patch, mock_open
 from ansible.errors import AnsibleParserError
 
 from ansible.parsing.dataloader import DataLoader
-from ansible.parsing.yaml.objects import AnsibleMapping
+
 
 class TestDataLoader(unittest.TestCase):
 
@@ -61,6 +60,85 @@ class TestDataLoader(unittest.TestCase):
                NOT VALID
         """, True)
         self.assertRaises(AnsibleParserError, self._loader.load_from_file, 'dummy_yaml_bad.txt')
+
+
+class TestPathDwimDataLoader(unittest.TestCase):
+
+    def setUp(self):
+        self._loader = DataLoader()
+
+    def test_slash(self):
+        ret = self._loader.path_dwim('/')
+        print(ret)
+
+    def test_tilde(self):
+        ret = self._loader.path_dwim('~')
+        print(ret)
+
+    def test_tilde_slash(self):
+        ret = self._loader.path_dwim('~/')
+        print(ret)
+
+    def test_dot(self):
+        ret = self._loader.path_dwim('.')
+        print(ret)
+
+
+class TestPathDwimRelativeDataLoader(unittest.TestCase):
+
+    def setUp(self):
+        self._loader = DataLoader()
+
+    def test_none(self):
+        ret = self._loader.path_dwim_relative(None, None, None)
+        print(ret)
+
+    def test_empty_strings(self):
+        ret = self._loader.path_dwim_relative('', '', '')
+        print(ret)
+
+    def test_all_slash(self):
+        ret = self._loader.path_dwim_relative('/', '/', '/')
+        print(ret)
+
+    def test_path_endswith_role(self):
+        ret = self._loader.path_dwim_relative(path='foo/bar/tasks/', dirname='/', source='/')
+        print(ret)
+
+    def test_path_endswith_role_source_tilde(self):
+        ret = self._loader.path_dwim_relative(path='foo/bar/tasks/', dirname='/', source='~/')
+        print(ret)
+
+
+class TestPathDwimRelativeStackDataLoader(unittest.TestCase):
+
+    def setUp(self):
+        self._loader = DataLoader()
+
+    def test_none(self):
+        ret = self._loader.path_dwim_relative_stack(None, None, None)
+        print(ret)
+
+    def test_empty_strings(self):
+        ret = self._loader.path_dwim_relative_stack('', '', '')
+        print(ret)
+
+    def test_empty_lists(self):
+        ret = self._loader.path_dwim_relative_stack([], '', '~/')
+        print(ret)
+
+    def test_all_slash(self):
+        ret = self._loader.path_dwim_relative_stack('/', '/', '/')
+        print(ret)
+
+    def test_path_endswith_role(self):
+        ret = self._loader.path_dwim_relative_stack(paths=['foo/bar/tasks/'], dirname='/', source='/')
+        print(ret)
+
+    def test_path_endswith_role_source_tilde(self):
+        ret = self._loader.path_dwim_relative_stack(paths=['foo/bar/tasks/'], dirname='/', source='~/')
+        print(ret)
+
 
 class TestDataLoaderWithVault(unittest.TestCase):
 
