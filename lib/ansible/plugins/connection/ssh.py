@@ -599,7 +599,10 @@ class Connection(ConnectionBase):
                 if return_tuple[0] != 255:
                     break
                 else:
-                    raise AnsibleConnectionFailure("Failed to connect to the host via ssh.")
+                    ssh_stdout = return_tuple[1]
+                    ssh_stderr = return_tuple[2]
+                    message = "Failed to connect to the host via ssh." + "\n" + "ssh_stdout: %s\n" % ssh_stdout + "ssh_stderr: %s\n" % ssh_stderr
+                    raise AnsibleConnectionFailure(message)
             except (AnsibleConnectionFailure, Exception) as e:
                 if attempt == remaining_tries - 1:
                     raise

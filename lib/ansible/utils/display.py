@@ -53,16 +53,20 @@ except NameError:
     pass
 
 
-
+DEBUG_LOG_FORMAT = """%(asctime)s - %(process)d:%(threadName)s %(levelname)s %(module)s:%(lineno)d - %(name)s %(message)s"""
 logger = None
 #TODO: make this a logging callback instead
+
 if C.DEFAULT_LOG_PATH:
     path = C.DEFAULT_LOG_PATH
     if (os.path.exists(path) and os.access(path, os.W_OK)) or os.access(os.path.dirname(path), os.W_OK):
-        logging.basicConfig(filename=path, level=logging.DEBUG, format='%(asctime)s %(name)s %(message)s')
+        logging.basicConfig(filename=path, level=logging.DEBUG, format=DEBUG_LOG_FORMAT)
         mypid = str(os.getpid())
         user = getpass.getuser()
-        logger = logging.getLogger("p=%s u=%s | " % (mypid, user))
+        # root logger so we see paramiko logging as well
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+        #logger = logging.getLogger("p=%s u=%s | " % (mypid, user))
     else:
         print("[WARNING]: log file at %s is not writeable and we cannot create it, aborting\n" % path, file=sys.stderr)
 

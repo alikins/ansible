@@ -67,10 +67,13 @@ with warnings.catch_warnings():
     try:
         import paramiko
         HAVE_PARAMIKO=True
-        logging.getLogger("paramiko").setLevel(logging.WARNING)
+        log = logging.getLogger("paramiko").setLevel(logging.DEBUG)
     except ImportError:
         pass
 
+
+logging.getLogger("paramiko").setLevel(logging.DEBUG)
+log = logging.getLogger(__name__)
 
 class MyAddPolicy(object):
     """
@@ -270,6 +273,7 @@ class Connection(ConnectionBase):
         if C.PARAMIKO_PTY and sudoable:
             chan.get_pty(term=os.getenv('TERM', 'vt100'), width=int(os.getenv('COLUMNS', 0)), height=int(os.getenv('LINES', 0)))
 
+        log.debug("ssh exec command: %s", cmd)
         display.vvv("EXEC %s" % cmd, host=self._play_context.remote_addr)
 
         cmd = to_bytes(cmd, errors='strict')
@@ -284,14 +288,15 @@ class Connection(ConnectionBase):
                 passprompt = False
                 become_sucess = False
                 while not (become_sucess or passprompt):
-                    display.debug('Waiting for Privilege Escalation input')
+                    log.debug('Waiting for Privilege Escalation input')
 
                     chunk = chan.recv(bufsize)
-                    display.debug("chunk is: %s" % chunk)
+                    log.debug("chunk is: %s", chunk)
                     if not chunk:
                         if 'unknown user' in become_output:
                             raise AnsibleError( 'user %s does not exist' % self._play_context.become_user)
                         else:
+                            log.debug('break...?')
                             break
                             #raise AnsibleError('ssh connection closed waiting for password prompt')
                     become_output += chunk
@@ -308,8 +313,10 @@ class Connection(ConnectionBase):
 
                 if passprompt:
                     if self._play_context.become and self._play_context.become_pass:
+                        log.debug('chan.sendall')
                         chan.sendall(self._play_context.become_pass + '\n')
                     else:
+                        log.debug('a password is required')
                         raise AnsibleError("A password is reqired but none was supplied")
                 else:
                     no_prompt_out += become_output
@@ -320,7 +327,14 @@ class Connection(ConnectionBase):
         stdout = ''.join(chan.makefile('rb', bufsize))
         stderr = ''.join(chan.makefile_stderr('rb', bufsize))
 
-        return (chan.recv_exit_status(), no_prompt_out + stdout, no_prompt_out + stderr)
+        ret_code = chan.recv_exit_status()
+        ret_stdout = no_prompt_out + stdout
+        ret_stderr = no_prompt_out + stderr
+        log.debug('chan.recv_exit_status=%s', ret_code)
+        log.debug('ret_stdout=%s', ret_stdout)
+        log.debug('ret_stderr=%s', ret_stderr)
+        log.debug('stderr=%s', stderr)
+        return (ret_code, ret_stdout, ret_stdout)
 
     def put_file(self, in_path, out_path):
         ''' transfer a file from local to remote '''
