@@ -21,6 +21,7 @@ from io import StringIO
 import os
 import ConfigParser
 import re
+import shlex
 
 from ansible.errors import AnsibleError
 from ansible.plugins.lookup import LookupBase
@@ -81,6 +82,7 @@ class LookupModule(LookupBase):
 
         ret = []
         for term in terms:
+#            params = shlex.split(term)
             params = _parse_params(term)
             key = params[0]
 
