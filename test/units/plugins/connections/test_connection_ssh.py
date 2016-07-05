@@ -34,6 +34,24 @@ from ansible.plugins.connection import ssh
 from ansible.module_utils._text import to_bytes
 
 
+ssh_stderr_key_too_open = """
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0666 for '/home/adrian/.ssh/id_rsa' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/home/adrian/.ssh/id_rsa": bad permissions
+Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).
+"""
+
+class TestOpenSshErrorParser(unittest.TestCase):
+    def test_private_key_too_open(self):
+
+        error_parser = ssh.OpenSshErrorParser(stderr=ssh_stderr_key_too_open)
+
+        print(error_parser)
+
 class TestConnectionBaseClass(unittest.TestCase):
 
     def test_plugins_connection_ssh_basic(self):
