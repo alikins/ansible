@@ -43,22 +43,6 @@
 - name: assert no_mode_stat is correct
   assert: { that: "no_mode_stat.stat.mode == '0644'" }
 
-- name: 'mode specified as yaml literal 600'
-  apt_repository:
-    repo: "{{ test_repo_spec }}"
-    state: present
-    mode: 600
-  register: mode_given_short_results
-
-- name: gather mode_given_yaml_literal_600 stat
-  stat: path="{{ test_repo_path }}"
-  register: mode_given_yaml_literal_600
-
-- name: show mode_given_yaml_literal_600
-  debug: var=mode_given_yaml_literal_600
-
-- include: 'mode_cleanup.yml'
-
 - name: 'mode specified as string 0600'
   apt_repository:
      repo: "{{ test_repo_spec }}"
@@ -94,6 +78,24 @@
 - name: assert mode is correct
   assert: { that: "mode_given_string_600_stat.stat.mode == '0600'" }
 
-# Will fail
-#- name: assert mode_given_yaml_literal_600 is correct
-#  assert: { that: "mode_given_yaml_literal_600.stat.mode == '0600'" }
+- name: 'mode specified as yaml literal 600'
+  apt_repository:
+    repo: "{{ test_repo_spec }}"
+    state: present
+    mode: 600
+  register: mode_given_short_results
+
+- name: gather mode_given_yaml_literal_600 stat
+  stat: path="{{ test_repo_path }}"
+  register: mode_given_yaml_literal_600
+
+- name: show mode_given_yaml_literal_600
+  debug: var=mode_given_yaml_literal_600
+
+- include: 'mode_cleanup.yml'
+
+# a literal 600 as the mode will fail currently, in the sense that it
+# doesn't guess and consider 600 and 0600 to be the same, and will instead
+# intepret 600 as
+- name: assert mode_given_yaml_literal_600 is correct
+  assert: { that: "mode_given_yaml_literal_600.stat.mode == '0600'" }
