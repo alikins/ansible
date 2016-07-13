@@ -186,8 +186,6 @@
 - name: 'ensure ppa key is absent (expect: pass)'
   apt_key: id='{{test_ppa_key}}' state=absent
 
-
-
 #
 # TEARDOWN
 #
