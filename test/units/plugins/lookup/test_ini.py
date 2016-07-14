@@ -20,44 +20,44 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from ansible.compat.tests import unittest
 from ansible.plugins.lookup.ini import _parse_params
 
 
-class TestINILookup(unittest.TestCase):
+class TestINILookup():
 
     # Currently there isn't a new-style
     old_style_params_data = (
-            # Simple case
-            dict(term=u'keyA section=sectionA file=/path/to/file',
-                expected=[u'keyA', u'section=sectionA', u'file=/path/to/file'],
-                ),
-            dict(term=u'keyB section=sectionB with space file=/path/with/embedded spaces and/file',
-                expected=[u'keyB', u'section=sectionB with space', u'file=/path/with/embedded spaces and/file'],
-                ),
-            dict(term=u'keyC section=sectionC file=/path/with/equals/cn=com.ansible',
-                expected=[u'keyC', u'section=sectionC', u'file=/path/with/equals/cn=com.ansible'],
-                ),
-            dict(term=u'keyD section=sectionD file=/path/with space and/equals/cn=com.ansible',
-                expected=[u'keyD', u'section=sectionD', u'file=/path/with space and/equals/cn=com.ansible'],
-                ),
-            dict(term=u'keyE section=sectionE file=/path/with/unicode/くらとみ/file',
-                expected=[u'keyE', u'section=sectionE', u'file=/path/with/unicode/くらとみ/file'],
-                ),
-            dict(term=u'keyF section=sectionF file=/path/with/utf 8 and spaces/くらとみ/file',
-                expected=[u'keyF', u'section=sectionF', u'file=/path/with/utf 8 and spaces/くらとみ/file'],
-                ),
-            )
+        # Simple case
+        dict(term=u'keyA section=sectionA file=/path/to/file',
+             expected=[u'keyA', u'section=sectionA', u'file=/path/to/file'],
+             ),
+        dict(term=u'keyB section=sectionB with space file=/path/with/embedded spaces and/file',
+             expected=[u'keyB', u'section=sectionB with space', u'file=/path/with/embedded spaces and/file'],
+             ),
+        dict(term=u'keyC section=sectionC file=/path/with/equals/cn=com.ansible',
+             expected=[u'keyC', u'section=sectionC', u'file=/path/with/equals/cn=com.ansible'],
+             ),
+        dict(term=u'keyD section=sectionD file=/path/with space and/equals/cn=com.ansible',
+             expected=[u'keyD', u'section=sectionD', u'file=/path/with space and/equals/cn=com.ansible'],
+             ),
+        dict(term=u'keyE section=sectionE file=/path/with/unicode/くらとみ/file',
+             expected=[u'keyE', u'section=sectionE', u'file=/path/with/unicode/くらとみ/file'],
+             ),
+        dict(term=u'keyF section=sectionF file=/path/with/utf 8 and spaces/くらとみ/file',
+             expected=[u'keyF', u'section=sectionF', u'file=/path/with/utf 8 and spaces/くらとみ/file'],
+             ),
+        dict(term=u'keyD section=sectionD file=/path/with space and/equals/cn=com.ansible',
+             expected=[u'keyD', u'section=sectionD', u'file=/path/with space and/equals/cn=com.ansible'],
+             ),
+        dict(term='keyD section=sectionD file=/path/with space and/equals/cn=com.ansible',
+             expected=['keyD', 'section=sectionD', 'file=/path/with space and/equals/cn=com.ansible'],
+             ),
+    )
 
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
+    def parse_parameters(self, testcase_data):
+        params = _parse_params(testcase_data['term'])
+        assert params == testcase_data['expected']
 
     def test_parse_parameters(self):
-        for testcase in self.old_style_params_data:
-            #print(testcase)
-            params = _parse_params(testcase['term'])
-            self.assertEqual(params, testcase['expected'])
+        for testcase_data in self.old_style_params_data:
+            yield self.parse_parameters, testcase_data
