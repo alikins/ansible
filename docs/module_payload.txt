@@ -1,0 +1,88 @@
+cast:
+
+lib/ansible/executor/module_common.py:
+   - _modify_module()
+   - _find_module_snippets()
+
+lib/ansible/plugins/action/__init__.py:
+   - class ActionBase
+      - _low_level_execute_command()  # eventually uses connection plugin exec_command()
+        - some sudo/become handling
+        - DOES THE 'sleep 0' linux kernel bug/sshd
+        - various string/unicode/bytes munging of std* streams
+      - _configure_module()  # entry point for finding/building remote module. Does a lot.
+        - find and log module form module path ('library') via module_loader.find_plugin()
+        - misc munging
+      - _execute_module()   # entry point for transfering and running remote module. DOES A _LOT_!
+        - builds up module_args based on (among others)
+            - task args
+            - _play_context stuff
+               - check_mode
+               - diff
+               - no_log
+        - calls _configure_module with module_args, task_vars
+        - various ways to find if a tmp path is needed and what it should be
+        - call _transfer_* in various ways for old style/new style/binary modules
+        - build up the environment string via _compute_environment_string()
+        - _fixup_perms (depending on remote, local, misc, module type and lang, become/sudo, remote user) eventually using misc chmod/chown etc calls vis _low_level_execute_command()
+        - various handling for new/v old modules and cleanup setup
+        - uses connection plugin (self._connection) build_module_command() to build
+          local command to use to transfer the module and run it (ie, the local ssh
+          and sftp invocations used). Depending on pipelining may do more stdin/out
+        - uses _low_level_execute_command() to invoked the cmd from build_module_command()
+        - _parse_returned_data() to handle the return from _low_level_execute_command()
+           - calls _filter_non_json_lines() in stdout
+                - _filter_non_json_linge()
+                   - splits results into lines, loads into memory
+                   - adhoc filtering
+           - otherwise mostly just deserialize json return
+        - splits returned data from _parse_returned_data() into list of lines
+        - returns the the 'data' dict
+      - _get_diff_data()
+        _execute_remote_stat()  # also call _execute_module for stat/diff spec r module
+
+lib/anible/executor/task_executor.py:
+    - _get_connection()  # can use _execute_module for deprec accelerate
+
+lib/ansible/plugins/action/fetch.py:
+    - run() # can use _excute_module() with 'slurp' module
+
+lib/ansible/plugins/actions/ops_template.py:
+    - run()   #  _execute_module() for NetActionModule module invocation??  TBD
+
+lib/ansible/plugins/actions/net_template.py:
+    - run()   #  _execute_module() for NetActionModule module invocation??  TBD
+
+lib/ansible/plugins/action/patch.py:
+    - run()   # ?? uses _execute_module()
+        - then again to invoke the 'patch' remote module
+
+lib/ansible/plugins/action/unarchive.py:
+    - run()   #  _execute_module() used once with the 'stat' module
+              # then again with the unarchive module
+
+lib/ansible/plugins/action/package.py:
+    - run()  # for 'auto' mode, uses _execute_module to run 'setup' modules
+             # then again to invoke correct package module (yum/apt/etc)
+
+lib/ansible/plugins/action/assemble.py:
+    - run()  # execute_module() used for 'copy' if file change, used for 'file' if
+             # can also be used to find remote file based on remote_src value
+
+lib/ansible/plugins/action/copy.py:
+    - run()  # uses _execute_module() to invoke remote 'copy' or 'file'
+
+lib/ansible/plugins/action/normal.py:
+    - run()  # uses _execute_module() to invoke itself (ie, subclasses) remotely
+
+lib/ansible/plugins/action/template.py:
+    - run()  # uses _execute_module() to invoke remote 'copy' or 'file'
+
+lib/ansible/plugins/action/synchronize.py:
+    - run() # uses _excute_module() to invoke 'synchronize' module
+
+lib/ansible/plugins/action/service.py:
+    - run()  # if in 'auto' mode uses _execute_module() to invoke 'setup' to determine
+             # the system service manager to use. Then the module itself.
+
+
