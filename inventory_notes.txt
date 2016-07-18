@@ -1,0 +1,19 @@
+# inventory plugin
+- shared cache
+
+- vars plugins
+-
+
+proposals:
+- variables
+
+
+
+related:
+vars plugins generically (instead of coupled to inventory)
+
+connection plugins
+
+
+static analysis, how to move to being more computable before
+
