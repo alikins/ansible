@@ -64,6 +64,10 @@ if __name__ == '__main__':
     cli = None
     me = os.path.basename(sys.argv[0])
 
+    import cProfile, pstats, StringIO
+    pr = cProfile.Profile()
+    pr.enable()
+
     try:
         display = Display()
         display.debug("starting run")
@@ -134,4 +138,6 @@ if __name__ == '__main__':
         # Remove ansible tempdir
         shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
+    pr.disable()
+    pr.dump_stats('ansible.pstats')
     sys.exit(exit_code)
