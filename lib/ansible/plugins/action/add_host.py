@@ -25,6 +25,7 @@ from ansible.compat.six import string_types
 from ansible.plugins.action import ActionBase
 from ansible.parsing.utils.addresses import parse_address
 from ansible.errors import AnsibleError
+from ansible import logger
 
 try:
     from __main__ import display
@@ -32,6 +33,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
 
 class ActionModule(ActionBase):
     ''' Create inventory hosts and groups in the memory inventory'''
@@ -54,6 +57,7 @@ class ActionModule(ActionBase):
         # Parse out any hostname:port patterns
         new_name = self._task.args.get('name', self._task.args.get('hostname', None))
         display.vv("creating host via 'add_host': hostname=%s" % new_name)
+        logger.log(logger.VV, "creating host via 'add_host': hostname=%s", new_name)
 
         try:
             name, port = parse_address(new_name, allow_ranges=False)
