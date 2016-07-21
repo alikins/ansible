@@ -44,7 +44,8 @@ from ansible.compat.six.moves import input
 from ansible.errors import AnsibleError, AnsibleConnectionFailure, AnsibleFileNotFound
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.path import makedirs_safe
-from ansible.module_utils._text import to_bytes
+from ansible.utils.unicode import to_bytes
+from ansible import logger
 
 try:
     from __main__ import display
@@ -61,6 +62,8 @@ Are you sure you want to continue connecting (yes/no)?
 
 # SSH Options Regex
 SETTINGS_REGEX = re.compile(r'(\w+)(?:\s*=\s*|\s+)(.+)')
+
+log = logging.getLogger(__name__)
 
 # prevent paramiko warning noise -- see http://stackoverflow.com/questions/3920502/
 HAVE_PARAMIKO=False
@@ -182,6 +185,7 @@ class Connection(ConnectionBase):
             try:
                 sock_kwarg = {'sock': paramiko.ProxyCommand(proxy_command)}
                 display.vvv("CONFIGURE PROXY COMMAND FOR CONNECTION: %s" % proxy_command, host=self._play_context.remote_addr)
+                log.log(logger.VVV, "CONFIGURE PROXY COMMAND FOR CONNECTION: %s", proxy_command, extra={'host':self._play_context.remote_addr})
             except AttributeError:
                 display.warning('Paramiko ProxyCommand support unavailable. '
                                 'Please upgrade to Paramiko 1.9.0 or newer. '

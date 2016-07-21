@@ -21,6 +21,7 @@ __metaclass__ = type
 
 import errno
 import fcntl
+import logging
 import os
 import pty
 import select
@@ -36,6 +37,9 @@ from ansible.module_utils.basic import BOOLEANS
 from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.path import unfrackpath, makedirs_safe
+from ansible.utils.unicode import to_bytes, to_unicode, to_str
+from ansible.compat.six import text_type, binary_type
+from ansible import logger
 
 boolean = C.mk_boolean
 
@@ -47,6 +51,7 @@ except ImportError:
 
 SSHPASS_AVAILABLE = None
 
+log = logging.getLogger(__name__)
 
 class Connection(ConnectionBase):
     ''' ssh based connections '''
@@ -118,8 +123,9 @@ class Connection(ConnectionBase):
             were added.  It will be displayed with a high enough verbosity.
         .. note:: This function does its work via side-effect.  The b_command list has the new arguments appended.
         """
-        display.vvvvv(u'SSH: %s: (%s)' % (explanation, ')('.join(to_text(a) for a in b_args)), host=self._play_context.remote_addr)
         b_command += b_args
+	display.vvvvv(u'SSH: %s: (%s)' % (explanation, ')('.join(to_text(a) for a in b_args)), host=self._play_context.remote_addr)
+        # FIXME: add back log
 
     def _build_command(self, binary, *other_args):
         '''
@@ -253,6 +259,7 @@ class Connection(ConnectionBase):
         '''
 
         display.debug('Sending initial data')
+        log.debug('Sending initial data')
 
         try:
             fh.write(to_bytes(in_data))
@@ -261,6 +268,7 @@ class Connection(ConnectionBase):
             raise AnsibleConnectionFailure('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh')
 
         display.debug('Sent initial data (%d bytes)' % len(in_data))
+        log.debug('Sent initial data (%d bytes)', len(in_data))
 
     # Used by _run() to kill processes on failures
     @staticmethod
@@ -288,20 +296,24 @@ class Connection(ConnectionBase):
             display_line = to_text(b_line).rstrip('\r\n')
             suppress_output = False
 
-            #display.debug("Examining line (source=%s, state=%s): '%s'" % (source, state, display_line))
-            if self._play_context.prompt and self.check_password_prompt(b_line):
-                display.debug("become_prompt: (source=%s, state=%s): '%s'" % (source, state, display_line))
+            #display.debug("Examining line (source=%s, state=%s): '%s'" % (source, state, l.rstrip('\r\n')))
+            if self._play_context.prompt and self.check_password_prompt(l):
+                display.debug("become_prompt: (source=%s, state=%s): '%s'" % (source, state, l.rstrip('\r\n')))
+                log.debug("become_prompt: (source=%s, state=%s): '%s'", source, state, l.rstrip('\r\n'))
                 self._flags['become_prompt'] = True
                 suppress_output = True
-            elif self._play_context.success_key and self.check_become_success(b_line):
-                display.debug("become_success: (source=%s, state=%s): '%s'" % (source, state, display_line))
+            elif self._play_context.success_key and self.check_become_success(l):
+                display.debug("become_success: (source=%s, state=%s): '%s'" % (source, state, l.rstrip('\r\n')))
+                log.debug("become_success: (source=%s, state=%s): '%s'", source, state, l.rstrip('\r\n'))
                 self._flags['become_success'] = True
                 suppress_output = True
-            elif sudoable and self.check_incorrect_password(b_line):
-                display.debug("become_error: (source=%s, state=%s): '%s'" % (source, state, display_line))
+            elif sudoable and self.check_incorrect_password(l):
+                display.debug("become_error: (source=%s, state=%s): '%s'" % (source, state, l.rstrip('\r\n')))
+                log.debug("become_error: (source=%s, state=%s): '%s'", source, state, l.rstrip('\r\n'))
                 self._flags['become_error'] = True
-            elif sudoable and self.check_missing_password(b_line):
-                display.debug("become_nopasswd_error: (source=%s, state=%s): '%s'" % (source, state, display_line))
+            elif sudoable and self.check_missing_password(l):
+                display.debug("become_nopasswd_error: (source=%s, state=%s): '%s'" % (source, state, l.rstrip('\r\n')))
+                log.debug("become_nopasswd_error: (source=%s, state=%s): '%s'", source, state, l.rstrip('\r\n'))
                 self._flags['become_nopasswd_error'] = True
 
             if not suppress_output:
@@ -326,6 +338,7 @@ class Connection(ConnectionBase):
 
         display_cmd = list(map(shlex_quote, map(to_text, cmd)))
         display.vvv(u'SSH: EXEC {0}'.format(u' '.join(display_cmd)), host=self.host)
+        log.log(logger.VVV, u'SSH: EXEC %s', u' '.join(display_cmd), extra={'host':self.host})
 
         # Start the given command. If we don't need to pipeline data, we can try
         # to use a pseudo-tty (ssh will have been invoked with -tt). If we are
@@ -394,12 +407,14 @@ class Connection(ConnectionBase):
                 # We're requesting escalation with a password, so we have to
                 # wait for a password prompt.
                 state = states.index('awaiting_prompt')
-                display.debug(u'Initial state: %s: %s' % (states[state], self._play_context.prompt))
+                display.debug('Initial state: %s: %s' % (states[state], self._play_context.prompt))
+                log.debug('Initial state: %s: %s', states[state], self._play_context.prompt)
             elif self._play_context.become and self._play_context.success_key:
                 # We're requesting escalation without a password, so we have to
                 # detect success/failure before sending any initial data.
                 state = states.index('awaiting_escalation')
-                display.debug(u'Initial state: %s: %s' % (states[state], self._play_context.success_key))
+                display.debug('Initial state: %s: %s' % (states[state], self._play_context.success_key))
+                log.debug('Initial state: %s: %s', states[state], self._play_context.success_key)
 
         # We store accumulated stdout and stderr output from the process here,
         # but strip any privilege escalation prompt/confirmation lines first.
@@ -466,8 +481,10 @@ class Connection(ConnectionBase):
                 b_chunk = p.stderr.read()
                 if b_chunk == b'':
                     rpipes.remove(p.stderr)
-                b_tmp_stderr += b_chunk
-                display.debug("stderr chunk (state=%s):\n>>>%s<<<\n" % (state, to_text(b_chunk)))
+                tmp_stderr += chunk
+                display.debug("stderr chunk (state=%s):\n>>>%s<<<\n" % (state, to_text(chunk)))
+                log.debug("stdout chunk (state=%s)", state)
+                log.debug("stdout chunk=%s", b_chunk)
 
             # We examine the output line-by-line until we have negotiated any
             # privilege escalation prompt and subsequent success/error message.
@@ -495,7 +512,8 @@ class Connection(ConnectionBase):
             if states[state] == 'awaiting_prompt':
                 if self._flags['become_prompt']:
                     display.debug('Sending become_pass in response to prompt')
-                    stdin.write(to_bytes(self._play_context.become_pass) + b'\n')
+                    log.debug('Sending become_pass in response to prompt')
+                    stdin.write(b'{0}\n'.format(to_bytes(self._play_context.become_pass )))
                     self._flags['become_prompt'] = False
                     state += 1
                 elif self._flags['become_success']:
@@ -507,10 +525,12 @@ class Connection(ConnectionBase):
             if states[state] == 'awaiting_escalation':
                 if self._flags['become_success']:
                     display.debug('Escalation succeeded')
+                    log.debug('Escalation succeeded')
                     self._flags['become_success'] = False
                     state += 1
                 elif self._flags['become_error']:
                     display.debug('Escalation failed')
+                    log.debug('Escalation failed')
                     self._terminate_process(p)
                     self._flags['become_error'] = False
                     raise AnsibleError('Incorrect %s password' % self._play_context.become_method)
@@ -523,6 +543,7 @@ class Connection(ConnectionBase):
                     # This shouldn't happen, because we should see the "Sorry,
                     # try again" message first.
                     display.debug('Escalation prompt repeated')
+                    log.debug('Escalation prompt repeated')
                     self._terminate_process(p)
                     self._flags['become_prompt'] = False
                     raise AnsibleError('Incorrect %s password' % self._play_context.become_method)
@@ -581,6 +602,8 @@ class Connection(ConnectionBase):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
         display.vvv(u"ESTABLISH SSH CONNECTION FOR USER: {0}".format(self._play_context.remote_user), host=self._play_context.remote_addr)
+        log.log(logger.VVV, u"ESTABLISH SSH CONNECTION FOR USER: %s",
+                self._play_context.remote_user, extra={'host':self._play_context.remote_addr})
 
 
         # we can only use tty when we are not pipelining the modules. piping
@@ -693,6 +716,7 @@ class Connection(ConnectionBase):
                         msg = "ssh_retry: attempt: %d, caught exception(%s) from cmd (%s), pausing for %d seconds" % (attempt, e, cmd_summary, pause)
 
                     display.vv(msg, host=self.host)
+                    logger.log(logger.VV, msg, extra={'hosts': self.host})
 
                     time.sleep(pause)
                     continue
@@ -705,8 +729,9 @@ class Connection(ConnectionBase):
         super(Connection, self).put_file(in_path, out_path)
 
         display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self.host)
-        if not os.path.exists(to_bytes(in_path, errors='surrogate_or_strict')):
-            raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_native(in_path)))
+        logger.log(logger.VVV, u"PUT %s TO %s", in_path, out_path, extra={'host':self.host})
+        if not os.path.exists(to_bytes(in_path, errors='strict')):
+            raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_str(in_path)))
 
         self._file_transport_command(in_path, out_path, 'put')
 
@@ -716,6 +741,7 @@ class Connection(ConnectionBase):
         super(Connection, self).fetch_file(in_path, out_path)
 
         display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self.host)
+        logger.log(logger.VVV, u"FETCH %s TO %s", in_path, out_path, extra={'host':self.host})
         self._file_transport_command(in_path, out_path, 'get')
 
     def close(self):

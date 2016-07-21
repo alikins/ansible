@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import json
+import logging
 import difflib
 import warnings
 from copy import deepcopy
@@ -28,6 +29,9 @@ from ansible import constants as C
 from ansible.module_utils._text import to_text
 from ansible.utils.color import stringc
 from ansible.vars import strip_internal_keys
+from ansible.utils.unicode import to_unicod
+from ansible import logger
+
 
 try:
     from __main__ import display as global_display
@@ -43,6 +47,8 @@ except ImportError:
 
 __all__ = ["CallbackBase"]
 
+
+log = logging.getLogger(__name__)
 
 class CallbackBase:
 
@@ -68,6 +74,8 @@ class CallbackBase:
             ctype = getattr(self, 'CALLBACK_TYPE', 'old')
             version = getattr(self, 'CALLBACK_VERSION', '1.0')
             self._display.vvvv('Loading callback plugin %s of type %s, v%s from %s' % (name, ctype, version, __file__))
+
+            log.log(logger.VVVV, 'Loaded callback %s of type %s, v%s', name, ctype, version)
 
     ''' helper for callbacks, so they don't all have to include deepcopy '''
     _copy_result = deepcopy
