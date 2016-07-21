@@ -19,6 +19,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import ast
+import logging
 import sys
 
 from ansible import constants as C
@@ -26,6 +27,7 @@ from ansible.module_utils.six import string_types
 from ansible.module_utils.six.moves import builtins
 from ansible.plugins.loader import filter_loader, test_loader
 
+log = logging.getLogger(__name__)
 
 def safe_eval(expr, locals={}, include_exceptions=False):
     '''
@@ -142,6 +144,8 @@ def safe_eval(expr, locals={}, include_exceptions=False):
             return (expr, None)
         return expr
     except Exception as e:
+        log.warning('Exception in safe_eval() on expr: %s (%s)', expr, e)
+        log.exception(e)
         if include_exceptions:
             return (expr, e)
         return expr

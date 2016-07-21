@@ -32,6 +32,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
+
 # Global so that all instances of a PluginLoader will share the caches
 MODULE_CACHE = {}
 PATH_CACHE = {}

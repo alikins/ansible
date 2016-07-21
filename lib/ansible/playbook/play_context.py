@@ -21,6 +21,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import pwd
 import random
@@ -48,6 +49,8 @@ except ImportError:
 
 
 __all__ = ['PlayContext']
+
+log = logging.getLogger(__name__)
 
 # the magic variable mapping dictionary below is used to translate
 # host/inventory variables to fields in the PlayContext
@@ -406,6 +409,7 @@ class PlayContext(Base):
                     break
             else:
                 display.debug("no remote address found for delegated host %s\nusing its name, so success depends on DNS resolution" % delegated_host_name)
+                log.debug("no remote address found for delegated host %s using its name, so success depends on DNS resolution", delegated_host_name)
                 delegated_vars['ansible_host'] = delegated_host_name
 
             # reset the port back to the default if none was specified, to prevent

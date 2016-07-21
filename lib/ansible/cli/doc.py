@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import datetime
+import logging
 import os
 import textwrap
 import traceback
@@ -32,11 +33,16 @@ from ansible.module_utils.six import string_types
 from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible.plugins.loader import module_loader, action_loader, lookup_loader, callback_loader, cache_loader, connection_loader, strategy_loader, PluginLoader
 from ansible.utils import plugin_docs
+from ansible import logger
+
+
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class DocCLI(CLI):
@@ -130,7 +136,8 @@ class DocCLI(CLI):
                 # if the plugin lives in a non-python file (eg, win_X.ps1), require the corresponding python file for docs
                 filename = loader.find_plugin(plugin, mod_type='.py', ignore_deprecated=True)
                 if filename is None:
-                    display.warning("%s %s not found in:\n%s\n" % (plugin_type, plugin, search_paths))
+                    display.warning("%s %s not found in %s\n" % (plugin_type, plugin, search_paths))
+                    log.warning("%s %s not found in %s", plugin_type, plugin, search_paths)
                     continue
 
                 if any(filename.endswith(x) for x in C.BLACKLIST_EXTS):
@@ -138,9 +145,13 @@ class DocCLI(CLI):
 
                 try:
                     doc, plainexamples, returndocs, metadata = plugin_docs.get_docstring(filename, verbose=(self.options.verbosity > 0))
-                except:
+                except Exception as e:
                     display.vvv(traceback.format_exc())
+                    log.exeption(e)
+
                     display.error("%s %s has a documentation error formatting or is missing documentation." % (plugin_type, plugin))
+                    log.error("%s %s has a documentation error formatting or is missing documentation", plugin_type, plugin)
+
                     continue
 
                 if doc is not None:
@@ -171,6 +182,9 @@ class DocCLI(CLI):
                     raise AnsibleError("Parsing produced an empty object.")
             except Exception as e:
                 display.vvv(traceback.format_exc())
+                # log what we display plus log.exception
+                log.log(logger.VVV, traceback.print_exc())
+                log.exception(e)
                 raise AnsibleError("%s %s missing documentation (or could not parse documentation): %s\n" % (plugin_type, plugin, str(e)))
 
         if text:

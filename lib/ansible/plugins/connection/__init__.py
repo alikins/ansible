@@ -21,6 +21,7 @@ __metaclass__ = type
 
 import fcntl
 import gettext
+import logging
 import os
 import shlex
 from abc import abstractmethod, abstractproperty
@@ -32,6 +33,8 @@ from ansible.module_utils.six import string_types
 from ansible.module_utils._text import to_bytes, to_text
 from ansible.plugins import AnsiblePlugin
 from ansible.plugins.loader import shell_loader
+from ansible.plugins import shell_loader
+from ansible import logger
 
 try:
     from __main__ import display
@@ -39,6 +42,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 __all__ = ['ConnectionBase', 'ensure_connect']
 
@@ -84,6 +88,11 @@ class ConnectionBase(AnsiblePlugin):
         self.success_key = None
         self.prompt = None
         self._connected = False
+
+        # Will make for a slightly odd logger name.
+        # TODO/FIXME: do we want a top level logging namespace for this?
+        # TODO/FIXME: recreate if hostname changes?
+        self.host_log = logging.getLogger('ansible.remote_host.' + self._play_context.remote_addr)
 
         # load the shell plugin for this action/connection
         if play_context.shell:
@@ -271,13 +280,17 @@ class ConnectionBase(AnsiblePlugin):
     def connection_lock(self):
         f = self._play_context.connection_lockfd
         display.vvvv('CONNECTION: pid %d waiting for lock on %d' % (os.getpid(), f), host=self._play_context.remote_addr)
+        # TODO/FIXME: the logger already knows the pid...
+        self.host_log.log(logger.VVV, 'CONNECTION: pid %d waiting for lock on %d', os.getpid(), f)
         fcntl.lockf(f, fcntl.LOCK_EX)
         display.vvvv('CONNECTION: pid %d acquired lock on %d' % (os.getpid(), f), host=self._play_context.remote_addr)
+        self.host_log.log(logger.VVVV, 'CONNECTION: pid %d acquired lock on %d', os.getpid(), f)
 
     def connection_unlock(self):
         f = self._play_context.connection_lockfd
         fcntl.lockf(f, fcntl.LOCK_UN)
         display.vvvv('CONNECTION: pid %d released lock on %d' % (os.getpid(), f), host=self._play_context.remote_addr)
+        self.host_log.log('CONNECTION: pid %d released lock on %d', os.getpid(), f)
 
     def reset(self):
         display.warning("Reset is not implemented for this connection")

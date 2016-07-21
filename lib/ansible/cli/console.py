@@ -32,6 +32,7 @@ __metaclass__ = type
 import atexit
 import cmd
 import getpass
+import logging
 import readline
 import os
 import sys
@@ -47,12 +48,16 @@ from ansible.playbook.play import Play
 from ansible.plugins.loader import module_loader
 from ansible.utils import plugin_docs
 from ansible.utils.color import stringc
+from ansible.vars import VariableManager
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class ConsoleCLI(CLI, cmd.Cmd):
@@ -166,6 +171,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
 
         if not self.options.cwd:
             display.error("No host found")
+            log.error("No host found")
             return False
 
         if arg.split()[0] in self.modules:
@@ -193,6 +199,8 @@ class ConsoleCLI(CLI, cmd.Cmd):
             play = Play().load(play_ds, variable_manager=self.variable_manager, loader=self.loader)
         except Exception as e:
             display.error(u"Unable to build command: %s" % to_text(e))
+            log.error(u"Unable to build command: %s", to_text(e))
+            log.exception(e)
             return False
 
         try:
@@ -220,12 +228,16 @@ class ConsoleCLI(CLI, cmd.Cmd):
 
             if result is None:
                 display.error("No hosts found")
+                log.error("No hosts found")
                 return False
         except KeyboardInterrupt:
             display.error('User interrupted execution')
+            log.error('User interrupted execution')
             return False
         except Exception as e:
             display.error(to_text(e))
+            log.error(to_text(e))
+            log.exception(e)
             # FIXME: add traceback in very very verbose mode
             return False
 
@@ -263,6 +275,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         else:
             display.verbosity = int(arg)
             display.v('verbosity level set to %s' % arg)
+            log.log(logger.V, 'verbosity level set to %s', arg)
 
     def do_cd(self, arg):
         """
@@ -298,6 +311,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         if arg:
             self.options.become = boolean(arg, strict=False)
             display.v("become changed to %s" % self.options.become)
+            log.log(logger.V, "become changed to %s", self.options.become)
             self.set_prompt()
         else:
             display.display("Please specify become value, e.g. `become yes`")
@@ -317,6 +331,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         else:
             display.display("Please specify a user, e.g. `become_user jenkins`")
             display.v("Current user is %s" % self.options.become_user)
+            log.log(logger.V, "Current user is %s", self.options.become_user)
         self.set_prompt()
 
     def do_become_method(self, arg):
@@ -324,6 +339,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         if arg:
             self.options.become_method = arg
             display.v("become_method changed to %s" % self.options.become_method)
+            log.log(logger.V, "become_method changed to %s", self.options.become_method)
         else:
             display.display("Please specify a become_method, e.g. `become_method su`")
 
@@ -332,6 +348,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         if arg:
             self.options.check = boolean(arg, strict=False)
             display.v("check mode changed to %s" % self.options.check)
+            log.log(logger.V, "check mode changed to %s", self.options.check)
         else:
             display.display("Please specify check mode value, e.g. `check yes`")
 
@@ -340,6 +357,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         if arg:
             self.options.diff = boolean(arg, strict=False)
             display.v("diff mode changed to %s" % self.options.diff)
+            log.log(logger.V, "diff mode changed to %s", self.options.diff)
         else:
             display.display("Please specify a diff value , e.g. `diff yes`")
 
@@ -362,8 +380,10 @@ class ConsoleCLI(CLI, cmd.Cmd):
                         display.display('  ' + stringc(opt, C.COLOR_HIGHLIGHT) + ' ' + oc['options'][opt]['description'][0])
                 else:
                     display.error('No documentation found for %s.' % module_name)
+                    log.error('No documentation found for %s.', module_name)
             else:
                 display.error('%s is not a valid command, use ? to list all valid commands.' % module_name)
+                log.error('%s is not a valid command, use ? to list all valid commands.', module_name)
 
     def complete_cd(self, text, line, begidx, endidx):
         mline = line.partition(' ')[2]
@@ -429,6 +449,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
             # Empty inventory
             no_hosts = True
             display.warning("provided hosts list is empty, only localhost is available")
+            log.warning("provided hosts list is empty, only localhost is available")
 
         self.inventory.subset(self.options.subset)
         hosts = self.inventory.list_hosts(self.pattern)

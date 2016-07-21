@@ -25,6 +25,8 @@ import time
 
 from collections import deque
 from multiprocessing import Lock
+import logging
+
 from jinja2.exceptions import UndefinedError
 
 from ansible import constants as C
@@ -44,6 +46,8 @@ from ansible.plugins.loader import action_loader, connection_loader, filter_load
 from ansible.template import Templar
 from ansible.utils.vars import combine_vars
 from ansible.vars.manager import strip_internal_keys
+from ansible import logger
+
 
 
 try:
@@ -51,6 +55,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 __all__ = ['StrategyBase']
 
@@ -149,6 +155,7 @@ class StrategyBase:
         unreachable_hosts = self._tqm._unreachable_hosts.keys()
 
         display.debug("running handlers")
+        log.debug("running handlers")
         handler_result = self.run_handlers(iterator, play_context)
         if isinstance(handler_result, bool) and not handler_result:
             result |= self._tqm.RUN_ERROR
@@ -578,6 +585,7 @@ class StrategyBase:
         ret_results = []
 
         display.debug("waiting for pending results...")
+        log.debug("waiting for pending results...")
         while self._pending_results > 0 and not self._tqm._terminated:
 
             if self._tqm.has_dead_workers():
@@ -589,6 +597,7 @@ class StrategyBase:
                 time.sleep(C.DEFAULT_INTERNAL_POLL_INTERVAL)
 
         display.debug("no more pending results, returning what we have")
+        log.debug("no more pending results, returning what we have")
 
         return ret_results
 
@@ -666,6 +675,7 @@ class StrategyBase:
         '''
 
         display.debug("loading included file: %s" % included_file._filename)
+        log.debug("loading included file: %s", included_file._filename)
         try:
             data = self._loader.load_from_file(included_file._filename)
             if data is None:
@@ -722,6 +732,7 @@ class StrategyBase:
         # finally, send the callback and return the list of blocks loaded
         self._tqm.send_callback('v2_playbook_on_include', included_file)
         display.debug("done processing included file")
+        log.debug("done processing included file")
         return block_list
 
     def run_handlers(self, iterator, play_context):
@@ -818,6 +829,7 @@ class StrategyBase:
                         iterator.mark_host_failed(host)
                         self._tqm._failed_hosts[host.name] = True
                     display.warning(str(e))
+                    log.exception(e)
                     continue
 
         # wipe the notification list
@@ -836,13 +848,16 @@ class StrategyBase:
 
         if resp.lower() in ['y', 'yes']:
             display.debug("User ran task")
+            log.debug("User ran task")
             ret = True
         elif resp.lower() in ['c', 'continue']:
             display.debug("User ran task and canceled step mode")
+            log.debug("User ran task and canceled step mode")
             self._step = False
             ret = True
         else:
             display.debug("User skipped task")
+            log.debug("User skipped task")
 
         display.banner(msg)
 

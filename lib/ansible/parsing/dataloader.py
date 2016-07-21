@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import copy
+import logging
 import os
 import json
 import re
@@ -37,6 +38,7 @@ from ansible.parsing.quoting import unquote
 from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.parsing.yaml.objects import AnsibleBaseYAMLObject, AnsibleUnicode
 from ansible.utils.path import unfrackpath
+from ansible import logger
 
 try:
     from __main__ import display
@@ -48,7 +50,7 @@ except ImportError:
 # this is not perfect but people should really avoid 'tasks' dirs outside roles when using Ansible.
 RE_TASKS = re.compile(u'(?:^|%s)+tasks%s?$' % (os.path.sep, os.path.sep))
 
-
+log = logging.getLogger(__name__)
 class DataLoader:
 
     '''
@@ -358,6 +360,7 @@ class DataLoader:
         search = []
         if source is None:
             display.warning('Invalid request to find a file that matches a "null" value')
+            log.warning('Invalid request to find a file that matches an empty string or "null" value')
         elif source and (source.startswith('~') or source.startswith(os.path.sep)):
             # path is absolute, no relative needed, check existence and return source
             test_path = unfrackpath(b_source, follow=False)
@@ -387,8 +390,10 @@ class DataLoader:
             search.append(os.path.join(to_bytes(self.get_basedir()), b_source))
 
             display.debug(u'search_path:\n\t%s' % to_text(b'\n\t'.join(search)))
+            log.debug('search_path: %s', to_text(b'\n\t'.join(search)))
             for b_candidate in search:
                 display.vvvvv(u'looking for "%s" at "%s"' % (source, to_text(b_candidate)))
+                log.log(logger.VVVVV, 'looking for \"%s\" at \"%s\"', source, to_text(b_candidate))
                 if os.path.exists(b_candidate):
                     result = to_text(b_candidate)
                     break

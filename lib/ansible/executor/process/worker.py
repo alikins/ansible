@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import multiprocessing
 import os
 import sys
@@ -49,6 +50,9 @@ except ImportError:
 
 __all__ = ['WorkerProcess']
 
+# TODO: Most of worker is a seperate process, so it will need to
+# do it's own logging setup (or use the multiprocessing logging)
+log = logging.getLogger(__name__)
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -107,6 +111,7 @@ class WorkerProcess(multiprocessing.Process):
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
+            log.debug("running TaskExecutor() for %s/%s", self._host, self._task)
             executor_result = TaskExecutor(
                 self._host,
                 self._task,
@@ -119,6 +124,7 @@ class WorkerProcess(multiprocessing.Process):
             ).run()
 
             display.debug("done running TaskExecutor() for %s/%s [%s]" % (self._host, self._task, self._task._uuid))
+            log.debug("done running TaskExecutor() for %s/%s [%s]", self._host, self._task, self._task._uuid))
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(
@@ -130,8 +136,10 @@ class WorkerProcess(multiprocessing.Process):
 
             # put the result on the result queue
             display.debug("sending task result for task %s" % self._task._uuid)
+            log.debug("sending task result for task %s", self._task._uuid)
             self._rslt_q.put(task_result)
             display.debug("done sending task result for task %s" % self._task._uuid)
+            log.debug("done sending task result for task %s", self._task._uuid)
 
         except AnsibleConnectionFailure:
             self._host.vars = dict()
@@ -156,11 +164,14 @@ class WorkerProcess(multiprocessing.Process):
                         task_fields=self._task.dump_attrs(),
                     )
                     self._rslt_q.put(task_result, block=False)
-                except:
+                except Exception as e:
                     display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
                     display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
+                    log.exception(e)
 
         display.debug("WORKER PROCESS EXITING")
+        log.debug("WORKER PROCESS EXITING")
+
 
         # pr.disable()
         # s = StringIO.StringIO()

@@ -22,6 +22,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os.path
 import re
 import shutil
@@ -41,12 +42,15 @@ from ansible.galaxy.role import GalaxyRole
 from ansible.galaxy.token import GalaxyToken
 from ansible.module_utils._text import to_text
 from ansible.playbook.role.requirement import RoleRequirement
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class GalaxyCLI(CLI):
@@ -332,6 +336,8 @@ class GalaxyCLI(CLI):
                         if "include" not in role:
                             role = RoleRequirement.role_yaml_parse(role)
                             display.vvv("found role %s in yaml file" % str(role))
+                            log.log(logger.VVV, "found role %s in yaml file", str(role))
+
                             if "name" not in role and "scm" not in role:
                                 raise AnsibleError("Must specify name or src for role")
                             roles_left.append(GalaxyRole(self.galaxy, **role))
@@ -352,6 +358,7 @@ class GalaxyCLI(CLI):
                         if rline.startswith("#") or rline.strip() == '':
                             continue
                         display.debug('found role %s in text file' % str(rline))
+                        log.debug('found role %s in text file', rline)
                         role = RoleRequirement.role_yaml_parse(rline.strip())
                         roles_left.append(GalaxyRole(self.galaxy, **role))
                 f.close()
@@ -368,9 +375,12 @@ class GalaxyCLI(CLI):
             # only process roles in roles files when names matches if given
             if role_file and self.args and role.name not in self.args:
                 display.vvv('Skipping role %s' % role.name)
+                log.log(logger.vvv, 'Skipping role %s' % role.name)
+
                 continue
 
             display.vvv('Processing role %s ' % role.name)
+            log.log(logger.vvv,'Processing role %s ' % role.name)
 
             # query the galaxy API for the role data
 
@@ -393,6 +403,8 @@ class GalaxyCLI(CLI):
                 installed = role.install()
             except AnsibleError as e:
                 display.warning("- %s was NOT installed successfully: %s " % (role.name, str(e)))
+                log.warning("- %s was NOT installed successfully: %s ", role.name, str(e))
+                log.exception(e)
                 self.exit_without_ignore()
                 continue
 
@@ -401,6 +413,7 @@ class GalaxyCLI(CLI):
                 role_dependencies = role.metadata.get('dependencies') or []
                 for dep in role_dependencies:
                     display.debug('Installing dep %s' % dep)
+                    log.debug('Installing dep %s', dep)
                     dep_req = RoleRequirement()
                     dep_info = dep_req.role_yaml_parse(dep)
                     dep_role = GalaxyRole(self.galaxy, **dep_info)
@@ -423,6 +436,7 @@ class GalaxyCLI(CLI):
 
             if not installed:
                 display.warning("- %s was NOT installed successfully." % role.name)
+                log.warning("- %s was NOT installed successfully.", role.name)
                 self.exit_without_ignore()
 
         return 0

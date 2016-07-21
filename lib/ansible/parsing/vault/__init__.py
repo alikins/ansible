@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import random
 import shlex
@@ -84,6 +85,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 b_HEADER = b'$ANSIBLE_VAULT'
 CIPHER_WHITELIST = frozenset((u'AES', u'AES256'))

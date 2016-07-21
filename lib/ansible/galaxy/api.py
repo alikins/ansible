@@ -23,6 +23,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import json
+import logging
 
 import ansible.constants as C
 from ansible.errors import AnsibleError
@@ -32,6 +33,7 @@ from ansible.module_utils.six.moves.urllib.error import HTTPError
 from ansible.module_utils.six.moves.urllib.parse import quote as urlquote, urlencode
 from ansible.module_utils._text import to_native, to_text
 from ansible.module_utils.urls import open_url
+from ansible import logger
 
 try:
     from __main__ import display
@@ -39,12 +41,14 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 def g_connect(method):
     ''' wrapper to lazily initialize connection info to galaxy '''
     def wrapped(self, *args, **kwargs):
         if not self.initialized:
             display.vvvv("Initial connection to galaxy_server: %s" % self._api_server)
+            log.log(logger.VVVV, "Initial connection to galaxy_server: %s", self._api_server)
             server_version = self._get_server_api_version()
             if server_version not in self.SUPPORTED_VERSIONS:
                 raise AnsibleError("Unsupported Galaxy server API version: %s" % server_version)
@@ -52,6 +56,7 @@ def g_connect(method):
             self.baseurl = '%s/api/%s' % (self._api_server, server_version)
             self.version = server_version  # for future use
             display.vvvv("Base API: %s" % self.baseurl)
+            log.log(logger.VVVV, "Base API: %s", self.baseurl)
             self.initialized = True
         return method(self, *args, **kwargs)
     return wrapped
@@ -72,6 +77,7 @@ class GalaxyAPI(object):
         self.initialized = False
 
         display.debug('Validate TLS certificates: %s' % self._validate_certs)
+        log.debug('Validate TLS certificates: %s', self._validate_certs)
 
         # set the API server
         if galaxy.options.api_server != C.GALAXY_SERVER:
@@ -89,7 +95,8 @@ class GalaxyAPI(object):
             headers = self.__auth_header()
         try:
             display.vvv(url)
-            resp = open_url(url, data=args, validate_certs=self._validate_certs, headers=headers, method=method,
+	    log.log(logger.VVV, url)
+	    resp = open_url(url, data=args, validate_certs=self._validate_certs, headers=headers, method=method,
                             timeout=20)
             data = json.loads(to_text(resp.read(), errors='surrogate_or_strict'))
         except HTTPError as e:
