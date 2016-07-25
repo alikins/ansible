@@ -29,6 +29,6 @@ VVV = 15
 # logging.DEBUG = 10
 VVVV = 9
 VVVVV = 10
-
+DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s %(playbook)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
 logging.basicConfig(level=logging.DEBUG, filename='/home/adrian/ansible.log')
 #logging.basicConfig(level=logging.DEBUG,)
