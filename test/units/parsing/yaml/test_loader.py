@@ -195,6 +195,8 @@ class TestAnsibleLoaderVault(unittest.TestCase):
 
         yaml_plaintext = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s""" % tagged_vaulted_var
 
+        print('yaml_plaintext')
+        print('|%s|' % yaml_plaintext)
         stream = NameStringIO(yaml_plaintext)
         stream.name = 'my.yml'
 

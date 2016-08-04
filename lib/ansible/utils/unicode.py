@@ -209,6 +209,8 @@ def to_bytes(obj, encoding='utf-8', errors='replace', nonstring=None):
     if not nonstring:
         nonstring = 'simplerepr'
 
+    print('to_bytes NONSTRING NONSTRING')
+    print('obj: %s' % obj)
     if nonstring == 'empty':
         return b''
     elif nonstring == 'passthru':
