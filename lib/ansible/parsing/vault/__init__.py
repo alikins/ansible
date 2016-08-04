@@ -122,12 +122,16 @@ class VaultLib:
             data.seek(current_position)
             return self.is_encrypted(header_part)
 
-        print('is_encr to_bytest: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
-        print('is_enc final test %s' % to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
+        print('repr(data) %s' % repr(data))
+        tb = to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru')
+        print('is_encr to_bytest FINAL: |%s|' % tb)
+        print('repr(tb): %s' % repr(tb))
+        print('type(tb) %s' % type(tb))
+    #    print('is_enc final test %s' % to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
         #print('is_encr to_str: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
         #print('is_enc final test %s' % to_str(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
         #if to_bytes(data, errors='strict', encoding='utf-8').startswith(b_HEADER):
-        if data.startswith(b_HEADER):
+        if to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthrue').startswith(b_HEADER):
             return True
         return False
 
@@ -140,7 +144,8 @@ class VaultLib:
             formatted to newline terminated lines of 80 characters.  This is
             suitable for dumping as is to a vault file.
         """
-        b_data = to_bytes(data, errors='strict', encoding='utf-8')
+        #b_data = to_bytes(data, errors='strict', encoding='utf-8')
+        b_data = data.encode('utf-8')
 
         if self.is_encrypted(b_data):
             raise AnsibleError("input is already encrypted")
@@ -155,6 +160,7 @@ class VaultLib:
         this_cipher = Cipher()
 
         # encrypt data
+        print('b_DATA: |%s|' % b_data)
         b_enc_data = this_cipher.encrypt(b_data, self.b_password)
 
         # format the data for output to the file
@@ -703,7 +709,9 @@ class VaultAES256:
         data = unhexlify(data)
         salt, cryptedHmac, cryptedData = data.split(b"\n", 2)
         salt = unhexlify(salt)
+        print('cryptedData1 |%s|' % cryptedData)
         cryptedData = unhexlify(cryptedData)
+        print('cryptedData2 |%s|' % cryptedData)
 
         key1, key2, iv = self.gen_key_initctr(password, salt)
 
