@@ -73,8 +73,11 @@ class DataLoader:
         self._FILE_CACHE = dict()
         self._tempfiles = set()
 
+        self.set_vault_secrets(None)
         # initialize the vault stuff with an empty password
-        self.set_vault_password(None)
+        # TODO: replace with a ref to something that can get the password
+        #       a creds/auth provider
+        #self.set_vault_password(None)
 
     def set_vault_password(self, b_vault_password):
         self._b_vault_password = b_vault_password
@@ -82,6 +85,10 @@ class DataLoader:
         # NOTE: instead of passing in a password or cred ref, maybe pass in a callback that will
         #       be used when needed?
         self._vault = VaultLib(b_password=b_vault_password)
+
+    # TODO: since we can query vault_secrets late, we could provide this to DataLoader init
+    def set_vault_secrets(self, vault_secrets):
+        self._vault = VaultLib(secrets=vault_secrets)
 
     def load(self, data, file_name='<string>', show_content=True):
         '''

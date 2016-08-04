@@ -28,6 +28,10 @@ from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.playbook.block import Block
 from ansible.playbook.play_context import PlayContext
+from ansible.utils.vars import load_extra_vars
+from ansible.utils.vars import load_options_vars
+from ansible.vars import VariableManager
+from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets
 
 try:
     from __main__ import display
@@ -99,9 +103,46 @@ class PlaybookCLI(CLI):
         if not self.options.listhosts and not self.options.listtasks and not self.options.listtags and not self.options.syntax:
             self.normalize_become_options()
             (sshpass, becomepass) = self.ask_passwords()
-            passwords = {'conn_pass': sshpass, 'become_pass': becomepass}
+            passwords = {'conn_pass': sshpass,
+                         'become_pass': becomepass}
 
-        loader, inventory, variable_manager = self._play_prereqs(self.options)
+        loader = DataLoader()
+
+        # Just a placeholder we can extend later
+        vault_secrets = VaultSecrets()
+
+        if self.options.vault_password_file:
+            # read vault_pass from a file
+            vault_secrets = FileVaultSecrets(name='password_file',
+                                             filename=self.options.vault_password_file,
+                                             loader=loader)
+        elif self.options.ask_vault_pass:
+            vault_secrets = PromptVaultSecrets(name='prompt')
+
+            # FIXME: we don't need to do this now, we could do it later though
+            #        that would change the cli UXD a bit and may be weird
+            vault_secrets.ask_vault_passwords()
+
+        loader.set_vault_secrets(vault_secrets)
+
+        # initial error check, to make sure all specified playbooks are accessible
+        # before we start running anything through the playbook executor
+        for playbook in self.args:
+            if not os.path.exists(playbook):
+                raise AnsibleError("the playbook: %s could not be found" % playbook)
+            if not (os.path.isfile(playbook) or stat.S_ISFIFO(os.stat(playbook).st_mode)):
+                raise AnsibleError("the playbook: %s does not appear to be a file" % playbook)
+
+        # create the variable manager, which will be shared throughout
+        # the code, ensuring a consistent view of global variables
+        variable_manager = VariableManager()
+        variable_manager.extra_vars = load_extra_vars(loader=loader, options=self.options)
+
+        variable_manager.options_vars = load_options_vars(self.options)
+
+        # create the inventory, and filter it based on the subset specified (if any)
+        inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=self.options.inventory)
+        variable_manager.set_inventory(inventory)
 
         # (which is not returned in list_hosts()) is taken into account for
         # warning if inventory is empty.  But it can't be taken into account for
