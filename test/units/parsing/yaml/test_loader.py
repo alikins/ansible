@@ -184,10 +184,6 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         plaintext_var = u"""This is the plaintext string."""
         vaulted_var = self.vault.encrypt(plaintext_var)
 
-        import yamllint
-        import yamllint.linter
-        import yamllint.config
-        conf = yamllint.config.YamlLintConfig('extends: default')
         # add yaml tag
         lines = vaulted_var.splitlines()
         lines2 = []
@@ -198,11 +194,6 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         tagged_vaulted_var = u"""!vault |\n%s""" % vaulted_var
 
         yaml_plaintext = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s""" % tagged_vaulted_var
-
-#        lint = yamllint.linter.run(yaml_plaintext, conf)
-
-#        for problem in lint:
-#            print(problem)
 
         stream = NameStringIO(yaml_plaintext)
         stream.name = 'my.yml'
