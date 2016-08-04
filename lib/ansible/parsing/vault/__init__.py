@@ -82,7 +82,7 @@ except Exception as e:
     display.debug("Traceback from import of cryptography was {0}".format(traceback.format_exc()))
 
 from ansible.compat.six import PY3
-from ansible.utils.unicode import to_unicode, to_bytes
+from ansible.utils.unicode import to_unicode, to_bytes, to_str
 
 HAS_ANY_PBKDF2HMAC = HAS_PBKDF2 or HAS_PBKDF2HMAC
 
@@ -114,14 +114,20 @@ class VaultLib:
             recognized as vault encrypted data
         :returns: True if it is recognized.  Otherwise, False.
         """
-
+        print('is_encrypted data=%s' % data)
+        print('type(data) %s' % type(data))
         if hasattr(data, 'read'):
             current_position = data.tell()
             header_part = data.read(len(b_HEADER))
             data.seek(current_position)
             return self.is_encrypted(header_part)
 
-        if to_bytes(data, errors='strict', encoding='utf-8').startswith(b_HEADER):
+        print('is_encr to_bytest: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
+        print('is_enc final test %s' % to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
+        #print('is_encr to_str: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
+        #print('is_enc final test %s' % to_str(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
+        #if to_bytes(data, errors='strict', encoding='utf-8').startswith(b_HEADER):
+        if data.startswith(b_HEADER):
             return True
         return False
 
@@ -498,6 +504,8 @@ class VaultFile(object):
 
     def is_encrypted(self):
         peak = self.filehandle.readline()
+        print('peak %s' % peak)
+        print('b_HEADER %s' % b_HEADER)
         if peak.startswith(b_HEADER):
             return True
         else:

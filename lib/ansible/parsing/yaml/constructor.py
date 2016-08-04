@@ -94,7 +94,7 @@ class AnsibleConstructor(Constructor):
     def construct_yaml_bytestring(self, node, unsafe=False):
         value = self.construct_scalar(node)
 
-        return value
+        #return value
 
         ret = AnsibleByteString(value)
         ret.ansible_pos = self._node_position_info(node)
@@ -129,13 +129,17 @@ class AnsibleConstructor(Constructor):
 
     def construct_vault(self, node):
 
-        ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
+        #ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
+        ciphertext_data = self.construct_yaml_str(node, unsafe=True)
 
         if self._vault_password is None:
             raise ConstructorError(None, None,
                     "found vault but no vault password provided", node.start_mark)
 
         vault = VaultLib(password=self._vault_password)
+        print('cipher_text %s' % ciphertext_data)
+        print('type(cipher_text) %s' % type(ciphertext_data))
+        print('is_enc %s' % vault.is_encrypted(ciphertext_data))
         if not vault.is_encrypted(ciphertext_data):
             raise ConstructorError(None, None,
                     "found vault but argument is not encrypted", node.start_mark)

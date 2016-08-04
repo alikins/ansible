@@ -75,6 +75,12 @@ class TestVaultLib(unittest.TestCase):
         data = u"$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(b"ansible")
         assert v.is_encrypted(data), "encryption check on headered text failed"
 
+    def test_is_encrypted_bytes(self):
+        v = VaultLib(None)
+        assert not v.is_encrypted(b"foobar"), "encryption check on plaintext failed"
+        data = b"$ANSIBLE_VAULT;9.9;TEST\n%s" + hexlify(b"ansible")
+        assert v.is_encrypted(data), "encryption check on headered text failed"
+
     def test_format_output(self):
         v = VaultLib('ansible')
         v.cipher_name = "TEST"
