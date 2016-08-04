@@ -37,7 +37,8 @@ def represent_hostvars(self, data):
     return self.represent_dict(dict(data))
 
 def represent_vault(self, data):
-    return self.represent_scalar(data)
+    #return self.represent_scalar(data)
+    return self.represent_unicode(data)
 
 if PY3:
     represent_unicode = yaml.representer.SafeRepresenter.represent_str
