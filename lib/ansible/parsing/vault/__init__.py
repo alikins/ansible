@@ -17,9 +17,11 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import getpass
 import os
 import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 import random
@@ -144,9 +146,110 @@ def is_encrypted_file(file_obj):
 #     - parse / split_header
 class VaultData(object):
     vault_data = True
+
     def __init__(self, data):
         self.data = data
 
+
+class VaultSecrets(object):
+    def __init__(self, name=None):
+        self.name = name
+        self._secret = None
+
+    def get_secret(self, secret_name=None):
+        # given some id, provide the right secret
+        # secret_name could be None for the default,
+        # or a filepath, or a label used for prompting users
+        # interactively  (like a ssh key id arg to ssh-add...)
+        #return to_bytes(self._secret)
+        return to_bytes(self._secret, errors='strict', encoding='utf-8')
+
+
+# FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
+# TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
+class FileVaultSecrets(VaultSecrets):
+    def __init__(self, name=None, filename=None, loader=None):
+        self.name = name
+        self.filename = filename
+        self.loader = loader
+
+        # load secrets from file
+        self._secret = FileVaultSecrets.read_vault_password_file(self.filename, self.loader)
+
+    @staticmethod
+    def read_vault_password_file(vault_password_file, loader):
+        """
+        Read a vault password from a file or if executable, execute the script and
+        retrieve password from STDOUT
+        """
+
+        this_path = os.path.realpath(os.path.expanduser(vault_password_file))
+        if not os.path.exists(this_path):
+            raise AnsibleError("The vault password file %s was not found" % this_path)
+
+        if loader.is_executable(this_path):
+            try:
+                # STDERR not captured to make it easier for users to prompt for input in their scripts
+                p = subprocess.Popen(this_path, stdout=subprocess.PIPE)
+            except OSError as e:
+                raise AnsibleError("Problem running vault password script %s (%s). If this is not a script, remove the executable bit from the file." % (' '.join(this_path), e))
+            stdout, stderr = p.communicate()
+            if p.returncode != 0:
+                raise AnsibleError("Vault password script %s returned non-zero (%s): %s" % (this_path, p.returncode, p.stderr))
+            vault_pass = stdout.strip('\r\n')
+        else:
+            try:
+                f = open(this_path, "rb")
+                vault_pass = f.read().strip()
+                f.close()
+            except (OSError, IOError) as e:
+                raise AnsibleError("Could not read vault password file %s: %s" % (this_path, e))
+
+        return vault_pass
+
+
+class DirVaultSecrets(VaultSecrets):
+    def __init__(self, directory=None, loader=None):
+        self.directory = directory
+        self.loader = loader
+
+        self._secrets = {}
+
+    def get_secret(self, name=None):
+        if name:
+            return self._secrets[name]
+        return None
+
+
+class PromptVaultSecrets(VaultSecrets):
+    @staticmethod
+    def ask_vault_passwords(ask_new_vault_pass=False, rekey=False):
+        ''' prompt for vault password and/or password change '''
+
+        vault_pass = None
+        new_vault_pass = None
+        try:
+            if rekey or not ask_new_vault_pass:
+                vault_pass = getpass.getpass(prompt="Vault password: ")
+
+            if ask_new_vault_pass:
+                new_vault_pass = getpass.getpass(prompt="New Vault password: ")
+                new_vault_pass2 = getpass.getpass(prompt="Confirm New Vault password: ")
+                if new_vault_pass != new_vault_pass2:
+                    raise AnsibleError("Passwords do not match")
+        except EOFError:
+            pass
+
+        # enforce no newline chars at the end of passwords
+        if vault_pass:
+            vault_pass = to_bytes(vault_pass, errors='strict', nonstring='simplerepr').strip()
+        if new_vault_pass:
+            new_vault_pass = to_bytes(new_vault_pass, errors='strict', nonstring='simplerepr').strip()
+
+        if ask_new_vault_pass and not rekey:
+            vault_pass = new_vault_pass
+
+        return vault_pass, new_vault_pass
 
 
 
@@ -154,8 +257,9 @@ class VaultData(object):
 
 class VaultLib:
 
-    def __init__(self, password):
-        self.b_password = to_bytes(password, errors='strict', encoding='utf-8')
+    def __init__(self, secrets=None):
+        #self.b_password = to_bytes(password, errors='strict', encoding='utf-8')
+        self.secrets = secrets
         self.cipher_name = None
         self.b_version = b'1.1'
 
@@ -205,10 +309,11 @@ class VaultLib:
         if not self.cipher_name or self.cipher_name not in CIPHER_WRITE_WHITELIST:
             self.cipher_name = u"AES256"
 
-        this_cipher = cipher_factory(self.cipher_name)
+        this_cipher_class = cipher_factory(self.cipher_name)
+        this_cipher = this_cipher_class()
 
         # encrypt data
-        b_ciphertext = this_cipher.encrypt(b_plaintext, self.b_password)
+        b_ciphertext = this_cipher.encrypt(b_plaintext, self.secrets)
 
         # format the data for output to the file
         b_ciphertext_envelope = self._format_output(b_ciphertext)
@@ -224,8 +329,8 @@ class VaultLib:
         """
         b_data = to_bytes(data, errors='strict', encoding='utf-8')
 
-        # TODO: generalize to needing the secret to unencrypt, not just password
-        if self.b_password is None:
+        # could provide a default or NullSecrets if this needs to be smarter about when it's ready
+        if self.secrets is None:
             raise AnsibleError("A vault password must be specified to decrypt data")
 
         # TODO: move to a is_vault() of validate_format()
@@ -249,7 +354,7 @@ class VaultLib:
             raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
 
         # try to unencrypt data
-        b_data = this_cipher.decrypt(b_data, self.b_password)
+        b_data = this_cipher.decrypt(b_data, self.secrets)
         if b_data is None:
             msg = "Decryption failed"
             if filename:
@@ -306,8 +411,8 @@ class VaultLib:
 
 class VaultEditor:
 
-    def __init__(self, password):
-        self.vault = VaultLib(password)
+    def __init__(self, secrets):
+        self.vault = VaultLib(secrets)
 
     # TODO: mv shred file stuff to it's own class
     def _shred_file_custom(self, tmp_path):
@@ -625,13 +730,13 @@ class VaultAES:
 
         return b_key, b_iv
 
-    def encrypt(self, data, password, key_length=32):
+    def encrypt(self, data, secrets, key_length=32):
 
         """ Read plaintext data from in_file and write encrypted to out_file """
 
         raise AnsibleError("Encryption disabled for deprecated VaultAES class")
 
-    def decrypt(self, data, password, key_length=32):
+    def decrypt(self, data, secrets, key_length=32):
 
         """ Read encrypted data from in_file and write decrypted to out_file """
 
@@ -646,6 +751,10 @@ class VaultAES:
         bs = AES.block_size
         b_tmpsalt = in_file.read(bs)
         b_salt = b_tmpsalt[len(b'Salted__'):]
+
+        # TODO: default id?
+        password = secrets.get_secret()
+
         b_key, b_iv = self.aes_derive_key_and_iv(password, b_salt, key_length, bs)
         cipher = AES.new(b_key, AES.MODE_CBC, b_iv)
         b_next_chunk = b''
@@ -730,12 +839,13 @@ class VaultAES256:
 
         return b_key1, b_key2, hexlify(b_iv)
 
-    def encrypt(self, data, password):
+    def encrypt(self, data, secrets):
         # use b_ for bytes name scheme but don't change public method args
         b_data = data
 
         # random bytes
         b_salt = os.urandom(32)
+        password = secrets.get_secret()
         key1, key2, iv = self.gen_key_initctr(password, b_salt)
 
         # PKCS#7 PAD DATA http://tools.ietf.org/html/rfc5652#section-6.3
@@ -765,7 +875,7 @@ class VaultAES256:
         b_message = b'\n'.join([hexlify(b_salt), to_bytes(hmac.hexdigest()), hexlify(b_ciphertext_data)])
         return hexlify(b_message)
 
-    def decrypt(self, data, password):
+    def decrypt(self, data, secrets):
         b_data = data
         # SPLIT SALT, DIGEST, AND DATA
         b_data = unhexlify(b_data)
@@ -773,6 +883,7 @@ class VaultAES256:
         b_salt = unhexlify(b_salt)
         b_ciphertext_data = unhexlify(b_ciphertext_data)
 
+        password = secrets.get_secret()
         b_key1, b_key2, b_iv = self.gen_key_initctr(password, b_salt)
 
         # TODO: move to it's own method
