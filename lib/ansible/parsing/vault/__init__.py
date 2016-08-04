@@ -174,6 +174,12 @@ class VaultSecrets(object):
         self.name = name
         self._secret = None
 
+    # TODO: Note this is not really the proposed interface/api
+    #       This is more to sort out where all we pass passwords around.
+    #       A better version would be passed deep into the decrypt/encrypt code
+    #       and VaultSecrets could potentially do the key stretching and
+    #       HMAC checks itself. Or for that matter, the Cipher objects could
+    #       be provided by VaultSecrets.
     def get_secret(self, secret_name=None):
         # given some id, provide the right secret
         # secret_name could be None for the default,
