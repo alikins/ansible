@@ -130,7 +130,9 @@ class AnsibleConstructor(Constructor):
     def construct_vault(self, node):
 
         #ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
-        ciphertext_data = self.construct_yaml_str(node, unsafe=True)
+        #ciphertext_data = self.construct_yaml_str(node, unsafe=True)
+        value = self.construct_scalar(node)
+        ciphertext_data = value
 
         if self._vault_password is None:
             raise ConstructorError(None, None,
