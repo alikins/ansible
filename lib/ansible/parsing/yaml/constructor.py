@@ -139,8 +139,8 @@ class AnsibleConstructor(Constructor):
         vault = VaultLib(password=self._vault_password)
         print('cipher_text %s' % ciphertext_data)
         print('type(cipher_text) %s' % type(ciphertext_data))
-        print('is_enc %s' % vault.is_encrypted(ciphertext_data))
-        if not vault.is_encrypted(ciphertext_data):
+        print('is_enc %s' % vault.is_encrypted(ciphertext_data.encode('utf-8')))
+        if not vault.is_encrypted(ciphertext_data.encode('utf-8')):
             raise ConstructorError(None, None,
                     "found vault but argument is not encrypted", node.start_mark)
 
