@@ -282,7 +282,8 @@ class VaultLib:
         #self.b_password = to_bytes(password, errors='strict', encoding='utf-8')
         self.secrets = secrets
         self.cipher_name = None
-        self.b_version = b'1.1'
+        # Add key_id to header
+        self.b_version = b'1.2'
 
     @staticmethod
     def is_encrypted(data):
@@ -324,6 +325,8 @@ class VaultLib:
         if not self.cipher_name or self.cipher_name not in CIPHER_WRITE_WHITELIST:
             self.cipher_name = u"AES256"
 
+        # could move creation of the cipher object to vaultSecrets to
+        # decouple vaultLib from the impl
         this_cipher_class = cipher_factory(self.cipher_name)
         this_cipher = this_cipher_class()
 
@@ -361,7 +364,7 @@ class VaultLib:
 
         # create the cipher object
         cipher_class_name = u'Vault{0}'.format(self.cipher_name)
-
+        # cipher metaclass that registered subclasses could be used here and in place of cipher_factory()
         if cipher_class_name in globals() and self.cipher_name in CIPHER_WHITELIST:
             cipher_class = globals()[cipher_class_name]
             this_cipher = cipher_class()
@@ -369,6 +372,12 @@ class VaultLib:
             raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
 
         # try to unencrypt data
+
+        # The key_id is known at this point from parsing the vault envelope
+        # Add a VaultContext(secrets, key_id, cipher) ?
+        # vault_context = VaultContext(self.secrets, self.key_id, this_cipher)
+        # b_data = vault_context.decrypt(b_data)
+        # vault_context could be an interface to an agent of some sort
         b_plaintext = this_cipher.decrypt(b_data, self.secrets)
         if b_plaintext is None:
             msg = "Decryption failed"
@@ -417,6 +426,11 @@ class VaultLib:
 
         self.b_version = b_tmpheader[1].strip()
         self.cipher_name = to_text(b_tmpheader[2].strip())
+        self.key_id = 'version_1_1_default_key'
+        # Only attempt to find key_id if the vault file is version 1.2 or newer
+        if self.b_version == b'1.2':
+            self.key_id = to_text(tmpheader[3].strip())
+
         b_ciphertext = b''.join(b_tmpdata[1:])
 
         return b_ciphertext
@@ -688,13 +702,13 @@ class VaultAES:
         if not HAS_AES:
             raise AnsibleError(CRYPTO_UPGRADE)
 
-    def _aes_derive_key_and_iv(self, b_password, b_salt, key_length, iv_length):
+    def aes_derive_key_and_iv(self, secrets, b_salt, key_length, iv_length):
 
         """ Create a key and an initialization vector """
 
         b_d = b_di = b''
         while len(b_d) < key_length + iv_length:
-            b_text = b''.join([b_di, b_password, b_salt])
+            b_text = b''.join([b_di, secrets.get_secret(), b_salt])
             b_di = to_bytes(md5(b_text).digest(), errors='strict')
             b_d += b_di
 
@@ -734,9 +748,9 @@ class VaultAES:
         b_salt = tmpsalt[len(b'Salted__'):]
 
         # TODO: default id?
-        password = secrets.get_secret()
+        #password = secrets.get_secret()
 
-        b_key, b_iv = self.aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
+        b_key, b_iv = self.aes_derive_key_and_iv(secrets, b_salt, key_length, bs)
         cipher = AES.new(key, AES.MODE_CBC, iv)
         b_next_chunk = b''
         finished = False
@@ -854,6 +868,13 @@ class VaultAES256:
         b_vaulttext = b'\n'.join([hexlify(b_salt), to_bytes(hmac.hexdigest()), hexlify(b_ciphertext)])
         b_vaulttext = hexlify(b_vaulttext)
         return b_vaulttext
+
+
+    def _verify_hmac(self, context, crypted_hmac, crypted_data):
+        hmacDecrypt = HMAC.new(context.key2, crypted_data, SHA256)
+        if not self.is_equal(crypted_hmac, to_bytes(hmacDecrypt.hexdigest())):
+            return None
+
 
     def decrypt(self, b_vaulttext, secrets):
 
