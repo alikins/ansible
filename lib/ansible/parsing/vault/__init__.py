@@ -374,9 +374,9 @@ class VaultEditor:
 
         # encrypt new data and write out to tmp
         # An existing vaultfile will always be UTF-8,
-        # do decode to unicode here
-        enc_data = self.vault.encrypt(tmpdata_bytes.decode())
-        self.write_data(enc_data, tmp_path)
+        # so decode to unicode here
+        enc_data_bytes = self.vault.encrypt(tmpdata_bytes.decode())
+        self.write_data(enc_data_bytes, tmp_path)
 
         # shuffle tmp file into place
         self.shuffle_files(tmp_path, filename)
@@ -388,8 +388,8 @@ class VaultEditor:
         # A file to be encrypted into a vaultfile could be any encoding
         # so treat the contents as a byte string.
         plaintext_bytes = self.read_data(filename)
-        ciphertext = self.vault.encrypt_bytestring(plaintext_bytes)
-        self.write_data(ciphertext, output_file or filename)
+        ciphertext_bytes = self.vault.encrypt_bytestring(plaintext_bytes)
+        self.write_data(ciphertext_bytes, output_file or filename)
 
     def decrypt_file(self, filename, output_file=None):
 
@@ -454,9 +454,9 @@ class VaultEditor:
             raise AnsibleError("%s for %s" % (to_bytes(e),to_bytes(filename)))
 
         new_vault = VaultLib(new_password)
-        new_ciphertext = new_vault.encrypt(plaintext)
+        new_ciphertext_bytes = new_vault.encrypt(plaintext)
 
-        self.write_data(new_ciphertext, filename)
+        self.write_data(new_ciphertext_bytes, filename)
 
         # preserve permissions
         os.chmod(filename, prev.st_mode)
@@ -475,15 +475,19 @@ class VaultEditor:
 
         return data
 
-    def write_data(self, data, filename, shred=True):
+    # TODO: add docstrings for arg types since this code is picky about that
+    def write_data(self, data_bytes, filename, shred=True):
         """write data to given path
-        
-        if shred==True, make sure that the original data is first shredded so 
-        that is cannot be recovered
+
+        :arg data: the encrypted and hexlified data as a utf-8 byte string
+        :arg filename: filename to save 'data' to.
+        :arg shred: if shred==True, make sure that the original data is first shredded so
+        that is cannot be recovered.
         """
-        bytes = to_bytes(data, errors='strict')
+        # FIXME: do we need this now? data_bytes should always be a utf-8 byte string
+        file_bytes = to_bytes(data_bytes, errors='strict')
         if filename == '-':
-            sys.stdout.write(bytes)
+            sys.stdout.write(file_bytes)
         else:
             if os.path.isfile(filename):
                 if shred:
@@ -491,7 +495,7 @@ class VaultEditor:
                 else:
                     os.remove(filename)
             with open(filename, "wb") as fh:
-                fh.write(bytes)
+                fh.write(file_bytes)
 
     def shuffle_files(self, src, dest):
         prev = None
@@ -504,7 +508,7 @@ class VaultEditor:
 
         # reset permissions if needed
         if prev is not None:
-            #TODO: selinux, ACLs, xattr?
+            # TODO: selinux, ACLs, xattr?
             os.chmod(dest, prev.st_mode)
             os.chown(dest, prev.st_uid, prev.st_gid)
 
@@ -514,6 +518,7 @@ class VaultEditor:
         editor.append(filename)
 
         return editor
+
 
 class VaultFile(object):
 
