@@ -130,20 +130,7 @@ class VaultLib:
 
         print('repr(data) %s' % repr(data))
         print('repr(plaintext_bytes) %s' % repr(plaintext_bytes))
-        # tb = to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru')
-        # print('type(tb) %s' % type(tb))
-        # plaintext_bytes = data.encode(encoding='utf-8', errors='strict')
-        # print('is_encr to_bytest FINAL: |%s|' % tb)
-        # print('plaintext_bytes: |%s|' % plaintext_bytes)
-        # print('repr(tb): %s' % repr(tb))
-        # print('type(tb) %s' % type(tb))
-    #    print('is_enc final test %s' % to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
-        # print('is_encr to_str: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
-        # print('is_enc final test %s' % to_str(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
-        # if to_bytes(data, errors='strict', encoding='utf-8').startswith(b_HEADER):
-        # if to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthrue').startswith(b_HEADER):
         if plaintext_bytes.startswith(header_bytes):
-        #if plaintext_bytes.startswith(header_bytes):
             return True
         return False
 

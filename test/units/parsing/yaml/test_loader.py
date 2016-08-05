@@ -182,9 +182,10 @@ class TestAnsibleLoaderVault(unittest.TestCase):
 
     def test_embedded_vault(self):
         plaintext_var = u"""This is the plaintext string."""
-        vaulted_var = self.vault.encrypt(plaintext_var)
+        vaulted_var_bytes = self.vault.encrypt(plaintext_var)
 
         # add yaml tag
+        vaulted_var = vaulted_var_bytes.decode()
         lines = vaulted_var.splitlines()
         lines2 = []
         for line in lines:
@@ -196,13 +197,15 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         yaml_plaintext = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s""" % tagged_vaulted_var
 
         print('yaml_plaintext')
-        print('|%s|' % yaml_plaintext)
+        print('|%s|' % yaml_plaintext.encode('utf-8'))
         stream = NameStringIO(yaml_plaintext)
         stream.name = 'my.yml'
 
         loader = AnsibleLoader(stream, vault_password=self.vault_password)
 
         data_from_yaml = loader.get_single_data()
+        print('data_from_yaml=|%s|' % data_from_yaml)
+        print('type(dfy)=%s' % type(data_from_yaml))
         self.assertEquals(plaintext_var, data_from_yaml['the_secret'])
 
 class TestAnsibleLoaderPlay(unittest.TestCase):
