@@ -89,6 +89,7 @@ HAS_ANY_PBKDF2HMAC = HAS_PBKDF2 or HAS_PBKDF2HMAC
 CRYPTO_UPGRADE = "ansible-vault requires a newer version of pycrypto than the one installed on your platform. You may fix this with OS-specific commands such as: yum install python-devel; rpm -e --nodeps python-crypto; pip install pycrypto"
 
 b_HEADER = b'$ANSIBLE_VAULT'
+HEADER = '$ANSIBLE_VAULT'
 CIPHER_WHITELIST = frozenset((u'AES', u'AES256'))
 CIPHER_WRITE_WHITELIST=frozenset((u'AES256',))
 # See also CIPHER_MAPPING at the bottom of the file which maps cipher strings
@@ -116,22 +117,29 @@ class VaultLib:
         """
         print('is_encrypted data=%s' % data)
         print('type(data) %s' % type(data))
+        header_bytes = HEADER.encode('utf-8')
+        print('header_bytes=|%s|' % header_bytes)
         if hasattr(data, 'read'):
             current_position = data.tell()
-            header_part = data.read(len(b_HEADER))
+            header_part = data.read(len(header_bytes))
             data.seek(current_position)
             return self.is_encrypted(header_part)
 
         print('repr(data) %s' % repr(data))
         tb = to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru')
+        print('type(tb) %s' % type(tb))
+        #plaintext_bytes = data.encode(encoding='utf-8', errors='strict')
         print('is_encr to_bytest FINAL: |%s|' % tb)
+        #print('plaintext_bytes: |%s|' % plaintext_bytes)
         print('repr(tb): %s' % repr(tb))
         print('type(tb) %s' % type(tb))
     #    print('is_enc final test %s' % to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
         #print('is_encr to_str: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
         #print('is_enc final test %s' % to_str(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
         #if to_bytes(data, errors='strict', encoding='utf-8').startswith(b_HEADER):
-        if to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthrue').startswith(b_HEADER):
+        #if to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthrue').startswith(b_HEADER):
+        if data.startswith(header_bytes):
+        #if plaintext_bytes.startswith(header_bytes):
             return True
         return False
 
@@ -144,7 +152,11 @@ class VaultLib:
             formatted to newline terminated lines of 80 characters.  This is
             suitable for dumping as is to a vault file.
         """
-        #b_data = to_bytes(data, errors='strict', encoding='utf-8')
+        print('DATA: %s' % data)
+        print('type(data): %s' % type(data))
+        tb = to_bytes(data, errors='strict', encoding='utf-8')
+        print('TB: %s' % tb)
+        print('type(tb): %s' % type(tb))
         b_data = data.encode('utf-8')
 
         if self.is_encrypted(b_data):
@@ -218,8 +230,10 @@ class VaultLib:
         if not self.cipher_name:
             raise AnsibleError("the cipher must be set before adding a header")
 
+        #header = b';'.join([b_HEADER, self.b_version,
+        #    to_bytes(self.cipher_name, errors='strict', encoding='utf-8')])
         header = b';'.join([b_HEADER, self.b_version,
-            to_bytes(self.cipher_name, errors='strict', encoding='utf-8')])
+                            self.cipher_name.encode('utf-8',errors='strict')])
         tmpdata = [header]
         tmpdata += [b_data[i:i+80] for i in range(0, len(b_data), 80)]
         tmpdata += [b'']
