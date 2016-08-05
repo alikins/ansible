@@ -263,7 +263,8 @@ class VaultLib:
         #self.b_password = to_bytes(password, errors='strict', encoding='utf-8')
         self.secrets = secrets
         self.cipher_name = None
-        self.b_version = b'1.1'
+        # Add key_id to header
+        self.b_version = b'1.2'
 
     @staticmethod
     def is_encrypted(data):
@@ -349,6 +350,12 @@ class VaultLib:
             raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
 
         # try to unencrypt data
+
+        # The key_id is known at this point from parsing the vault envelope
+        # Add a VaultContext(secrets, key_id, cipher) ?
+        # vault_context = VaultContext(self.secrets, self.key_id, this_cipher)
+        # b_data = vault_context.decrypt(b_data)
+        # vault_context could be an interface to an agent of some sort
         b_plaintext = this_cipher.decrypt(b_data, self.secrets)
         if b_plaintext is None:
             msg = "Decryption failed"
@@ -397,6 +404,11 @@ class VaultLib:
 
         self.b_version = b_tmpheader[1].strip()
         self.cipher_name = to_text(b_tmpheader[2].strip())
+        self.key_id = 'version_1_1_default_key'
+        # Only attempt to find key_id if the vault file is version 1.2 or newer
+        if self.b_version == b'1.2':
+            self.key_id = to_text(tmpheader[3].strip())
+
         b_ciphertext = b''.join(b_tmpdata[1:])
 
         return b_ciphertext
@@ -707,13 +719,13 @@ class VaultAES:
             raise AnsibleError(NEED_CRYPTO_LIBRARY)
 
     @staticmethod
-    def _aes_derive_key_and_iv(b_password, b_salt, key_length, iv_length):
+    def _aes_derive_key_and_iv(secrets, b_salt, key_length, iv_length):
 
         """ Create a key and an initialization vector """
 
         b_d = b_di = b''
         while len(b_d) < key_length + iv_length:
-            b_text = b''.join([b_di, b_password, b_salt])
+            b_text = b''.join([b_di, secrets.get_secret(), b_salt])
             b_di = to_bytes(md5(b_text).digest(), errors='strict')
             b_d += b_di
 
@@ -730,7 +742,9 @@ class VaultAES:
         raise AnsibleError("Encryption disabled for deprecated VaultAES class")
 
     @classmethod
-    def _decrypt_cryptography(cls, b_salt, b_ciphertext, b_password, key_length):
+    def _decrypt_cryptography(cls, b_salt, b_ciphertext, secrets, key_length):
+
+        #password = secrets.get_secret()
         bs = algorithms.AES.block_size // 8
         b_key, b_iv = cls._aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
         cipher = C_Cipher(algorithms.AES(b_key), modes.CBC(b_iv), CRYPTOGRAPHY_BACKEND).decryptor()
@@ -765,7 +779,7 @@ class VaultAES:
         bs = AES_pycrypto.block_size
 
         # TODO: default id?
-        password = secrets.get_secret()
+        #password = secrets.get_secret()
 
         b_key, b_iv = cls._aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
         cipher = AES_pycrypto.new(b_key, AES_pycrypto.MODE_CBC, b_iv)
@@ -939,6 +953,14 @@ class VaultAES256:
         hmac = HMAC_pycrypto.new(b_key2, b_ciphertext, SHA256_pycrypto)
 
         return to_bytes(hmac.hexdigest(), errors='surrogate_or_strict'), hexlify(b_ciphertext)
+
+    def _verify_hmac(self, context, crypted_hmac, crypted_data):
+        hmacDecrypt = HMAC.new(context.key2, crypted_data, SHA256)
+        if not self.is_equal(crypted_hmac, to_bytes(hmacDecrypt.hexdigest())):
+            return None
+
+
+    def decrypt(self, b_vaulttext, secrets):
 
     @classmethod
     def encrypt(cls, b_plaintext, b_password):
