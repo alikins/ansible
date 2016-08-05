@@ -25,6 +25,8 @@ from io import StringIO
 from six import text_type, binary_type
 from collections import Sequence, Set, Mapping
 
+import yaml
+
 from ansible.compat.tests import unittest
 
 from ansible import errors
@@ -180,9 +182,8 @@ class TestAnsibleLoaderVault(unittest.TestCase):
             self.assertIsInstance(e, errors.AnsibleError)
             self.assertEqual(e.message, 'Decryption failed')
 
-    def test_embedded_vault(self):
-        plaintext_var = u"""This is the plaintext string."""
-        vaulted_var_bytes = self.vault.encrypt(plaintext_var)
+    def _encrypt_plaintext(self, plaintext):
+        vaulted_var_bytes = self.vault.encrypt(plaintext)
 
         # add yaml tag
         vaulted_var = vaulted_var_bytes.decode()
@@ -193,20 +194,55 @@ class TestAnsibleLoaderVault(unittest.TestCase):
 
         vaulted_var = '\n'.join(lines2)
         tagged_vaulted_var = u"""!vault |\n%s""" % vaulted_var
+        return tagged_vaulted_var
 
-        yaml_plaintext = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s""" % tagged_vaulted_var
-
-        print('yaml_plaintext')
-        print('|%s|' % yaml_plaintext.encode('utf-8'))
-        stream = NameStringIO(yaml_plaintext)
+    def _load_yaml(self, yaml_text, password):
+        print('yaml_text')
+        print('|%s|' % yaml_text.encode('utf-8'))
+        stream = NameStringIO(yaml_text)
         stream.name = 'my.yml'
 
-        loader = AnsibleLoader(stream, vault_password=self.vault_password)
+        loader = AnsibleLoader(stream, vault_password=password)
 
         data_from_yaml = loader.get_single_data()
         print('data_from_yaml=|%s|' % data_from_yaml)
         print('type(dfy)=%s' % type(data_from_yaml))
+
+        return data_from_yaml
+
+    def test_embedded_vault(self):
+        plaintext_var = u"""This is the plaintext string."""
+        tagged_vaulted_var = self._encrypt_plaintext(plaintext_var)
+        yaml_text = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s""" % tagged_vaulted_var
+
+        data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
         self.assertEquals(plaintext_var, data_from_yaml['the_secret'])
+
+    def test_embedded_vault_list(self):
+        sample_list = ['amen break', 'funky drummer']
+        sample_yaml = yaml.dump(sample_list)
+        print('sample_yaml %s' % sample_yaml)
+
+        tagged_vaulted_var = self._encrypt_plaintext(sample_yaml)
+        yaml_text = u"""---\nwebster: daniel\noed: oxford\nthe_secret_sample_list: %s""" % tagged_vaulted_var
+
+        data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
+        print('data_from_yaml %s' % data_from_yaml)
+
+    def test_embedded_vault_map(self):
+        map_map = {'mercator': ['a'],
+                   'peters': ['c', 'f', 'sa']}
+        map_map_yaml = yaml.dump(map_map)
+        print('map_map_yaml: %s' % map_map_yaml)
+
+        tagged_vaulted_var = self._encrypt_plaintext(map_map_yaml)
+        yaml_text = u"""---\nwebster: daniel\nthe_secret_map_map: %s\noed: exford""" % tagged_vaulted_var
+
+        data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
+        print('data_from_yaml %s' % data_from_yaml)
+        # verify we get a map of some sort
+        assert not isinstance(data_from_yaml['the_secret_map_map'], (unicode, str, bytes))
+
 
 class TestAnsibleLoaderPlay(unittest.TestCase):
 
