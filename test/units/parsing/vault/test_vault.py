@@ -19,14 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import getpass
-import os
-import shutil
-import time
-import tempfile
 import six
 
-from binascii import unhexlify
 from binascii import hexlify
 from nose.plugins.skip import SkipTest
 
@@ -86,9 +80,9 @@ class TestVaultLib(unittest.TestCase):
 
     def test_is_encrypted(self):
         v = VaultLib(None)
-        assert not v.is_encrypted(u"foobar"), "encryption check on plaintext failed"
+        assert not v.is_encrypted("foobar".encode('utf-8')), "encryption check on plaintext failed"
         data = u"$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(b"ansible")
-        assert v.is_encrypted(data), "encryption check on headered text failed"
+        assert v.is_encrypted(data.encode('utf-8')), "encryption check on headered text failed"
 
     def test_is_encrypted_bytes(self):
         v = VaultLib(None)
@@ -136,7 +130,8 @@ class TestVaultLib(unittest.TestCase):
             raise SkipTest
         v = VaultLib('ansible')
         v.cipher_name = 'AES256'
-        enc_data = v.encrypt(b"foobar")
+        plaintext = "foobar"
+        enc_data = v.encrypt(plaintext)
         dec_data = v.decrypt(enc_data)
         assert enc_data != b"foobar", "encryption failed"
         assert dec_data == b"foobar", "decryption failed"

@@ -111,34 +111,38 @@ class VaultLib:
     def is_encrypted(self, data):
         """ Test if this is vault encrypted data
 
-        :arg data: a byte str or unicode string to test whether it is
+        :arg data: a python2 utf-8 string or a python3 'bytes' to test whether it is
             recognized as vault encrypted data
         :returns: True if it is recognized.  Otherwise, False.
         """
+        plaintext_bytes = data
         print('is_encrypted data=%s' % data)
         print('type(data) %s' % type(data))
         header_bytes = HEADER.encode('utf-8')
         print('header_bytes=|%s|' % header_bytes)
-        if hasattr(data, 'read'):
-            current_position = data.tell()
-            header_part = data.read(len(header_bytes))
-            data.seek(current_position)
+
+        # TODO: split file like object handling to seperate method
+        if hasattr(plaintext_bytes, 'read'):
+            current_position = plaintext_bytes.tell()
+            header_part = plaintext_bytes.read(len(header_bytes))
+            plaintext_bytes.seek(current_position)
             return self.is_encrypted(header_part)
 
         print('repr(data) %s' % repr(data))
-        tb = to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru')
-        print('type(tb) %s' % type(tb))
-        #plaintext_bytes = data.encode(encoding='utf-8', errors='strict')
-        print('is_encr to_bytest FINAL: |%s|' % tb)
-        #print('plaintext_bytes: |%s|' % plaintext_bytes)
-        print('repr(tb): %s' % repr(tb))
-        print('type(tb) %s' % type(tb))
+        print('repr(plaintext_bytes) %s' % repr(plaintext_bytes))
+        # tb = to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru')
+        # print('type(tb) %s' % type(tb))
+        # plaintext_bytes = data.encode(encoding='utf-8', errors='strict')
+        # print('is_encr to_bytest FINAL: |%s|' % tb)
+        # print('plaintext_bytes: |%s|' % plaintext_bytes)
+        # print('repr(tb): %s' % repr(tb))
+        # print('type(tb) %s' % type(tb))
     #    print('is_enc final test %s' % to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
-        #print('is_encr to_str: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
-        #print('is_enc final test %s' % to_str(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
-        #if to_bytes(data, errors='strict', encoding='utf-8').startswith(b_HEADER):
-        #if to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthrue').startswith(b_HEADER):
-        if data.startswith(header_bytes):
+        # print('is_encr to_str: %s' % to_bytes(data, errors='strict', encoding='utf-8'))
+        # print('is_enc final test %s' % to_str(data, errors='strict', encoding='utf-8', nonstring='passthru').startswith(b_HEADER))
+        # if to_bytes(data, errors='strict', encoding='utf-8').startswith(b_HEADER):
+        # if to_bytes(data, errors='strict', encoding='utf-8', nonstring='passthrue').startswith(b_HEADER):
+        if plaintext_bytes.startswith(header_bytes):
         #if plaintext_bytes.startswith(header_bytes):
             return True
         return False
@@ -157,9 +161,13 @@ class VaultLib:
         tb = to_bytes(data, errors='strict', encoding='utf-8')
         print('TB: %s' % tb)
         print('type(tb): %s' % type(tb))
-        b_data = data.encode('utf-8')
+        plaintext = data
+        plaintext_bytes = plaintext.encode('utf-8')
 
-        if self.is_encrypted(b_data):
+        return self.encrypt_bytestring(plaintext_bytes)
+
+    def encrypt_bytestring(self, plaintext_bytes):
+        if self.is_encrypted(plaintext_bytes):
             raise AnsibleError("input is already encrypted")
 
         if not self.cipher_name or self.cipher_name not in CIPHER_WRITE_WHITELIST:
@@ -172,12 +180,12 @@ class VaultLib:
         this_cipher = Cipher()
 
         # encrypt data
-        print('b_DATA: |%s|' % b_data)
-        b_enc_data = this_cipher.encrypt(b_data, self.b_password)
+        print('plaintext_bytes: |%s|' % plaintext_bytes)
+        ciphertext_bytes = this_cipher.encrypt(plaintext_bytes, self.b_password)
 
         # format the data for output to the file
-        b_tmp_data = self._format_output(b_enc_data)
-        return b_tmp_data
+        ciphertext_envelope = self._format_output(ciphertext_bytes)
+        return ciphertext_envelope
 
     def decrypt(self, data, filename=None):
         """Decrypt a piece of vault encrypted data.
@@ -227,15 +235,17 @@ class VaultLib:
                 formatted to 80 char columns and has the header prepended
         """
 
+        ciphertext_bytes = b_data
         if not self.cipher_name:
             raise AnsibleError("the cipher must be set before adding a header")
 
         #header = b';'.join([b_HEADER, self.b_version,
         #    to_bytes(self.cipher_name, errors='strict', encoding='utf-8')])
-        header = b';'.join([b_HEADER, self.b_version,
+        header_bytes = HEADER.encode('utf-8')
+        header = b';'.join([header_bytes, self.b_version,
                             self.cipher_name.encode('utf-8',errors='strict')])
         tmpdata = [header]
-        tmpdata += [b_data[i:i+80] for i in range(0, len(b_data), 80)]
+        tmpdata += [ciphertext_bytes[i:i + 80] for i in range(0, len(ciphertext_bytes), 80)]
         tmpdata += [b'']
         tmpdata = b'\n'.join(tmpdata)
 
@@ -354,15 +364,18 @@ class VaultEditor:
             self._shred_file(tmp_path)
             raise
 
-        tmpdata = self.read_data(tmp_path)
+        tmpdata_bytes = self.read_data(tmp_path)
 
+        print('type(tmpdata): %s' % type(tmpdata_bytes))
         # Do nothing if the content has not changed
-        if existing_data == tmpdata and not force_save:
+        if existing_data == tmpdata_bytes and not force_save:
             self._shred_file(tmp_path)
             return
 
         # encrypt new data and write out to tmp
-        enc_data = self.vault.encrypt(tmpdata)
+        # An existing vaultfile will always be UTF-8,
+        # do decode to unicode here
+        enc_data = self.vault.encrypt(tmpdata_bytes.decode())
         self.write_data(enc_data, tmp_path)
 
         # shuffle tmp file into place
@@ -372,8 +385,10 @@ class VaultEditor:
 
         check_prereqs()
 
-        plaintext = self.read_data(filename)
-        ciphertext = self.vault.encrypt(plaintext)
+        # A file to be encrypted into a vaultfile could be any encoding
+        # so treat the contents as a byte string.
+        plaintext_bytes = self.read_data(filename)
+        ciphertext = self.vault.encrypt_bytestring(plaintext_bytes)
         self.write_data(ciphertext, output_file or filename)
 
     def decrypt_file(self, filename, output_file=None):
