@@ -75,3 +75,25 @@ class AnsibleSequence(AnsibleBaseYAMLObject, list):
 
 class AnsibleVault(AnsibleBaseYAMLObject, bytes):
     pass
+
+# Unicode like object that is not evaluation (decrypted) until it needs to be
+class AnsibleVaultUnicode(AnsibleUnicode):
+    __UNSAFE__ = True
+
+    def __init__(self, ciphertext,  *args, **kwargs):
+        log.debug('AnsibleVaultUnicode init %s %s %s', ciphertext, args, kwargs)
+        super(AnsibleVaultUnicode, self).__init__(args, kwargs)
+        self.vault = None
+        self.ciphertext = ciphertext
+
+    @property
+    def plaintext(self):
+        log.debug('plaintext property')
+        if not self.vault:
+            # FIXME: raise exception?
+            return self.ciphertext
+        return self.vault.decrypt(self.ciphertext)
+
+    def __str__(self):
+        log.debug('AnsibleVaultUnicode __str__')
+        return str(self.plaintext)
