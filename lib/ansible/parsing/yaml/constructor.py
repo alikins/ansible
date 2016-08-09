@@ -21,13 +21,16 @@ __metaclass__ = type
 
 from yaml.constructor import Constructor, ConstructorError
 from yaml.nodes import MappingNode
-from yaml import YAMLError
+# from yaml import YAMLError
 
 from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode, AnsibleByteString
 from ansible.vars.unsafe_proxy import wrap_var
 from ansible.parsing.vault import VaultLib
-from ansible.utils import unicode
+# from ansible.utils import unicode
 
+import logging
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 try:
     from __main__ import display
@@ -37,6 +40,7 @@ except ImportError:
 
 class AnsibleConstructor(Constructor):
     def __init__(self, file_name=None, vault_password=None):
+        log.debug('AnsibleConstructor init')
         self._vault_password = vault_password
         self._ansible_file_name = file_name
         super(AnsibleConstructor, self).__init__()
@@ -92,9 +96,10 @@ class AnsibleConstructor(Constructor):
         return ret
 
     def construct_yaml_bytestring(self, node, unsafe=False):
+        log.debug('IS THIS USED? construct_yaml_bytestring')
         value = self.construct_scalar(node)
 
-        #return value
+        # return value
 
         ret = AnsibleByteString(value)
         ret.ansible_pos = self._node_position_info(node)
@@ -128,9 +133,9 @@ class AnsibleConstructor(Constructor):
         return (datasource, line, column)
 
     def construct_vault(self, node):
-
-        #ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
-        #ciphertext_data = self.construct_yaml_str(node, unsafe=True)
+        log.debug('construct_vault')
+        # ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
+        # ciphertext_data = self.construct_yaml_str(node, unsafe=True)
         value = self.construct_scalar(node)
         ciphertext_data = value
 

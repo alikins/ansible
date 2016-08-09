@@ -21,6 +21,9 @@ __metaclass__ = type
 
 from ansible.compat.six import text_type
 
+import logging
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 class AnsibleBaseYAMLObject(object):
     '''
@@ -59,9 +62,12 @@ class AnsibleUnicode(AnsibleBaseYAMLObject, text_type):
     ''' sub class for unicode objects '''
     pass
 
+
 class AnsibleByteString(AnsibleBaseYAMLObject, bytes):
     ''' sub class for bystream data objects '''
-    pass
+    def __init__(self, *args, **kwargs):
+        log.debug('AnsibleByteString init %s %s', args, kwargs)
+        super(AnsibleByteString, self).__init__(args, kwargs)
 
 class AnsibleSequence(AnsibleBaseYAMLObject, list):
     ''' sub class for lists '''

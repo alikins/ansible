@@ -39,6 +39,9 @@ try:
 except ImportError:
     from yaml.parser import ParserError
 
+import logging
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 class NameStringIO(StringIO):
     """In py2.6, StringIO doesn't let you set name because a baseclass has it
@@ -196,11 +199,40 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         tagged_vaulted_var = u"""!vault |\n%s""" % vaulted_var
         return tagged_vaulted_var
 
+    def _build_stream(self, yaml_text):
+        stream = NameStringIO(yaml_text)
+        stream.name = 'my.yml'
+        return stream
+
+    # DEBUG methods
+
+    # show yaml stream parsing events
+    def _yaml_events(self, yaml_text):
+        stream = self._build_stream(yaml_text)
+        for event in yaml.parse(stream):
+            log.debug('yaml_parse event: %s', event)
+
+    # show the yaml tree/ast
+    def _yaml_compose(self, yaml_text):
+        log.debug('yaml_compose: %s', yaml.compose(yaml_text))
+
+    # show the yaml tokens
+    def _yaml_scan(self, yaml_text):
+        stream = self._build_stream(yaml_text)
+        for token in yaml.scan(stream):
+            log.debug('yaml.scan token: %s', token)
+
+    def _yaml_innards(self, yaml_text):
+        self._yaml_scan(yaml_text)
+        self._yaml_events(yaml_text)
+        self._yaml_compose(yaml_text)
+
     def _load_yaml(self, yaml_text, password):
         print('yaml_text')
         print('|%s|' % yaml_text.encode('utf-8'))
-        stream = NameStringIO(yaml_text)
-        stream.name = 'my.yml'
+
+        # self._yaml_innards(yaml_text)
+        stream = self._build_stream(yaml_text)
 
         loader = AnsibleLoader(stream, vault_password=password)
 
