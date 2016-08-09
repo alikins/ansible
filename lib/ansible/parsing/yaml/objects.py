@@ -19,6 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import UserString
+
 from ansible.compat.six import text_type
 
 import logging
@@ -77,23 +79,27 @@ class AnsibleVault(AnsibleBaseYAMLObject, bytes):
     pass
 
 # Unicode like object that is not evaluation (decrypted) until it needs to be
-class AnsibleVaultUnicode(AnsibleUnicode):
+class AnsibleVaultUnicode(AnsibleUnicode, UserString.UserString):
     __UNSAFE__ = True
 
-    def __init__(self, ciphertext,  *args, **kwargs):
-        log.debug('AnsibleVaultUnicode init %s %s %s', ciphertext, args, kwargs)
-        super(AnsibleVaultUnicode, self).__init__(args, kwargs)
+    def __init__(self, ciphertext):
+        log.debug('AnsibleVaultUnicode init %s', ciphertext)
+        super(AnsibleVaultUnicode, self).__init__(ciphertext)
         self.vault = None
-        self.ciphertext = ciphertext
+        self._ciphertext = None
 
     @property
-    def plaintext(self):
+    def data(self):
         log.debug('plaintext property')
         if not self.vault:
             # FIXME: raise exception?
-            return self.ciphertext
-        return self.vault.decrypt(self.ciphertext)
+            return self._ciphertext
+        return self.vault.decrypt(self._ciphertext)
 
-    def __str__(self):
-        log.debug('AnsibleVaultUnicode __str__')
-        return str(self.plaintext)
+    @data.setter
+    def data(self, value):
+        self._ciphertext = value
+
+#    def __str__(self):
+#        log.debug('AnsibleVaultUnicode __str__')
+#        return str(self.data)
