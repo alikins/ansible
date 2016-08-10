@@ -1213,58 +1213,122 @@ class LinuxHardware(Hardware):
                 else:
                     self.facts[k] = 'NA'
 
-    @timeout(10)
-    def get_mount_facts(self):
-        uuids = dict()
-        self.facts['mounts'] = []
-        bind_mounts = []
-        findmntPath = self.module.get_bin_path("findmnt")
-        if findmntPath:
-            rc, out, err = self.module.run_command("%s -lnur" % ( findmntPath ), use_unsafe_shell=True)
-            if rc == 0:
-                # find bind mounts, in case /etc/mtab is a symlink to /proc/mounts
-                for line in out.split('\n'):
-                    fields = line.rstrip('\n').split()
-                    if(len(fields) < 2):
-                        continue
-                    if(re.match(".*\]",fields[1])):
-                        bind_mounts.append(fields[0])
+    def _run_lsblk(self, lsblk_path):
+        args = ['--list', '--noheadings', '--paths',  '--output', 'NAME,UUID']
+        cmd = [lsblk_path] + args
+        rc, out, err = self.module.run_command(cmd)
+        return rc, out, err
 
+    def _lsblk_uuid(self):
+
+        uuids = {}
+        lsblk_path = self.module.get_bin_path("lsblk")
+        if not lsblk_path:
+            return uuids
+
+        rc, out, err = self._run_lsblk(lsblk_path)
+        if rc != 0:
+            return uuids
+
+        lsblk_lines = out.splitlines()
+
+        # each line will be in format:
+        # <devicename><some whitespace><uuid>
+        # /dev/sda1  32caaec3-ef40-4691-a3b6-438c3f9bc1c0
+        for lsblk_line in lsblk_lines:
+            if not lsblk_line:
+                continue
+
+            line = lsblk_line.strip()
+            fields = line.split()
+            if len(fields) < 2:
+                continue
+
+            device_name, uuid = fields[0].strip(), fields[1].strip()
+            if device_name in uuids:
+                continue
+            uuids[device_name] = uuid
+
+        return uuids
+
+    def _run_findmnt(self, findmnt_path):
+        args = ['--list', '--noheadings', '--notruncate']
+        cmd = [findmnt_path] + args
+        rc, out, err = self.module.run_command(cmd)
+        return rc, out, err
+
+    def _find_bind_mounts(self):
+        bind_mounts = []
+        findmnt_path = self.module.get_bin_path("findmnt")
+        if not findmnt_path:
+            return
+
+        rc, out, err = self._run_findmnt(findmnt_path)
+        if rc != 0:
+            return bind_mounts
+
+        # find bind mounts, in case /etc/mtab is a symlink to /proc/mounts
+        lines = out.splitlines()
+        for line in lines:
+            fields = line.split()
+            # fields[0] is the TARGET, fields[1] is the SOURCE
+            if len(fields) < 2:
+                continue
+
+            # bind mounts will have a [/directory_name] in the SOURCE column
+            if re.match(".*\]",fields[1]):
+                bind_mounts.append(fields[0])
+
+        return bind_mounts
+
+    def _mtab_entries(self):
         mtab = get_file_content('/etc/mtab', '')
-        for line in mtab.split('\n'):
+        lines = mtab.splitlines()
+        mtab_entries = []
+        for line in lines:
             fields = line.rstrip('\n').split()
             if len(fields) < 4:
                 continue
-            if fields[0].startswith('/') or ':/' in fields[0]:
-                if(fields[2] != 'none'):
-                    size_total, size_available = self._get_mount_size_facts(fields[1])
-                    if fields[0] in uuids:
-                        uuid = uuids[fields[0]]
-                    else:
-                        uuid = 'NA'
-                        lsblkPath = self.module.get_bin_path("lsblk")
-                        if lsblkPath:
-                            rc, out, err = self.module.run_command("%s -ln --output UUID %s" % (lsblkPath, fields[0]), use_unsafe_shell=True)
+            mtab_entries.append(fields)
+        return mtab_entries
 
-                            if rc == 0:
-                                uuid = out.strip()
-                                uuids[fields[0]] = uuid
+    @timeout(10)
+    def get_mount_facts(self):
+        self.facts['mounts'] = []
 
-                    if fields[1] in bind_mounts:
-                        # only add if not already there, we might have a plain /etc/mtab
-                        if not re.match(".*bind.*", fields[3]):
-                            fields[3] += ",bind"
+        bind_mounts = self._find_bind_mounts()
+        uuids = self._lsblk_uuid()
+        mtab_entries = self._mtab_entries()
 
-                    self.facts['mounts'].append(
-                        {'mount': fields[1],
-                         'device':fields[0],
-                         'fstype': fields[2],
-                         'options': fields[3],
-                         # statvfs data
-                         'size_total': size_total,
-                         'size_available': size_available,
-                         'uuid': uuid,
-                         })
+        mounts = []
+        for fields in mtab_entries:
+            device, mount, fstype, options = fields[0], fields[1], fields[2], fields[3]
+
+            if not device.startswith('/') and ':/' not in device:
+                continue
+
+            if fstype == 'none':
+                continue
+
+            size_total, size_available = self._get_mount_size_facts(mount)
+
+            if mount in bind_mounts:
+                # only add if not already there, we might have a plain /etc/mtab
+                if not re.match(".*bind.*", options):
+                    options += ",bind"
+
+            mount_info = {'mount': mount,
+                          'device': device,
+                          'fstype': fstype,
+                          'options': options,
+                          # statvfs data
+                          'size_total': size_total,
+                          'size_available': size_available,
+                          'uuid': uuids.get(device, 'N/A')}
+
+            mounts.append(mount_info)
+
+        self.facts['mounts'] = mounts
 
     def get_holders(self, block_dev_dict, sysdir):
         block_dev_dict['holders'] = []
