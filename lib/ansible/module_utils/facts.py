@@ -38,7 +38,9 @@ try:
 except ImportError:
     # python3
     import configparser
+
 from ansible.module_utils.basic import get_all_subclasses
+from ansible.module_utils.six import PY3
 
 # py2 vs py3; replace with six via ansiballz
 try:
@@ -971,7 +973,10 @@ class Hardware(Facts):
         for sc in get_all_subclasses(Hardware):
             if sc.platform == platform.system():
                 subclass = sc
-        return super(cls, subclass).__new__(subclass, *arguments, **keyword)
+        if PY3:
+            return super(cls, subclass).__new__(subclass)
+        else:
+            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
     def populate(self):
         return self.facts
@@ -1709,8 +1714,10 @@ class FreeBSDHardware(Hardware):
             else:
                 self.facts[k] = 'NA'
 
+
 class DragonFlyHardware(FreeBSDHardware):
-    pass
+    platform = 'DragonFly'
+
 
 class NetBSDHardware(Hardware):
     """
@@ -2068,7 +2075,10 @@ class Network(Facts):
         for sc in get_all_subclasses(Network):
             if sc.platform == platform.system():
                 subclass = sc
-        return super(cls, subclass).__new__(subclass, *arguments, **keyword)
+        if PY3:
+            return super(cls, subclass).__new__(subclass)
+        else:
+            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
     def populate(self):
         return self.facts
@@ -2619,12 +2629,14 @@ class FreeBSDNetwork(GenericBsdIfconfigNetwork):
     """
     platform = 'FreeBSD'
 
+
 class DragonFlyNetwork(GenericBsdIfconfigNetwork):
     """
     This is the DragonFly Network Class.
     It uses the GenericBsdIfconfigNetwork unchanged.
     """
     platform = 'DragonFly'
+
 
 class AIXNetwork(GenericBsdIfconfigNetwork):
     """
@@ -2858,7 +2870,11 @@ class Virtual(Facts):
         for sc in get_all_subclasses(Virtual):
             if sc.platform == platform.system():
                 subclass = sc
-        return super(cls, subclass).__new__(subclass, *arguments, **keyword)
+
+        if PY3:
+            return super(cls, subclass).__new__(subclass)
+        else:
+            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
     def populate(self):
         return self.facts
@@ -3046,7 +3062,7 @@ class FreeBSDVirtual(Virtual):
         self.facts['virtualization_role'] = ''
 
 class DragonFlyVirtual(FreeBSDVirtual):
-    pass
+    platform = 'DragonFly'
 
 class OpenBSDVirtual(Virtual):
     """
