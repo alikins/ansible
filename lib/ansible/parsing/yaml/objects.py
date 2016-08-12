@@ -79,14 +79,15 @@ class AnsibleVault(AnsibleBaseYAMLObject, bytes):
     pass
 
 # Unicode like object that is not evaluation (decrypted) until it needs to be
-class AnsibleVaultUnicode(AnsibleUnicode, UserString.UserString):
+class AnsibleVaultUnicode(AnsibleUnicode):
     __UNSAFE__ = True
 
     def __init__(self, ciphertext):
         log.debug('AnsibleVaultUnicode init %s', ciphertext)
         super(AnsibleVaultUnicode, self).__init__(ciphertext)
+        # After construction, calling code has to set the .vault attribute to a VaultLib object
         self.vault = None
-        self._ciphertext = None
+        self._ciphertext = ciphertext
 
     @property
     def data(self):
@@ -100,6 +101,13 @@ class AnsibleVaultUnicode(AnsibleUnicode, UserString.UserString):
     def data(self, value):
         self._ciphertext = value
 
-#    def __str__(self):
-#        log.debug('AnsibleVaultUnicode __str__')
-#        return str(self.data)
+    # Compare a regular str/text_type with the decrypted hypertext
+    def __eq__(self, other):
+        return other == self.data
+
+    def __ne__(self, other):
+        return other != self.data
+
+    def __str__(self):
+        log.debug('AnsibleVaultUnicode __str__')
+        return str(self.data)
