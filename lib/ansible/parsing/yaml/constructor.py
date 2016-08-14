@@ -24,7 +24,7 @@ from yaml.nodes import MappingNode
 # from yaml import YAMLError
 
 from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode, AnsibleByteString
-from ansible.parsing.yaml.objects import AnsibleVaultUnicode, AnsibleVault
+from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode, AnsibleVault
 from ansible.vars.unsafe_proxy import wrap_var
 from ansible.parsing.vault import VaultLib
 # from ansible.utils import unicode
@@ -116,7 +116,7 @@ class AnsibleConstructor(Constructor):
 
         # could pass in a key id here to choose the vault to associate with
         vault = self._vaults['default']
-        ret = AnsibleVaultUnicode(ciphertext_data)
+        ret = AnsibleVaultEncryptedUnicode(ciphertext_data)
         ret.vault = vault
         return ret
 #        return wrap_var(ret)
