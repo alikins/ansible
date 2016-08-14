@@ -19,9 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import UserString
-
 from ansible.compat.six import text_type
+from ansible.errors import AnsibleError
 
 import logging
 log = logging.getLogger(__name__)
@@ -78,14 +77,44 @@ class AnsibleSequence(AnsibleBaseYAMLObject, list):
 class AnsibleVault(AnsibleBaseYAMLObject, bytes):
     pass
 
-# Unicode like object that is not evaluation (decrypted) until it needs to be
-class AnsibleVaultUnicode(AnsibleUnicode):
+class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
+    """A object created from a !vault-unencrypted yaml object.
+
+    This will be used to allow 'ansible-vault edit' to find yaml objects that
+    should be encrypted.
+
+    WARNING: This should only be used by 'ansible-vault edit'. Normal ansible
+    tools should throw an error if they see this in a yaml file."""
+
+    # This should never get called from ansible/ansible-playbook so maybe
+    # not needed.
     __UNSAFE__ = True
 
+    def __init__(self, plaintext):
+        log.debug('ansibleVaultUnencryptedUnicode init %s', plaintext)
+        super(AnsibleVaultUnencryptedUnicode, self).__init__()
+        # after construction, calling code has to set the .vault attribute to a vaultlib object
+        self.vault = None
+
+# Unicode like object that is not evaluated (decrypted) until it needs to be
+class AnsibleVaultEncryptedUnicode(AnsibleUnicode):
+    __UNSAFE__ = True
+
+    @classmethod
+    def from_plaintext(cls, seq, vault):
+        if not vault:
+            raise vault.AnsibleVaultError('Error creating AnsibleVaultEncryptedUnicode, invalid vault (%s) provided' % vault)
+
+        ciphertext = vault.encrypt(seq)
+        avu = cls(ciphertext)
+        avu.vault = vault
+        return avu
+
     def __init__(self, ciphertext):
-        log.debug('AnsibleVaultUnicode init %s', ciphertext)
-        super(AnsibleVaultUnicode, self).__init__(ciphertext)
-        # After construction, calling code has to set the .vault attribute to a VaultLib object
+        log.debug('ansiblevaultunicode init %s', ciphertext)
+        #super(ansiblevaultunicode, self).__init__(ciphertext)
+        super(AnsibleVaultEncryptedUnicode, self).__init__()
+        # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
         self._ciphertext = ciphertext
 

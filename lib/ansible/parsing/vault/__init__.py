@@ -101,6 +101,10 @@ def check_prereqs():
     if not HAS_AES or not HAS_COUNTER or not HAS_ANY_PBKDF2HMAC or not HAS_HASH:
         raise AnsibleError(CRYPTO_UPGRADE)
 
+
+class AnsibleVaultError(AnsibleError):
+    pass
+
 class VaultLib:
 
     def __init__(self, password):
