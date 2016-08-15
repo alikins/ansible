@@ -174,14 +174,8 @@ class DataLoader():
         try:
             with open(b_file_name, 'rb') as f:
                 data = f.read()
-                # If open is patched with mock_open, the type of data ends up being a str on
-                # PY2 or PY3, even if mock_open()'s read_data arg is a bytestring. is_encrypted
-                # expects a bytestring and fails on a PY3 str.
-                b_data = to_bytes(data)
-                print('type(data) read from file %s' % type(data))
-                print('type(b_data) read from file %s' % type(b_data))
-                if self._vault.is_encrypted(b_data):
-                    data = self._vault.decrypt(b_data, filename=b_file_name)
+                if self._vault.is_encrypted(data):
+                    data = self._vault.decrypt(data, filename=b_file_name)
                     show_content = False
 
             data = to_unicode(data, errors='strict')
