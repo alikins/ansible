@@ -134,6 +134,7 @@ class VaultLib:
 
         print('repr(data) %s' % repr(data))
         print('repr(plaintext_bytes) %s' % repr(plaintext_bytes))
+        print('type(plaintext_bytes) %s' % type(plaintext_bytes))
         if plaintext_bytes.startswith(header_bytes):
             return True
         return False
