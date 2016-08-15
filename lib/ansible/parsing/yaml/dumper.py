@@ -26,6 +26,10 @@ from ansible.parsing.yaml.objects import AnsibleUnicode, AnsibleSequence, Ansibl
 from ansible.parsing.yaml.objects import AnsibleVault, AnsibleVaultEncryptedUnicode
 from ansible.vars.hostvars import HostVars
 
+import logging
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
 class AnsibleDumper(yaml.SafeDumper):
     '''
     A simple stub class that allows us to add representers
@@ -42,7 +46,11 @@ def represent_vault(self, data):
 
 # Note: only want to represent the encrypted data
 def represent_vault_encrypted_unicode(self, data):
-    return self.represent_unicode(data)
+    #return self.represent_scalar(data, '!vault-encrypted')
+    #return self.represent_scalar('!vault-encrypted', data._ciphertext)
+    log.debug('rep v_e_u data=%s', data)
+    return self.represent_scalar('!vault-encrypted', data._ciphertext.decode())
+    #return self.represent_unicode(data)
 
 if PY3:
     represent_unicode = yaml.representer.SafeRepresenter.represent_str
@@ -79,7 +87,7 @@ AnsibleDumper.add_representer(
     represent_vault,
 )
 
-#AnsibleDumper.add_representer(
-#    AnsibleVaultEncryptedUnicode,
-#    represent_vault_encrypted_unicode,
-#)
+AnsibleDumper.add_representer(
+    AnsibleVaultEncryptedUnicode,
+    represent_vault_encrypted_unicode,
+)
