@@ -79,7 +79,7 @@ AnsibleDumper.add_representer(
     represent_vault,
 )
 
-AnsibleDumper.add_representer(
-    AnsibleVaultEncryptedUnicode,
-    represent_vault_encrypted_unicode,
-)
+#AnsibleDumper.add_representer(
+#    AnsibleVaultEncryptedUnicode,
+#    represent_vault_encrypted_unicode,
+#)

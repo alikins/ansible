@@ -98,7 +98,7 @@ class AnsibleConstructor(Constructor):
 
         return ret
 
-    def construct_vault_unicode(self, node):
+    def construct_vault_encrypted_unicode(self, node):
         log.debug('node=%s', node)
         value = self.construct_scalar(node)
 
@@ -210,5 +210,5 @@ AnsibleConstructor.add_constructor(
     AnsibleConstructor.construct_yaml_unsafe)
 
 AnsibleConstructor.add_constructor(
-    u'!vault',
-    AnsibleConstructor.construct_vault_unicode)
+    u'!vault-encrypted',
+    AnsibleConstructor.construct_vault_encrypted_unicode)

@@ -19,6 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import yaml
+
 from ansible.compat.six import text_type
 from ansible.errors import AnsibleError
 
@@ -89,6 +91,7 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
     # This should never get called from ansible/ansible-playbook so maybe
     # not needed.
     __UNSAFE__ = True
+    yaml_tag = u'!vault-unencrypted'
 
     def __init__(self, plaintext):
         log.debug('ansibleVaultUnencryptedUnicode init %s', plaintext)
@@ -97,8 +100,10 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
         self.vault = None
 
 # Unicode like object that is not evaluated (decrypted) until it needs to be
-class AnsibleVaultEncryptedUnicode(AnsibleUnicode):
+# TODO: is there a reason these objects are subclasses for YAMLObject?
+class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     __UNSAFE__ = True
+    yaml_tag = u'!vault-encrypted'
 
     @classmethod
     def from_plaintext(cls, seq, vault):
