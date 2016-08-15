@@ -148,5 +148,5 @@ class AnsibleVaultEncryptedUnicode(AnsibleUnicode):
         log.debug('AnsibleVaultUnicode __str__')
         return str(self.data)
 
-    def __unicode__(self):
-        return self.data.decode()
+#    def __unicode__(self):
+#        return self.data.decode()
