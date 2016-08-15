@@ -85,6 +85,6 @@ class TestDataLoaderWithVault(unittest.TestCase):
         else:
             builtins_name = '__builtin__'
 
-        with patch(builtins_name + '.open', mock_open(read_data=vaulted_data)):
+        with patch(builtins_name + '.open', mock_open(read_data=vaulted_data.encode('utf-8'))):
             output = self._loader.load_from_file('dummy_vault.txt')
             self.assertEqual(output, dict(foo='bar'))
