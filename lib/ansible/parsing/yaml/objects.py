@@ -23,6 +23,7 @@ import yaml
 
 from ansible.compat.six import text_type
 from ansible.errors import AnsibleError
+#from ansible.parsing.yaml.dumper import AnsibleDumper
 
 import logging
 log = logging.getLogger(__name__)
@@ -104,6 +105,7 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
 class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     __UNSAFE__ = True
     yaml_tag = u'!vault-encrypted'
+#    yaml_dumper = AnsibleDumper
 
     @classmethod
     def from_plaintext(cls, seq, vault):
