@@ -32,6 +32,8 @@ from ansible.compat.tests import unittest
 from ansible import errors
 from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.parsing import vault
+from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
+from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible.utils.unicode import to_bytes
 
 try:
@@ -186,6 +188,7 @@ class TestAnsibleLoaderVault(unittest.TestCase):
             self.assertEqual(e.message, 'Decryption failed')
 
     def _encrypt_plaintext(self, plaintext):
+        # Construct a yaml repr of a vault by hand
         vaulted_var_bytes = self.vault.encrypt(plaintext)
 
         # add yaml tag
@@ -228,8 +231,8 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         self._yaml_compose(yaml_text)
 
     def _load_yaml(self, yaml_text, password):
-        print('yaml_text')
-        print('|%s|' % yaml_text.encode('utf-8'))
+        #print('yaml_text')
+        #print('|%s|' % yaml_text.encode('utf-8'))
 
         # self._yaml_innards(yaml_text)
         stream = self._build_stream(yaml_text)
@@ -237,10 +240,43 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         loader = AnsibleLoader(stream, vault_password=password)
 
         data_from_yaml = loader.get_single_data()
-        print('data_from_yaml=|%s|' % data_from_yaml)
-        print('type(dfy)=%s' % type(data_from_yaml))
+        #print('data_from_yaml=|%s|' % data_from_yaml)
+        #print('type(dfy)=%s' % type(data_from_yaml))
 
         return data_from_yaml
+
+    def test_embedded_vault_from_dump(self):
+        avu = AnsibleVaultEncryptedUnicode.from_plaintext('setec astronomy', vault=self.vault)
+        blip = {'stuff1': [{'a dict key': 24},
+                           {'shhh-ssh-secrets': avu,
+                            'nothing to see here': 'move along'}],
+                'another key': 24.1}
+
+        blip = ['some string', 'another string', avu]
+        #stream = self._build_stream('')
+        stream = NameStringIO(u'')
+        yaml.dump(blip, stream, Dumper=AnsibleDumper, encoding='utf-8')
+        log.debug('stream: %s', stream.getvalue())
+        stream.seek(0)
+
+        for token in yaml.scan(stream):
+            log.debug('yaml.scan token: %s', token)
+        for event in yaml.parse(stream):
+            log.debug('yaml_parse event: %s', event)
+
+        stream.seek(0)
+        loader = AnsibleLoader(stream, vault_password=self.vault_password)
+
+        data_from_yaml = loader.get_data()
+        #data_from_yaml = loader.get_single_data()
+        log.debug('data_from_yaml: %s', data_from_yaml)
+        log.debug('data_from_yaml[2]: %s', type(data_from_yaml[2]._ciphertext))
+        #vault_string = data_from_yaml['the_secret']
+        stream2 = NameStringIO(u'')
+        yaml.dump(data_from_yaml, stream2, Dumper=AnsibleDumper, encoding='utf-8')
+        log.debug('stream: %s', stream2.getvalue())
+        stream2.seek(0)
+        #log.debug('vault_string: %s', vault_string)
 
     def test_embedded_vault(self):
         plaintext_var = u"""This is the plaintext string."""
@@ -255,7 +291,7 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
         vault_string = data_from_yaml['the_secret']
 
-        print('vault_string %s type(vault_string): %s str(vault_string): %s' % (vault_string, type(vault_string), str(vault_string)))
+        #print('vault_string %s type(vault_string): %s str(vault_string): %s' % (vault_string, type(vault_string), str(vault_string)))
 
         log.debug('vault_string: %s', vault_string)
         log.debug('type(vault_string): %s', type(vault_string))

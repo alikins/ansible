@@ -126,7 +126,7 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         of the ciphertext as a PY2 unicode or PY3 string object.
         '''
 
-        log.debug('ansiblevaultunicode init %s', ciphertext)
+        #log.debug('ansiblevaultunicode init %s', ciphertext)
         super(AnsibleVaultEncryptedUnicode, self).__init__()
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
@@ -134,7 +134,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
 
     @property
     def data(self):
-        log.debug('plaintext property')
         if not self.vault:
             # FIXME: raise exception?
             return self._ciphertext
@@ -145,7 +144,7 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         self._ciphertext = value
 
     def __repr__(self):
-        return 'AnsibleVaultEncryptedUnicode(%s)' % self.data
+        return 'AnsibleVaultEncryptedUnicode(\"%s\')' % self._ciphertext
 
     # Compare a regular str/text_type with the decrypted hypertext
     def __eq__(self, other):
@@ -155,7 +154,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         return other != self.data
 
     def __str__(self):
-        log.debug('AnsibleVaultUnicode __str__')
         return str(self.data)
 
     def __unicode__(self):
