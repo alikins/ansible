@@ -120,10 +120,10 @@ class VaultLib:
         :returns: True if it is recognized.  Otherwise, False.
         """
         plaintext_bytes = data
-        print('is_encrypted data=%s' % data)
-        print('type(data) %s' % type(data))
+        # print('is_encrypted data=%s' % data)
+        # print('type(data) %s' % type(data))
         header_bytes = HEADER.encode('utf-8')
-        print('header_bytes=|%s|' % header_bytes)
+        # print('header_bytes=|%s|' % header_bytes)
 
         # TODO: split file like object handling to seperate method
         if hasattr(plaintext_bytes, 'read'):
@@ -132,9 +132,9 @@ class VaultLib:
             plaintext_bytes.seek(current_position)
             return self.is_encrypted(header_part)
 
-        print('repr(data) %s' % repr(data))
-        print('repr(plaintext_bytes) %s' % repr(plaintext_bytes))
-        print('type(plaintext_bytes) %s' % type(plaintext_bytes))
+        # print('repr(data) %s' % repr(data))
+        # print('repr(plaintext_bytes) %s' % repr(plaintext_bytes))
+        # print('type(plaintext_bytes) %s' % type(plaintext_bytes))
         if plaintext_bytes.startswith(header_bytes):
             return True
         return False
@@ -152,11 +152,11 @@ class VaultLib:
         encryption. If the a already encoded string or PY2 bytestring needs to
         be encrypted, use encrypt_bytestring().
         """
-        print('DATA: %s' % data)
-        print('type(data): %s' % type(data))
+        # print('DATA: %s' % data)
+        # print('type(data): %s' % type(data))
         tb = to_bytes(data, errors='strict', encoding='utf-8')
-        print('TB: %s' % tb)
-        print('type(tb): %s' % type(tb))
+        # print('TB: %s' % tb)
+        # print('type(tb): %s' % type(tb))
         plaintext = data
         plaintext_bytes = plaintext.encode('utf-8')
 
@@ -181,7 +181,7 @@ class VaultLib:
         this_cipher = Cipher()
 
         # encrypt data
-        print('plaintext_bytes: |%s|' % plaintext_bytes)
+        # print('plaintext_bytes: |%s|' % plaintext_bytes)
         ciphertext_bytes = this_cipher.encrypt(plaintext_bytes, self.b_password)
 
         # format the data for output to the file
@@ -744,9 +744,9 @@ class VaultAES256:
         data = unhexlify(data)
         salt, cryptedHmac, cryptedData = data.split(b"\n", 2)
         salt = unhexlify(salt)
-        print('cryptedData1 |%s|' % cryptedData)
+        # print('cryptedData1 |%s|' % cryptedData)
         cryptedData = unhexlify(cryptedData)
-        print('cryptedData2 |%s|' % cryptedData)
+        # print('cryptedData2 |%s|' % cryptedData)
 
         key1, key2, iv = self.gen_key_initctr(password, salt)
 
