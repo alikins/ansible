@@ -111,8 +111,15 @@ class AnsibleVaultEncryptedUnicode(AnsibleUnicode):
         return avu
 
     def __init__(self, ciphertext):
+        '''A AnsibleUnicode with a Vault attribute that can decrypt it.
+
+        ciphertext is a byte string (str on PY2, bytestring on PY3).
+
+        The .data atttribute is a property that returns the decrypted plaintext
+        of the ciphertext as a PY2 unicode or PY3 string object.
+        '''
+
         log.debug('ansiblevaultunicode init %s', ciphertext)
-        #super(ansiblevaultunicode, self).__init__(ciphertext)
         super(AnsibleVaultEncryptedUnicode, self).__init__()
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
@@ -124,7 +131,7 @@ class AnsibleVaultEncryptedUnicode(AnsibleUnicode):
         if not self.vault:
             # FIXME: raise exception?
             return self._ciphertext
-        return self.vault.decrypt(self._ciphertext)
+        return self.vault.decrypt(self._ciphertext).decode()
 
     @data.setter
     def data(self, value):
@@ -140,3 +147,6 @@ class AnsibleVaultEncryptedUnicode(AnsibleUnicode):
     def __str__(self):
         log.debug('AnsibleVaultUnicode __str__')
         return str(self.data)
+
+    def __unicode__(self):
+        return self.data.decode()
