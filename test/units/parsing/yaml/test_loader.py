@@ -246,38 +246,54 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         plaintext_var = u"""This is the plaintext string."""
         tagged_vaulted_var = self._encrypt_plaintext(plaintext_var)
         another_vaulted_var = self._encrypt_plaintext(plaintext_var)
+
         different_var = u"""A different string that is not the same as the first one."""
         different_vaulted_var = self._encrypt_plaintext(different_var)
+
         yaml_text = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s\nanother_secret: %s\ndifferent_secret: %s""" % (tagged_vaulted_var, another_vaulted_var, different_vaulted_var)
 
         data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
         vault_string = data_from_yaml['the_secret']
+
         print('vault_string %s type(vault_string): %s str(vault_string): %s' % (vault_string, type(vault_string), str(vault_string)))
+
         log.debug('vault_string: %s', vault_string)
         log.debug('type(vault_string): %s', type(vault_string))
         log.debug('str(vault_string): %s', str(vault_string))
+
         self.assertEquals(plaintext_var, data_from_yaml['the_secret'])
+
         test_dict = {}
         test_dict[vault_string] = 'did this work?'
+
         log.debug('test_dict %s', test_dict)
         log.debug('test_dict[vault_string] %s', test_dict[vault_string])
         log.debug('hash(vault_string): %s', hash(vault_string))
+
         is_eql = vault_string.data == vault_string
         is_eql2 = vault_string == vault_string
+
         log.debug('vault_string.data == vault_string %s', is_eql)
         log.debug('vault_string == vault_string %s', is_eql2)
+
         another_vault_string = data_from_yaml['another_secret']
         different_vault_string = data_from_yaml['different_secret']
+
         is_eql3 = vault_string == another_vault_string
         is_eql4 = vault_string == different_vault_string
+
         log.debug('vault_string == another_vault_string: %s', is_eql3)
         log.debug('vault_string == different_vault_string: %s', is_eql4)
+
         str_eq = 'some string' == vault_string
         str_eq2 = plaintext_var == vault_string
+
         log.debug('\'some string\' == vault_string: %s', str_eq)
         log.debug('plaintext_var == vault_string: %s', str_eq2)
+
         str_neq = 'some string' != vault_string
         str_neq2 = plaintext_var != vault_string
+        
         log.debug('\'some string\' != vault_string: %s', str_neq)
         log.debug('plaintext_var != vault_string: %s', str_neq2)
 

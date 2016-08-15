@@ -91,7 +91,7 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
     # This should never get called from ansible/ansible-playbook so maybe
     # not needed.
     __UNSAFE__ = True
-    yaml_tag = u'!vault-unencrypted'
+#    yaml_tag = u'!vault-unencrypted'
 
     def __init__(self, plaintext):
         log.debug('ansibleVaultUnencryptedUnicode init %s', plaintext)
@@ -142,6 +142,9 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     def data(self, value):
         self._ciphertext = value
 
+    def __repr__(self):
+        return 'AnsibleVaultEncryptedUnicode(%s)' % self.data
+
     # Compare a regular str/text_type with the decrypted hypertext
     def __eq__(self, other):
         return other == self.data
@@ -153,5 +156,5 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         log.debug('AnsibleVaultUnicode __str__')
         return str(self.data)
 
-#    def __unicode__(self):
-#        return self.data.decode()
+    def __unicode__(self):
+        return self.data.decode()
