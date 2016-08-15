@@ -141,12 +141,16 @@ class VaultLib:
     def encrypt(self, data):
         """Vault encrypt a piece of data.
 
-        :arg data: a utf-8 byte str or unicode string to encrypt.
+        :arg data: a PY2 unicode string or PY3 string to encrypt.
         :returns: a utf-8 encoded byte str of encrypted data.  The string
             contains a header identifying this as vault encrypted data and
             formatted to newline terminated lines of 80 characters.  This is
             suitable for dumping as is to a vault file.
-        """
+
+        The unicode or string passed in as data will encoded to UTF-8 before
+        encryption. If the a already encoded string or PY2 bytestring needs to
+        be encrypted, use encrypt_bytestring().
+        """
         print('DATA: %s' % data)
         print('type(data): %s' % type(data))
         tb = to_bytes(data, errors='strict', encoding='utf-8')
@@ -158,6 +162,11 @@ class VaultLib:
         return self.encrypt_bytestring(plaintext_bytes)
 
     def encrypt_bytestring(self, plaintext_bytes):
+        '''Encrypt a PY2 bytestring.
+
+        Like encrypt(), except plaintext_bytes is not encoded to UTF-8
+        before encryption.'''
+
         if self.is_encrypted(plaintext_bytes):
             raise AnsibleError("input is already encrypted")
 
@@ -234,7 +243,7 @@ class VaultLib:
         #    to_bytes(self.cipher_name, errors='strict', encoding='utf-8')])
         header_bytes = HEADER.encode('utf-8')
         header = b';'.join([header_bytes, self.b_version,
-                            self.cipher_name.encode('utf-8',errors='strict')])
+                        self.cipher_name.encode('utf-8',errors='strict')])
         tmpdata = [header]
         tmpdata += [ciphertext_bytes[i:i + 80] for i in range(0, len(ciphertext_bytes), 80)]
         tmpdata += [b'']
