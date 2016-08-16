@@ -34,10 +34,6 @@ from ansible.parsing.yaml import objects
 from ansible.parsing import vault
 from ansible.compat.six import PY3
 
-import logging
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
 # FIXME: move somewhere shared
 class NameStringIO(io.StringIO):
     """In py2.6, StringIO doesn't let you set name because a baseclass has it
@@ -70,15 +66,9 @@ class TestAnsibleDumper(unittest.TestCase):
     def test(self):
         plaintext = 'This is a string we are going to encrypt.'
         avu = objects.AnsibleVaultEncryptedUnicode.from_plaintext(plaintext, vault=self.vault)
-        log.debug('avu: %s', avu)
-        log.debug('type(avu): %s', type(avu))
 
         yaml_out = self._dump(avu, Dumper=self.dumper)
-        log.debug('yaml_out: %s', yaml_out)
-
         stream = self._build_stream(yaml_out)
-        log.debug('self.stream: %s', self.stream.getvalue())
         loader = AnsibleLoader(stream, vault_password=self.vault_password)
         data_from_yaml = loader.get_single_data()
-        log.debug('data_from_yaml %s', data_from_yaml)
-
+        self.assertEquals(plaintext, data_from_yaml.data)

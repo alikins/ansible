@@ -20,14 +20,12 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from six import PY3
-from yaml.scanner import ScannerError
 
 from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import patch, mock_open
 from ansible.errors import AnsibleParserError
 
 from ansible.parsing.dataloader import DataLoader
-from ansible.parsing.yaml.objects import AnsibleMapping
 
 class TestDataLoader(unittest.TestCase):
 

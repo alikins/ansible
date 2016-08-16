@@ -21,19 +21,14 @@ __metaclass__ = type
 
 from yaml.constructor import Constructor, ConstructorError
 from yaml.nodes import MappingNode
-# from yaml import YAMLError
 
-from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode, AnsibleByteString
+from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode
 from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
 from ansible.parsing.yaml.objects import AnsibleVaultUnencryptedUnicode
 
 from ansible.vars.unsafe_proxy import wrap_var
 from ansible.parsing.vault import VaultLib
 from ansible.utils.unicode import to_bytes
-
-import logging
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 try:
     from __main__ import display
@@ -43,7 +38,6 @@ except ImportError:
 
 class AnsibleConstructor(Constructor):
     def __init__(self, file_name=None, vault_password=None):
-        log.debug('AnsibleConstructor init')
         self._vault_password = vault_password
         self._ansible_file_name = file_name
         super(AnsibleConstructor, self).__init__()
@@ -101,48 +95,23 @@ class AnsibleConstructor(Constructor):
         return ret
 
     def construct_vault_unencrypted_unicode(self, node):
-        log.debug('unencrypted node=%s', node)
         value = self.construct_scalar(node)
         ret = AnsibleVaultUnencryptedUnicode(value)
         return ret
 
     def construct_vault_encrypted_unicode(self, node):
-        log.debug('node=%s', node)
         value = self.construct_scalar(node)
 
-        log.debug('type(value): %s', type(value))
         ciphertext_data = to_bytes(value)
 
-        log.debug('type(ciphertext_data: %s', type(ciphertext_data))
         if self._vault_password is None:
             raise ConstructorError(None, None,
                     "found vault but no vault password provided", node.start_mark)
-
-        # vault = VaultLib(password=self._vault_password)
-        # value here is the encrypted value
-
-        # We don't need to do this until later (on __str__() ?)
-        #  plaintext_data = vault.decrypt(ciphertext_data)
 
         # could pass in a key id here to choose the vault to associate with
         vault = self._vaults['default']
         ret = AnsibleVaultEncryptedUnicode(ciphertext_data)
         ret.vault = vault
-        return ret
-#        return wrap_var(ret)
-
-    def construct_yaml_bytestring(self, node, unsafe=False):
-        log.debug('IS THIS USED? construct_yaml_bytestring')
-        value = self.construct_scalar(node)
-
-        # return value
-
-        ret = AnsibleByteString(value)
-        ret.ansible_pos = self._node_position_info(node)
-
-        if unsafe:
-            ret = wrap_var(ret)
-
         return ret
 
     def construct_yaml_seq(self, node):
@@ -169,7 +138,6 @@ class AnsibleConstructor(Constructor):
         return (datasource, line, column)
 
     def construct_vault(self, node):
-        log.debug('construct_vault')
         # ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
         # ciphertext_data = self.construct_yaml_str(node, unsafe=True)
         value = self.construct_scalar(node)
@@ -180,9 +148,6 @@ class AnsibleConstructor(Constructor):
                     "found vault but no vault password provided", node.start_mark)
 
         vault = VaultLib(password=self._vault_password)
-        #print('cipher_text %s' % ciphertext_data)
-        #print('type(cipher_text) %s' % type(ciphertext_data))
-        #print('is_enc %s' % vault.is_encrypted(ciphertext_data.encode('utf-8')))
         if not vault.is_encrypted(ciphertext_data.encode('utf-8')):
             raise ConstructorError(None, None,
                     "found vault but argument is not encrypted", node.start_mark)

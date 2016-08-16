@@ -22,14 +22,11 @@ __metaclass__ = type
 import yaml
 from ansible.compat.six import PY3
 
-from ansible.parsing.yaml.objects import AnsibleUnicode, AnsibleSequence, AnsibleMapping, AnsibleByteString
-#from ansible.parsing.yaml.objects import AnsibleVault
-from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode, AnsibleVaultUnencryptedUnicode
+from ansible.parsing.yaml.objects import AnsibleUnicode, AnsibleSequence, AnsibleMapping
+from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
+from ansible.parsing.yaml.objects import AnsibleVaultUnencryptedUnicode
 from ansible.vars.hostvars import HostVars
 
-import logging
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 class AnsibleDumper(yaml.SafeDumper):
     '''
@@ -41,16 +38,8 @@ class AnsibleDumper(yaml.SafeDumper):
 def represent_hostvars(self, data):
     return self.represent_dict(dict(data))
 
-#def represent_vault(self, data):
-#    return self.represent_scalar(data)
-#    return self.represent_unicode(data)
-
 # Note: only want to represent the encrypted data
 def represent_vault_encrypted_unicode(self, data):
-    log.debug('rep v_e_u data=%s', data)
-    log.debug('rep_vault_enc_unicode data._ciphertext %s', data._ciphertext)
-    log.debug('rep_vault_enc_unicode data._ciphertext type %s', type(data._ciphertext))
-    # add yaml tag
     return self.represent_scalar(u'!vault-encrypted', data._ciphertext.decode(), style='|')
 
 def represent_vault_unencrypted_unicode(self, data):
@@ -80,16 +69,6 @@ AnsibleDumper.add_representer(
     AnsibleMapping,
     yaml.representer.SafeRepresenter.represent_dict,
 )
-
-AnsibleDumper.add_representer(
-    AnsibleByteString,
-    yaml.representer.SafeRepresenter.represent_str,
-)
-
-#AnsibleDumper.add_representer(
-#    AnsibleVault,
-#    represent_vault,
-#)
 
 AnsibleDumper.add_representer(
     AnsibleVaultEncryptedUnicode,
