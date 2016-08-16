@@ -29,7 +29,7 @@ from ansible.parsing.yaml.objects import AnsibleVaultUnencryptedUnicode
 
 from ansible.vars.unsafe_proxy import wrap_var
 from ansible.parsing.vault import VaultLib
-# from ansible.utils import unicode
+from ansible.utils.unicode import to_bytes
 
 import logging
 log = logging.getLogger(__name__)
@@ -110,8 +110,10 @@ class AnsibleConstructor(Constructor):
         log.debug('node=%s', node)
         value = self.construct_scalar(node)
 
-        ciphertext_data = value
+        log.debug('type(value): %s', type(value))
+        ciphertext_data = to_bytes(value)
 
+        log.debug('type(ciphertext_data: %s', type(ciphertext_data))
         if self._vault_password is None:
             raise ConstructorError(None, None,
                     "found vault but no vault password provided", node.start_mark)

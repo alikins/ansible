@@ -19,7 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from io import StringIO
+from io import BytesIO, StringIO
+import io
 import yaml
 from ansible.compat.tests import unittest
 
@@ -28,11 +29,19 @@ from ansible.parsing.yaml import objects
 from ansible.parsing import vault
 from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.parsing.yaml.dumper import AnsibleDumper
-# from ansible.utils.unicode import to_unicode, to_bytes, to_str
+from ansible.utils.unicode import to_unicode, to_bytes, to_str
 
 import logging
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
+
+class NameBytesIO(io.TextIOWrapper):
+    """In py2.6, StringIO doesn't let you set name because a baseclass has it
+    as readonly property"""
+    name = None
+
+    def __init__(self, *args, **kwargs):
+        super(NameBytesIO, self).__init__(*args, **kwargs)
 
 class NameStringIO(StringIO):
     """In py2.6, StringIO doesn't let you set name because a baseclass has it
@@ -45,53 +54,68 @@ class NameStringIO(StringIO):
 def dump_load_cycle(obj, vault_password):
     '''Dump the passed in object to yaml, load it back up, dump again, compare.'''
     stream = NameStringIO()
-    yaml.dump(obj, stream, Dumper=AnsibleDumper, encoding='utf-8')
-    yaml_string = yaml.dump(obj, Dumper=AnsibleDumper)
+    # Each pass though a dump or load revs the 'generation'
+    obj_0 = obj
+    yaml_string_1 = yaml.dump(obj_0, Dumper=AnsibleDumper)
+    yaml.dump(obj_0, stream, Dumper=AnsibleDumper)
 
-    yaml_string_from_stream = stream.getvalue()
-    dump_equals = yaml_string == yaml_string_from_stream
+    yaml_string_from_stream_1 = stream.getvalue()
 
     # reset stream
     stream.seek(0)
 
+    out = stream.getvalue()
+    log.debug('stream.getvalue: %s', out)
+    log.debug('type(getvalue: %s', type(out))
+    log.debug('type(yaml_string_1): %s', type(yaml_string_1))
+    log.debug('yaml_string_1: %s', yaml_string_1)
+    stream.seek(0)
     loader = AnsibleLoader(stream, vault_password=vault_password)
-    obj_from_stream = loader.get_data()
+    obj_from_stream_2 = loader.get_data()
 
-    stream_from_string = NameStringIO(yaml_string)
-    loader2 = AnsibleLoader(stream_from_string, vault_password=vault_password)
-    obj_from_string = loader2.get_data()
+    stream_from_yaml_string_1 = NameStringIO(yaml_string_1)
+    loader2 = AnsibleLoader(stream_from_yaml_string_1, vault_password=vault_password)
+    obj_from_string_2 = loader2.get_data()
 
-    obj_equals = obj_from_stream == obj_from_string
+    #log.debug('obj_from_stream_2 type=%s ciphertext= %s', type(obj_from_stream_2._ciphertext), obj_from_stream_2._ciphertext)
+    #log.debug('obj_from_string_2: %s', obj_from_string_2)
+    assert obj_from_stream_2 == obj_from_string_2
 
-    stream_obj_from_stream = NameStringIO()
-    stream_obj_from_string = NameStringIO()
+    # stream objects for gen 3
+    stream_obj_from_stream_3 = NameStringIO()
+    stream_obj_from_string_3 = NameStringIO()
 
-    yaml.dump(obj_from_stream, stream_obj_from_stream, Dumper=AnsibleDumper, encoding='utf-8')
-    yaml.dump(obj_from_stream, stream_obj_from_string, Dumper=AnsibleDumper, encoding='utf-8')
+    # dump the gen 2 objects to streams
+    yaml.dump(obj_from_stream_2, stream_obj_from_stream_3, Dumper=AnsibleDumper)
+    yaml.dump(obj_from_stream_2, stream_obj_from_string_3, Dumper=AnsibleDumper)
+    # The gen3 string of the dumped gen2 objects
+    yaml_string_stream_obj_from_stream_3 = stream_obj_from_stream_3.getvalue()
+    yaml_string_stream_obj_from_string_3 = stream_obj_from_string_3.getvalue()
 
-    yaml_string_stream_obj_from_stream = stream_obj_from_stream.getvalue()
-    yaml_string_stream_obj_from_string = stream_obj_from_string.getvalue()
+    stream_obj_from_stream_3.seek(0)
+    stream_obj_from_string_3.seek(0)
 
-    stream_obj_from_stream.seek(0)
-    stream_obj_from_string.seek(0)
+    # dump the gen 2 objects directory to strings
+    yaml_string_obj_from_stream_3 = yaml.dump(obj_from_stream_2, Dumper=AnsibleDumper)
+    yaml_string_obj_from_string_3 = yaml.dump(obj_from_string_2, Dumper=AnsibleDumper)
 
-    yaml_string_obj_from_stream = yaml.dump(obj_from_stream, Dumper=AnsibleDumper)
-    yaml_string_obj_from_string = yaml.dump(obj_from_string, Dumper=AnsibleDumper)
+    assert yaml_string_1 == yaml_string_obj_from_string_3
+    assert yaml_string_1 == yaml_string_obj_from_stream_3
+    assert yaml_string_1 == yaml_string_from_stream_1
+    assert yaml_string_1 == yaml_string_stream_obj_from_stream_3
+    assert yaml_string_1 == yaml_string_stream_obj_from_string_3
 
-    assert yaml_string == yaml_string_obj_from_stream
-    assert yaml_string == yaml_string_obj_from_stream == yaml_string_obj_from_string
-    assert yaml_string == yaml_string_obj_from_stream == yaml_string_obj_from_string == yaml_string_stream_obj_from_stream == yaml_string_stream_obj_from_string
-    assert obj == obj_from_stream
-    assert obj == obj_from_string
-    assert obj == yaml_string_obj_from_stream
-    assert obj == yaml_string_obj_from_string
-    assert obj == obj_from_stream == obj_from_string == yaml_string_obj_from_stream == yaml_string_obj_from_string
+    assert obj == obj_0
+    assert obj == obj_from_stream_2
+    assert obj == obj_from_string_2
+
     return {'obj': obj,
-            'yaml_string': yaml_string,
-            'yaml_string_from_stream': yaml_string_from_stream,
-            'obj_from_stream': obj_from_stream,
-            'obj_from_string': obj_from_string,
-            'yaml_string_obj_from_string': yaml_string_obj_from_string}
+            'yaml_string_1': yaml_string_1,
+            'yaml_string_from_stream_1': yaml_string_from_stream_1,
+            'obj_from_stream_1': obj_from_stream_2,
+            'obj_from_string_2': obj_from_string_2,
+            'yaml_string_obj_from_string_3': yaml_string_obj_from_string_3,
+            'yaml_string_stream_obj_from_stream_3': yaml_string_stream_obj_from_stream_3}
 
 
 class TestAnsibleVaultUnicodeNoVault(unittest.TestCase):
@@ -120,8 +144,9 @@ class TestAnsibleVaultUnicodeNoVault(unittest.TestCase):
         self.assert_values(seq)
 
 class TestAnsibleVaultUnencryptedUnicode(unittest.TestCase):
-    def test(self):
-        seq = 'test string'
+    def test_dump_load_cycle(self):
+        seq = u'test string'
+        log.debug('type(seq): %s', type(seq))
         avuu = objects.AnsibleVaultUnencryptedUnicode(seq)
 
         results = dump_load_cycle(avuu, vault_password='hunter42')
@@ -137,6 +162,11 @@ class TestAnsibleVaultEncryptedUnicode(unittest.TestCase):
         self.wrong_vault = vault.VaultLib(self.wrong_vault_password)
 
         self.vault = self.good_vault
+
+    def test_dump_load_cycle(self):
+        aveu = self._from_plaintext('the test string for TestAnsibleVaultEncryptedUnicode.test_dump_load_cycle')
+        results = dump_load_cycle(aveu, vault_password=self.vault_password)
+        log.debug('results: %s', results)
 
     def assert_values(self, avu, seq):
         self.assertIsInstance(avu, objects.AnsibleVaultEncryptedUnicode)
