@@ -66,17 +66,10 @@ class TestVaultLib(unittest.TestCase):
     def test_encrypt(self):
         v = VaultLib(password='the_unit_test_password')
         plaintext = u'Some text to encrypt.'
-        print('plaintext=%s' % plaintext)
-        print('type(plaintext)=%s' % type(plaintext))
-
         ciphertext = v.encrypt(plaintext)
-        print('ciphertext=%s' % ciphertext)
-        print('str(ciphertext)=%s' % str(ciphertext))
-        print('ciphertext.decode=%s' % ciphertext.decode())
-        print('type(ciphertext)=%s' % type(ciphertext))
 
-        # TODO
-        # verify text encodines
+        self.assertIsInstance(ciphertext, (bytes, str))
+        # TODO: assert something...
 
     def test_is_encrypted(self):
         v = VaultLib(None)

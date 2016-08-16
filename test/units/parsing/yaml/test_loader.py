@@ -41,10 +41,6 @@ try:
 except ImportError:
     from yaml.parser import ParserError
 
-import logging
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
 class NameStringIO(StringIO):
     """In py2.6, StringIO doesn't let you set name because a baseclass has it
     as readonly property"""
@@ -181,6 +177,7 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         bobs_vault = vault.VaultLib(bob_password)
 
         ciphertext = bobs_vault.encrypt(plaintext)
+
         try:
             self.vault.decrypt(ciphertext)
         except Exception as e:
@@ -207,44 +204,14 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         stream.name = 'my.yml'
         return stream
 
-    # DEBUG methods
-
-    # show yaml stream parsing events
-    def _yaml_events(self, yaml_text):
-        stream = self._build_stream(yaml_text)
-        for event in yaml.parse(stream):
-            log.debug('yaml_parse event: %s', event)
-
-    # show the yaml tree/ast
-    def _yaml_compose(self, yaml_text):
-        log.debug('yaml_compose: %s', yaml.compose(yaml_text))
-
-    # show the yaml tokens
-    def _yaml_scan(self, yaml_text):
-        stream = self._build_stream(yaml_text)
-        for token in yaml.scan(stream):
-            log.debug('yaml.scan token: %s', token)
-
-    def _yaml_innards(self, yaml_text):
-        self._yaml_scan(yaml_text)
-        self._yaml_events(yaml_text)
-        self._yaml_compose(yaml_text)
-
     def _load_yaml(self, yaml_text, password):
-        #print('yaml_text')
-        #print('|%s|' % yaml_text.encode('utf-8'))
-
-        # self._yaml_innards(yaml_text)
         stream = self._build_stream(yaml_text)
-
         loader = AnsibleLoader(stream, vault_password=password)
-
         data_from_yaml = loader.get_single_data()
-        #print('data_from_yaml=|%s|' % data_from_yaml)
-        #print('type(dfy)=%s' % type(data_from_yaml))
 
         return data_from_yaml
 
+    # FIXME: undup this
     def _dump_load_cycle(self, obj):
         '''Dump the passed in object to yaml, load it back up, dump again, compare.'''
         stream = NameStringIO()
@@ -257,7 +224,6 @@ class TestAnsibleLoaderVault(unittest.TestCase):
             yaml.dump(obj, stream, Dumper=AnsibleDumper, encoding=None)
 
         yaml_string_from_stream = stream.getvalue()
-        dump_equals = yaml_string == yaml_string_from_stream
 
         # reset stream
         stream.seek(0)
@@ -268,8 +234,6 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         stream_from_string = NameStringIO(yaml_string)
         loader2 = AnsibleLoader(stream_from_string, vault_password=self.vault_password)
         obj_from_string = loader2.get_data()
-
-        obj_equals = obj_from_stream == obj_from_string
 
         stream_obj_from_stream = NameStringIO()
         stream_obj_from_string = NameStringIO()
@@ -311,10 +275,10 @@ class TestAnsibleLoaderVault(unittest.TestCase):
 
     def test_dump_load_cycle(self):
         avu = AnsibleVaultEncryptedUnicode.from_plaintext('The plaintext for test_dump_load_cycle.', vault=self.vault)
-        results = self._dump_load_cycle(avu)
-        log.debug('dump_load_results: %s', results)
+        self._dump_load_cycle(avu)
 
     def _dump(self, obj, stream, dumper=None):
+        """Dump to a py2-unicode or py3-string stream."""
         if PY3:
             return yaml.dump(obj, stream, Dumper=dumper)
         else:
@@ -328,30 +292,18 @@ class TestAnsibleLoaderVault(unittest.TestCase):
                 'another key': 24.1}
 
         blip = ['some string', 'another string', avu]
-        #stream = self._build_stream('')
         stream = NameStringIO(u'')
+
         self._dump(blip, stream, dumper=AnsibleDumper)
-        log.debug('stream: %s', stream.getvalue())
-        stream.seek(0)
-
-        for token in yaml.scan(stream):
-            log.debug('yaml.scan token: %s', token)
-        for event in yaml.parse(stream):
-            log.debug('yaml_parse event: %s', event)
 
         stream.seek(0)
+
         loader = AnsibleLoader(stream, vault_password=self.vault_password)
 
         data_from_yaml = loader.get_data()
-        #data_from_yaml = loader.get_single_data()
-        log.debug('data_from_yaml: %s', data_from_yaml)
-        log.debug('data_from_yaml[2]: %s', type(data_from_yaml[2]._ciphertext))
-        #vault_string = data_from_yaml['the_secret']
         stream2 = NameStringIO(u'')
+        # verify we can dump the object again
         self._dump(data_from_yaml, stream2, dumper=AnsibleDumper)
-        log.debug('stream: %s', stream2.getvalue())
-        stream2.seek(0)
-        #log.debug('vault_string: %s', vault_string)
 
     def test_embedded_vault(self):
         plaintext_var = u"""This is the plaintext string."""
@@ -366,72 +318,29 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
         vault_string = data_from_yaml['the_secret']
 
-        #print('vault_string %s type(vault_string): %s str(vault_string): %s' % (vault_string, type(vault_string), str(vault_string)))
-
-        log.debug('vault_string: %s', vault_string)
-        log.debug('type(vault_string): %s', type(vault_string))
-        log.debug('str(vault_string): %s', str(vault_string))
-
         self.assertEquals(plaintext_var, data_from_yaml['the_secret'])
 
         test_dict = {}
         test_dict[vault_string] = 'did this work?'
 
-        log.debug('test_dict %s', test_dict)
-        log.debug('test_dict[vault_string] %s', test_dict[vault_string])
-        log.debug('hash(vault_string): %s', hash(vault_string))
+        self.assertEquals(vault_string.data, vault_string)
 
-        is_eql = vault_string.data == vault_string
-        is_eql2 = vault_string == vault_string
-
-        log.debug('vault_string.data == vault_string %s', is_eql)
-        log.debug('vault_string == vault_string %s', is_eql2)
+        # This looks weird and useless, but the object in question has a custom __eq__
+        self.assertEquals(vault_string, vault_string)
 
         another_vault_string = data_from_yaml['another_secret']
         different_vault_string = data_from_yaml['different_secret']
 
-        is_eql3 = vault_string == another_vault_string
-        is_eql4 = vault_string == different_vault_string
+        self.assertEquals(vault_string, another_vault_string)
+        self.assertNotEquals(vault_string, different_vault_string)
 
-        log.debug('vault_string == another_vault_string: %s', is_eql3)
-        log.debug('vault_string == different_vault_string: %s', is_eql4)
+        # Note this is a compare of the str of these, they are diferent types
+        self.assertEquals(plaintext_var, vault_string)
 
-        str_eq = 'some string' == vault_string
-        str_eq2 = plaintext_var == vault_string
-
-        log.debug('\'some string\' == vault_string: %s', str_eq)
-        log.debug('plaintext_var == vault_string: %s', str_eq2)
-
-        str_neq = 'some string' != vault_string
-        str_neq2 = plaintext_var != vault_string
-        
-        log.debug('\'some string\' != vault_string: %s', str_neq)
-        log.debug('plaintext_var != vault_string: %s', str_neq2)
-
-    # def test_embedded_vault_list(self):
-        # sample_list = ['amen break', 'funky drummer']
-        # sample_yaml = yaml.dump(sample_list)
-        # print('sample_yaml %s' % sample_yaml)
-
-        # tagged_vaulted_var = self._encrypt_plaintext(sample_yaml)
-        # yaml_text = u"""---\nwebster: daniel\noed: oxford\nthe_secret_sample_list: %s""" % tagged_vaulted_var
-
-        # data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
-        # print('data_from_yaml %s' % data_from_yaml)
-
-    # def test_embedded_vault_map(self):
-        # map_map = {'mercator': ['
-        # 'peters': ['c', 'f', 'sa']}
-        # map_map_yaml = yaml.dump(map_map)
-        # print('map_map_yaml: %s' % map_map_yaml)
-
-        # tagged_vaulted_var = self._encrypt_plaintext(map_map_yaml)
-        # yaml_text = u"""---\nwebster: daniel\nthe_secret_map_map: %s\noed: exford""" % tagged_vaulted_var
-
-        # data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
-        # print('data_from_yaml %s' % data_from_yaml)
-        # # verify we get a map of some sort
-        # assert not isinstance(data_from_yaml['the_secret_map_map'], (unicode, str, bytes))
+        # More testing of __eq__/__ne__
+        self.assertTrue('some string' == vault_string)
+        self.assertTrue('some string' != vault_string)
+        self.assertTrue(plaintext_var != vault_string)
 
 
 class TestAnsibleLoaderPlay(unittest.TestCase):

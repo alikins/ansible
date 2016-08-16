@@ -29,21 +29,14 @@ from yaml.resolver import Resolver
 
 from ansible.parsing.yaml.constructor import AnsibleConstructor
 
-import logging
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
 if HAVE_PYYAML_C:
-    log.debug('using pyaml_c')
 
     class AnsibleLoader(CParser, AnsibleConstructor, Resolver):
         def __init__(self, stream, file_name=None, vault_password=None):
-            log.debug('pyyaml_c AnsibleLoader __init__')
             CParser.__init__(self, stream)
             AnsibleConstructor.__init__(self, file_name=file_name, vault_password=vault_password)
             Resolver.__init__(self)
 else:
-    log.debug('using pyyaml python')
     from yaml.composer import Composer
     from yaml.reader import Reader
     from yaml.scanner import Scanner
@@ -51,7 +44,6 @@ else:
 
     class AnsibleLoader(Reader, Scanner, Parser, Composer, AnsibleConstructor, Resolver):
         def __init__(self, stream, file_name=None, vault_password=None):
-            log.debug('pyyaml python AnsibleLoader __init__')
             Reader.__init__(self, stream)
             Scanner.__init__(self)
             Parser.__init__(self)

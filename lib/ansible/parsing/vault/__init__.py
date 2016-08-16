@@ -82,7 +82,7 @@ except Exception as e:
     display.debug("Traceback from import of cryptography was {0}".format(traceback.format_exc()))
 
 from ansible.compat.six import PY3
-from ansible.utils.unicode import to_unicode, to_bytes, to_str
+from ansible.utils.unicode import to_unicode, to_bytes
 
 HAS_ANY_PBKDF2HMAC = HAS_PBKDF2 or HAS_PBKDF2HMAC
 
@@ -91,7 +91,7 @@ CRYPTO_UPGRADE = "ansible-vault requires a newer version of pycrypto than the on
 b_HEADER = b'$ANSIBLE_VAULT'
 HEADER = '$ANSIBLE_VAULT'
 CIPHER_WHITELIST = frozenset((u'AES', u'AES256'))
-CIPHER_WRITE_WHITELIST=frozenset((u'AES256',))
+CIPHER_WRITE_WHITELIST = frozenset((u'AES256',))
 # See also CIPHER_MAPPING at the bottom of the file which maps cipher strings
 # (used in VaultFile header) to a cipher class
 
@@ -120,10 +120,7 @@ class VaultLib:
         :returns: True if it is recognized.  Otherwise, False.
         """
         plaintext_bytes = data
-        # print('is_encrypted data=%s' % data)
-        # print('type(data) %s' % type(data))
         header_bytes = HEADER.encode('utf-8')
-        # print('header_bytes=|%s|' % header_bytes)
 
         # TODO: split file like object handling to seperate method
         if hasattr(plaintext_bytes, 'read'):
@@ -132,9 +129,6 @@ class VaultLib:
             plaintext_bytes.seek(current_position)
             return self.is_encrypted(header_part)
 
-        # print('repr(data) %s' % repr(data))
-        # print('repr(plaintext_bytes) %s' % repr(plaintext_bytes))
-        # print('type(plaintext_bytes) %s' % type(plaintext_bytes))
         if plaintext_bytes.startswith(header_bytes):
             return True
         return False
@@ -151,12 +145,7 @@ class VaultLib:
         The unicode or string passed in as data will encoded to UTF-8 before
         encryption. If the a already encoded string or PY2 bytestring needs to
         be encrypted, use encrypt_bytestring().
-        """
-        # print('DATA: %s' % data)
-        # print('type(data): %s' % type(data))
-        tb = to_bytes(data, errors='strict', encoding='utf-8')
-        # print('TB: %s' % tb)
-        # print('type(tb): %s' % type(tb))
+        """
         plaintext = data
         plaintext_bytes = plaintext.encode('utf-8')
 
@@ -181,7 +170,6 @@ class VaultLib:
         this_cipher = Cipher()
 
         # encrypt data
-        # print('plaintext_bytes: |%s|' % plaintext_bytes)
         ciphertext_bytes = this_cipher.encrypt(plaintext_bytes, self.b_password)
 
         # format the data for output to the file
@@ -240,8 +228,6 @@ class VaultLib:
         if not self.cipher_name:
             raise AnsibleError("the cipher must be set before adding a header")
 
-        #header = b';'.join([b_HEADER, self.b_version,
-        #    to_bytes(self.cipher_name, errors='strict', encoding='utf-8')])
         header_bytes = HEADER.encode('utf-8')
         header = b';'.join([header_bytes, self.b_version,
                         self.cipher_name.encode('utf-8',errors='strict')])
@@ -315,7 +301,6 @@ class VaultEditor:
                     assert(fh.tell() == file_len) # FIXME remove this assert once we have unittests to check its accuracy
                     os.fsync(fh)
 
-
     def _shred_file(self, tmp_path):
         """Securely destroy a decrypted file
 
@@ -367,7 +352,6 @@ class VaultEditor:
 
         tmpdata_bytes = self.read_data(tmp_path)
 
-        print('type(tmpdata): %s' % type(tmpdata_bytes))
         # Do nothing if the content has not changed
         if existing_data == tmpdata_bytes and not force_save:
             self._shred_file(tmp_path)
@@ -536,7 +520,7 @@ class VaultFile(object):
 
         _, self.tmpfile = tempfile.mkstemp()
 
-    ### TODO:
+    # TODO:
     # __del__ can be problematic in python... For this use case, make
     # VaultFile a context manager instead (implement __enter__ and __exit__)
     def __del__(self):
@@ -545,8 +529,6 @@ class VaultFile(object):
 
     def is_encrypted(self):
         peak = self.filehandle.readline()
-        print('peak %s' % peak)
-        print('b_HEADER %s' % b_HEADER)
         if peak.startswith(b_HEADER):
             return True
         else:
@@ -744,9 +726,7 @@ class VaultAES256:
         data = unhexlify(data)
         salt, cryptedHmac, cryptedData = data.split(b"\n", 2)
         salt = unhexlify(salt)
-        # print('cryptedData1 |%s|' % cryptedData)
         cryptedData = unhexlify(cryptedData)
-        # print('cryptedData2 |%s|' % cryptedData)
 
         key1, key2, iv = self.gen_key_initctr(password, salt)
 
@@ -796,6 +776,6 @@ class VaultAES256:
 # Keys could be made bytes later if the code that gets the data is more
 # naturally byte-oriented
 CIPHER_MAPPING = {
-        u'AES': VaultAES,
-        u'AES256': VaultAES256,
-    }
+    u'AES': VaultAES,
+    u'AES256': VaultAES256,
+}

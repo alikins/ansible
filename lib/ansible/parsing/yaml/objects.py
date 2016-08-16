@@ -24,11 +24,6 @@ import yaml
 from ansible.compat.six import text_type
 from ansible.errors import AnsibleError
 from ansible.utils.unicode import to_bytes
-#from ansible.parsing.yaml.dumper import AnsibleDumper
-
-import logging
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 class AnsibleBaseYAMLObject(object):
     '''
@@ -68,18 +63,14 @@ class AnsibleUnicode(AnsibleBaseYAMLObject, text_type):
     pass
 
 
-class AnsibleByteString(AnsibleBaseYAMLObject, bytes):
-    ''' sub class for bystream data objects '''
-    def __init__(self, *args, **kwargs):
-        log.debug('AnsibleByteString init %s %s', args, kwargs)
-        super(AnsibleByteString, self).__init__(args, kwargs)
-
 class AnsibleSequence(AnsibleBaseYAMLObject, list):
     ''' sub class for lists '''
     pass
 
+
 class AnsibleVault(AnsibleBaseYAMLObject, bytes):
     pass
+
 
 class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
     """A object created from a !vault-unencrypted yaml object.
@@ -96,7 +87,6 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
     yaml_tag = u'!vault-unencrypted'
 
     def __init__(self, plaintext):
-        log.debug('ansibleVaultUnencryptedUnicode init %s', plaintext)
         super(AnsibleVaultUnencryptedUnicode, self).__init__()
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
@@ -113,7 +103,6 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
 class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     __UNSAFE__ = True
     yaml_tag = u'!vault-encrypted'
-#    yaml_dumper = AnsibleDumper
 
     @classmethod
     def from_plaintext(cls, seq, vault):
@@ -134,8 +123,8 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         of the ciphertext as a PY2 unicode or PY3 string object.
         '''
 
-        #log.debug('ansiblevaultunicode init %s', ciphertext)
         super(AnsibleVaultEncryptedUnicode, self).__init__()
+
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
         self._ciphertext = to_bytes(ciphertext)
@@ -162,8 +151,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     def __ne__(self, other):
         return other != self.data
 
-    #def __str__(self):
-    #    return str(self.data)
+    def __str__(self):
+        return str(self.data)
 
-#    def __unicode__(self):
-#        return self.data.decode()
