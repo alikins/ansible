@@ -32,7 +32,7 @@ from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.compat.tests import unittest
 from ansible.parsing.yaml import objects
 from ansible.parsing import vault
-
+from ansible.compat.six import PY3
 
 import logging
 log = logging.getLogger(__name__)
@@ -56,17 +56,24 @@ class TestAnsibleDumper(unittest.TestCase):
         self.dumper = dumper.AnsibleDumper
 
     def _build_stream(self,yaml_text=None):
-        text = yaml_text or ''
+        text = yaml_text or u''
         stream = NameStringIO(text)
         stream.name = 'my.yml'
         return stream
+
+    def _dump(self, obj, Dumper=None):
+        if PY3:
+            return yaml.dump(obj, Dumper=Dumper)
+        else:
+            return yaml.dump(obj, Dumper=Dumper, encoding=None)
 
     def test(self):
         plaintext = 'This is a string we are going to encrypt.'
         avu = objects.AnsibleVaultEncryptedUnicode.from_plaintext(plaintext, vault=self.vault)
         log.debug('avu: %s', avu)
         log.debug('type(avu): %s', type(avu))
-        yaml_out = yaml.dump(avu, Dumper=self.dumper)
+
+        yaml_out = self._dump(avu, Dumper=self.dumper)
         log.debug('yaml_out: %s', yaml_out)
 
         stream = self._build_stream(yaml_out)
