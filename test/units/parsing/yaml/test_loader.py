@@ -22,7 +22,7 @@ __metaclass__ = type
 
 from io import StringIO
 
-from six import text_type, binary_type
+from six import text_type, binary_type, PY3
 from collections import Sequence, Set, Mapping
 
 import yaml
@@ -248,8 +248,13 @@ class TestAnsibleLoaderVault(unittest.TestCase):
     def _dump_load_cycle(self, obj):
         '''Dump the passed in object to yaml, load it back up, dump again, compare.'''
         stream = NameStringIO()
-        yaml.dump(obj, stream, Dumper=AnsibleDumper, encoding='utf-8')
-        yaml_string = yaml.dump(obj, Dumper=AnsibleDumper)
+
+        if PY3:
+            yaml_string = yaml.dump(obj, Dumper=AnsibleDumper)
+            yaml.dump(obj, stream, Dumper=AnsibleDumper)
+        else:
+            yaml_string = yaml.dump(obj, Dumper=AnsibleDumper, encoding=None)
+            yaml.dump(obj, stream, Dumper=AnsibleDumper, encoding=None)
 
         yaml_string_from_stream = stream.getvalue()
         dump_equals = yaml_string == yaml_string_from_stream
@@ -269,8 +274,12 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         stream_obj_from_stream = NameStringIO()
         stream_obj_from_string = NameStringIO()
 
-        yaml.dump(obj_from_stream, stream_obj_from_stream, Dumper=AnsibleDumper, encoding='utf-8')
-        yaml.dump(obj_from_stream, stream_obj_from_string, Dumper=AnsibleDumper, encoding='utf-8')
+        if PY3:
+            yaml.dump(obj_from_stream, stream_obj_from_stream, Dumper=AnsibleDumper)
+            yaml.dump(obj_from_stream, stream_obj_from_string, Dumper=AnsibleDumper)
+        else:
+            yaml.dump(obj_from_stream, stream_obj_from_stream, Dumper=AnsibleDumper, encoding=None)
+            yaml.dump(obj_from_stream, stream_obj_from_string, Dumper=AnsibleDumper, encoding=None)
 
         yaml_string_stream_obj_from_stream = stream_obj_from_stream.getvalue()
         yaml_string_stream_obj_from_string = stream_obj_from_string.getvalue()
@@ -278,8 +287,12 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         stream_obj_from_stream.seek(0)
         stream_obj_from_string.seek(0)
 
-        yaml_string_obj_from_stream = yaml.dump(obj_from_stream, Dumper=AnsibleDumper)
-        yaml_string_obj_from_string = yaml.dump(obj_from_string, Dumper=AnsibleDumper)
+        if PY3:
+            yaml_string_obj_from_stream = yaml.dump(obj_from_stream, Dumper=AnsibleDumper)
+            yaml_string_obj_from_string = yaml.dump(obj_from_string, Dumper=AnsibleDumper)
+        else:
+            yaml_string_obj_from_stream = yaml.dump(obj_from_stream, Dumper=AnsibleDumper, encoding=None)
+            yaml_string_obj_from_string = yaml.dump(obj_from_string, Dumper=AnsibleDumper, encoding=None)
 
         assert yaml_string == yaml_string_obj_from_stream
         assert yaml_string == yaml_string_obj_from_stream == yaml_string_obj_from_string
@@ -301,6 +314,12 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         results = self._dump_load_cycle(avu)
         log.debug('dump_load_results: %s', results)
 
+    def _dump(self, obj, stream, dumper=None):
+        if PY3:
+            return yaml.dump(obj, stream, Dumper=dumper)
+        else:
+            return yaml.dump(obj, stream, Dumper=dumper, encoding=None)
+
     def test_embedded_vault_from_dump(self):
         avu = AnsibleVaultEncryptedUnicode.from_plaintext('setec astronomy', vault=self.vault)
         blip = {'stuff1': [{'a dict key': 24},
@@ -311,7 +330,7 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         blip = ['some string', 'another string', avu]
         #stream = self._build_stream('')
         stream = NameStringIO(u'')
-        yaml.dump(blip, stream, Dumper=AnsibleDumper, encoding='utf-8')
+        self._dump(blip, stream, dumper=AnsibleDumper)
         log.debug('stream: %s', stream.getvalue())
         stream.seek(0)
 
@@ -329,7 +348,7 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         log.debug('data_from_yaml[2]: %s', type(data_from_yaml[2]._ciphertext))
         #vault_string = data_from_yaml['the_secret']
         stream2 = NameStringIO(u'')
-        yaml.dump(data_from_yaml, stream2, Dumper=AnsibleDumper, encoding='utf-8')
+        self._dump(data_from_yaml, stream2, dumper=AnsibleDumper)
         log.debug('stream: %s', stream2.getvalue())
         stream2.seek(0)
         #log.debug('vault_string: %s', vault_string)
