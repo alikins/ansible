@@ -48,11 +48,13 @@ def represent_hostvars(self, data):
 # Note: only want to represent the encrypted data
 def represent_vault_encrypted_unicode(self, data):
     log.debug('rep v_e_u data=%s', data)
+    log.debug('rep_vault_enc_unicode data._ciphertext %s', data._ciphertext)
+    log.debug('rep_vault_enc_unicode data._ciphertext type %s', type(data._ciphertext))
     # add yaml tag
-    return self.represent_scalar('!vault-encrypted', data._ciphertext.decode(), style='|')
+    return self.represent_scalar(u'!vault-encrypted', data._ciphertext.decode(), style='|')
 
 def represent_vault_unencrypted_unicode(self, data):
-    return self.represent_scalar('!vault-unencrypted', str(data), style='|')
+    return self.represent_scalar(u'!vault-unencrypted', data.plaintext, style='|')
 
 if PY3:
     represent_unicode = yaml.representer.SafeRepresenter.represent_str

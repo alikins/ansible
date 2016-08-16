@@ -23,6 +23,7 @@ import yaml
 
 from ansible.compat.six import text_type
 from ansible.errors import AnsibleError
+from ansible.utils.unicode import to_bytes
 #from ansible.parsing.yaml.dumper import AnsibleDumper
 
 import logging
@@ -137,7 +138,8 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         super(AnsibleVaultEncryptedUnicode, self).__init__()
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
-        self._ciphertext = ciphertext
+        self._ciphertext = to_bytes(ciphertext)
+        assert type(ciphertext) == type(b'')
 
     @property
     def data(self):
@@ -160,8 +162,8 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     def __ne__(self, other):
         return other != self.data
 
-    def __str__(self):
-        return str(self.data)
+    #def __str__(self):
+    #    return str(self.data)
 
-    def __unicode__(self):
-        return self.data.decode()
+#    def __unicode__(self):
+#        return self.data.decode()
