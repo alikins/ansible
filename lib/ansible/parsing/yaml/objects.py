@@ -92,13 +92,20 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
     # This should never get called from ansible/ansible-playbook so maybe
     # not needed.
     __UNSAFE__ = True
-#    yaml_tag = u'!vault-unencrypted'
+    yaml_tag = u'!vault-unencrypted'
 
     def __init__(self, plaintext):
         log.debug('ansibleVaultUnencryptedUnicode init %s', plaintext)
         super(AnsibleVaultUnencryptedUnicode, self).__init__()
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
+        self.plaintext = plaintext
+
+    def __str__(self):
+        return str(self.plaintext)
+
+    def __unicode__(self):
+        return unicode(self.plaintext)
 
 # Unicode like object that is not evaluated (decrypted) until it needs to be
 # TODO: is there a reason these objects are subclasses for YAMLObject?
