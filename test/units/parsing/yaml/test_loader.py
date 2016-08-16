@@ -245,6 +245,62 @@ class TestAnsibleLoaderVault(unittest.TestCase):
 
         return data_from_yaml
 
+    def _dump_load_cycle(self, obj):
+        '''Dump the passed in object to yaml, load it back up, dump again, compare.'''
+        stream = NameStringIO()
+        yaml.dump(obj, stream, Dumper=AnsibleDumper, encoding='utf-8')
+        yaml_string = yaml.dump(obj, Dumper=AnsibleDumper)
+
+        yaml_string_from_stream = stream.getvalue()
+        dump_equals = yaml_string == yaml_string_from_stream
+
+        # reset stream
+        stream.seek(0)
+
+        loader = AnsibleLoader(stream, vault_password=self.vault_password)
+        obj_from_stream = loader.get_data()
+
+        stream_from_string = NameStringIO(yaml_string)
+        loader2 = AnsibleLoader(stream_from_string, vault_password=self.vault_password)
+        obj_from_string = loader2.get_data()
+
+        obj_equals = obj_from_stream == obj_from_string
+
+        stream_obj_from_stream = NameStringIO()
+        stream_obj_from_string = NameStringIO()
+
+        yaml.dump(obj_from_stream, stream_obj_from_stream, Dumper=AnsibleDumper, encoding='utf-8')
+        yaml.dump(obj_from_stream, stream_obj_from_string, Dumper=AnsibleDumper, encoding='utf-8')
+
+        yaml_string_stream_obj_from_stream = stream_obj_from_stream.getvalue()
+        yaml_string_stream_obj_from_string = stream_obj_from_string.getvalue()
+
+        stream_obj_from_stream.seek(0)
+        stream_obj_from_string.seek(0)
+
+        yaml_string_obj_from_stream = yaml.dump(obj_from_stream, Dumper=AnsibleDumper)
+        yaml_string_obj_from_string = yaml.dump(obj_from_string, Dumper=AnsibleDumper)
+
+        assert yaml_string == yaml_string_obj_from_stream
+        assert yaml_string == yaml_string_obj_from_stream == yaml_string_obj_from_string
+        assert yaml_string == yaml_string_obj_from_stream == yaml_string_obj_from_string == yaml_string_stream_obj_from_stream == yaml_string_stream_obj_from_string
+        assert obj == obj_from_stream
+        assert obj == obj_from_string
+        assert obj == yaml_string_obj_from_stream
+        assert obj == yaml_string_obj_from_string
+        assert obj == obj_from_stream == obj_from_string == yaml_string_obj_from_stream == yaml_string_obj_from_string
+        return {'obj': obj,
+                'yaml_string': yaml_string,
+                'yaml_string_from_stream': yaml_string_from_stream,
+                'obj_from_stream': obj_from_stream,
+                'obj_from_string': obj_from_string,
+                'yaml_string_obj_from_string': yaml_string_obj_from_string}
+
+    def test_dump_load_cycle(self):
+        avu = AnsibleVaultEncryptedUnicode.from_plaintext('The plaintext for test_dump_load_cycle.', vault=self.vault)
+        results = self._dump_load_cycle(avu)
+        log.debug('dump_load_results: %s', results)
+
     def test_embedded_vault_from_dump(self):
         avu = AnsibleVaultEncryptedUnicode.from_plaintext('setec astronomy', vault=self.vault)
         blip = {'stuff1': [{'a dict key': 24},
