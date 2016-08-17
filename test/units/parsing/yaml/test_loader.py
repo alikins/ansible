@@ -22,10 +22,8 @@ __metaclass__ = type
 
 from io import StringIO
 
-from six import text_type, binary_type, PY3
+from six import text_type, binary_type
 from collections import Sequence, Set, Mapping
-
-import yaml
 
 from ansible.compat.tests import unittest
 
@@ -35,6 +33,8 @@ from ansible.parsing import vault
 from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
 from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible.utils.unicode import to_bytes
+
+from units.mock.yaml_helper import YamlTestUtils
 
 try:
     from _yaml import ParserError
@@ -165,7 +165,7 @@ class TestAnsibleLoaderBasic(unittest.TestCase):
         self.assertEqual(data[0][u'baz'].ansible_pos, ('myfile.yml', 2, 9))
 
 
-class TestAnsibleLoaderVault(unittest.TestCase):
+class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
         self.vault = vault.VaultLib(self.vault_password)
@@ -204,85 +204,20 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         stream.name = 'my.yml'
         return stream
 
+    def _loader(self, stream):
+        return AnsibleLoader(stream, vault_password=self.vault_password)
+
     def _load_yaml(self, yaml_text, password):
         stream = self._build_stream(yaml_text)
-        loader = AnsibleLoader(stream, vault_password=password)
+        loader = self._loader(stream)
+
         data_from_yaml = loader.get_single_data()
 
         return data_from_yaml
 
-    # FIXME: undup this
-    def _dump_load_cycle(self, obj):
-        '''Dump the passed in object to yaml, load it back up, dump again, compare.'''
-        stream = NameStringIO()
-
-        if PY3:
-            yaml_string = yaml.dump(obj, Dumper=AnsibleDumper)
-            yaml.dump(obj, stream, Dumper=AnsibleDumper)
-        else:
-            yaml_string = yaml.dump(obj, Dumper=AnsibleDumper, encoding=None)
-            yaml.dump(obj, stream, Dumper=AnsibleDumper, encoding=None)
-
-        yaml_string_from_stream = stream.getvalue()
-
-        # reset stream
-        stream.seek(0)
-
-        loader = AnsibleLoader(stream, vault_password=self.vault_password)
-        obj_from_stream = loader.get_data()
-
-        stream_from_string = NameStringIO(yaml_string)
-        loader2 = AnsibleLoader(stream_from_string, vault_password=self.vault_password)
-        obj_from_string = loader2.get_data()
-
-        stream_obj_from_stream = NameStringIO()
-        stream_obj_from_string = NameStringIO()
-
-        if PY3:
-            yaml.dump(obj_from_stream, stream_obj_from_stream, Dumper=AnsibleDumper)
-            yaml.dump(obj_from_stream, stream_obj_from_string, Dumper=AnsibleDumper)
-        else:
-            yaml.dump(obj_from_stream, stream_obj_from_stream, Dumper=AnsibleDumper, encoding=None)
-            yaml.dump(obj_from_stream, stream_obj_from_string, Dumper=AnsibleDumper, encoding=None)
-
-        yaml_string_stream_obj_from_stream = stream_obj_from_stream.getvalue()
-        yaml_string_stream_obj_from_string = stream_obj_from_string.getvalue()
-
-        stream_obj_from_stream.seek(0)
-        stream_obj_from_string.seek(0)
-
-        if PY3:
-            yaml_string_obj_from_stream = yaml.dump(obj_from_stream, Dumper=AnsibleDumper)
-            yaml_string_obj_from_string = yaml.dump(obj_from_string, Dumper=AnsibleDumper)
-        else:
-            yaml_string_obj_from_stream = yaml.dump(obj_from_stream, Dumper=AnsibleDumper, encoding=None)
-            yaml_string_obj_from_string = yaml.dump(obj_from_string, Dumper=AnsibleDumper, encoding=None)
-
-        assert yaml_string == yaml_string_obj_from_stream
-        assert yaml_string == yaml_string_obj_from_stream == yaml_string_obj_from_string
-        assert yaml_string == yaml_string_obj_from_stream == yaml_string_obj_from_string == yaml_string_stream_obj_from_stream == yaml_string_stream_obj_from_string
-        assert obj == obj_from_stream
-        assert obj == obj_from_string
-        assert obj == yaml_string_obj_from_stream
-        assert obj == yaml_string_obj_from_string
-        assert obj == obj_from_stream == obj_from_string == yaml_string_obj_from_stream == yaml_string_obj_from_string
-        return {'obj': obj,
-                'yaml_string': yaml_string,
-                'yaml_string_from_stream': yaml_string_from_stream,
-                'obj_from_stream': obj_from_stream,
-                'obj_from_string': obj_from_string,
-                'yaml_string_obj_from_string': yaml_string_obj_from_string}
-
     def test_dump_load_cycle(self):
         avu = AnsibleVaultEncryptedUnicode.from_plaintext('The plaintext for test_dump_load_cycle.', vault=self.vault)
         self._dump_load_cycle(avu)
-
-    def _dump(self, obj, stream, dumper=None):
-        """Dump to a py2-unicode or py3-string stream."""
-        if PY3:
-            return yaml.dump(obj, stream, Dumper=dumper)
-        else:
-            return yaml.dump(obj, stream, Dumper=dumper, encoding=None)
 
     def test_embedded_vault_from_dump(self):
         avu = AnsibleVaultEncryptedUnicode.from_plaintext('setec astronomy', vault=self.vault)
@@ -292,18 +227,18 @@ class TestAnsibleLoaderVault(unittest.TestCase):
                 'another key': 24.1}
 
         blip = ['some string', 'another string', avu]
-        stream = NameStringIO(u'')
+        stream = NameStringIO()
 
-        self._dump(blip, stream, dumper=AnsibleDumper)
+        self._dump_stream(blip, stream, dumper=AnsibleDumper)
 
         stream.seek(0)
 
-        loader = AnsibleLoader(stream, vault_password=self.vault_password)
+        loader = self._loader(stream)
 
         data_from_yaml = loader.get_data()
         stream2 = NameStringIO(u'')
         # verify we can dump the object again
-        self._dump(data_from_yaml, stream2, dumper=AnsibleDumper)
+        self._dump_stream(data_from_yaml, stream2, dumper=AnsibleDumper)
 
     def test_embedded_vault(self):
         plaintext_var = u"""This is the plaintext string."""
@@ -334,14 +269,16 @@ class TestAnsibleLoaderVault(unittest.TestCase):
         self.assertEquals(vault_string, another_vault_string)
         self.assertNotEquals(vault_string, different_vault_string)
 
-        # Note this is a compare of the str of these, they are diferent types
-        self.assertEquals(plaintext_var, vault_string)
-
         # More testing of __eq__/__ne__
-        self.assertTrue('some string' == vault_string)
         self.assertTrue('some string' != vault_string)
-        self.assertTrue(plaintext_var != vault_string)
+        self.assertNotEquals('some string', vault_string)
 
+        # Note this is a compare of the str/unicode of these, they are diferent types
+        # so we want to test self == other, and other == self etc
+        self.assertEquals(plaintext_var, vault_string)
+        self.assertEquals(vault_string, plaintext_var)
+        self.assertFalse(plaintext_var != vault_string)
+        self.assertFalse(vault_string != plaintext_var)
 
 class TestAnsibleLoaderPlay(unittest.TestCase):
 

@@ -154,3 +154,5 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     def __str__(self):
         return str(self.data)
 
+    def __unicode__(self):
+        return unicode(self.data)
