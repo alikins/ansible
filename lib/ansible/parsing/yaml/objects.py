@@ -148,6 +148,9 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     def __eq__(self, other):
         return other == self.data
 
+    def __hash__(self):
+        return id(self)
+
     def __ne__(self, other):
         return other != self.data
 
