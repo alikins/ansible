@@ -231,6 +231,9 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
 
         self._dump_stream(blip, stream, dumper=AnsibleDumper)
 
+        print(stream.getvalue())
+        stream.seek(0)
+
         stream.seek(0)
 
         loader = self._loader(stream)

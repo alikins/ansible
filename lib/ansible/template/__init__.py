@@ -56,6 +56,8 @@ except ImportError:
 
 __all__ = ['Templar']
 
+import logging
+log = logging.getLogger(__name__)
 # A regex for checking to see if a variable we're trying to
 # expand is just a single variable name.
 
@@ -227,12 +229,17 @@ class Templar:
     def _clean_data(self, orig_data):
         ''' remove jinja2 template tags from a string '''
 
-        if not isinstance(orig_data, string_types):
+        if not isinstance(orig_data, string_types) or hasattr(orig_data, '__ENCRYPTED__'):
+            log.debug('%s not string_types(%s)?', orig_data, string_types)
             return orig_data
 
+        log.debug('is a string type (%s)', string_types)
+        log.debug('type(orig_data)=%s', type(orig_data))
         with contextlib.closing(StringIO(orig_data)) as data:
             # these variables keep track of opening block locations, as we only
             # want to replace matched pairs of print/block tags
+            log.debug('data=%s', data)
+            log.debug('type(data)=%s', type(data))
             print_openings = []
             block_openings = []
             for mo in self._clean_regex.finditer(orig_data):
@@ -263,7 +270,8 @@ class Templar:
                 else:
                     raise AnsibleError("Error while cleaning data for safety: unhandled regex match")
 
-            return data.getvalue()
+            new_data = data.getvalue()
+            log.debug('new_data=%s type(new_data)=%s', new_data, type(new_data))
 
     def set_available_variables(self, variables):
         '''
@@ -281,7 +289,7 @@ class Templar:
         '''
         Templates (possibly recursively) any given data as input. If convert_bare is
         set to True, the given data will be wrapped as a jinja2 variable ('{{foo}}')
-        before being sent through the template engine. 
+        before being sent through the template engine.
         '''
 
         if fail_on_undefined is None:
@@ -289,9 +297,16 @@ class Templar:
 
         # Don't template unsafe variables, instead drop them back down to their constituent type.
         if hasattr(variable, '__UNSAFE__'):
+            log.debug('unsafe variable=%s', variable)
+            log.debug('type(variable)=%s', type(variable))
+            log.debug('dir(variable)=%s', dir(variable))
+
             if isinstance(variable, text_type):
+                log.debug('text_type')
                 return self._clean_data(variable)
             else:
+                log.debug('not text type, do something else?')
+                log.debug('variable._obj=%s', variable._obj)
                 # Do we need to convert these into text_type as well?
                 # return self._clean_data(to_unicode(variable._obj, nonstring='passthru'))
                 return self._clean_data(variable._obj)
@@ -304,20 +319,24 @@ class Templar:
                 result = variable
 
                 if self._contains_vars(variable):
-
+                    log.debug('contains %s', variable)
                     # Check to see if the string we are trying to render is just referencing a single
                     # var.  In this case we don't want to accidentally change the type of the variable
                     # to a string by using the jinja template renderer. We just want to pass it.
                     only_one = self.SINGLE_VAR.match(variable)
                     if only_one:
+                        log.debug('only_one')
                         var_name = only_one.group(1)
                         if var_name in self._available_variables:
+                            log.debug('only_one avail')
                             resolved_val = self._available_variables[var_name]
+                            log.debug('resolved_val=%s', resolved_val)
                             if isinstance(resolved_val, NON_TEMPLATED_TYPES):
                                 return resolved_val
                             elif resolved_val is None:
                                 return C.DEFAULT_NULL_REPRESENTATION
 
+                    log.debug('normal')
                     # Using a cache in order to prevent template calls with already templated variables
                     sha1_hash = None
                     if cache:
@@ -327,6 +346,7 @@ class Templar:
                     if cache and sha1_hash in self._cached_result:
                         result = self._cached_result[sha1_hash]
                     else:
+                        log.debug('_do_template')
                         result = self._do_template(variable, preserve_trailing_newlines=preserve_trailing_newlines, escape_backslashes=escape_backslashes, fail_on_undefined=fail_on_undefined, overrides=overrides)
                         if convert_data and not self._no_type_regex.match(variable):
                             # if this looks like a dictionary or list, convert it to such using the safe_eval method
@@ -438,7 +458,7 @@ class Templar:
             raise AnsibleError("lookup plugin (%s) not found" % name)
 
     def _do_template(self, data, preserve_trailing_newlines=True, escape_backslashes=True, fail_on_undefined=None, overrides=None):
-
+        log.debug('foo')
         # For preserving the number of input newlines in the output (used
         # later in this method)
         data_newlines = _count_newlines_from_end(data)
@@ -472,6 +492,7 @@ class Templar:
                 # instead of as "\\\\".
                 data = _escape_backslashes(data, myenv)
 
+            log.debug('to_template data=%s', data)
             try:
                 t = myenv.from_string(data)
             except TemplateSyntaxError as e:
@@ -488,10 +509,13 @@ class Templar:
             jvars = AnsibleJ2Vars(self, t.globals)
 
             new_context = t.new_context(jvars, shared=True)
+            log.debug('t=%s', t)
             rf = t.root_render_func(new_context)
 
+            log.debug('rf=%s', rf)
             try:
                 res = j2_concat(rf)
+                log.debug('res=%s', res)
             except TypeError as te:
                 if 'StrictUndefined' in to_str(te):
                     errmsg  = "Unable to look up a name or access an attribute in template string (%s).\n" % to_str(data)
@@ -517,9 +541,10 @@ class Templar:
                 res_newlines = _count_newlines_from_end(res)
                 if data_newlines > res_newlines:
                     res += '\n' * (data_newlines - res_newlines)
-
+            log.debug('return res=%s', res)
             return res
         except (UndefinedError, AnsibleUndefinedVariable) as e:
+            log.debug('exception =%s', e)
             if fail_on_undefined:
                 raise AnsibleUndefinedVariable(e)
             else:

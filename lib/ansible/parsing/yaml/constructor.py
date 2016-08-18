@@ -36,6 +36,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
+
 class AnsibleConstructor(Constructor):
     def __init__(self, file_name=None, vault_password=None):
         self._vault_password = vault_password
@@ -100,6 +103,7 @@ class AnsibleConstructor(Constructor):
         return ret
 
     def construct_vault_encrypted_unicode(self, node):
+        log.debug('nose=%s', node)
         value = self.construct_scalar(node)
 
         ciphertext_data = to_bytes(value)
@@ -108,10 +112,13 @@ class AnsibleConstructor(Constructor):
             raise ConstructorError(None, None,
                     "found vault but no vault password provided", node.start_mark)
 
+        log.debug('have a vault')
         # could pass in a key id here to choose the vault to associate with
         vault = self._vaults['default']
         ret = AnsibleVaultEncryptedUnicode(ciphertext_data)
         ret.vault = vault
+        #import pdb; pdb.set_trace()
+        #log.debug('ret=%s', ret)
         return ret
 
     def construct_yaml_seq(self, node):

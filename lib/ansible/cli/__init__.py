@@ -41,6 +41,10 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger('ansible')
+log_format = "%(asctime)s [%(process)s %(name)s %(levelname)s] @%(filename)s:%(funcName)s:%(lineno)d - %(message)s"
+logging.basicConfig(level=logging.DEBUG, format=log_format)
 
 class SortedOptParser(optparse.OptionParser):
     '''Optparser which sorts the options by opt before outputting --help'''

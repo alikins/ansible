@@ -21,18 +21,36 @@ from ansible.errors import AnsibleError
 from ansible.playbook.conditional import Conditional
 from ansible.plugins.action import ActionBase
 
+import logging
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+import pprint
+
+class Pretty(object):
+    def __init__(self, inner):
+        self.inner = inner
+
+    def __repr__(self):
+        return pprint.pformat(self.inner)
+
+    def __str__(self):
+        return pprint.pformat(self.inner)
+
 
 class ActionModule(ActionBase):
     ''' Fail with custom message '''
 
     TRANSFERS_FILES = False
+    log.debug('assert ActionModule')
 
     def run(self, tmp=None, task_vars=None):
+        self.log.debug('run')
         if task_vars is None:
             task_vars = dict()
 
         result = super(ActionModule, self).run(tmp, task_vars)
 
+#        self.log.debug('result=%s', result)
         if 'that' not in self._task.args:
             raise AnsibleError('conditional required in "that" string')
 
@@ -45,6 +63,11 @@ class ActionModule(ActionBase):
         if not isinstance(thats, list):
             thats = [thats]
 
+#        self.log.debug('task_vars=%s', Pretty(task_vars))
+       # import rpdb; rpdb.set_trace()
+        #from pudb.remote import set_trace
+        #set_trace(term_size=(211, 60))
+#        import ptpdb; ptpdb.set_trace()
         # Now we iterate over the that items, temporarily assigning them
         # to the task's when value so we can evaluate the conditional using
         # the built in evaluate function. The when has already been evaluated

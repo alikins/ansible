@@ -25,6 +25,11 @@ from ansible.compat.six import text_type
 from ansible.errors import AnsibleError
 from ansible.utils.unicode import to_bytes
 
+import logging
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
+
 class AnsibleBaseYAMLObject(object):
     '''
     the base class used to sub-class python built-in objects
@@ -100,12 +105,18 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
 
 # Unicode like object that is not evaluated (decrypted) until it needs to be
 # TODO: is there a reason these objects are subclasses for YAMLObject?
+#@pdb.break_on_setattr('data')
+#@pdb.break_on_setattr('_ciphertext')
+#@pdb.break_on_setattr('vault')
+#@pdb.break_on_setattr('__eq__')
 class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     __UNSAFE__ = True
+    __ENCRYPTED__ = True
     yaml_tag = u'!vault-encrypted'
 
     @classmethod
     def from_plaintext(cls, seq, vault):
+        log.debug('from_plaintext')
         if not vault:
             raise vault.AnsibleVaultError('Error creating AnsibleVaultEncryptedUnicode, invalid vault (%s) provided' % vault)
 
@@ -122,23 +133,38 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         The .data atttribute is a property that returns the decrypted plaintext
         of the ciphertext as a PY2 unicode or PY3 string object.
         '''
+        log.debug("__init__")
 
-        super(AnsibleVaultEncryptedUnicode, self).__init__()
-
+        super(AnsibleVaultEncryptedUnicode, self).__init__(ciphertext)
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
         self._ciphertext = to_bytes(ciphertext)
         assert type(ciphertext) == type(b'')
+        #super(AnsibleVaultEncryptedUnicode, self).__init__(ciphertext)
+        log.debug('vault=%s', self.vault)
+        log.debug('id(self)=%s', id(self))
+        log.debug('self=%s', self)
+        ## remove
+
+
+
+#        import pdb; pdb.set_trace()
+        # import ptpdb; ptpdb.set_trace()##remove
+
+
 
     @property
     def data(self):
+        log.debug('data getter')
         if not self.vault:
             # FIXME: raise exception?
             return self._ciphertext
         return self.vault.decrypt(self._ciphertext).decode()
 
+
     @data.setter
     def data(self, value):
+        log.debug('data.setter %s', value)
         self._ciphertext = value
 
     def __repr__(self):
@@ -146,16 +172,20 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
 
     # Compare a regular str/text_type with the decrypted hypertext
     def __eq__(self, other):
+        log.debug('__eq__ %s == %s', self, other)
         return other == self.data
 
     def __hash__(self):
         return id(self)
 
     def __ne__(self, other):
+        logger.debug('__ne__ %s != %s', self, other)
         return other != self.data
 
     def __str__(self):
+        log.debug('__str__')
         return str(self.data)
 
     def __unicode__(self):
+        log.debug('__unicode__')
         return unicode(self.data)
