@@ -84,6 +84,10 @@ except Exception as e:
 from ansible.compat.six import PY3
 from ansible.utils.unicode import to_unicode, to_bytes
 
+import logging
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+
 HAS_ANY_PBKDF2HMAC = HAS_PBKDF2 or HAS_PBKDF2HMAC
 
 CRYPTO_UPGRADE = "ansible-vault requires a newer version of pycrypto than the one installed on your platform. You may fix this with OS-specific commands such as: yum install python-devel; rpm -e --nodeps python-crypto; pip install pycrypto"
@@ -458,6 +462,7 @@ class VaultEditor:
         except Exception as e:
             raise AnsibleError(str(e))
 
+        log.debug('read_data=|%s|', data)
         return data
 
     # TODO: add docstrings for arg types since this code is picky about that
@@ -470,7 +475,9 @@ class VaultEditor:
         that is cannot be recovered.
         """
         # FIXME: do we need this now? data_bytes should always be a utf-8 byte string
+        log.debug('data_bytes pre_to_bytes=|%s|', data_bytes)
         file_bytes = to_bytes(data_bytes, errors='strict')
+        log.debug('data_bytes post_to_bytes=|%s|', file_bytes)
         if filename == '-':
             sys.stdout.write(file_bytes)
         else:
@@ -689,14 +696,16 @@ class VaultAES256:
         return key1, key2, hexlify(iv)
 
     def encrypt(self, data, password):
-
+        log.debug('encrypt password=%s', password)
         salt = os.urandom(32)
         key1, key2, iv = self.gen_key_initctr(password, salt)
 
         # PKCS#7 PAD DATA http://tools.ietf.org/html/rfc5652#section-6.3
         bs = AES.block_size
         padding_length = (bs - len(data) % bs) or bs
+        log.debug('data pre crypt=|%s|', data)
         data += to_bytes(padding_length * chr(padding_length), encoding='ascii', errors='strict')
+        log.debug('data post to_bytes=|%s|', data)
 
         # COUNTER.new PARAMETERS
         # 1) nbits (integer) - Length of the counter, in bits.
@@ -721,20 +730,27 @@ class VaultAES256:
         return message
 
     def decrypt(self, data, password):
-
+        log.debug('decrypt')
         # SPLIT SALT, DIGEST, AND DATA
         data = unhexlify(data)
         salt, cryptedHmac, cryptedData = data.split(b"\n", 2)
         salt = unhexlify(salt)
         cryptedData = unhexlify(cryptedData)
-
+        log.debug('cryptedData=|%s|', cryptedData)
         key1, key2, iv = self.gen_key_initctr(password, salt)
 
         # EXIT EARLY IF DIGEST DOESN'T MATCH
         hmacDecrypt = HMAC.new(key2, cryptedData, SHA256)
+        log.debug('about to check hmac')
+        f = hmacDecrypt.hexdigest()
+        log.debug('c=|%s|', cryptedData)
+        log.debug('f=|%s|', f)
+        g = to_bytes(f)
+        log.debug('g=|%s|', g)
+        log.debug('type(f)=%s, type(g)=%s, len(f)=%s, len(g)=%s', type(f), type(g), len(f), len(g))
         if not self.is_equal(cryptedHmac, to_bytes(hmacDecrypt.hexdigest())):
             return None
-
+        log.debug('hmac ok')
         # SET THE COUNTER AND THE CIPHER
         ctr = Counter.new(128, initial_value=int(iv, 16))
         cipher = AES.new(key1, AES.MODE_CTR, counter=ctr)
@@ -748,8 +764,9 @@ class VaultAES256:
         except TypeError:
             padding_length = decryptedData[-1]
 
+        log.debug('decryptedData^0=|%s|', decryptedData)
         decryptedData = decryptedData[:-padding_length]
-
+        log.debug('decryptedData=|%s|', decryptedData)
         return decryptedData
 
     def is_equal(self, a, b):
