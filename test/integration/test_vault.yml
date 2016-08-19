@@ -3,25 +3,11 @@
     - vars/test_var_encrypted.yml
 
   gather_facts: False
-  vars:
-      - vault_encrypted_var: !vault-encrypted |
-                            $ANSIBLE_VAULT;1.1;AES256
-                            66386439653236336462626566653063336164663966303231363934653561363964363833313662
-                            6431626536303530376336343832656537303632313433360a626438346336353331386135323734
-                            62656361653630373231613662633962316233633936396165386439616533353965373339616234
-                            3430613539666330390a313736323265656432366236633330313963326365653937323833366536
-                            34623731376664623134383463316265643436343438623266623965636363326136
 
   tasks:
-    - debug: var=secret_var
-    - debug: msg="{{ secret_var }}"
     - assert:
         that:
           - 'secret_var == "secret"'
 
-    - copy: src=vault-secret.txt dest={{output_dir}}/secret.txt
 
-    - debug: var=vault_encrypted_var
-    - assert:
-        that:
-         - 'vault_encrypted_var == "Setec Astronomy"'
+    - copy: src=vault-secret.txt dest={{output_dir}}/secret.txt
