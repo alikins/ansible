@@ -1,0 +1,87 @@
+- hosts: testhost
+
+  gather_facts: False
+  vars:
+      # If you use normal 'ansible-vault create' or edit, files always have at least one new line
+      # so c&p from a vault encrypted that wasn't specifically created sans new line ends up with one.
+      # (specifically created, as in 'echo -n "just one line" > my_secret.yml'
+      - vault_encrypted_var: !vault-encrypted |
+                            $ANSIBLE_VAULT;1.1;AES256
+                            66386439653236336462626566653063336164663966303231363934653561363964363833313662
+                            6431626536303530376336343832656537303632313433360a626438346336353331386135323734
+                            62656361653630373231613662633962316233633936396165386439616533353965373339616234
+                            3430613539666330390a313736323265656432366236633330313963326365653937323833366536
+                            34623731376664623134383463316265643436343438623266623965636363326136
+      - vault_encrypted_one_line_var: !vault-encrypted |
+                                    $ANSIBLE_VAULT;1.1;AES256
+                                    33363965326261303234626463623963633531343539616138316433353830356566396130353436
+                                    3562643163366231316662386565383735653432386435610a306664636137376132643732393835
+                                    63383038383730306639353234326630666539346233376330303938323639306661313032396437
+                                    6233623062366136310a633866373936313238333730653739323461656662303864663666653563
+                                    3138
+      - some_dict:
+          - 'sdfsdfsdf'
+          - !vault-unencrypted asdfasdfadfafasdfasdfadfadf
+
+      - vault_header_blob: "$ANSIBLE_VAULT;1.1;AES256"
+      - a_test_of_yaml_and_jinja: '{{ [ "127.0.0.1/32", "::1/128" ] + ansible_all_ipv4_addresses + (ansible_all_ipv6_addresses | difference(ansible_all_ipv6_addresses | ipaddr("link-local"))) }}'
+
+      - has_jinja_2_templating: !vault-encrypted |
+                                $ANSIBLE_VAULT;1.1;AES256
+                                32396365643231613931356465626430633563613030313666663866373265656462363238363535
+                                6466343861396166653533646430386264653132316238330a326265383364383330626538333063
+                                37363762393334646534346238626436313336316462393337333731376338633939653261396131
+                                6335656431386239310a623239356539613862393432343035666430666137626432623661316132
+                                30343664396232653438666463383036346333333764643761353166383038333339363233643338
+                                64383832366366373838356334663936616164353165616437316431343130303066333032663166
+                                66653534323664613237613238396363303461343563646537303731396539633466623761623434
+                                34386566653432623862303432666438336632313933303638336637313463336538306233313337
+                                62646161326562383636393332363963346330323732333333636564346232363264303330663361
+                                34373134363261646462316431386166666534343531336265353039326335383462663232393836
+                                35326162363431373932363939356561323735373830393737343863366230396533396138666632
+                                61663466343436333330653064303432353865643537333364393138316666346635663836636431
+                                3336
+
+      - vault_encrypted_one_line_var_with_embedded_template: !vault-encrypted |
+                                    {{ vault_header_blob }}
+                                    33363965326261303234626463623963633531343539616138316433353830356566396130353436
+                                    3562643163366231316662386565383735653432386435610a306664636137376132643732393835
+                                    63383038383730306639353234326630666539346233376330303938323639306661313032396437
+                                    6233623062366136310a633866373936313238333730653739323461656662303864663666653563
+                                    3138
+
+  tasks:
+    - debug: var=vault_encrypted_var
+
+#    - debug: msg={{ vault_encrypted_var }}
+
+    - debug: var=vault_encrypted_one_line_var
+
+#    - debug:
+#        - msg: |{{ vault_encrypted_one_line_var }}|
+
+    - debug: var=some_dict
+
+#    - debug: var=some_dict.a_list
+#    - debug: var=a_test_of_yaml_and_jinja
+
+#    - debug:
+#        msg: "{{ a_test_of_yaml_and_jinja }}"
+
+    - debug: var=has_jinja_2_templating
+    - debug:
+        msg: "{{ has_jinja_2_templating }}"
+
+# TODO: add a expected fail here
+# - debug: var=vault_encrypted_one_line_var_with_embedded_template
+
+    - assert:
+        that:
+         - '"{{ vault_encrypted_one_line_var }}" == "Setec Astronomy"'
+    - assert:
+        that:
+         - vault_encrypted_var == "Setec Astronomy\n"
+
+    # - assert:
+    #    that:
+    #        - '"{{ vault_encrypted_one_line_var_with_embedded_template }}" == "Setec Astronomy"'
