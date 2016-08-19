@@ -39,8 +39,6 @@ from ansible.release import __version__
 from ansible.parsing.utils.jsonify import jsonify
 from ansible.utils.unicode import to_bytes, to_unicode
 
-import logging
-
 try:
     from __main__ import display
 except ImportError:
@@ -69,8 +67,6 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
         self._cleanup_remote_tmp  = False
         self._supports_check_mode = True
-        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
-        self.log.debug('action init play_context=%s', play_context)
 
     @abstractmethod
     def run(self, tmp=None, task_vars=None):
@@ -89,7 +85,6 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
         * Module parameters.  These are stored in self._task.args
         """
-        #self.log.debug('action run task_vars=%s', task_vars)
         # store the module invocation details into the results
         results =  {}
         if self._task.async == 0:

@@ -36,8 +36,6 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
-import logging
-log = logging.getLogger(__name__)
 
 class AnsibleConstructor(Constructor):
     def __init__(self, file_name=None, vault_password=None):
@@ -98,18 +96,13 @@ class AnsibleConstructor(Constructor):
         return ret
 
     def construct_vault_unencrypted_unicode(self, node):
-        log.debug('node=%s', node)
         value = self.construct_scalar(node)
-        log.debug('value=%s', value)
         ret = AnsibleVaultUnencryptedUnicode(value)
 
-        log.debug('ret=%s', ret)
         return ret
 
     def construct_vault_encrypted_unicode(self, node):
-        log.debug('node=%s', node)
         value = self.construct_scalar(node)
-        log.debug('dir(node)=%s', dir(node))
         ciphertext_data = to_bytes(value)
 
         if self._vault_password is None:
@@ -120,7 +113,6 @@ class AnsibleConstructor(Constructor):
         vault = self._vaults['default']
         ret = AnsibleVaultEncryptedUnicode(ciphertext_data)
         ret.vault = vault
-        log.debug('dir(ret): %s', dir(ret))
         return ret
 
     def construct_yaml_seq(self, node):
