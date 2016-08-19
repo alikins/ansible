@@ -230,7 +230,6 @@ class Templar:
         ''' remove jinja2 template tags from a string '''
 
         if not isinstance(orig_data, string_types) or hasattr(orig_data, '__ENCRYPTED__'):
-            log.debug('%s not string_types(%s)?', orig_data, string_types)
             return orig_data
 
         with contextlib.closing(StringIO(orig_data)) as data:
@@ -267,8 +266,6 @@ class Templar:
                     raise AnsibleError("Error while cleaning data for safety: unhandled regex match")
 
             new_data = data.getvalue()
-            log.debug('new_data=%s type(new_data)=%s', new_data, type(new_data))
-            return new_data
 
     def set_available_variables(self, variables):
         '''
@@ -294,12 +291,7 @@ class Templar:
 
         # Don't template unsafe variables, instead drop them back down to their constituent type.
         if hasattr(variable, '__UNSAFE__'):
-            log.debug('unsafe variable=%s', variable)
-            log.debug('type(variable)=%s', type(variable))
-            # log.debug('dir(variable)=%s', dir(variable))
-
             if isinstance(variable, text_type):
-                log.debug('text_type')
                 return self._clean_data(variable)
             else:
                 # Do we need to convert these into text_type as well?
@@ -314,18 +306,14 @@ class Templar:
                 result = variable
 
                 if self._contains_vars(variable):
-                    log.debug('contains %s', variable)
                     # Check to see if the string we are trying to render is just referencing a single
                     # var.  In this case we don't want to accidentally change the type of the variable
                     # to a string by using the jinja template renderer. We just want to pass it.
                     only_one = self.SINGLE_VAR.match(variable)
                     if only_one:
-                        log.debug('only_one')
                         var_name = only_one.group(1)
                         if var_name in self._available_variables:
-                            log.debug('only_one avail')
                             resolved_val = self._available_variables[var_name]
-                            log.debug('resolved_val=%s', resolved_val)
                             if isinstance(resolved_val, NON_TEMPLATED_TYPES):
                                 return resolved_val
                             elif resolved_val is None:
@@ -484,7 +472,6 @@ class Templar:
                 # instead of as "\\\\".
                 data = _escape_backslashes(data, myenv)
 
-            log.debug('to_template data=%s', data)
             try:
                 t = myenv.from_string(data)
             except TemplateSyntaxError as e:
@@ -502,9 +489,9 @@ class Templar:
 
             new_context = t.new_context(jvars, shared=True)
             rf = t.root_render_func(new_context)
+
             try:
                 res = j2_concat(rf)
-                log.debug('res=%s', res)
             except TypeError as te:
                 if 'StrictUndefined' in to_str(te):
                     errmsg  = "Unable to look up a name or access an attribute in template string (%s).\n" % to_str(data)
@@ -530,10 +517,8 @@ class Templar:
                 res_newlines = _count_newlines_from_end(res)
                 if data_newlines > res_newlines:
                     res += '\n' * (data_newlines - res_newlines)
-            log.debug('return res=%s', res)
             return res
         except (UndefinedError, AnsibleUndefinedVariable) as e:
-            log.exception(e)
             if fail_on_undefined:
                 raise AnsibleUndefinedVariable(e)
             else:
