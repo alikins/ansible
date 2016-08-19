@@ -236,7 +236,7 @@ class VaultLib:
 
         b_header = HEADER.encode('utf-8')
         b_header = b';'.join([b_header, self.b_version,
-                        self.cipher_name.encode('utf-8',errors='strict')])
+                        to_bytes(self.cipher_name, 'utf-8',errors='strict')])
         b_tmpdata = [b_header]
         b_tmpdata += [b_ciphertext[i:i + 80] for i in range(0, len(b_ciphertext), 80)]
         b_tmpdata += [b'']
