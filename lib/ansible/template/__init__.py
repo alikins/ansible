@@ -533,7 +533,7 @@ class Templar:
             log.debug('return res=%s', res)
             return res
         except (UndefinedError, AnsibleUndefinedVariable) as e:
-            log.debug('exception =%s', e)
+            log.exception(e)
             if fail_on_undefined:
                 raise AnsibleUndefinedVariable(e)
             else:
