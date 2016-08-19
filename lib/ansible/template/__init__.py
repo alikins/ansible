@@ -265,7 +265,7 @@ class Templar:
                 else:
                     raise AnsibleError("Error while cleaning data for safety: unhandled regex match")
 
-            new_data = data.getvalue()
+            return data.getvalue()
 
     def set_available_variables(self, variables):
         '''
