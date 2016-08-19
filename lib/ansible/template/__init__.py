@@ -233,13 +233,9 @@ class Templar:
             log.debug('%s not string_types(%s)?', orig_data, string_types)
             return orig_data
 
-        log.debug('is a string type (%s)', string_types)
-        log.debug('type(orig_data)=%s', type(orig_data))
         with contextlib.closing(StringIO(orig_data)) as data:
             # these variables keep track of opening block locations, as we only
             # want to replace matched pairs of print/block tags
-            log.debug('data=%s', data)
-            log.debug('type(data)=%s', type(data))
             print_openings = []
             block_openings = []
             for mo in self._clean_regex.finditer(orig_data):
@@ -272,6 +268,7 @@ class Templar:
 
             new_data = data.getvalue()
             log.debug('new_data=%s type(new_data)=%s', new_data, type(new_data))
+            return new_data
 
     def set_available_variables(self, variables):
         '''
@@ -299,14 +296,12 @@ class Templar:
         if hasattr(variable, '__UNSAFE__'):
             log.debug('unsafe variable=%s', variable)
             log.debug('type(variable)=%s', type(variable))
-            log.debug('dir(variable)=%s', dir(variable))
+            # log.debug('dir(variable)=%s', dir(variable))
 
             if isinstance(variable, text_type):
                 log.debug('text_type')
                 return self._clean_data(variable)
             else:
-                log.debug('not text type, do something else?')
-                log.debug('variable._obj=%s', variable._obj)
                 # Do we need to convert these into text_type as well?
                 # return self._clean_data(to_unicode(variable._obj, nonstring='passthru'))
                 return self._clean_data(variable._obj)
@@ -336,7 +331,6 @@ class Templar:
                             elif resolved_val is None:
                                 return C.DEFAULT_NULL_REPRESENTATION
 
-                    log.debug('normal')
                     # Using a cache in order to prevent template calls with already templated variables
                     sha1_hash = None
                     if cache:
@@ -346,7 +340,6 @@ class Templar:
                     if cache and sha1_hash in self._cached_result:
                         result = self._cached_result[sha1_hash]
                     else:
-                        log.debug('_do_template')
                         result = self._do_template(variable, preserve_trailing_newlines=preserve_trailing_newlines, escape_backslashes=escape_backslashes, fail_on_undefined=fail_on_undefined, overrides=overrides)
                         if convert_data and not self._no_type_regex.match(variable):
                             # if this looks like a dictionary or list, convert it to such using the safe_eval method
@@ -458,7 +451,6 @@ class Templar:
             raise AnsibleError("lookup plugin (%s) not found" % name)
 
     def _do_template(self, data, preserve_trailing_newlines=True, escape_backslashes=True, fail_on_undefined=None, overrides=None):
-        log.debug('foo')
         # For preserving the number of input newlines in the output (used
         # later in this method)
         data_newlines = _count_newlines_from_end(data)
@@ -509,10 +501,7 @@ class Templar:
             jvars = AnsibleJ2Vars(self, t.globals)
 
             new_context = t.new_context(jvars, shared=True)
-            log.debug('t=%s', t)
             rf = t.root_render_func(new_context)
-
-            log.debug('rf=%s', rf)
             try:
                 res = j2_concat(rf)
                 log.debug('res=%s', res)

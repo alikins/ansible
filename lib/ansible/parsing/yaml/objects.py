@@ -77,7 +77,7 @@ class AnsibleVault(AnsibleBaseYAMLObject, bytes):
     pass
 
 
-class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
+class AnsibleVaultUnencryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     """A object created from a !vault-unencrypted yaml object.
 
     This will be used to allow 'ansible-vault edit' to find yaml objects that
@@ -92,7 +92,7 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
     yaml_tag = u'!vault-unencrypted'
 
     def __init__(self, plaintext):
-        super(AnsibleVaultUnencryptedUnicode, self).__init__()
+        super(AnsibleVaultUnencryptedUnicode, self).__init__(plaintext)
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
         self.plaintext = plaintext
@@ -105,10 +105,6 @@ class AnsibleVaultUnencryptedUnicode(AnsibleUnicode):
 
 # Unicode like object that is not evaluated (decrypted) until it needs to be
 # TODO: is there a reason these objects are subclasses for YAMLObject?
-#@pdb.break_on_setattr('data')
-#@pdb.break_on_setattr('_ciphertext')
-#@pdb.break_on_setattr('vault')
-#@pdb.break_on_setattr('__eq__')
 class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     __UNSAFE__ = True
     __ENCRYPTED__ = True
@@ -116,7 +112,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
 
     @classmethod
     def from_plaintext(cls, seq, vault):
-        log.debug('from_plaintext')
         if not vault:
             raise vault.AnsibleVaultError('Error creating AnsibleVaultEncryptedUnicode, invalid vault (%s) provided' % vault)
 
@@ -133,8 +128,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         The .data atttribute is a property that returns the decrypted plaintext
         of the ciphertext as a PY2 unicode or PY3 string object.
         '''
-        log.debug("__init__")
-
         super(AnsibleVaultEncryptedUnicode, self).__init__(ciphertext)
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
@@ -155,7 +148,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
 
     @property
     def data(self):
-        log.debug('data getter')
         if not self.vault:
             # FIXME: raise exception?
             return self._ciphertext
