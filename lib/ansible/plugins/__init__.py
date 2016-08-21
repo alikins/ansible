@@ -44,6 +44,10 @@ MODULE_CACHE = {}
 PATH_CACHE = {}
 PLUGIN_PATH_CACHE = {}
 
+
+import pprint
+import traceback
+
 def get_all_plugin_loaders():
     return [(name, obj) for (name, obj) in inspect.getmembers(sys.modules[__name__]) if isinstance(obj, PluginLoader)]
 
@@ -71,6 +75,7 @@ class PluginLoader:
             config = []
 
         self.config = config
+
 
         if not class_name in MODULE_CACHE:
             MODULE_CACHE[class_name] = {}
@@ -161,6 +166,7 @@ class PluginLoader:
     def _get_paths(self):
         ''' Return a list of paths to search for plugins in '''
 
+        # no cache
         if self._paths is not None:
             return self._paths
 
@@ -180,6 +186,7 @@ class PluginLoader:
         # look for any plugins installed in the package subtree
         ret.extend(self._get_package_paths())
 
+        #display.vvv('Directories to search for plugins=%s' % pprint.pformat(ret))
         # HACK: because powershell modules are in the same directory
         # hierarchy as other modules we have to process them last.  This is
         # because powershell only works on windows but the other modules work
@@ -200,6 +207,7 @@ class PluginLoader:
             else:
                 reordered_paths.append(path)
         reordered_paths.extend(win_dirs)
+        #display.vvv('Directories to search for plugins (post reorder)=%s' % pprint.pformat(reordered_paths))
 
         # cache and return the result
         self._paths = reordered_paths
@@ -208,18 +216,28 @@ class PluginLoader:
     def add_directory(self, directory, with_subdir=False):
         ''' Adds an additional directory to the search path '''
 
+        display.vvv('add_directory input directory=%s with_subdir=%s' % (directory, with_subdir))
         directory = os.path.realpath(directory)
+        display.vvv('add_directory input real_path directory=%s' % directory)
 
+        display.vvv('pre self._extras_dirs=%s' % pprint.pformat(self._extra_dirs))
         if directory is not None:
             if with_subdir:
                 directory = os.path.join(directory, self.subdir)
+                display.vvv('add_directory post add_subdir  directory=%s subdir=%s' % (directory, self.subdir))
             if directory not in self._extra_dirs:
+                display.vvv('add_directory ADDED add_subdir  directory=%s subdir=%s' % (directory, self.subdir))
                 # append the directory and invalidate the path cache
                 self._extra_dirs.append(directory)
                 self._paths = None
+                self._module_cache = {}
+                self._plugin_path_cache = defaultdict(dict)
+                display.vvv('self_paths=%s  (SHOULD BE NONE)' % self._paths)
+        display.vvv('post self._extras_dirs=%s' % pprint.pformat(self._extra_dirs))
 
     def find_plugin(self, name, mod_type=''):
         ''' Find a plugin named name '''
+        display.vvvv('find_plugin name=%s mod_type=|%s|' % (name, mod_type))
 
         if mod_type:
             suffix = mod_type
@@ -231,11 +249,22 @@ class PluginLoader:
             # they can have any suffix
             suffix = ''
 
+
         # The particular cache to look for modules within.  This matches the
         # requested mod_type
         pull_cache = self._plugin_path_cache[suffix]
+        #display.vvvv('suffix=|%s| self._plugin_path_cache.keys=%s' % (suffix, pprint.pformat(self._plugin_path_cache.keys())))
+        #display.vvvv('pull_cache=%s' % pprint.pformat(pull_cache))
+
         try:
-            return pull_cache[name]
+            display.vvv('SELF.PATHS=%s' % self._paths)
+            res = pull_cache[name]
+            if name.startswith('uri'):
+                print('name=%s' % name)
+                traceback.print_stack()
+            display.vvvv('pull_cache[%s]=%s' % (name, pull_cache[name]))
+            if self._paths:
+                return res
         except KeyError:
             # Cache miss.  Now let's find the plugin
             pass
@@ -246,6 +275,7 @@ class PluginLoader:
         #       (add_directory()) once we start using the iterator.  Currently, it
         #       looks like _get_paths() never forces a cache refresh so if we expect
         #       additional directories to be added later, it is buggy.
+        # display.vvvv('self._searced_paths=%s' % self._searched_paths)
         for path in (p for p in self._get_paths() if p not in self._searched_paths and os.path.isdir(p)):
             try:
                 full_paths = (os.path.join(path, f) for f in os.listdir(path))
@@ -267,23 +297,39 @@ class PluginLoader:
                 except IndexError:
                     extension = ''
 
+                #display.vvvv('base_name=%s full_name=%s extension=%s' % (base_name, full_name, extension))
                 # Module found, now enter it into the caches that match
                 # this file
                 if base_name not in self._plugin_path_cache['']:
                     self._plugin_path_cache[''][base_name] = full_path
+                    if base_name.startswith('uri'):
+                        display.vv('path_cache[ ][%s] = %s' % (base_name, full_path))
+                        traceback.print_stack()
 
                 if full_name not in self._plugin_path_cache['']:
                     self._plugin_path_cache[''][full_name] = full_path
+                    if base_name.startswith('uri'):
+                        display.vv('path_cache[ ][%s] = %s' % (full_name, full_path))
+                        traceback.print_stack()
 
                 if base_name not in self._plugin_path_cache[extension]:
                     self._plugin_path_cache[extension][base_name] = full_path
+                    if base_name.startswith('uri'):
+                        display.vv('path_cach[%s][%s] = %s' % (extension, base_name, full_path))
+                        traceback.print_stack()
 
                 if full_name not in self._plugin_path_cache[extension]:
                     self._plugin_path_cache[extension][full_name] = full_path
+                    if base_name.startswith('uri'):
+                        display.vv('path_cache[%s][%s] = %s' % (extension, full_name, full_path))
+                        traceback.print_stack()
 
             self._searched_paths.add(path)
             try:
-                return pull_cache[name]
+                res = pull_cache[name]
+                #if name == 'uri':
+                #    traceback.print_stack()
+                return res
             except KeyError:
                 # Didn't find the plugin in this directory.  Load modules from
                 # the next one
@@ -300,7 +346,10 @@ class PluginLoader:
                               'documentation details page may explain '
                               'more about this rationale.' %
                               name.lstrip('_'))
-                return pull_cache[alias_name]
+                res = pull_cache[alias_name]
+                if name == 'uri':
+                    traceback.print_stack()
+                return res
 
         return None
 
@@ -314,7 +363,9 @@ class PluginLoader:
     def _load_module_source(self, name, path):
         if name in sys.modules:
             # See https://github.com/ansible/ansible/issues/13110
-            return sys.modules[name]
+            res = sys.modules[name]
+            display.vvv('FOUND in sys.modules: name=%s res=%s' % (name, res))
+            return res
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             with open(path, 'r') as module_file:
@@ -323,6 +374,10 @@ class PluginLoader:
 
     def get(self, name, *args, **kwargs):
         ''' instantiates a plugin of the given name using arguments '''
+        display.vvvv('get name=%s args=%s kwargs=%s' % (name, args, kwargs))
+        display.vvv('PluginLoader class_name=|%s|' % self.class_name)
+        #display.vvv('PLUGIN_PATH_CACHE=%s' % pprint.pformat(PLUGIN_PATH_CACHE))
+        #display.vvv('MODULE_CACHE=%s' % pprint.pformat(MODULE_CACHE))
 
         found_in_cache = True
         class_only = kwargs.pop('class_only', False)
@@ -370,6 +425,7 @@ class PluginLoader:
 
     def all(self, *args, **kwargs):
         ''' instantiates all plugins with the same arguments '''
+        display.vvvv('all() args=%s kwargs=%s' % (args, kwargs))
 
         class_only = kwargs.pop('class_only', False)
         all_matches = []

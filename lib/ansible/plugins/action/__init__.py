@@ -109,6 +109,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         if task_vars is None:
             task_vars = dict()
 
+        display.vvv("Searching for module_name=%s" % module_name)
         # Search module path(s) for named module.
         for mod_type in self._connection.module_implementation_preferences:
             # Check to determine if PowerShell modules are supported, and apply
@@ -126,7 +127,9 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                         if key in module_args:
                             module_args[key] = self._connection._shell._unquote(module_args[key])
 
+            display.vvv("Searching for module_name=%s module_type=%s" % (module_name, mod_type))
             module_path = self._shared_loader_obj.module_loader.find_plugin(module_name, mod_type)
+            display.vvv('Find module_name %s of type %s at %s' % (module_name, mod_type, module_path))
             if module_path:
                 break
         else:  # This is a for-else: http://bit.ly/1ElPkyg
