@@ -38,7 +38,8 @@ from units.mock.yaml_helper import YamlTestUtils
 class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
-        self.good_vault = vault.VaultLib(self.vault_password)
+        self.vault_secrets = vault.PasswordVaultSecrets(password=self.vault_password)
+        self.good_vault = vault.VaultLib(self.vault_secrets)
         self.vault = self.good_vault
         self.stream = self._build_stream()
         self.dumper = dumper.AnsibleDumper
@@ -49,7 +50,7 @@ class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
         return stream
 
     def _loader(self, stream):
-        return AnsibleLoader(stream, vault_password=self.vault_password)
+        return AnsibleLoader(stream, vault=self.vault)
 
     def test(self):
         plaintext = 'This is a string we are going to encrypt.'

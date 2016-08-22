@@ -170,6 +170,13 @@ class VaultSecrets(object):
         return to_bytes(self._secret, errors='strict', encoding='utf-8')
 
 
+# A vault with just a plaintext password
+class PasswordVaultSecrets(VaultSecrets):
+    def __init__(self, name='default', password=None):
+        super(PasswordVaultSecrets, self).__init__(name)
+        self._secret = password
+
+
 # FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
 # TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
 class FileVaultSecrets(VaultSecrets):
@@ -417,16 +424,16 @@ class VaultLib:
         b_clean_data = b''.join(b_tmp_data[1:])
         self.key_id = 'version_1_1_default_key'
         # Only attempt to find key_id if the vault file is version 1.2 or newer
-        if self.b_version == b'1.2':
-            self.key_id = to_unicode(b_tmp_header[3].strip())
+        #if b_version == b'1.2':
+        #    self.key_id = to_unicode(b_tmp_header[3].strip())
 
         return b_clean_data
 
 
 class VaultEditor:
 
-    def __init__(self, secrets):
-        self.vault = VaultLib(secrets)
+    def __init__(self, vault):
+        self.vault = vault
 
     # TODO: mv shred file stuff to it's own class
     def _shred_file_custom(self, tmp_path):
@@ -591,7 +598,7 @@ class VaultEditor:
 
         return plaintext
 
-    def rekey_file(self, filename, new_password):
+    def rekey_file(self, filename, new_secrets):
 
         check_prereqs()
 
@@ -602,7 +609,8 @@ class VaultEditor:
         except AnsibleError as e:
             raise AnsibleError("%s for %s" % (to_bytes(e),to_bytes(filename)))
 
-        new_vault = VaultLib(new_password)
+        # TODO: just pass in a new vault[lib]/Context
+        new_vault = VaultLib(secrets=new_secrets)
         b_new_ciphertext = new_vault.encrypt(plaintext)
 
         self.write_data(b_new_ciphertext, filename)

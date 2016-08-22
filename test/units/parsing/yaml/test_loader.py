@@ -168,13 +168,15 @@ class TestAnsibleLoaderBasic(unittest.TestCase):
 class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
-        self.vault = vault.VaultLib(self.vault_password)
+        self.vault_secrets = vault.PasswordVaultSecrets(password=self.vault_password)
+        self.vault = vault.VaultLib(self.vault_secrets)
 
     def test_wrong_password(self):
         plaintext = u"Ansible"
-        bob_password = "this is a different password"
+        bobs_password = "this is a different password"
+        bobs_vault_secrets = vault.PasswordVaultSecrets(password=bobs_password)
 
-        bobs_vault = vault.VaultLib(bob_password)
+        bobs_vault = vault.VaultLib(bobs_vault_secrets)
 
         ciphertext = bobs_vault.encrypt(plaintext)
 
@@ -205,9 +207,9 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         return stream
 
     def _loader(self, stream):
-        return AnsibleLoader(stream, vault_password=self.vault_password)
+        return AnsibleLoader(stream, vault=self.vault)
 
-    def _load_yaml(self, yaml_text, password):
+    def _load_yaml(self, yaml_text):
         stream = self._build_stream(yaml_text)
         loader = self._loader(stream)
 
@@ -253,7 +255,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
 
         yaml_text = u"""---\nwebster: daniel\noed: oxford\nthe_secret: %s\nanother_secret: %s\ndifferent_secret: %s""" % (tagged_vaulted_var, another_vaulted_var, different_vaulted_var)
 
-        data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
+        data_from_yaml = self._load_yaml(yaml_text)
         vault_string = data_from_yaml['the_secret']
 
         self.assertEquals(plaintext_var, data_from_yaml['the_secret'])

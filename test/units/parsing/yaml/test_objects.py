@@ -68,15 +68,17 @@ class TestAnsibleVaultUnencryptedUnicode(unittest.TestCase, YamlTestUtils):
 class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
-        self.good_vault = vault.VaultLib(self.vault_password)
+        self.vault_secret = vault.PasswordVaultSecrets(password=self.vault_password)
+        self.good_vault = vault.VaultLib(self.vault_secret)
 
         self.wrong_vault_password = 'not-hunter42'
-        self.wrong_vault = vault.VaultLib(self.wrong_vault_password)
+        self.wrong_vault_secret = vault.PasswordVaultSecrets(password=self.vault_password)
+        self.wrong_vault = vault.VaultLib(self.wrong_vault_secret)
 
         self.vault = self.good_vault
 
     def _loader(self, stream):
-        return AnsibleLoader(stream, vault_password=self.vault_password)
+        return AnsibleLoader(stream, vault=self.vault)
 
     def test_dump_load_cycle(self):
         aveu = self._from_plaintext('the test string for TestAnsibleVaultEncryptedUnicode.test_dump_load_cycle')

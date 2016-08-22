@@ -204,7 +204,8 @@ class TestVaultCipherAes256(unittest.TestCase):
 class TestVaultLib(unittest.TestCase):
 
     def test_methods_exist(self):
-        v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         slots = ['is_encrypted',
                  'encrypt',
                  'decrypt',
@@ -214,7 +215,8 @@ class TestVaultLib(unittest.TestCase):
             assert hasattr(v, slot), "VaultLib is missing the %s method" % slot
 
     def test_encrypt(self):
-        v = VaultLib(password='the_unit_test_password')
+        secrets = vault.PasswordVaultSecrets(password='the_unit_test_password')
+        v = vault.VaultLib(secrets=secrets)
         plaintext = u'Some text to encrypt.'
         ciphertext = v.encrypt(plaintext)
 
@@ -234,7 +236,8 @@ class TestVaultLib(unittest.TestCase):
         assert v.is_encrypted(data), "encryption check on headered text failed"
 
     def test_format_output(self):
-        v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         v.cipher_name = "TEST"
         sensitive_data = b"ansible"
         data = v._format_output(sensitive_data)
@@ -249,7 +252,8 @@ class TestVaultLib(unittest.TestCase):
         assert header_parts[2] == b'TEST', "header does end with cipher name"
 
     def test_split_header(self):
-        v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         data = b"$ANSIBLE_VAULT;9.9;TEST\nansible"
         rdata = v._split_header(data)
         lines = rdata.split(b'\n')
@@ -260,7 +264,8 @@ class TestVaultLib(unittest.TestCase):
     def test_encrypt_decrypt_aes(self):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
-        v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         v.cipher_name = u'AES'
         # AES encryption code has been removed, so this is old output for
         # AES-encrypted 'foobar' with password 'ansible'.
@@ -272,6 +277,8 @@ class TestVaultLib(unittest.TestCase):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
         v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         v.cipher_name = 'AES256'
         plaintext = "foobar"
         enc_data = v.encrypt(plaintext)
@@ -282,7 +289,8 @@ class TestVaultLib(unittest.TestCase):
     def test_encrypt_decrypt_aes256_existing_vault(self):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
-        v = VaultLib('test-vault-password')
+        secrets = vault.PasswordVaultSecrets(password='test-vault-password')
+        v = VaultLib(secrets=secrets)
         v.cipher_name = 'AES256'
         plaintext = b"Setec Astronomy"
         enc_data = '''$ANSIBLE_VAULT;1.1;AES256
@@ -301,7 +309,8 @@ class TestVaultLib(unittest.TestCase):
 
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
-        v = VaultLib('test-vault-password')
+        secrets = vault.PasswordVaultSecrets(password='test-vault-password')
+        v = VaultLib(secrets)
         v.cipher_name = 'AES256'
         # plaintext = "Setec Astronomy"
         enc_data = '''$ANSIBLE_VAULT;1.1;AES256
@@ -338,7 +347,8 @@ class TestVaultLib(unittest.TestCase):
     def test_encrypt_encrypted(self):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
-        v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         v.cipher_name = 'AES'
         data = "$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(six.b("ansible"))
         self.assertRaises(errors.AnsibleError, v.encrypt, data,)
@@ -346,7 +356,8 @@ class TestVaultLib(unittest.TestCase):
     def test_decrypt_decrypted(self):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
-        v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         data = "ansible"
         self.assertRaises(errors.AnsibleError, v.decrypt, data)
 
@@ -354,7 +365,8 @@ class TestVaultLib(unittest.TestCase):
         # not setting the cipher should default to AES256
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
-        v = VaultLib('ansible')
+        secrets = vault.PasswordVaultSecrets(password='ansible')
+        v = VaultLib(secrets=secrets)
         data = "ansible"
         v.encrypt(data)
         self.assertEquals(v.cipher_name, "AES256")

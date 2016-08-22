@@ -33,6 +33,7 @@ from ansible.utils.unicode import to_bytes, to_unicode
 from ansible import errors
 from ansible.parsing.vault import VaultLib
 from ansible.parsing.vault import VaultEditor
+from ansible.parsing import vault
 
 # Counter import fails for 2.0.1, requires >= 2.6.1 from pip
 try:
@@ -75,8 +76,13 @@ class TestVaultEditor(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def _ve_from_password(self, password):
+        secrets = vault.PasswordVaultSecrets(password=password)
+        vault_lib = vault.VaultLib(secrets=secrets)
+        return vault.VaultEditor(vault_lib)
+
     def test_methods_exist(self):
-        v = VaultEditor(None)
+        v = self._ve_from_password(None)
         slots = ['create_file',
                  'decrypt_file',
                  'edit_file',
@@ -98,7 +104,7 @@ class TestVaultEditor(unittest.TestCase):
         tmp_file = tempfile.NamedTemporaryFile()
         os.unlink(tmp_file.name)
 
-        ve = VaultEditor("ansible")
+        ve = self._ve_from_password('ansible')
         ve.create_file(tmp_file.name)
 
         self.assertTrue(os.path.exists(tmp_file.name))
@@ -115,7 +121,7 @@ class TestVaultEditor(unittest.TestCase):
         with v10_file as f:
             f.write(to_bytes(v10_data))
 
-        ve = VaultEditor("ansible")
+        ve = self._ve_from_password('ansible')
 
         # make sure the password functions for the cipher
         error_hit = False
@@ -134,7 +140,6 @@ class TestVaultEditor(unittest.TestCase):
         assert error_hit == False, "error decrypting 1.0 file"
         assert fdata.strip() == "foo", "incorrect decryption of 1.0 file: %s" % fdata.strip()
 
-
     def test_decrypt_1_1(self):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
@@ -143,7 +148,7 @@ class TestVaultEditor(unittest.TestCase):
         with v11_file as f:
             f.write(to_bytes(v11_data))
 
-        ve = VaultEditor("ansible")
+        ve = self._ve_from_password('ansible')
 
         # make sure the password functions for the cipher
         error_hit = False
@@ -162,7 +167,6 @@ class TestVaultEditor(unittest.TestCase):
         assert error_hit == False, "error decrypting 1.0 file"
         assert fdata.strip() == "foo", "incorrect decryption of 1.0 file: %s" % fdata.strip()
 
-
     def test_rekey_migration(self):
         """
         Skip testing rekeying files if we don't have access to AES, KDF or
@@ -175,12 +179,15 @@ class TestVaultEditor(unittest.TestCase):
         with v10_file as f:
             f.write(to_bytes(v10_data))
 
-        ve = VaultEditor("ansible")
+        orig_secrets = vault.PasswordVaultSecrets(password='ansible')
+        vault_lib = vault.VaultLib(secrets=orig_secrets)
+        ve = vault.VaultEditor(vault_lib)
 
         # make sure the password functions for the cipher
         error_hit = False
+        new_secrets = vault.PasswordVaultSecrets(password='ansible2')
         try:
-            ve.rekey_file(v10_file.name, 'ansible2')
+            ve.rekey_file(v10_file.name, new_secrets)
         except errors.AnsibleError as e:
             error_hit = True
 
@@ -192,7 +199,7 @@ class TestVaultEditor(unittest.TestCase):
         assert error_hit == False, "error rekeying 1.0 file to 1.1"
 
         # ensure filedata can be decrypted, is 1.1 and is AES256
-        vl = VaultLib("ansible2")
+        vl = VaultLib(secrets=new_secrets)
         dec_data = None
         error_hit = False
         try:
@@ -205,5 +212,3 @@ class TestVaultEditor(unittest.TestCase):
         assert vl.cipher_name == "AES256", "wrong cipher name set after rekey: %s" % vl.cipher_name
         assert error_hit == False, "error decrypting migrated 1.0 file"
         assert dec_data.strip() == "foo", "incorrect decryption of rekeyed/migrated file: %s" % dec_data
-
-

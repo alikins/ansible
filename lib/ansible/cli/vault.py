@@ -24,7 +24,7 @@ import sys
 
 from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.parsing.dataloader import DataLoader
-from ansible.parsing.vault import VaultEditor, VaultSecrets, FileVaultSecrets, PromptVaultSecrets
+from ansible.parsing.vault import VaultLib, VaultEditor, VaultSecrets, FileVaultSecrets, PromptVaultSecrets
 from ansible.cli import CLI
 from ansible.utils.unicode import to_unicode
 
@@ -124,7 +124,8 @@ class VaultCLI(CLI):
         if not vault_secrets:
             raise AnsibleOptionsError("A password is required to use Ansible's Vault")
 
-        self.editor = VaultEditor(vault_secrets)
+        vault_lib = VaultLib(secrets=vault_secrets)
+        self.editor = VaultEditor(vault_lib)
 
         self.execute()
 
