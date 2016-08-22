@@ -355,14 +355,8 @@ class VaultLib:
         # clean out header
         b_data = self._split_header(b_data)
 
-        # create the cipher object
-        cipher_class_name = u'Vault{0}'.format(self.cipher_name)
-        # cipher metaclass that registered subclasses could be used here and in place of cipher_factory()
-        if cipher_class_name in globals() and self.cipher_name in CIPHER_WHITELIST:
-            cipher_class = globals()[cipher_class_name]
-            this_cipher = cipher_class()
-        else:
-            raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
+        this_cipher_class = cipher_factory(self.cipher_name)
+        this_cipher = this_cipher_class()
 
         # try to unencrypt data
 
