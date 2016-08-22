@@ -271,6 +271,7 @@ class VaultEditor:
     def __init__(self, password):
         self.vault = VaultLib(password)
 
+    # TODO: mv shred file stuff to it's own class
     def _shred_file_custom(self, tmp_path):
         """"Destroy a file, when shred (core-utils) is not available
 
@@ -509,7 +510,7 @@ class VaultEditor:
 
         return editor
 
-
+# TODO: does anything use this?
 class VaultFile(object):
 
     def __init__(self, password, filename):
