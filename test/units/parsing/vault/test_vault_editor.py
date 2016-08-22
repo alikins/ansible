@@ -19,7 +19,6 @@
 # Make coding more python3-ish
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
-#!/usr/bin/env python
 
 import sys
 import os
@@ -30,9 +29,6 @@ from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import patch
 from ansible.utils.unicode import to_bytes, to_unicode
 
-from ansible import errors
-from ansible.parsing.vault import VaultLib
-from ansible.parsing.vault import VaultEditor
 from ansible.parsing import vault
 
 # Counter import fails for 2.0.1, requires >= 2.6.1 from pip
@@ -94,7 +90,7 @@ class TestVaultEditor(unittest.TestCase):
         for slot in slots:
             assert hasattr(v, slot), "VaultLib is missing the %s method" % slot
 
-    @patch.object(VaultEditor, '_editor_shell_command')
+    @patch.object(vault.VaultEditor, '_editor_shell_command')
     def test_create_file(self, mock_editor_shell_command):
 
         def sc_side_effect(filename):
@@ -124,11 +120,7 @@ class TestVaultEditor(unittest.TestCase):
         ve = self._ve_from_password('ansible')
 
         # make sure the password functions for the cipher
-        error_hit = False
-        try:
-            ve.decrypt_file(v10_file.name)
-        except errors.AnsibleError as e:
-            error_hit = True
+        ve.decrypt_file(v10_file.name)
 
         # verify decrypted content
         f = open(v10_file.name, "rb")
@@ -137,8 +129,8 @@ class TestVaultEditor(unittest.TestCase):
 
         os.unlink(v10_file.name)
 
-        assert error_hit == False, "error decrypting 1.0 file"
-        assert fdata.strip() == "foo", "incorrect decryption of 1.0 file: %s" % fdata.strip()
+        res = fdata.strip()
+        self.assertEquals(res, "foo", "incorrect decryption of 1.0 file: %s" % res)
 
     def test_decrypt_1_1(self):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
@@ -151,11 +143,7 @@ class TestVaultEditor(unittest.TestCase):
         ve = self._ve_from_password('ansible')
 
         # make sure the password functions for the cipher
-        error_hit = False
-        try:
-            ve.decrypt_file(v11_file.name)
-        except errors.AnsibleError as e:
-            error_hit = True
+        ve.decrypt_file(v11_file.name)
 
         # verify decrypted content
         f = open(v11_file.name, "rb")
@@ -164,8 +152,8 @@ class TestVaultEditor(unittest.TestCase):
 
         os.unlink(v11_file.name)
 
-        assert error_hit == False, "error decrypting 1.0 file"
-        assert fdata.strip() == "foo", "incorrect decryption of 1.0 file: %s" % fdata.strip()
+        res = fdata.strip()
+        self.assertEquals(res, "foo", "incorrect decryption of 1.1 file: %s" % res)
 
     def test_rekey_migration(self):
         """
@@ -184,31 +172,20 @@ class TestVaultEditor(unittest.TestCase):
         ve = vault.VaultEditor(vault_lib)
 
         # make sure the password functions for the cipher
-        error_hit = False
         new_secrets = vault.PasswordVaultSecrets(password='ansible2')
-        try:
-            ve.rekey_file(v10_file.name, new_secrets)
-        except errors.AnsibleError as e:
-            error_hit = True
+        ve.rekey_file(v10_file.name, new_secrets)
 
         # verify decrypted content
         f = open(v10_file.name, "rb")
         fdata = f.read()
         f.close()
 
-        assert error_hit == False, "error rekeying 1.0 file to 1.1"
-
         # ensure filedata can be decrypted, is 1.1 and is AES256
         vl = VaultLib(secrets=new_secrets)
         dec_data = None
-        error_hit = False
-        try:
-            dec_data = vl.decrypt(fdata)
-        except errors.AnsibleError as e:
-            error_hit = True
+        dec_data = vl.decrypt(fdata)
 
         os.unlink(v10_file.name)
 
-        assert vl.cipher_name == "AES256", "wrong cipher name set after rekey: %s" % vl.cipher_name
-        assert error_hit == False, "error decrypting migrated 1.0 file"
-        assert dec_data.strip() == "foo", "incorrect decryption of rekeyed/migrated file: %s" % dec_data
+        self.assertEquals(vl.cipher_name, "AES256", "wrong cipher name set after rekey")
+        self.assertEquals(dec_data.strip(), "foo", "incorrect decryption of rekeyed/migrated file: %s" % dec_data)
