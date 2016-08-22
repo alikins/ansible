@@ -167,7 +167,6 @@ class VaultSecrets(object):
         # secret_name could be None for the default,
         # or a filepath, or a label used for prompting users
         # interactively  (like a ssh key id arg to ssh-add...)
-        #return to_bytes(self._secret)
         return to_bytes(self._secret, errors='strict', encoding='utf-8')
 
 
@@ -258,13 +257,9 @@ class PromptVaultSecrets(VaultSecrets):
         return vault_pass, new_vault_pass
 
 
-
-
-
 class VaultLib:
 
     def __init__(self, secrets=None):
-        #self.b_password = to_bytes(password, errors='strict', encoding='utf-8')
         self.secrets = secrets
         self.cipher_name = None
         # Add key_id to header
@@ -423,7 +418,7 @@ class VaultLib:
         self.key_id = 'version_1_1_default_key'
         # Only attempt to find key_id if the vault file is version 1.2 or newer
         if self.b_version == b'1.2':
-            self.key_id = to_unicode(tmpheader[3].strip())
+            self.key_id = to_unicode(b_tmp_header[3].strip())
 
         return b_clean_data
 
@@ -740,7 +735,7 @@ class VaultAES:
 
         b_digest = b_digest_i = b''
         while len(b_digest) < key_length + iv_length:
-            b_text = b''.join([b_digest_i, password, b_salt])
+            b_text = b''.join([b_digest_i, secrets.get_secret(), b_salt])
             b_digest_i = to_bytes(md5(b_text).digest(), errors='strict')
             b_digest += b_digest_i
 
@@ -772,7 +767,7 @@ class VaultAES:
         b_salt = b_tmpsalt[len(b'Salted__'):]
 
         # TODO: default id?
-        #password = secrets.get_secret()
+        # password = secrets.get_secret()
 
         b_key, b_iv = self.aes_derive_key_and_iv(secrets, b_salt, key_length, bs)
         cipher = AES.new(b_key, AES.MODE_CBC, b_iv)
@@ -894,14 +889,10 @@ class VaultAES256:
         b_message = b'\n'.join([hexlify(b_salt), to_bytes(hmac.hexdigest()), hexlify(b_ciphertext_data)])
         return hexlify(b_message)
 
-
     def _verify_hmac(self, context, crypted_hmac, crypted_data):
         hmacDecrypt = HMAC.new(context.key2, crypted_data, SHA256)
         if not self.is_equal(crypted_hmac, to_bytes(hmacDecrypt.hexdigest())):
             return None
-
-
-    def _decrypt(self, context, crytped_data
 
     def decrypt(self, data, secrets):
         b_data = data

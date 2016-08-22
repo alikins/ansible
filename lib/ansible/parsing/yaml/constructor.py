@@ -38,12 +38,16 @@ except ImportError:
 
 
 class AnsibleConstructor(Constructor):
-    def __init__(self, file_name=None, vault_password=None):
-        self._vault_password = vault_password
+    def __init__(self, file_name=None, vault=None):
         self._ansible_file_name = file_name
         super(AnsibleConstructor, self).__init__()
         self._vaults = {}
-        self._vaults['default'] = VaultLib(password=self._vault_password)
+        self._vault_id = 'default'
+        self._vaults[self._vault_id] = vault
+
+    @property
+    def vault(self):
+        return self._vaults.get(self._vault_id, None)
 
     def construct_yaml_map(self, node):
         data = AnsibleMapping()
@@ -105,14 +109,13 @@ class AnsibleConstructor(Constructor):
         value = self.construct_scalar(node)
         ciphertext_data = to_bytes(value)
 
-        if self._vault_password is None:
+        if self.vault is None:
             raise ConstructorError(None, None,
-                    "found vault but no vault password provided", node.start_mark)
+                    "found vault but no vault secrets provided", node.start_mark)
 
         # could pass in a key id here to choose the vault to associate with
-        vault = self._vaults['default']
         ret = AnsibleVaultEncryptedUnicode(ciphertext_data)
-        ret.vault = vault
+        ret.vault = self.vault
         return ret
 
     def construct_yaml_seq(self, node):
