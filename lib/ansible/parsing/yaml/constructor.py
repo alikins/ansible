@@ -138,24 +138,6 @@ class AnsibleConstructor(Constructor):
 
         return (datasource, line, column)
 
-    def construct_vault(self, node):
-        # ciphertext_data = self.construct_yaml_bytestring(node, unsafe=True)
-        # ciphertext_data = self.construct_yaml_str(node, unsafe=True)
-        value = self.construct_scalar(node)
-        ciphertext_data = value
-
-        if self._vault_password is None:
-            raise ConstructorError(None, None,
-                    "found vault but no vault password provided", node.start_mark)
-
-        vault = VaultLib(password=self._vault_password)
-        if not vault.is_encrypted(ciphertext_data.encode('utf-8')):
-            raise ConstructorError(None, None,
-                    "found vault but argument is not encrypted", node.start_mark)
-
-        plaintext_data = vault.decrypt(ciphertext_data)
-
-        return plaintext_data
 
 AnsibleConstructor.add_constructor(
     u'tag:yaml.org,2002:map',
@@ -176,10 +158,6 @@ AnsibleConstructor.add_constructor(
 AnsibleConstructor.add_constructor(
     u'tag:yaml.org,2002:seq',
     AnsibleConstructor.construct_yaml_seq)
-
-AnsibleConstructor.add_constructor(
-    u'!vaultBlob',
-    AnsibleConstructor.construct_vault)
 
 AnsibleConstructor.add_constructor(
     u'!unsafe',

@@ -23,6 +23,7 @@ __metaclass__ = type
 import six
 
 import binascii
+import io
 import os
 
 from binascii import hexlify
@@ -55,6 +56,75 @@ try:
     HAS_AES = True
 except ImportError:
     HAS_AES = False
+
+
+class TestVaultIsEncrypted(unittest.TestCase):
+    def test_utf8_not_encrypted(self):
+        b_data = "foobar".encode('utf8')
+        self.assertFalse(vault.is_encrypted(b_data))
+
+    def test_utf8_encrypted(self):
+        data = u"$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(b"ansible")
+        b_data = data.encode('utf8')
+        self.assertTrue(vault.is_encrypted(b_data))
+
+    def test_bytes_not_encrypted(self):
+        b_data = b"foobar"
+        self.assertFalse(vault.is_encrypted(b_data))
+
+    def test_bytes_encrypted(self):
+        b_data = b"$ANSIBLE_VAULT;9.9;TEST\n%s" + hexlify(b"ansible")
+        self.assertTrue(vault.is_encrypted(b_data))
+
+    def test_unicode_not_encrypted_py3(self):
+        if not six.PY3:
+            raise SkipTest()
+        data = u"ァ ア ィ イ ゥ ウ ェ エ ォ オ カ ガ キ ギ ク グ ケ "
+        self.assertRaises(TypeError, vault.is_encrypted, data)
+
+    def test_unicode_not_encrypted_py2(self):
+        if six.PY3:
+            raise SkipTest()
+        data = u"ァ ア ィ イ ゥ ウ ェ エ ォ オ カ ガ キ ギ ク グ ケ "
+        # py2 will take a unicode string, but that should always fails
+        self.assertFalse(vault.is_encrypted(data))
+
+    def test_unicode_is_encrypted_py3(self):
+        if not six.PY3:
+            raise SkipTest()
+        data = "$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(b"ansible")
+        # should still be a type error
+        self.assertRaises(TypeError, vault.is_encrypted, data)
+
+    def test_unicode_is_encrypted_py2(self):
+        if six.PY3:
+            raise SkipTest()
+        data = u"$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(b"ansible")
+        # THis works, but arguably shouldn't...
+        self.assertTrue(vault.is_encrypted(data))
+
+
+class TestVaultIsEncryptedFile(unittest.TestCase):
+    def test_utf8_not_encrypted(self):
+        b_data = "foobar".encode('utf8')
+        b_data_fo = io.BytesIO(b_data)
+        self.assertFalse(vault.is_encrypted_file(b_data_fo))
+
+    def test_utf8_encrypted(self):
+        data = u"$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(b"ansible")
+        b_data = data.encode('utf8')
+        b_data_fo = io.BytesIO(b_data)
+        self.assertTrue(vault.is_encrypted_file(b_data_fo))
+
+    def test_bytes_not_encrypted(self):
+        b_data = b"foobar"
+        b_data_fo = io.BytesIO(b_data)
+        self.assertFalse(vault.is_encrypted_file(b_data_fo))
+
+    def test_bytes_encrypted(self):
+        b_data = b"$ANSIBLE_VAULT;9.9;TEST\n%s" + hexlify(b"ansible")
+        b_data_fo = io.BytesIO(b_data)
+        self.assertTrue(vault.is_encrypted_file(b_data_fo))
 
 
 class TestVaultCipherAes256(unittest.TestCase):

@@ -382,7 +382,7 @@ class DataLoader():
 
         try:
             with open(to_bytes(real_path), 'rb') as f:
-                if self._vault.is_encrypted(f):
+                if self._vault.is_encrypted_file(f):
                     # if the file is encrypted and no password was specified,
                     # the decrypt call would throw an error, but we check first
                     # since the decrypt function doesn't know the file name

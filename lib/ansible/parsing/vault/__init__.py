@@ -105,6 +105,32 @@ def check_prereqs():
 class AnsibleVaultError(AnsibleError):
     pass
 
+def is_encrypted(b_data):
+    """ Test if this is vault encrypted data blob
+
+    :arg data: a python2 str or a python3 'bytes' to test whether it is
+        recognized as vault encrypted data
+    :returns: True if it is recognized.  Otherwise, False.
+    """
+    if b_data.startswith(b_HEADER):
+        return True
+    return False
+
+def is_encrypted_file(file_obj):
+    """Test if the contents of a file obj are a vault encrypted data blob.
+
+    The data read from the file_obj is expected to be bytestrings (py2 'str' or
+    python3 'bytes'). This more or less expects 'utf-8' encoding.
+
+    :arg file_obj: A file object that will be read from.
+    :returns: True if the file is a vault file. Otherwise, False.
+    """
+    # read the header and reset the file stream to where it started
+    current_position = file_obj.tell()
+    b_header_part = file_obj.read(len(b_HEADER))
+    file_obj.seek(current_position)
+    return is_encrypted(b_header_part)
+
 # VaultLib split into
 #  VaultContext
 #      - key/passphrase
@@ -123,6 +149,7 @@ class VaultLib:
         self.cipher_name = None
         self.b_version = b'1.1'
 
+    # really b_data, but for compat
     def is_encrypted(self, data):
         """ Test if this is vault encrypted data
 
@@ -130,19 +157,13 @@ class VaultLib:
             recognized as vault encrypted data
         :returns: True if it is recognized.  Otherwise, False.
         """
-        b_plaintext = data
-        b_header = HEADER.encode('utf-8')
 
-        # TODO: split file like object handling to seperate method
-        if hasattr(b_plaintext, 'read'):
-            current_position = b_plaintext.tell()
-            b_header_part = b_plaintext.read(len(b_header))
-            b_plaintext.seek(current_position)
-            return self.is_encrypted(b_header_part)
+        # This could check to see if the data is a vault blob and is encrypted with a key associated with this vault
+        # instead of just checking the format.
+        return is_encrypted(data)
 
-        if b_plaintext.startswith(b_header):
-            return True
-        return False
+    def is_encrypted_file(self, file_obj):
+        return is_encrypted_file(file_obj)
 
     def encrypt(self, data):
         """Vault encrypt a piece of data.
@@ -205,9 +226,9 @@ class VaultLib:
         # TODO: move to a is_vault() of validate_format()
         # TODO: raise some NotEncryptedError(AnsibleVaultError) here or in validate_format()
         if not self.is_encrypted(b_data):
-            msg = "input is not encrypted"
+            msg = "input is not vault encrypted data"
             if filename:
-                msg += "%s is not encrypted" % filename
+                msg += "%s is not a vault encrypted file" % filename
             raise AnsibleError(msg)
 
         # clean out header
@@ -548,11 +569,7 @@ class VaultFile(object):
         os.unlink(self.tmpfile)
 
     def is_encrypted(self):
-        peak = self.filehandle.readline()
-        if peak.startswith(b_HEADER):
-            return True
-        else:
-            return False
+        return is_encrypted_file(self.filehandle)
 
     def get_decrypted(self):
         check_prereqs()
