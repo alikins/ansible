@@ -88,6 +88,7 @@ class PluginLoader:
 
         self._extra_dirs = []
         self._searched_paths = set()
+        self._added_dir_paths = set()
         #self._new_paths = self._get_initial_paths()
         self._new_paths = []
 
@@ -184,13 +185,24 @@ class PluginLoader:
     def _get_win_paths(self):
         pass
 
-    def _get_initial_paths(self):
+    def _get_new_paths(self):
+        # We don't care if we think we searched the path before, something has claimed it is 'new'
+        new_paths = []
+        for path in (p for p in self._new_paths if os.path.isdir(p)):
+            new_paths.append(path)
+
+        display.vvv('new_paths=%s' % new_paths)
+        self._new_paths = []
+        return new_paths
+
+    def _get_paths(self):
         ''' Return a list of paths to search for plugins in '''
 
         new_paths = []
-        new_paths.extend(self._get_extra_paths())
         new_paths.extend(self._get_config_paths())
         new_paths.extend(self._get_package_paths())
+        new_paths.extend(self._get_new_paths())
+        new_paths.extend(self._get_extra_paths())
         #new_paths.append(self._get_win_paths())
         # start with all the extra dirs, add configured dirs and sub paths
         #ret = self._extra_dirs[:]
@@ -232,21 +244,9 @@ class PluginLoader:
         if directory is not None:
             if with_subdir:
                 directory = os.path.join(directory, self.subdir)
-            if directory not in self._extra_dirs:
-                # append the directory and invalidate the path cache
-                self._extra_dirs.append(directory)
-        #        self._paths = None
-                # self._plugin_path_cache = defaultdict(dict)
-                self._new_paths.append(directory)
+            self._added_dir_paths.add(directory)
+            self._extra_dirs.append(directory)
 
-    def _get_new_paths(self):
-        # We don't care if we think we searched the path before, something has claimed it is 'new'
-        new_paths = []
-        for path in (p for p in self._new_paths if os.path.isdir(p)):
-            new_paths.append(path)
-
-        display.vvv('new_paths=%s' % new_paths)
-        return new_paths
 
     def _cache_full_path(self, mod_type, full_path):
         '''Populate the plugin path caches by side effect'''
@@ -264,22 +264,21 @@ class PluginLoader:
             extension = splitname[1]
         except IndexError:
             extension = ''
-
-        display.vvv('full_path=%s' % full_path)
+        # display.vvv('full_path=%s' % full_path)
 
         # Module found, now enter it into the caches that match
         # this file
-        if base_name not in self._plugin_path_cache['']:
-            self._plugin_path_cache[''][base_name] = full_path
+        #if base_name not in self._plugin_path_cache['']:
+        self._plugin_path_cache[''][base_name] = full_path
 
-        if full_name not in self._plugin_path_cache['']:
-            self._plugin_path_cache[''][full_name] = full_path
+        #if full_name not in self._plugin_path_cache['']:
+        self._plugin_path_cache[''][full_name] = full_path
 
-        if base_name not in self._plugin_path_cache[extension]:
-            self._plugin_path_cache[extension][base_name] = full_path
+        #if base_name not in self._plugin_path_cache[extension]:
+        self._plugin_path_cache[extension][base_name] = full_path
 
-        if full_name not in self._plugin_path_cache[extension]:
-            self._plugin_path_cache[extension][full_name] = full_path
+        #if full_name not in self._plugin_path_cache[extension]:
+        self._plugin_path_cache[extension][full_name] = full_path
 
     def _is_valid_full_path(self, full_path):
         if not os.path.isfile(full_path):
@@ -299,11 +298,12 @@ class PluginLoader:
         # filter out any invalid files or dirs
         return [f for f in full_paths if self._is_valid_full_path(f)]
 
-    def update_plugin_cache(self, mod_type, name):
+    def update_plugin_cache(self, mod_type, name, paths=None):
+        paths = paths or []
         display.vvv('update_plugin_cache')
         traceback.print_stack()
         # First call will be all configured paths
-        for dir_path in (p for p in self._get_new_paths()):
+        for dir_path in (p for p in paths):
             full_paths = self._get_full_paths(dir_path)
 
             # TODO: currently the module cache key is based on filename manipulations of full_path,
@@ -316,10 +316,22 @@ class PluginLoader:
             self._searched_paths.add(dir_path)
 
     def find_plugin(self, name, mod_type=None):
+        paths = self._get_paths()
+        return self._find_plugin(name, mod_type, paths)
+
+    def _find_plugin(self, name, mod_type=None, paths=None):
         ''' Find a plugin named name '''
         # mod_type can be an enum
-        mod_type = mod_type or self.class_name or ''
-        display.vvv('find_plugin name=%s mod_type=%s' % (name, mod_type))
+        paths = paths or []
+        mod_type = mod_type or ''
+        if mod_type:
+            suffix = mod_type
+        elif self.class_name:
+            suffix = '.py'
+        else:
+            suffix = ''
+        mod_type = suffix
+        display.vvv('find_plugin name=%s mod_type=%s self.class_name=%s' % (name, mod_type, self.class_name))
 
         # Process 'new dirs', then check the caches
 
@@ -327,17 +339,17 @@ class PluginLoader:
         # requested mod_type
 
         # Check in any new paths before trying to use the cache
-        self.update_plugin_cache(mod_type, name)
+        self.update_plugin_cache(mod_type, name, paths)
 
-        # lookup in the cached
+        # lookup in the cache
         return self._search_cache(mod_type, name)
 
     def _search_cache(self, mod_type, name):
         display.vvv('mod_type=%s name=%s' % (mod_type, name))
 
-        display.vvv('cache=%s' % pprint.pformat(self._plugin_path_cache))
-        display.vvv('cache[.py] = %s' % pprint.pformat(self._plugin_path_cache['.py']))
-        display.vvv('cache[%s][%s]=%s' % (mod_type, name, pprint.pformat(self._plugin_path_cache[mod_type])))
+        #display.vvv('cache=%s' % pprint.pformat(self._plugin_path_cache))
+        #display.vvv('cache[.py] = %s' % pprint.pformat(self._plugin_path_cache['.py']))
+        display.vvv('cache[%s][%s]=%s' % (mod_type, name, pprint.pformat(self._plugin_path_cache[mod_type].get(name,None))))
 
         try:
             return self._plugin_path_cache[mod_type][name]
@@ -403,17 +415,20 @@ class PluginLoader:
     def get(self, name, *args, **kwargs):
         ''' instantiates a plugin of the given name using arguments '''
 
+        # first part is find_path()
         found_in_cache = True
         class_only = kwargs.pop('class_only', False)
         if name in self.aliases:
             name = self.aliases[name]
 
-        self._new_paths = self._get_initial_paths()
+        # update paths
+        paths = self._get_paths()
 
-        path = self.find_plugin(name)
+        path = self._find_plugin(name, paths=paths)
         if path is None:
             return None
 
+        # second part is get_class()
         if path not in self._module_cache:
             self._module_cache[path] = self._load_module_source('.'.join([self.package, name]), path)
             found_in_cache = False
@@ -433,6 +448,8 @@ class PluginLoader:
 
         self._display_plugin_load(self.class_name, name, self._searched_paths, path,
                                   found_in_cache=found_in_cache, class_only=class_only)
+
+        # third parts is load() [get an an instance of the plugin]
         if not class_only:
             obj = obj(*args, **kwargs)
 
@@ -457,9 +474,12 @@ class PluginLoader:
         all_matches = []
         found_in_cache = True
 
-        for i in self._get_new_paths():
+        # first part is find_paths()
+        for i in self._get_paths():
             all_matches.extend(glob.glob(os.path.join(i, "*.py")))
 
+
+        # second part is get_class() for each path
         for path in sorted(all_matches, key=lambda match: os.path.basename(match)):
             name, _ = os.path.splitext(path)
             if '__init__' in name:
@@ -489,12 +509,40 @@ class PluginLoader:
 
             self._display_plugin_load(self.class_name, name, self._searched_paths, path,
                                       found_in_cache=found_in_cache, class_only=class_only)
+
+            # third part is load() for each class
             if not class_only:
                 obj = obj(*args, **kwargs)
 
             # set extra info on the module, in case we want it later
             setattr(obj, '_original_path', path)
             yield obj
+
+
+class ModuleLoader(PluginLoader):
+
+    def __init__(self, class_name, package, config, subdir, aliases={}, required_base_class=None):
+        super(ModuleLoader, self).__init__(class_name, package, config, subdir, aliases, required_base_class)
+
+    def _get_paths(self):
+        ''' Return a list of paths to search for plugins in '''
+
+        new_paths = []
+        new_paths.extend(self._get_config_paths())
+        new_paths.extend(self._get_extra_paths())
+        new_paths.extend(self._get_new_paths())
+        return new_paths
+
+    def _load_module_source(self, name, path):
+        if name in sys.modules:
+            # See https://github.com/ansible/ansible/issues/13110
+            return sys.modules[name]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            with open(path, 'r') as module_file:
+                module = imp.load_source(name, path, module_file)
+        return module
+
 
 action_loader = PluginLoader(
     'ActionModule',
@@ -534,7 +582,7 @@ shell_loader = PluginLoader(
     'shell_plugins',
 )
 
-module_loader = PluginLoader(
+module_loader = ModuleLoader(
     '',
     'ansible.modules',
     C.DEFAULT_MODULE_PATH,
