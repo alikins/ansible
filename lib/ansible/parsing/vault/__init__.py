@@ -105,7 +105,17 @@ def check_prereqs():
 class AnsibleVaultError(AnsibleError):
     pass
 
-
+# VaultLib split into
+#  VaultContext
+#      - key/passphrase
+#      - algo
+#         - name
+#         - type
+#         - version
+#      - context_id
+#  VaultEnvelope  (maybe)
+#     - render / format_output
+#     - parse / split_header
 class VaultLib:
 
     def __init__(self, password):
@@ -273,6 +283,7 @@ class VaultEditor:
     def __init__(self, password):
         self.vault = VaultLib(password)
 
+    # TODO: mv shred file stuff to it's own class
     def _shred_file_custom(self, tmp_path):
         """"Destroy a file, when shred (core-utils) is not available
 
@@ -513,7 +524,7 @@ class VaultEditor:
 
         return editor
 
-
+# TODO: does anything use this?
 class VaultFile(object):
 
     def __init__(self, password, filename):
@@ -739,6 +750,7 @@ class VaultAES256:
         b_salt, b_ciphertext_hmac, b_ciphertext_data = b_data.split(b"\n", 2)
         b_salt = unhexlify(b_salt)
         b_ciphertext_data = unhexlify(b_ciphertext_data)
+
         b_key1, b_key2, b_iv = self.gen_key_initctr(password, b_salt)
 
         # TODO: move to it's own method
