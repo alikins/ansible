@@ -44,6 +44,9 @@ MODULE_CACHE = {}
 PATH_CACHE = {}
 PLUGIN_PATH_CACHE = {}
 
+import traceback
+import pprint
+
 def get_all_plugin_loaders():
     return [(name, obj) for (name, obj) in inspect.getmembers(sys.modules[__name__]) if isinstance(obj, PluginLoader)]
 
@@ -85,6 +88,8 @@ class PluginLoader:
 
         self._extra_dirs = []
         self._searched_paths = set()
+        #self._new_paths = self._get_initial_paths()
+        self._new_paths = []
 
     def __setstate__(self, data):
         '''
@@ -140,9 +145,9 @@ class PluginLoader:
         results = []
         results.append(dir)
         for root, subdirs, files in os.walk(dir, followlinks=True):
-           if '__init__.py' in files:
-               for x in subdirs:
-                   results.append(os.path.join(root,x))
+            if '__init__.py' in files:
+                for x in subdirs:
+                    results.append(os.path.join(root,x))
         return results
 
     def _get_package_paths(self):
@@ -158,27 +163,41 @@ class PluginLoader:
             self.package_path = os.path.dirname(m.__file__)
         return self._all_directories(self.package_path)
 
-    def _get_paths(self):
-        ''' Return a list of paths to search for plugins in '''
+    def _get_extra_paths(self):
+        # FIXME: does this need to be a copy?
+        return self._extra_dirs[:]
 
-        if self._paths is not None:
-            return self._paths
-
-        ret = self._extra_dirs[:]
-
+    def _get_config_paths(self):
         # look in any configured plugin paths, allow one level deep for subcategories
+        config_paths = []
         if self.config is not None:
             for path in self.config:
                 path = os.path.realpath(os.path.expanduser(path))
                 contents = glob.glob("%s/*" % path) + glob.glob("%s/*/*" % path)
                 for c in contents:
-                    if os.path.isdir(c) and c not in ret:
-                        ret.append(c)
-                if path not in ret:
-                    ret.append(path)
+                    if os.path.isdir(c) and c not in config_paths:
+                        config_paths.append(c)
+                if path not in config_paths:
+                    config_paths.append(path)
+        return config_paths
+
+    def _get_win_paths(self):
+        pass
+
+    def _get_initial_paths(self):
+        ''' Return a list of paths to search for plugins in '''
+
+        new_paths = []
+        new_paths.extend(self._get_extra_paths())
+        new_paths.extend(self._get_config_paths())
+        new_paths.extend(self._get_package_paths())
+        #new_paths.append(self._get_win_paths())
+        # start with all the extra dirs, add configured dirs and sub paths
+        #ret = self._extra_dirs[:]
+
 
         # look for any plugins installed in the package subtree
-        ret.extend(self._get_package_paths())
+        #ret.extend(self._get_package_paths())
 
         # HACK: because powershell modules are in the same directory
         # hierarchy as other modules we have to process them last.  This is
@@ -194,7 +213,7 @@ class PluginLoader:
         # would have class_names, they would not work as written.
         reordered_paths = []
         win_dirs = []
-        for path in ret:
+        for path in new_paths:
             if path.endswith('windows'):
                 win_dirs.append(path)
             else:
@@ -202,7 +221,7 @@ class PluginLoader:
         reordered_paths.extend(win_dirs)
 
         # cache and return the result
-        self._paths = reordered_paths
+        #self._paths = reordered_paths
         return reordered_paths
 
     def add_directory(self, directory, with_subdir=False):
@@ -216,93 +235,153 @@ class PluginLoader:
             if directory not in self._extra_dirs:
                 # append the directory and invalidate the path cache
                 self._extra_dirs.append(directory)
-                self._paths = None
+        #        self._paths = None
+                # self._plugin_path_cache = defaultdict(dict)
+                self._new_paths.append(directory)
 
-    def find_plugin(self, name, mod_type=''):
+    def _get_new_paths(self):
+        # We don't care if we think we searched the path before, something has claimed it is 'new'
+        new_paths = []
+        for path in (p for p in self._new_paths if os.path.isdir(p)):
+            new_paths.append(path)
+
+        display.vvv('new_paths=%s' % new_paths)
+        return new_paths
+
+    def _cache_full_path(self, mod_type, full_path):
+        '''Populate the plugin path caches by side effect'''
+        full_name = os.path.basename(full_path)
+
+        # HACK: We have no way of executing python byte
+        # compiled files as ansible modules so specifically exclude them
+        if full_path.endswith(('.pyc', '.pyo')):
+            return
+
+        # _cache_path()
+        splitname = os.path.splitext(full_name)
+        base_name = splitname[0]
+        try:
+            extension = splitname[1]
+        except IndexError:
+            extension = ''
+
+        display.vvv('full_path=%s' % full_path)
+
+        # Module found, now enter it into the caches that match
+        # this file
+        if base_name not in self._plugin_path_cache['']:
+            self._plugin_path_cache[''][base_name] = full_path
+
+        if full_name not in self._plugin_path_cache['']:
+            self._plugin_path_cache[''][full_name] = full_path
+
+        if base_name not in self._plugin_path_cache[extension]:
+            self._plugin_path_cache[extension][base_name] = full_path
+
+        if full_name not in self._plugin_path_cache[extension]:
+            self._plugin_path_cache[extension][full_name] = full_path
+
+    def _is_valid_full_path(self, full_path):
+        if not os.path.isfile(full_path):
+            return False
+        # make module type specific
+        if full_path.endswith('__init__.py'):
+            return False
+        return True
+
+    def _get_full_paths(self, dir_path):
+        full_paths = []
+        try:
+            full_paths = (os.path.join(dir_path, f) for f in os.listdir(dir_path))
+        except OSError as e:
+            display.warning("Error accessing plugin paths: %s" % to_unicode(e))
+
+        # filter out any invalid files or dirs
+        return [f for f in full_paths if self._is_valid_full_path(f)]
+
+    def update_plugin_cache(self, mod_type, name):
+        display.vvv('update_plugin_cache')
+        traceback.print_stack()
+        # First call will be all configured paths
+        for dir_path in (p for p in self._get_new_paths()):
+            full_paths = self._get_full_paths(dir_path)
+
+            # TODO: currently the module cache key is based on filename manipulations of full_path,
+            #       eventually it should be decoupled
+            # cache the plugins (or modules) we found
+            for full_path in full_paths:
+                self._cache_full_path(mod_type, full_path)
+
+            # track the paths we've searched in for user info messages
+            self._searched_paths.add(dir_path)
+
+    def find_plugin(self, name, mod_type=None):
         ''' Find a plugin named name '''
+        # mod_type can be an enum
+        mod_type = mod_type or self.class_name or ''
+        display.vvv('find_plugin name=%s mod_type=%s' % (name, mod_type))
 
-        if mod_type:
-            suffix = mod_type
-        elif self.class_name:
-            # Ansible plugins that run in the controller process (most plugins)
-            suffix = '.py'
-        else:
-            # Only Ansible Modules.  Ansible modules can be any executable so
-            # they can have any suffix
-            suffix = ''
+        # Process 'new dirs', then check the caches
 
         # The particular cache to look for modules within.  This matches the
         # requested mod_type
-        pull_cache = self._plugin_path_cache[suffix]
+
+        # Check in any new paths before trying to use the cache
+        self.update_plugin_cache(mod_type, name)
+
+        # lookup in the cached
+        return self._search_cache(mod_type, name)
+
+    def _search_cache(self, mod_type, name):
+        display.vvv('mod_type=%s name=%s' % (mod_type, name))
+
+        display.vvv('cache=%s' % pprint.pformat(self._plugin_path_cache))
+        display.vvv('cache[.py] = %s' % pprint.pformat(self._plugin_path_cache['.py']))
+        display.vvv('cache[%s][%s]=%s' % (mod_type, name, pprint.pformat(self._plugin_path_cache[mod_type])))
+
         try:
-            return pull_cache[name]
+            return self._plugin_path_cache[mod_type][name]
         except KeyError:
-            # Cache miss.  Now let's find the plugin
+            # Didn't find the plugin in this directory.  Load modules from
+            # the next one
             pass
 
-        # TODO: Instead of using the self._paths cache (PATH_CACHE) and
-        #       self._searched_paths we could use an iterator.  Before enabling that
-        #       we need to make sure we don't want to add additional directories
-        #       (add_directory()) once we start using the iterator.  Currently, it
-        #       looks like _get_paths() never forces a cache refresh so if we expect
-        #       additional directories to be added later, it is buggy.
-        for path in (p for p in self._get_paths() if p not in self._searched_paths and os.path.isdir(p)):
-            try:
-                full_paths = (os.path.join(path, f) for f in os.listdir(path))
-            except OSError as e:
-                display.warning("Error accessing plugin paths: %s" % to_unicode(e))
+        return self._search_alias_in_cache(mod_type, name)
 
-            for full_path in (f for f in full_paths if os.path.isfile(f) and not f.endswith('__init__.py')):
-                full_name = os.path.basename(full_path)
+    def _search_alias_in_cache(self, mod_type, name):
+        # if nothing is found, try finding alias or a deprecated version
+        #
+        # FIXME: magic string name
+        # If the module was referenced directly with the _module name, we
+        # would have found it already.
+        if name.startswith('_'):
+            return None
 
-                # HACK: We have no way of executing python byte
-                # compiled files as ansible modules so specifically exclude them
-                if full_path.endswith(('.pyc', '.pyo')):
-                    continue
+        alias_name = '_' + name
 
-                splitname = os.path.splitext(full_name)
-                base_name = splitname[0]
-                try:
-                    extension = splitname[1]
-                except IndexError:
-                    extension = ''
+        alias_path = self._plugin_path_cache[mod_type].get(alias_name, None)
+        if not alias_path:
+            return None
 
-                # Module found, now enter it into the caches that match
-                # this file
-                if base_name not in self._plugin_path_cache['']:
-                    self._plugin_path_cache[''][base_name] = full_path
+        self._check_deprecated(name, mod_type, alias_path)
 
-                if full_name not in self._plugin_path_cache['']:
-                    self._plugin_path_cache[''][full_name] = full_path
+        return alias_path
 
-                if base_name not in self._plugin_path_cache[extension]:
-                    self._plugin_path_cache[extension][base_name] = full_path
+    def _check_deprecated(self, name, mod_type, full_path):
+        '''Detect if a plugin is deprecated.
 
-                if full_name not in self._plugin_path_cache[extension]:
-                    self._plugin_path_cache[extension][full_name] = full_path
+        Currently that just means the path name is in the form of '_module_name'.
 
-            self._searched_paths.add(path)
-            try:
-                return pull_cache[name]
-            except KeyError:
-                # Didn't find the plugin in this directory.  Load modules from
-                # the next one
-                pass
+        The side_effect is displaying a deprecated warning.
+        '''
+        # Note: mod_type is currently not used here
 
-        # if nothing is found, try finding alias/deprecated
-        if not name.startswith('_'):
-            alias_name = '_' + name
-            # We've already cached all the paths at this point
-            if alias_name in pull_cache:
-                if not os.path.islink(pull_cache[alias_name]):
-                    display.deprecated('%s is kept for backwards compatibility '
-                              'but usage is discouraged. The module '
-                              'documentation details page may explain '
-                              'more about this rationale.' %
-                              name.lstrip('_'))
-                return pull_cache[alias_name]
-
-        return None
+        if not os.path.islink(full_path):
+            display.deprecated('%s is kept for backwards compatibility '
+                        'but usage is discouraged. The module '
+                        'documentation details page may explain '
+                        'more about this rationale.' %
+                        name.lstrip('_'))
 
     def has_plugin(self, name):
         ''' Checks if a plugin named name exists '''
@@ -328,6 +407,9 @@ class PluginLoader:
         class_only = kwargs.pop('class_only', False)
         if name in self.aliases:
             name = self.aliases[name]
+
+        self._new_paths = self._get_initial_paths()
+
         path = self.find_plugin(name)
         if path is None:
             return None
@@ -375,7 +457,7 @@ class PluginLoader:
         all_matches = []
         found_in_cache = True
 
-        for i in self._get_paths():
+        for i in self._get_new_paths():
             all_matches.extend(glob.glob(os.path.join(i, "*.py")))
 
         for path in sorted(all_matches, key=lambda match: os.path.basename(match)):
