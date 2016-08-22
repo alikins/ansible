@@ -56,8 +56,6 @@ except ImportError:
 
 __all__ = ['Templar']
 
-import logging
-log = logging.getLogger(__name__)
 # A regex for checking to see if a variable we're trying to
 # expand is just a single variable name.
 
