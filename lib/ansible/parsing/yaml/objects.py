@@ -25,10 +25,6 @@ from ansible.compat.six import text_type
 from ansible.errors import AnsibleError
 from ansible.utils.unicode import to_bytes
 
-import logging
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
 
 class AnsibleBaseYAMLObject(object):
     '''
