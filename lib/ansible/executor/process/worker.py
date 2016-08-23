@@ -47,6 +47,9 @@ except ImportError:
 
 __all__ = ['WorkerProcess']
 
+import logging
+log = logging.getLogger(__name__)
+mplog = multiprocessing.get_logger()
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -103,6 +106,8 @@ class WorkerProcess(multiprocessing.Process):
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
+            log.debug('pre task executor')
+            mplog.debug('pre TaskExecutor')
             executor_result = TaskExecutor(
                 self._host,
                 self._task,

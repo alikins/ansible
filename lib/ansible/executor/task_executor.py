@@ -47,6 +47,8 @@ except ImportError:
 
 __all__ = ['TaskExecutor']
 
+import logging
+log = logging.getLogger(__name__)
 
 class TaskExecutor:
 
@@ -173,6 +175,7 @@ class TaskExecutor:
                 old_vars[k] = self._job_vars[k]
             self._job_vars[k] = play_context_vars[k]
 
+        log.debug('play_context_vars=%s', play_context_vars)
         templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=self._job_vars)
         items = None
         if self._task.loop:

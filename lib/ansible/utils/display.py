@@ -37,6 +37,15 @@ from ansible.errors import AnsibleError
 from ansible.utils.color import stringc
 from ansible.module_utils._text import to_bytes, to_text
 
+import multiprocessing
+
+try:
+    from __main__ import debug_lock
+except ImportError:
+    # for those not using a CLI, though ...
+    # this might not work well after fork
+    from multiprocessing import Lock
+    debug_lock = Lock()
 
 try:
     # Python 2
@@ -45,13 +54,38 @@ except NameError:
     # Python 3, we already have raw_input
     pass
 
+DEBUG_LOG_FORMAT = '%(asctime)s [%(processName)s:%(process)s t=%(threadName)s/%(thread)s %(name)s %(levelname)s] @%(filename)s:%(funcName)s:%(lineno)d - %(message)s'
+LOG_FORMAT = '%(asctime)s %(name)s %(message)s'
 
 logger = None
-#TODO: make this a logging callback instead
-if C.DEFAULT_LOG_PATH:
+# TODO: make this a logging callback instead
+if os.getenv('ANSIBLE_LOG_STDOUT'):
+    formatter = logging.Formatter(DEBUG_LOG_FORMAT)
+
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(handler)
+
+    display_logger = logging.getLogger('display')
+    display_logger.setLevel(logging.WARNING)
+
+    mplog = multiprocessing.get_logger()
+    mplog.propagate = True
+    #mplog.setLevel(logging.DEBUG)
+    mplog.setLevel(multiprocessing.SUBDEBUG)
+    #mplog.setLevel(multiprocessing.SUBWARNING)
+    #mplog.addHandler(handler)
+
+    import logging_tree
+    logging_tree.printout()
+elif C.DEFAULT_LOG_PATH:
     path = C.DEFAULT_LOG_PATH
     if (os.path.exists(path) and os.access(path, os.W_OK)) or os.access(os.path.dirname(path), os.W_OK):
-        logging.basicConfig(filename=path, level=logging.DEBUG, format='%(asctime)s %(name)s %(message)s')
+        logging.basicConfig(filename=path, level=logging.DEBUG, format=LOG_FORMAT)
         mypid = str(os.getpid())
         user = getpass.getuser()
         logger = logging.getLogger("p=%s u=%s | " % (mypid, user))
