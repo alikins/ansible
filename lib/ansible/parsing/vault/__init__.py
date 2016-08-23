@@ -135,6 +135,7 @@ def is_encrypted_file(file_obj):
     file_obj.seek(current_position)
     return is_encrypted(b_header_part)
 
+
 class VaultLib:
 
     def __init__(self, password):
@@ -531,7 +532,6 @@ class VaultEditor:
 
         return editor
 
-# TODO: does anything use this?
 class VaultFile(object):
 
     def __init__(self, password, filename):

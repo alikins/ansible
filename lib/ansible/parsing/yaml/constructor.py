@@ -24,7 +24,6 @@ from yaml.nodes import MappingNode
 
 from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode
 from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
-from ansible.parsing.yaml.objects import AnsibleVaultUnencryptedUnicode
 
 from ansible.vars.unsafe_proxy import wrap_var
 from ansible.parsing.vault import VaultLib
@@ -95,12 +94,6 @@ class AnsibleConstructor(Constructor):
 
         return ret
 
-    def construct_vault_unencrypted_unicode(self, node):
-        value = self.construct_scalar(node)
-        ret = AnsibleVaultUnencryptedUnicode(value)
-
-        return ret
-
     def construct_vault_encrypted_unicode(self, node):
         value = self.construct_scalar(node)
         ciphertext_data = to_bytes(value)
@@ -166,7 +159,3 @@ AnsibleConstructor.add_constructor(
 AnsibleConstructor.add_constructor(
     u'!vault-encrypted',
     AnsibleConstructor.construct_vault_encrypted_unicode)
-
-AnsibleConstructor.add_constructor(
-    u'!vault-unencrypted',
-    AnsibleConstructor.construct_vault_unencrypted_unicode)

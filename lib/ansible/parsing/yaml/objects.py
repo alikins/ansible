@@ -69,37 +69,6 @@ class AnsibleSequence(AnsibleBaseYAMLObject, list):
     pass
 
 
-class AnsibleVault(AnsibleBaseYAMLObject, bytes):
-    pass
-
-
-class AnsibleVaultUnencryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
-    """A object created from a !vault-unencrypted yaml object.
-
-    This will be used to allow 'ansible-vault edit' to find yaml objects that
-    should be encrypted.
-
-    WARNING: This should only be used by 'ansible-vault edit'. Normal ansible
-    tools should throw an error if they see this in a yaml file."""
-
-    # This should never get called from ansible/ansible-playbook so maybe
-    # not needed.
-    __UNSAFE__ = True
-    yaml_tag = u'!vault-unencrypted'
-
-    def __init__(self, plaintext):
-        # super(AnsibleVaultUnencryptedUnicode, self).__init__(plaintext)
-        super(AnsibleVaultUnencryptedUnicode, self).__init__()
-        # after construction, calling code has to set the .vault attribute to a vaultlib object
-        self.vault = None
-        self.plaintext = plaintext
-
-    def __str__(self):
-        return str(self.plaintext)
-
-    def __unicode__(self):
-        return unicode(self.plaintext)
-
 # Unicode like object that is not evaluated (decrypted) until it needs to be
 # TODO: is there a reason these objects are subclasses for YAMLObject?
 class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
@@ -125,21 +94,12 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         The .data atttribute is a property that returns the decrypted plaintext
         of the ciphertext as a PY2 unicode or PY3 string object.
         '''
-        #super(AnsibleVaultEncryptedUnicode, self).__init__(ciphertext)
         super(AnsibleVaultEncryptedUnicode, self).__init__()
+
         # after construction, calling code has to set the .vault attribute to a vaultlib object
         self.vault = None
         self._ciphertext = to_bytes(ciphertext)
         assert type(ciphertext) == type(b'')
-        #super(AnsibleVaultEncryptedUnicode, self).__init__(ciphertext)
-        ## remove
-
-
-
-#        import pdb; pdb.set_trace()
-        # import ptpdb; ptpdb.set_trace()##remove
-
-
 
     @property
     def data(self):
@@ -147,7 +107,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
             # FIXME: raise exception?
             return self._ciphertext
         return self.vault.decrypt(self._ciphertext).decode()
-
 
     @data.setter
     def data(self, value):
