@@ -54,7 +54,7 @@ except ImportError:
     debug_lock = Lock()
 
 # TODO: mv these to a version abstration class?
-#    
+#
 try:
     # Python 2
     input = raw_input
