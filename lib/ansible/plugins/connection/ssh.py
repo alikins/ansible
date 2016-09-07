@@ -481,8 +481,8 @@ class Connection(ConnectionBase):
                 b_chunk = p.stderr.read()
                 if b_chunk == b'':
                     rpipes.remove(p.stderr)
-                tmp_stderr += chunk
-                display.debug("stderr chunk (state=%s):\n>>>%s<<<\n" % (state, to_text(chunk)))
+                b_tmp_stderr += b_chunk
+                display.debug("stderr chunk (state=%s):\n>>>%s<<<\n" % (state, to_text(b_chunk)))
                 log.debug("stdout chunk (state=%s)", state)
                 log.debug("stdout chunk=%s", b_chunk)
 
@@ -729,7 +729,7 @@ class Connection(ConnectionBase):
         super(Connection, self).put_file(in_path, out_path)
 
         display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self.host)
-        logger.log(logger.VVV, u"PUT %s TO %s", in_path, out_path, extra={'host':self.host})
+        logging.log(logger.VVV, u"PUT %s TO %s", in_path, out_path, extra={'host':self.host})
         if not os.path.exists(to_bytes(in_path, errors='strict')):
             raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_str(in_path)))
 
