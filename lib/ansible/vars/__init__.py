@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import sys
 
@@ -50,6 +51,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 VARIABLE_CACHE = dict()
 HOSTVARS_CACHE = dict()
@@ -374,7 +377,9 @@ class VariableManager:
             if  'environment' not in all_vars:
                 all_vars['environment'] = task.environment
             else:
-                display.warning("The variable 'environment' appears to be used already, which is also used internally for environment variables set on the task/block/play. You should use a different variable name to avoid conflicts with this internal variable")
+                msg = "The variable 'environment' appears to be used already, which is also used internally for environment variables set on the task/block/play. You should use a different variable name to avoid conflicts with this internal variable"
+                display.warning(msg)
+                log.warning(msg)
 
         # if we have a task and we're delegating to another host, figure out the
         # variables for that host now so we don't have to rely on hostvars later

@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import fnmatch
+import logging
 import os
 import subprocess
 import sys
@@ -39,6 +40,7 @@ from ansible.parsing.utils.addresses import parse_address
 from ansible.plugins import vars_loader
 from ansible.utils.vars import combine_vars
 from ansible.utils.path import unfrackpath
+from ansible import logger
 
 try:
     from __main__ import display
@@ -46,6 +48,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 HOSTS_PATTERNS_CACHE = {}
 
@@ -138,7 +141,11 @@ class Inventory(object):
                     # set default localhost from inventory to avoid creating an implicit one. Last localhost defined 'wins'.
                     if self.localhost is not None:
                         display.warning("A duplicate localhost-like entry was found (%s). First found localhost was %s" % (h, self.localhost.name))
+                        log.warning("A duplicate localhost-like entry was found (%s). First found localhost was %s",
+                                    h, self.localhost.name)
                     display.vvvv("Set default localhost to %s" % h)
+                    log.log(logger.VVV, "Set default localhost to %s", h)
+
                     self.localhost = new_host
                 all.add_host(new_host)
         elif self._loader.path_exists(host_list):
@@ -156,6 +163,7 @@ class Inventory(object):
                 raise AnsibleError("Unable to parse %s as an inventory source" % host_list)
         else:
             display.warning("Host file not found: %s" % to_text(host_list))
+            log.warning("Host file not found: %s", host_list)
 
         self._vars_plugins = [ x for x in vars_loader.all(self) ]
 
@@ -418,6 +426,7 @@ class Inventory(object):
                 subscript = (int(start), int(end))
                 if sep == '-':
                     display.warning("Use [x:y] inclusive subscripts instead of [x-y] which has been removed")
+                    log.warning("Use [x:y] inclusive subscripts instead of [x-y] which has been removed")
 
         return (pattern, subscript)
 
@@ -490,8 +499,11 @@ class Inventory(object):
                 py_interp = sys.executable
                 if not py_interp:
                     # sys.executable is not set in some cornercases.  #13585
-                    display.warning('Unable to determine python interpreter from sys.executable. Using /usr/bin/python default.'
-                            ' You can correct this by setting ansible_python_interpreter for localhost')
+                    msg = 'Unable to determine python interpreter from sys.executable. '
+                    'Using /usr/bin/python default. '
+                    'You can correct this by setting ansible_python_interpreter for localhost'
+                    display.warning(msg)
+                    log.warning(msg)
                     py_interp = '/usr/bin/python'
                 new_host.set_variable("ansible_python_interpreter", py_interp)
             self.get_group("ungrouped").add_host(new_host)
