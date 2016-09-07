@@ -96,7 +96,7 @@ class PlaybookExecutor:
                 i = 1
                 plays = pb.get_plays()
                 display.vv(u'%d plays in %s' % (len(plays), to_text(playbook_path)))
-                logging.log(logger.VV, '%d plays in %s', len(plays), playbook_path)
+                log.log(logger.VV, '%d plays in %s', len(plays), playbook_path)
 
                 for play in plays:
                     if play._included_path is not None:

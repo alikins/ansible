@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import multiprocessing
 import os
 import tempfile
@@ -45,6 +46,7 @@ except ImportError:
 
 __all__ = ['TaskQueueManager']
 
+log = logging.getLogger(__name__)
 
 class TaskQueueManager:
 
@@ -291,6 +293,7 @@ class TaskQueueManager:
 
     def cleanup(self):
         display.debug("RUNNING CLEANUP")
+        log.debug("RUNNING CLEANUP")
         self.terminate()
         self._final_q.close()
         self._cleanup_processes()
@@ -371,7 +374,10 @@ class TaskQueueManager:
                         method(*args, **kwargs)
                 except Exception as e:
                     # TODO: add config toggle to make this fatal or not?
-                    display.warning(u"Failure using method (%s) in callback plugin (%s): %s" % (to_text(method_name), to_text(callback_plugin), to_text(e)))
+                    msg = u"Failure using method (%s) in callback plugin (%s): %s"
+                    display.warning(msg % (to_text(method_name), to_text(callback_plugin), to_text(e)))
+                    log.warning(msg, (to_text(method_name), to_text(callback_plugin), to_text(e)))
                     from traceback import format_tb
                     from sys import exc_info
                     display.debug('Callback Exception: \n' + ' '.join(format_tb(exc_info()[2])))
+                    log.exception(e)

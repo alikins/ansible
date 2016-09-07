@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import base64
+import logging
 import subprocess
 import sys
 import time
@@ -46,6 +47,8 @@ except ImportError:
     display = Display()
 
 __all__ = ['TaskExecutor']
+
+log = logging.getLogger(__name__)
 
 
 class TaskExecutor:
@@ -84,6 +87,7 @@ class TaskExecutor:
         '''
 
         display.debug("in run()")
+        log.debug("in run()")
 
         try:
             try:
@@ -123,8 +127,10 @@ class TaskExecutor:
                     res = dict(changed=False, skipped=True, skipped_reason='No items in the list', results=[])
             else:
                 display.debug("calling self._execute()")
+                log.debug("calling self._execute()")
                 res = self._execute()
                 display.debug("_execute() done")
+                log.debug("_execute() done")
 
             # make sure changed is set in the result, if it's not present
             if 'changed' not in res:
@@ -144,8 +150,12 @@ class TaskExecutor:
                 return res
 
             display.debug("dumping result to json")
+            log.debug("dumping result to json")
+
             res = _clean_res(res)
             display.debug("done dumping result, returning")
+            log.debug("done dumping result, returning")
+
             return res
         except AnsibleError as e:
             return dict(failed=True, msg=to_text(e, nonstring='simplerepr'))
@@ -157,7 +167,10 @@ class TaskExecutor:
             except AttributeError:
                 pass
             except Exception as e:
-                display.debug(u"error closing connection: %s" % to_text(e))
+                # FIXME: exceptions should have a __str__/__repr__ that handles this
+                msg = u"error closing connection: %s" % to_text(e)
+                display.debug(msg)
+                log.debug(msg)
 
     def _get_loop_items(self):
         '''
@@ -251,9 +264,11 @@ class TaskExecutor:
             loop_pause = self._task.loop_control.pause or 0
 
         if loop_var in task_vars:
-            display.warning(u"The loop variable '%s' is already in use. "
-                    u"You should set the `loop_var` value in the `loop_control` option for the task"
-                    u" to something else to avoid variable collisions and unexpected behavior." % loop_var)
+            msg = u"The loop variable '%s' is already in use."
+            u"You should set the `loop_var` value in the `loop_control` option for the task"
+            u" to something else to avoid variable collisions and unexpected behavior." % loop_var
+            display.warning(msg)
+            log.warning(msg)
 
         ran_once = False
         items = self._squash_items(items, loop_var, task_vars)
@@ -408,6 +423,8 @@ class TaskExecutor:
         try:
             if not self._task.evaluate_conditional(templar, variables):
                 display.debug("when evaluation failed, skipping this task")
+                log.debug("when evaluation failed, skipping this task")
+
                 return dict(changed=False, skipped=True, skip_reason='Conditional check failed', _ansible_no_log=self._play_context.no_log)
         except AnsibleError:
             # loop error takes precedence
@@ -497,14 +514,19 @@ class TaskExecutor:
         vars_copy = variables.copy()
 
         display.debug("starting attempt loop")
+        log.debug("starting attempt loop")
+
         result = None
         for attempt in range(1, retries + 1):
             display.debug("running the handler")
+            log.debug("running the handler")
+
             try:
                 result = self._handler.run(task_vars=variables)
             except AnsibleConnectionFailure as e:
                 return dict(unreachable=True, msg=to_text(e))
             display.debug("handler run complete")
+            log.debug("handler run complete")
 
             # preserve no log
             result["_ansible_no_log"] = self._play_context.no_log
@@ -563,7 +585,9 @@ class TaskExecutor:
                     if attempt < retries:
                         result['_ansible_retry'] = True
                         result['retries'] = retries
-                        display.debug('Retrying task, attempt %d of %d' % (attempt, retries))
+                        msg = 'retrying task, attempt %d of %d' % (attempt, retries)
+                        display.debug(msg % (attempt, retries))
+                        log.debug(msg, attempt, retries)
                         self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result), block=False)
                         time.sleep(delay)
         else:
@@ -599,6 +623,7 @@ class TaskExecutor:
 
         # and return
         display.debug("attempt loop complete, returning result")
+        log.debug("attempt loop complete, returning result")
         return result
 
     def _poll_async_result(self, result, templar, task_vars=None):
@@ -746,8 +771,10 @@ class TaskExecutor:
                 connection._connect()
             except AnsibleConnectionFailure:
                 display.debug('connection failed, fallback to accelerate')
+                log.debug('connection failed, fallback to accelerate')
                 res = handler._execute_module(module_name='accelerate', module_args=accelerate_args, task_vars=variables, delete_remote_tmp=False)
                 display.debug(res)
+                log.debug('_execute_module results=%s', res)
                 connection._connect()
 
         return connection
