@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 
 from ansible import constants as C
@@ -29,12 +30,15 @@ from ansible.template import Templar
 from ansible.utils.helpers import pct_to_int
 from ansible.utils.path import makedirs_safe
 from ansible.utils.ssh_functions import check_for_controlpersist
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class PlaybookExecutor:
@@ -92,6 +96,7 @@ class PlaybookExecutor:
                 i = 1
                 plays = pb.get_plays()
                 display.vv(u'%d plays in %s' % (len(plays), to_text(playbook_path)))
+                logging.log(logger.VV, '%d plays in %s', len(plays), playbook_path)
 
                 for play in plays:
                     if play._included_path is not None:
@@ -202,7 +207,8 @@ class PlaybookExecutor:
                             (retry_name, _) = os.path.splitext(os.path.basename(playbook_path))
                             filename = os.path.join(basedir, "%s.retry" % retry_name)
                             if self._generate_retry_inventory(filename, retries):
-                                display.display("\tto retry, use: --limit @%s\n" % filename)
+                                display.warning("\tto retry, use: --limit @%s\n" % filename)
+                                log.warning("to retry, use: --limit @%s", filename)
 
                     self._tqm.send_callback('v2_playbook_on_stats', self._tqm._stats)
 
@@ -221,6 +227,7 @@ class PlaybookExecutor:
 
         if self._options.syntax:
             display.display("No issues encountered")
+            log.info("No issues encountered")
             return result
 
         return result
@@ -284,6 +291,8 @@ class PlaybookExecutor:
                     fd.write("%s\n" % x)
         except Exception as e:
             display.warning("Could not create retry file '%s'.\n\t%s" % (retry_path, to_native(e)))
+            log.warning("Could not create retry file '%s'.", retry_path)
+            log.exception(e)
             return False
 
         return True
