@@ -39,7 +39,7 @@ from ansible.module_utils._text import to_bytes, to_text
 
 
 # TODO: mv these to a version abstration class?
-#    
+#
 try:
     # Python 2
     input = raw_input
