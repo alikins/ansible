@@ -43,10 +43,43 @@ DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d):%(funcNam
 
 user = getpass.getuser()
 hostname = 'FIXME'
-DISPLAY_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
+OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
 
-logging.basicConfig(level=logging.DEBUG,
-                    filename='/home/adrian/ansible.log',
-                    #format=DEBUG_LOG_FORMAT)
-                    format=DISPLAY_LOG_FORMAT)
-#logging.basicConfig(level=logging.DEBUG,)
+import logging_tree
+
+def log_setup():
+    null_handler = logging.NullHandler()
+
+    root_logger = logging.getLogger()
+    # root_logger.setLevel(logging.CRITICAL)
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.propagate = True
+    # root_logger.addHandler(null_handler)
+
+    log = logging.getLogger('ansible')
+    log.setLevel(logging.DEBUG)
+    # log.setLevel(logging.CRITICAL)
+    formatter = logging.Formatter(DEBUG_LOG_FORMAT)
+    # log.propagate = True
+
+    # stream_handler = logging.StreamHandler()
+    # stream_handler.setLevel(logging.DEBUG)
+    # stream_handler.setFormatter(formatter)
+
+    # file_handler = logging.FileHandler(filename='/home/adrian/ansible.log')
+    file_handler = logging.handlers.WatchedFileHandler(filename='/home/adrian/ansible.log')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+
+    # log.addHandler(null_handler)
+    # log.addHandler(stream_handler)
+    # log.addHandler(file_handler)
+    root_logger.addHandler(file_handler)
+    # logging.basicConfig(level=logging.DEBUG,
+    #                    filename='/home/adrian/ansible.log',
+    #                    format=DEBUG_LOG_FORMAT)
+    #                   format=DISPLAY_LOG_FORMAT)
+
+logging_tree.printout()
+log_setup()
+logging_tree.printout()
