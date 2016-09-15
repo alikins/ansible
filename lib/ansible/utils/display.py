@@ -80,8 +80,9 @@ if os.getenv('ANSIBLE_LOG_STDOUT'):
     #mplog.setLevel(multiprocessing.SUBWARNING)
     #mplog.addHandler(handler)
 
-    import logging_tree
-    logging_tree.printout()
+    #import logging_tree
+    #logging_tree.printout()
+
 elif C.DEFAULT_LOG_PATH:
     path = C.DEFAULT_LOG_PATH
     if (os.path.exists(path) and os.access(path, os.W_OK)) or os.access(os.path.dirname(path), os.W_OK):
