@@ -21,6 +21,7 @@ __metaclass__ = type
 
 import os
 
+
 from ansible.compat.six import iteritems, string_types
 from ansible.errors import AnsibleError, AnsibleParserError
 from ansible.module_utils._text import to_native
@@ -138,6 +139,9 @@ class Task(Base, Conditional, Taggable, Become):
     def load(data, block=None, role=None, task_include=None, variable_manager=None, loader=None):
         t = Task(block=block, role=role, task_include=task_include)
         return t.load_data(data, variable_manager=variable_manager, loader=loader)
+
+    # def __str__(self):
+    #     return pprint.pformat(self.serialize())
 
     def __repr__(self):
         ''' returns a human readable representation of the task '''

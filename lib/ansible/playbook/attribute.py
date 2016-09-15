@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import pprint
 from copy import deepcopy
 
 class Attribute:
@@ -60,6 +61,20 @@ class Attribute:
     def __ge__(self, other):
         return other.priority >= self.priority
 
+    #def __str__(self):
+    #    return pprint.pformat(self.__dict__)
+
+    def __long_repr__(self):
+        buf = "%s(isa=%s, private=%s, default=%s, required=%s, listof=%s, priority=%s, class_type=%s, always_post_validate=%s, inherit=%s)" % \
+            (self.__class__.__name__, self.isa, self.private, self.default, self.required, self.listof, self.priority, self.class_type, self.always_post_validate, self.inherit)
+        return buf
+
+    def __short_repr__(self):
+        buf = "%s(isa=%s, default=%s)" % \
+            (self.__class__.__name__, self.isa, self.default)
+        return buf
+
+    __repr__ = __short_repr__
 
 class FieldAttribute(Attribute):
     pass

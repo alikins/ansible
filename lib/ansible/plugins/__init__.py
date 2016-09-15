@@ -224,6 +224,7 @@ class PluginLoader:
     def find_plugin(self, name, mod_type=''):
         ''' Find a plugin named name '''
 
+
         if mod_type:
             suffix = mod_type
         elif self.class_name:
@@ -355,6 +356,9 @@ class PluginLoader:
         self._display_plugin_load(self.class_name, name, self._searched_paths, path,
                                   found_in_cache=found_in_cache, class_only=class_only)
         if not class_only:
+            display.vvvvv('Searched for %s plugins \'%s\' in paths: %s' % \
+                          (self.class_name, name, self.format_paths(self._searched_paths)))
+            display.vvvv('loading %s plugin \'%s\' from %s' % (self.class_name, name, path))
             obj = obj(*args, **kwargs)
 
         return obj

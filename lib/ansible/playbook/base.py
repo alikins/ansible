@@ -21,6 +21,7 @@ __metaclass__ = type
 
 import itertools
 import operator
+import pprint
 import uuid
 
 from copy import copy as shallowcopy
@@ -194,17 +195,49 @@ class Base(with_metaclass(BaseMeta, object)):
         self.vars = dict()
 
     def dump_me(self, depth=0):
+        buf = ''
         if depth == 0:
             print("DUMPING OBJECT ------------------------------------------------------")
-        print("%s- %s (%s, id=%s)" % (" " * depth, self.__class__.__name__, self, id(self)))
+        buf += "%s- %s (%s, id=%s)" % (" " * depth,
+                                       self.__class__.__name__,
+                                       self,
+                                       id(self))
         if hasattr(self, '_parent') and self._parent:
-            self._parent.dump_me(depth+2)
+            buf += self._parent.dump_me(depth + 2)
             dep_chain = self._parent.get_dep_chain()
             if dep_chain:
                 for dep in dep_chain:
-                    dep.dump_me(depth+2)
+                    buf += dep.dump_me(depth + 2)
         if hasattr(self, '_play') and self._play:
-            self._play.dump_me(depth+2)
+            buf += self._play.dump_me(depth + 2)
+        return buf
+
+    def __str__(self):
+        repr_dict = {'_internal_type': self.__class__.__name__}
+        #for name in self._valid_attrs.keys():
+        # for name in self._attributes.keys():
+        lines = [""]
+        lines.append("%s:" % self.__class__.__name__)
+        default_attrs = {}
+        for (name, attribute) in iteritems(self._valid_attrs):
+            value = getattr(self, name)
+
+            if not attribute:
+                continue
+
+            if value != attribute.default:
+                lines.append("    " + "%s: %s  ( %s )" % (name, value, attribute))
+            else:
+                default_attrs[name] = attribute
+        default_str = ','.join(sorted(default_attrs.keys()))
+        lines.append('attrs with default value: %s' % default_str)
+        return '\n'.join(lines)
+#            if attribute:
+#                print('name: %s value: %s attr:%s attr.default=%s attr.isa=%s' % (name, value, attribute, attribute.default, attribute.isa))
+#            repr_dict[name] = attribute
+            #repr_dict[name] = getattr(self, name)
+        #return pprint.pformat(repr_dict)
+#        return pprint.pformat(self.serialize())
 
     def preprocess_data(self, ds):
         ''' infrequently used method to do some pre-processing of legacy terms '''

@@ -19,6 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import pprint
+
 class AggregateStats:
     ''' holds stats about per-host activity during playbook runs '''
 
@@ -49,3 +51,8 @@ class AggregateStats:
             skipped     = self.skipped.get(host, 0)
         )
 
+    def __str__(self):
+        buf = ""
+        for host in self.processed:
+            buf += pprint.pformat(self.summarize(host))
+        return buf

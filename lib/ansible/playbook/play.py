@@ -101,6 +101,17 @@ class Play(Base, Taggable, Become):
     def __repr__(self):
         return self.get_name()
 
+    def __short_str__(self):
+        return 'Play: %s' % self.get_name()
+
+    def __str__(self):
+        lines = [""]
+        lines.append('Play: %s (included_path=%s)' % (self.get_name(), self._included_path))
+        lines.append('    Roles:')
+        for role in self.get_roles():
+            lines.append('        %s' % role)
+        return '\n'.join(lines)
+
     def get_name(self):
         ''' return the name of the Play '''
         return self._attributes.get('name')
