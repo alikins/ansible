@@ -91,7 +91,6 @@ class CallbackBase:
         if not indent and (result.get('_ansible_verbose_always') or self._display.verbosity > 2):
             indent = 4
 
-
         # All result keys stating with _ansible_ are internal, so remove them from the result before we output anything.
         abridged_result = strip_internal_keys(result)
 
@@ -107,9 +106,7 @@ class CallbackBase:
         if 'exception' in abridged_result:
             del abridged_result['exception']
 
-        buf = json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
-
-        return buf
+        return json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
 
     def _handle_warnings(self, res):
         ''' display warnings, if enabled and any exist in the result '''

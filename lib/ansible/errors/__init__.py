@@ -42,8 +42,11 @@ class AnsibleError(Exception):
     Where "obj" is some subclass of ansible.parsing.yaml.objects.AnsibleBaseYAMLObject,
     which should be returned by the DataLoader() class.
     '''
+    # any data items that should be used by all instances of a class.
+    # For example, AnsibleConnectionFailure adds a 'unreachable' item to _default_data
+    _default_data = {}
 
-    def __init__(self, message="", obj=None, show_content=True, suppress_extended_error=False):
+    def __init__(self, message="", obj=None, show_content=True, suppress_extended_error=False, data=None):
         # we import this here to prevent an import loop problem,
         # since the objects code also imports ansible.errors
         from ansible.parsing.yaml.objects import AnsibleBaseYAMLObject
@@ -58,6 +61,20 @@ class AnsibleError(Exception):
                 self.message = '%s' % to_native(message)
         else:
             self.message = '%s' % to_native(message)
+
+        # Generic dict for other misc data that may need to be transfered
+        # with an exception. Connection exceptions for example could include
+        # error messages or stderr from helper commands (aka, ssh).
+        # This data will be merged into TaskResult.
+        # NOTE: The data in self.data will need to be types that can be serialized
+        self.data = {}
+
+        # add the per class default data items
+        # TODO: deep copy?
+        self.data.update(self._default_data)
+
+        # update data with provided items
+        self.data.update(data or {})
 
     def __str__(self):
         return self.message
@@ -171,16 +188,8 @@ class AnsibleModuleError(AnsibleRuntimeError):
 
 class AnsibleConnectionFailure(AnsibleRuntimeError):
     ''' the transport / connection_plugin had a fatal error '''
-    pass
 
-class AnsibleSshConnectionFailure(AnsibleConnectionFailure):
-    ''' the ssh transport / connection_plugin had a fatal error '''
-    # Kind of a weird init to have to inherit, but...
-    def __init__(self, *args, **kwargs):
-        stderr_buf = kwargs.pop('stderr', None)
-        super(AnsibleSshConnectionFailure, self).__init__(args, kwargs)
-
-        self.stderr = stderr_buf
+    _default_data = {'unreachable': True}
 
 
 class AnsibleFilterError(AnsibleRuntimeError):

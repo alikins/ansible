@@ -30,7 +30,7 @@ import time
 
 from ansible import constants as C
 from ansible.compat.six import text_type, binary_type
-from ansible.errors import AnsibleError, AnsibleConnectionFailure, AnsibleSshConnectionFailure, AnsibleFileNotFound
+from ansible.errors import AnsibleError, AnsibleConnectionFailure, AnsibleFileNotFound
 from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.path import unfrackpath, makedirs_safe
@@ -548,7 +548,8 @@ class Connection(ConnectionBase):
             raise AnsibleError('using -c ssh on certain older ssh versions may not support ControlPersist, set ANSIBLE_SSH_ARGS="" (or ssh_args in [ssh_connection] section of the config file) before running again')
 
         if p.returncode == 255 and in_data:
-            raise AnsibleSshConnectionFailure('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh', stderr=b_stderr)
+            raise AnsibleConnectionFailure('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh',
+                                           data=dict(_ansible_exception_stderr=b_stderr))
 
         return (p.returncode, b_stdout, b_stderr)
 
@@ -603,8 +604,8 @@ class Connection(ConnectionBase):
                 if return_tuple[0] != 255:
                     break
                 else:
-                    raise AnsibleSshConnectionFailure("Failed to connect to the host via ssh.",
-                                                      stderr=return_tuple[2])
+                    raise AnsibleConnectionFailure("Failed to connect to the host via ssh.",
+                                                   data=dict(_ansible_exception_stderr=return_tuple[2]))
             except (AnsibleConnectionFailure, Exception) as e:
                 if attempt == remaining_tries - 1:
                     raise

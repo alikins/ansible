@@ -116,17 +116,10 @@ class WorkerProcess(multiprocessing.Process):
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(self._host.name, self._task._uuid, executor_result)
-
             # put the result on the result queue
             display.debug("sending task result")
             self._rslt_q.put(task_result)
             display.debug("done sending task result")
-
-        except AnsibleConnectionFailure:
-            self._host.vars = dict()
-            self._host.groups = []
-            task_result = TaskResult(self._host.name, self._task._uuid, dict(unreachable=True))
-            self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):

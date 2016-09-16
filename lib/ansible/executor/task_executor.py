@@ -144,7 +144,10 @@ class TaskExecutor:
             display.debug("done dumping result, returning")
             return res
         except AnsibleError as e:
-            return dict(failed=True, msg=to_text(e, nonstring='simplerepr'))
+            failure_dict = dict(failed=True, msg=to_text(e, nonstring='simplerepr'))
+            # connection failures will add 'unreachable'
+            failure_dict.update(e.data)
+            return failure_dict
         except Exception as e:
             return dict(failed=True, msg='Unexpected failure during module execution.', exception=to_text(traceback.format_exc()), stdout='')
         finally:
@@ -487,10 +490,10 @@ class TaskExecutor:
             try:
                 result = self._handler.run(task_vars=variables)
             except AnsibleConnectionFailure as e:
-                failure_dict = dict(unreachable=True,
-                                    msg=to_text(e),
-                                    _ansible_connection_exception=e)
+                failure_dict = dict(msg=to_text(e))
+                failure_dict.update(e.data)
                 return failure_dict
+
             display.debug("handler run complete")
 
             # preserve no log
