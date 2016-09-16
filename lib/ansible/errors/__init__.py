@@ -182,9 +182,6 @@ class AnsibleSshConnectionFailure(AnsibleConnectionFailure):
 
         self.stderr = stderr_buf
 
-    def __str__(self):
-        return "%s\nstderr: %s" % (self.message, self.stderr)
-
 
 class AnsibleFilterError(AnsibleRuntimeError):
     ''' a templating failure '''
