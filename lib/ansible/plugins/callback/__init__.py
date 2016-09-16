@@ -91,7 +91,6 @@ class CallbackBase:
         if not indent and (result.get('_ansible_verbose_always') or self._display.verbosity > 2):
             indent = 4
 
-        connection_exception = result.pop('_ansible_connection_exception', None)
 
         # All result keys stating with _ansible_ are internal, so remove them from the result before we output anything.
         abridged_result = strip_internal_keys(result)
@@ -109,9 +108,6 @@ class CallbackBase:
             del abridged_result['exception']
 
         buf = json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
-        if connection_exception:
-            if hasattr(connection_exception, 'stderr'):
-                buf += '\nstderr: %s' % connection_exception.stderr
 
         return buf
 
