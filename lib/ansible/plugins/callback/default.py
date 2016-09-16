@@ -115,28 +115,35 @@ class CallbackModule(CallbackBase):
                     msg += " => %s" % self._dump_results(result._result)
                 self._display.display(msg, color=C.COLOR_SKIP)
 
-    def _dump_unreachable(self, result, *args, **kwargs):
-        connection_exception = result.pop('_ansible_connection_exception', None)
+    def _extract_stderr(self, result):
+        connection_exception = result._result.pop('_ansible_connection_exception', None)
+        if not connection_exception:
+            return None
 
-        buf = self._dump_results(result, *args, **kwargs)
-        if connection_exception:
-            if hasattr(connection_exception, 'stderr'):
-                buf += '\nstderr: %s' % connection_exception.stderr
-        return buf
+        if hasattr(connection_exception, 'stderr'):
+            return connection_exception.stderr
+        return None
 
     def v2_runner_on_unreachable(self, result):
         if self._play.strategy == 'free' and self._last_task_banner != result._task._uuid:
             self._print_task_banner(result._task)
 
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
+
+        connection_stderr = self._extract_stderr(result)
+
+        # TODO: extract the host/host-delegate formating
         if delegated_vars:
             self._display.display("fatal: [%s -> %s]: UNREACHABLE! => %s" % (result._host.get_name(), delegated_vars['ansible_host'],
-                                                                             self._dump_unreachable(result._result)),
+                                                                             self._dump_results(result._result)),
                                   color=C.COLOR_UNREACHABLE)
         else:
             self._display.display("fatal: [%s]: UNREACHABLE! => %s" % (result._host.get_name(),
-                                                                       self._dump_unreachable(result._result)),
+                                                                       self._dump_results(result._result)),
                                   color=C.COLOR_UNREACHABLE)
+        if connection_stderr:
+            self._display.display("fatal: [%s]: STDERR => \n%s" % (result._host.get_name(), connection_stderr),
+                                  color=C.COLOR_STDERR)
 
     def v2_playbook_on_no_hosts_matched(self):
         self._display.display("skipping: no hosts matched", color=C.COLOR_SKIP)
