@@ -115,15 +115,28 @@ class CallbackModule(CallbackBase):
                     msg += " => %s" % self._dump_results(result._result)
                 self._display.display(msg, color=C.COLOR_SKIP)
 
+    def _dump_unreachable(self, result, *args, **kwargs):
+        connection_exception = result.pop('_ansible_connection_exception', None)
+
+        buf = self._dump_results(result, *args, **kwargs)
+        if connection_exception:
+            if hasattr(connection_exception, 'stderr'):
+                buf += '\nstderr: %s' % connection_exception.stderr
+        return buf
+
     def v2_runner_on_unreachable(self, result):
         if self._play.strategy == 'free' and self._last_task_banner != result._task._uuid:
             self._print_task_banner(result._task)
 
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
         if delegated_vars:
-            self._display.display("fatal: [%s -> %s]: UNREACHABLE! => %s" % (result._host.get_name(), delegated_vars['ansible_host'], self._dump_results(result._result)), color=C.COLOR_UNREACHABLE)
+            self._display.display("fatal: [%s -> %s]: UNREACHABLE! => %s" % (result._host.get_name(), delegated_vars['ansible_host'],
+                                                                             self._dump_unreachable(result._result)),
+                                  color=C.COLOR_UNREACHABLE)
         else:
-            self._display.display("fatal: [%s]: UNREACHABLE! => %s" % (result._host.get_name(), self._dump_results(result._result)), color=C.COLOR_UNREACHABLE)
+            self._display.display("fatal: [%s]: UNREACHABLE! => %s" % (result._host.get_name(),
+                                                                       self._dump_unreachable(result._result)),
+                                  color=C.COLOR_UNREACHABLE)
 
     def v2_playbook_on_no_hosts_matched(self):
         self._display.display("skipping: no hosts matched", color=C.COLOR_SKIP)
