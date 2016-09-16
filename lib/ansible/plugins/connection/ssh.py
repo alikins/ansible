@@ -548,7 +548,7 @@ class Connection(ConnectionBase):
             raise AnsibleError('using -c ssh on certain older ssh versions may not support ControlPersist, set ANSIBLE_SSH_ARGS="" (or ssh_args in [ssh_connection] section of the config file) before running again')
 
         if p.returncode == 255 and in_data:
-            raise AnsibleConnectionFailure('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh')
+            raise AnsibleSshConnectionFailure('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh', stderr=b_stderr)
 
         return (p.returncode, b_stdout, b_stderr)
 
