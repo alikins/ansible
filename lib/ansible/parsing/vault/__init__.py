@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import shlex
 import shutil
@@ -73,6 +74,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
+
 # OpenSSL pbkdf2_hmac
 HAS_PBKDF2HMAC = False
 try:
@@ -84,8 +87,10 @@ except ImportError:
     pass
 except Exception as e:
     display.warning("Optional dependency 'cryptography' raised an exception, falling back to 'Crypto'")
+    log.warning("Optional dependency 'cryptography' raised an exception, falling back to 'Crypto'")
     import traceback
     display.debug("Traceback from import of cryptography was {0}".format(traceback.format_exc()))
+    log.exception(e)
 
 HAS_ANY_PBKDF2HMAC = HAS_PBKDF2 or HAS_PBKDF2HMAC
 

@@ -20,6 +20,7 @@ __metaclass__ = type
 
 import base64
 import inspect
+import logging
 import os
 import re
 import shlex
@@ -41,6 +42,7 @@ from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.hashing import secure_hash
 from ansible.utils.path import makedirs_safe
+from ansible import logger
 
 try:
     import winrm
@@ -60,6 +62,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 class Connection(ConnectionBase):
     '''WinRM connections over HTTP/HTTPS.'''
@@ -127,6 +130,7 @@ class Connection(ConnectionBase):
         # warn for kwargs unsupported by the installed version of pywinrm
         for arg in unsupported_args:
             display.warning("ansible_winrm_{0} unsupported by pywinrm (is an up-to-date version of pywinrm installed?)".format(arg))
+            log.warning("ansible_winrm_%s unsupported by pywinrm (is an up-to-date version of pywinrm installed?)", arg)
 
         # pass through matching kwargs, excluding the list we want to treat specially
         for arg in passed_winrm_args.difference(internal_kwarg_mask).intersection(supported_winrm_args):
@@ -136,8 +140,9 @@ class Connection(ConnectionBase):
         '''
         Establish a WinRM connection over HTTP/HTTPS.
         '''
-        display.vvv("ESTABLISH WINRM CONNECTION FOR USER: %s on PORT %s TO %s" %
-            (self._winrm_user, self._winrm_port, self._winrm_host), host=self._winrm_host)
+        msg = "ESTABLISH WINRM CONNECTION FOR USER: %s on PORT %s TO %s"
+        display.vvv(msg % (self._winrm_user, self._winrm_port, self._winrm_host), host=self._winrm_host)
+        self.host_log.log(logger.VVV, msg, self._winrm_user, self._winrm_port, self._winrm_host)
         netloc = '%s:%d' % (self._winrm_host, self._winrm_port)
         endpoint = urlunsplit((self._winrm_scheme, netloc, self._winrm_path, '', ''))
         errors = []
@@ -146,6 +151,7 @@ class Connection(ConnectionBase):
                 errors.append('kerberos: the python kerberos library is not installed')
                 continue
             display.vvvvv('WINRM CONNECT: transport=%s endpoint=%s' % (transport, endpoint), host=self._winrm_host)
+            self.host_log(logger.VVVVV, 'WINRM CONNECT: transport=%s endpoint=%s', transport, endpoint)
             try:
                 protocol = Protocol(endpoint, transport=transport, **self._winrm_kwargs)
 
@@ -153,6 +159,7 @@ class Connection(ConnectionBase):
                 if not self.shell_id:
                     self.shell_id = protocol.open_shell(codepage=65001)  # UTF-8
                     display.vvvvv('WINRM OPEN SHELL: %s' % self.shell_id, host=self._winrm_host)
+                    self.host_log.log(logger.VVVVV, 'WINRM OPEN SHELL: %s', self.shell_id)
 
                 return protocol
             except Exception as e:
@@ -168,6 +175,8 @@ class Connection(ConnectionBase):
                         return protocol
                 errors.append(u'%s: %s' % (transport, err_msg))
                 display.vvvvv(u'WINRM CONNECTION ERROR: %s\n%s' % (err_msg, to_text(traceback.format_exc())), host=self._winrm_host)
+                self.host_log(logger.VVVVV, 'WINRM CONNECTION ERROR: %s\n%s', err_msg, to_text(traceback.format_exc()))
+                log.exception(e)
         if errors:
             raise AnsibleConnectionFailure(', '.join(map(to_native, errors)))
         else:
@@ -193,8 +202,10 @@ class Connection(ConnectionBase):
             self._connected = True
         if from_exec:
             display.vvvvv("WINRM EXEC %r %r" % (command, args), host=self._winrm_host)
+            self.host_log(logger.VVVVV, "WINRM EXEC %r %r", command, args)
         else:
             display.vvvvvv("WINRM EXEC %r %r" % (command, args), host=self._winrm_host)
+            self.host_log(logger.VVVVV, "WINRM EXEC %r %r", command, args)
         command_id = None
         try:
             stdin_push_failed = False
@@ -209,6 +220,8 @@ class Connection(ConnectionBase):
             except Exception as ex:
                 from traceback import format_exc
                 display.warning("FATAL ERROR DURING FILE TRANSFER: %s" % format_exc(ex))
+                log.warning("FATAL ERROR DURING FILE TRANSFER:")
+                log.exception(e)
                 stdin_push_failed = True
 
             if stdin_push_failed:
@@ -221,11 +234,16 @@ class Connection(ConnectionBase):
             # TODO: check result from response and set stdin_push_failed if we have nonzero
             if from_exec:
                 display.vvvvv('WINRM RESULT %r' % to_text(response), host=self._winrm_host)
+                self.host_log(logger.VVVVV, 'WINRM RESULT %r', to_text(response))
             else:
                 display.vvvvvv('WINRM RESULT %r' % to_text(response), host=self._winrm_host)
+                self.host_log(logger.VVVVV, 'WINRM RESULT %r', to_text(response)
 
             display.vvvvvv('WINRM STDOUT %s' % to_text(response.std_out), host=self._winrm_host)
+            # TODO/FIXME: this will be logged to ansible.plugins.connection.winrm, so the 'WINRM' can be removed
+            self.host_log(logger.VVVVV, 'WINRM STDOUT %s', to_text(response.std_out)
             display.vvvvvv('WINRM STDERR %s' % to_text(response.std_err), host=self._winrm_host)
+            self.host_log(logger.VVVVV, 'WINRM STDERR %s', to_text(response.std_err)
 
             if stdin_push_failed:
                 raise AnsibleError('winrm send_input failed; \nstdout: %s\nstderr %s' % (response.std_out, response.std_err))
@@ -268,8 +286,10 @@ class Connection(ConnectionBase):
             encoded_cmd = cmd_parts[cmd_parts.index('-EncodedCommand') + 1]
             decoded_cmd = to_text(base64.b64decode(encoded_cmd).decode('utf-16-le'))
             display.vvv("EXEC %s" % decoded_cmd, host=self._winrm_host)
+            self.host_log(logger.VVV, "EXEC %s", decoded_cmd)
         else:
             display.vvv("EXEC %s" % cmd, host=self._winrm_host)
+            self.host_log(logger.VVV, "EXEC %s" % cmd)
         try:
             result = self._winrm_exec(cmd_parts[0], cmd_parts[1:], from_exec=True)
         except Exception:
@@ -306,6 +326,7 @@ class Connection(ConnectionBase):
             for out_data in iter((lambda:in_file.read(buffer_size)), ''):
                 offset += len(out_data)
                 self._display.vvvvv('WINRM PUT "%s" to "%s" (offset=%d size=%d)' % (in_path, out_path, offset, len(out_data)), host=self._winrm_host)
+                self.host_log(logger.VVVVV, 'WINRM PUT "%s" to "%s" (offset=%d size=%d)', in_path, out_path, offset, len(out_data))
                 # yes, we're double-encoding over the wire in this case- we want to ensure that the data shipped to the end PS pipeline is still b64-encoded
                 b64_data = base64.b64encode(out_data) + '\r\n'
                 # cough up the data, as well as an indicator if this is the last chunk so winrm_send knows to set the End signal
@@ -318,6 +339,7 @@ class Connection(ConnectionBase):
         super(Connection, self).put_file(in_path, out_path)
         out_path = self._shell._unquote(out_path)
         display.vvv('PUT "%s" TO "%s"' % (in_path, out_path), host=self._winrm_host)
+        self.host_log(logger.VVV, 'PUT "%s" TO "%s"', in_path, out_path)
         if not os.path.exists(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound('file or module does not exist: "%s"' % in_path)
 
@@ -375,6 +397,7 @@ class Connection(ConnectionBase):
         in_path = self._shell._unquote(in_path)
         out_path = out_path.replace('\\', '/')
         display.vvv('FETCH "%s" TO "%s"' % (in_path, out_path), host=self._winrm_host)
+        self.host_log(logger.VVV, 'FETCH "%s" TO "%s"', in_path, out_path)
         buffer_size = 2**19  # 0.5MB chunks
         makedirs_safe(os.path.dirname(out_path))
         out_file = None
@@ -404,6 +427,7 @@ class Connection(ConnectionBase):
                         }
                     ''' % dict(buffer_size=buffer_size, path=self._shell._escape(in_path), offset=offset)
                     display.vvvvv('WINRM FETCH "%s" to "%s" (offset=%d)' % (in_path, out_path, offset), host=self._winrm_host)
+                    self.host_log(logger.VVVVV, 'WINRM FETCH "%s" to "%s" (offset=%d)', in_path, out_path, offset)
                     cmd_parts = self._shell._encode_script(script, as_list=True)
                     result = self._winrm_exec(cmd_parts[0], cmd_parts[1:])
                     if result.status_code != 0:
@@ -435,6 +459,7 @@ class Connection(ConnectionBase):
     def close(self):
         if self.protocol and self.shell_id:
             display.vvvvv('WINRM CLOSE SHELL: %s' % self.shell_id, host=self._winrm_host)
+            self.host_log(logger.VVVVV, 'WINRM CLOSE SHELL: %s', self.shell_id)
             self.protocol.close_shell(self.shell_id)
         self.shell_id = None
         self.protocol = None

@@ -19,18 +19,22 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import socket
 import time
 
 from datetime import datetime, timedelta
 
 from ansible.plugins.action import ActionBase
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class TimedOutException(Exception):
@@ -54,10 +58,12 @@ class ActionModule(ActionBase):
                 what()
                 if what_desc:
                     display.debug("win_reboot: %s success" % what_desc)
+                    log.debug("win_reboot: %s success", what_desc)
                 return
             except:
                 if what_desc:
                     display.debug("win_reboot: %s fail (expected), sleeping before retry..." % what_desc)
+                    log.debug("win_reboot: %s fail (expected), sleeping before retry...", what_desc)
                 time.sleep(fail_sleep_sec)
 
         raise TimedOutException("timed out waiting for %s" % what_desc)
@@ -74,6 +80,7 @@ class ActionModule(ActionBase):
 
         if self._play_context.check_mode:
             display.vvv("win_reboot: skipping for check_mode")
+            log.log(logger.VVV, "win_reboot: skipping for check_mode")
             return dict(skipped=True)
 
         winrm_host = self._connection._winrm_host
@@ -110,6 +117,7 @@ class ActionModule(ActionBase):
 
             def run_test_command():
                 display.vvv("attempting post-reboot test command '%s'" % test_command)
+                log.log(logger.VVV, "attempting post-reboot test command '%s'", test_command)
                 # call connection reset between runs if it's there
                 try:
                     self._connection._reset()

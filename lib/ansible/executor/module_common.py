@@ -24,6 +24,7 @@ import ast
 import base64
 import imp
 import json
+import logging
 import os
 import shlex
 import zipfile
@@ -44,6 +45,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 REPLACER          = b"#<<INCLUDE_ANSIBLE_MODULE_COMMON>>"
 REPLACER_VERSION  = b"\"<<ANSIBLE_VERSION>>\""
@@ -594,6 +596,8 @@ def _find_snippet_imports(module_name, module_data, module_path, module_args, ta
             compression_method = getattr(zipfile, module_compression)
         except AttributeError:
             display.warning(u'Bad module compression string specified: %s.  Using ZIP_STORED (no compression)' % module_compression)
+            log.warning(u'Bad module compression string specified: %s.  Using ZIP_STORED (no compression)', module_compression)
+
             compression_method = zipfile.ZIP_STORED
 
         lookup_path = os.path.join(C.DEFAULT_LOCAL_TMP, 'ansiballz_cache')
@@ -603,10 +607,12 @@ def _find_snippet_imports(module_name, module_data, module_path, module_args, ta
         # Optimization -- don't lock if the module has already been cached
         if os.path.exists(cached_module_filename):
             display.debug('ANSIBALLZ: using cached module: %s' % cached_module_filename)
+            log.debug('ANSIBALLZ: using cached module: %s', cached_module_filename)
             zipdata = open(cached_module_filename, 'rb').read()
         else:
             if module_name in action_write_locks.action_write_locks:
                 display.debug('ANSIBALLZ: Using lock for %s' % module_name)
+                log.debug('ANSIBALLZ: Using lock for %s', module_name)
                 lock = action_write_locks.action_write_locks[module_name]
             else:
                 # If the action plugin directly invokes the module (instead of
@@ -614,15 +620,20 @@ def _find_snippet_imports(module_name, module_data, module_path, module_args, ta
                 # Lock specifically for this module.  Use the "unexpected
                 # module" lock instead
                 display.debug('ANSIBALLZ: Using generic lock for %s' % module_name)
+                log.debug('ANSIBALLZ: Using generic lock for %s', module_name)
                 lock = action_write_locks.action_write_locks[None]
 
             display.debug('ANSIBALLZ: Acquiring lock')
+            log.debug('ANSIBALLZ: Acquiring lock')
+
             with lock:
                 display.debug('ANSIBALLZ: Lock acquired: %s' % id(lock))
+                log.debug('ANSIBALLZ: Lock acquired: %s', id(lock))
                 # Check that no other process has created this while we were
                 # waiting for the lock
                 if not os.path.exists(cached_module_filename):
                     display.debug('ANSIBALLZ: Creating module')
+                    log.debug('ANSIBALLZ: Creating module')
                     # Create the module zip data
                     zipoutput = BytesIO()
                     zf = zipfile.ZipFile(zipoutput, mode='w', compression=compression_method)
@@ -649,6 +660,7 @@ def _find_snippet_imports(module_name, module_data, module_path, module_args, ta
                         # be a better place to run this
                         os.makedirs(lookup_path)
                     display.debug('ANSIBALLZ: Writing module')
+                    log.debug('ANSIBALLZ: Writing module')
                     with open(cached_module_filename + '-part', 'wb') as f:
                         f.write(zipdata)
 
@@ -656,11 +668,14 @@ def _find_snippet_imports(module_name, module_data, module_path, module_args, ta
                     # future users of this module can read it off the
                     # filesystem instead of constructing from scratch.
                     display.debug('ANSIBALLZ: Renaming module')
+                    log.debug('ANSIBALLZ: Renaming module')
                     os.rename(cached_module_filename + '-part', cached_module_filename)
                     display.debug('ANSIBALLZ: Done creating module')
+                    log.debug('ANSIBALLZ: Done creating module')
 
             if zipdata is None:
                 display.debug('ANSIBALLZ: Reading module after lock')
+                log.debug('ANSIBALLZ: Reading module after lock')
                 # Another process wrote the file while we were waiting for
                 # the write lock.  Go ahead and read the data from disk
                 # instead of re-creating it.
