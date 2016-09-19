@@ -17,13 +17,18 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
+
 from ansible.plugins.action import ActionBase
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class ActionModule(ActionBase):
@@ -51,6 +56,7 @@ class ActionModule(ActionBase):
         if module == 'auto':
             facts = self._execute_module(module_name='setup', module_args=dict(filter='ansible_pkg_mgr', gather_subset='!all'), task_vars=task_vars)
             display.debug("Facts %s" % facts)
+            log.debug("Facts %s", facts)
             if 'ansible_facts' in facts and  'ansible_pkg_mgr' in facts['ansible_facts']:
                 module = getattr(facts['ansible_facts'], 'ansible_pkg_mgr', 'auto')
 
@@ -67,6 +73,7 @@ class ActionModule(ActionBase):
                 del new_module_args['use']
 
             display.vvvv("Running %s" % module)
+            log.log(logger.VVVV,"Running %s", module)
             result.update(self._execute_module(module_name=module, module_args=new_module_args, task_vars=task_vars))
             return result
         else:

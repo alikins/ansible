@@ -19,6 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
+
 from yaml.constructor import Constructor, ConstructorError
 from yaml.nodes import MappingNode
 
@@ -33,6 +35,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class AnsibleConstructor(Constructor):
@@ -75,6 +79,9 @@ class AnsibleConstructor(Constructor):
             if key in mapping:
                 display.warning(u'While constructing a mapping from {1}, line {2}, column {3}, found a duplicate dict key ({0}).'
                 u' Using last defined value only.'.format(key, *mapping.ansible_pos))
+                log.warning('While constructing a mapping from %s, line %s, column %s, found a duplicate dict key (%s).',
+                            mapping.ansible_pos[0], mapping.ansible_pos[1], mapping.ansible_pos[2], key)
+
 
             value = self.construct_object(value_node, deep=deep)
             mapping[key] = value

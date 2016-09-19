@@ -20,6 +20,7 @@ __metaclass__ = type
 
 ########################################################
 import datetime
+import logging
 import os
 import platform
 import random
@@ -40,6 +41,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 ########################################################
 
@@ -193,12 +195,15 @@ class PullCLI(CLI):
 
         # RUN the Checkout command
         display.debug("running ansible with VCS module to checkout repo")
+        log.debug("running ansible with VCS module to checkout repo")
         display.vvvv('EXEC: %s' % cmd)
+        log.log(logger.VVVV, 'EXEC: %s', cmd)
         rc, out, err = run_cmd(cmd, live=True)
 
         if rc != 0:
             if self.options.force:
                 display.warning("Unable to update repository. Continuing with (forced) run of playbook.")
+                log.warning("Unable to update repository. Continuing with (forced) run of playbook.")
             else:
                 return rc
         elif self.options.ifchanged and '"changed": true' not in out:
@@ -232,7 +237,9 @@ class PullCLI(CLI):
 
         # RUN THE PLAYBOOK COMMAND
         display.debug("running ansible-playbook to do actual work")
+        log.debug("running ansible-playbook to do actual work")
         display.debug('EXEC: %s' % cmd)
+        log.debug('EXEC: %s', cmd)
         rc, out, err = run_cmd(cmd, live=True)
 
         if self.options.purge:
@@ -241,6 +248,8 @@ class PullCLI(CLI):
                 shutil.rmtree(self.options.dest)
             except Exception as e:
                 display.error("Failed to remove %s: %s" % (self.options.dest, str(e)))
+                log.error("Failed to remove %s: %s", self.options.dest, str(e))
+                log.exception(e)
 
         return rc
 
@@ -258,6 +267,7 @@ class PullCLI(CLI):
             rc = self.try_playbook(playbook)
             if rc != 0:
                 display.warning("%s: %s" % (playbook, self.PLAYBOOK_ERRORS[rc]))
+                log.warning("%s: %s", playbook, self.PLAYBOOK_ERRORS[rc])
                 return None
             return playbook
         else:
@@ -275,4 +285,5 @@ class PullCLI(CLI):
                     errors.append("%s: %s" % (pb, self.PLAYBOOK_ERRORS[rc]))
             if playbook is None:
                 display.warning("\n".join(errors))
+                log.warning("\n".join(errors))
             return playbook

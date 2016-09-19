@@ -21,6 +21,7 @@ __metaclass__ = type
 
 import ast
 import contextlib
+import logging
 import os
 import re
 
@@ -54,6 +55,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 __all__ = ['Templar']
 
@@ -512,6 +515,7 @@ class Templar:
                     raise AnsibleUndefinedVariable(errmsg)
                 else:
                     display.debug("failing because of a type error, template data is: %s" % to_native(data))
+                    log.debug("failing because of a type error, template data is: %s", to_native(data))
                     raise AnsibleError("Unexpected templating type error occurred on (%s): %s" % (to_native(data),to_native(te)))
 
             if preserve_trailing_newlines:

@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import time
 
 from ansible import constants as C
@@ -28,6 +29,7 @@ from ansible.plugins import action_loader
 from ansible.plugins.strategy import StrategyBase
 from ansible.template import Templar
 from ansible.module_utils._text import to_text
+from ansible import logger
 
 
 try:
@@ -35,6 +37,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class StrategyModule(StrategyBase):
@@ -75,13 +79,17 @@ class StrategyModule(StrategyBase):
             while True:
                 host = hosts_left[last_host]
                 display.debug("next free host: %s" % host)
+                log.debug("next free host: %s", host)
                 host_name = host.get_name()
 
                 # peek at the next task for the host, to see if there's
                 # anything to do do for this host
                 (state, task) = iterator.get_next_task_for_host(host, peek=True)
                 display.debug("free host state: %s" % state)
+                log.debug("free host state: %s", state)
                 display.debug("free host task: %s" % task)
+                log.debug("free host task: %s", task)
+
                 if host_name not in self._tqm._unreachable_hosts and task:
 
                     # set the flag so the outer loop knows we've still found
@@ -89,6 +97,7 @@ class StrategyModule(StrategyBase):
                     work_to_do = True
 
                     display.debug("this host has work to do")
+                    log.debug("this host has work to do")
 
                     # check to see if this host is blocked (still executing a previous task)
                     if host_name not in self._blocked_hosts or not self._blocked_hosts[host_name]:
@@ -104,18 +113,22 @@ class StrategyModule(StrategyBase):
                             action = None
 
                         display.debug("getting variables")
+                        log.debug("getting variables")
                         task_vars = self._variable_manager.get_vars(loader=self._loader, play=iterator._play, host=host, task=task)
                         self.add_tqm_variables(task_vars, play=iterator._play)
                         templar = Templar(loader=self._loader, variables=task_vars)
                         display.debug("done getting variables")
+                        log.debug("done getting variables")
 
                         try:
                             task.name = to_text(templar.template(task.name, fail_on_undefined=False), nonstring='empty')
                             display.debug("done templating")
+                            log.debug("done templating")
                         except:
                             # just ignore any errors during task name templating,
                             # we don't care if it just shows the raw name
                             display.debug("templating failed for some reason")
+                            log.debug("templating failed for some reason")
                             pass
 
                         run_once = templar.template(task.run_once) or action and getattr(action, 'BYPASS_HOST_LOOP', False)
@@ -124,8 +137,10 @@ class StrategyModule(StrategyBase):
                                 raise AnsibleError("The '%s' module bypasses the host loop, which is currently not supported in the free strategy "
                                                    "and would instead execute for every host in the inventory list." % task.action, obj=task._ds)
                             else:
-                                display.warning("Using run_once with the free strategy is not currently supported. This task will still be "
-                                                "executed for every host in the inventory list.")
+                                warn_msg = "Using run_once with the free strategy is not currently supported. This task will still be " \
+                                    "executed for every host in the inventory list."
+                                display.warning(warn_msg)
+                                log.warning(warn_msg)
 
                         # check to see if this task should be skipped, due to it being a member of a
                         # role which has already run (and whether that role allows duplicate execution)
@@ -134,6 +149,7 @@ class StrategyModule(StrategyBase):
                             # if there is metadata, check to see if the allow_duplicates flag was set to true
                             if task._role._metadata is None or task._role._metadata and not task._role._metadata.allow_duplicates:
                                 display.debug("'%s' skipped because role has already run" % task)
+                                log.debug("'%s' skipped because role has already run", task)
                                 del self._blocked_hosts[host_name]
                                 continue
 
@@ -144,13 +160,16 @@ class StrategyModule(StrategyBase):
                             # handle step if needed, skip meta actions as they are used internally
                             if not self._step or self._take_step(task, host_name):
                                 if task.any_errors_fatal:
-                                    display.warning("Using any_errors_fatal with the free strategy is not supported,"
-                                            " as tasks are executed independently on each host")
+                                    warn_msg = "Using any_errors_fatal with the free strategy is not supported," \
+                                        " as tasks are executed independently on each host"
+                                    display.warning(warn_msg)
+                                    log.warning(warn_msg)
                                 self._tqm.send_callback('v2_playbook_on_task_start', task, is_conditional=False)
                                 self._queue_task(host, task, task_vars, play_context)
                                 del task_vars
                     else:
                         display.debug("%s is blocked, skipping for now" % host_name)
+                        log.debug("%s is blocked, skipping for now", host_name)
 
                 # move on to the next host and make sure we
                 # haven't gone past the end of our hosts list
@@ -181,12 +200,15 @@ class StrategyModule(StrategyBase):
                 all_blocks = dict((host, []) for host in hosts_left)
                 for included_file in included_files:
                     display.debug("collecting new blocks for %s" % included_file)
+                    log.debug("collecting new blocks for %s", included_file)
                     try:
                         new_blocks = self._load_included_file(included_file, iterator=iterator)
                     except AnsibleError as e:
                         for host in included_file._hosts:
                             iterator.mark_host_failed(host)
                         display.warning(str(e))
+                        log.warning(str(e))
+                        log.exception(e)
                         continue
 
                     for new_block in new_blocks:
@@ -196,11 +218,14 @@ class StrategyModule(StrategyBase):
                             if host in included_file._hosts:
                                 all_blocks[host].append(final_block)
                     display.debug("done collecting new blocks for %s" % included_file)
+                    log.debug("done collecting new blocks for %s", included_file)
 
                 display.debug("adding all collected blocks from %d included file(s) to iterator" % len(included_files))
+                log.debug("adding all collected blocks from %d included file(s) to iterator", len(included_files))
                 for host in hosts_left:
                     iterator.add_tasks(host, all_blocks[host])
                 display.debug("done adding collected blocks to iterator")
+                log.debug("done adding collected blocks to iterator")
 
             # pause briefly so we don't spin lock
             time.sleep(C.DEFAULT_INTERNAL_POLL_INTERVAL)

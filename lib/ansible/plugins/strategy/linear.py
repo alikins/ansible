@@ -19,6 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
+
 from ansible.compat.six import iteritems
 
 from ansible.errors import AnsibleError
@@ -30,13 +32,15 @@ from ansible.plugins import action_loader
 from ansible.plugins.strategy import StrategyBase
 from ansible.template import Templar
 from ansible.module_utils._text import to_text
-
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class StrategyModule(StrategyBase):
@@ -55,9 +59,12 @@ class StrategyModule(StrategyBase):
 
         host_tasks = {}
         display.debug("building list of next tasks for hosts")
+        log.debug("building list of next tasks for hosts")
+
         for host in hosts:
             host_tasks[host.name] = iterator.get_next_task_for_host(host, peek=True)
         display.debug("done building task lists")
+        log.debug("done building task lists")
 
         num_setups = 0
         num_tasks  = 0
@@ -65,6 +72,7 @@ class StrategyModule(StrategyBase):
         num_always = 0
 
         display.debug("counting tasks in each state of execution")
+        log.debug("counting tasks in each state of execution")
         host_tasks_to_run = [(host, state_task)
                              for host, state_task in iteritems(host_tasks)
                              if state_task and state_task[1]]
@@ -97,6 +105,11 @@ class StrategyModule(StrategyBase):
             elif s.run_state == PlayIterator.ITERATING_ALWAYS:
                 num_always += 1
         display.debug("done counting tasks in each state of execution:\n\tnum_setups: %s\n\tnum_tasks: %s\n\tnum_rescue: %s\n\tnum_always: %s" % (num_setups, num_tasks, num_rescue, num_always))
+        # TODO: a ds and a repr/str would be handy here
+        log.debug("done counting tasks in each state of execution")
+        log.debug("num_setups: %s", num_setups)
+        log.debug("num_rescue: %s", num_rescue)
+        log.debug("num_always: %s", num_always)
 
         def _advance_selected_hosts(hosts, cur_block, cur_state):
             '''
@@ -109,6 +122,7 @@ class StrategyModule(StrategyBase):
             # specified in the given hosts array
             rvals = []
             display.debug("starting to advance hosts")
+            log.debug("starting to advance hosts")
             for host in hosts:
                 host_state_task = host_tasks.get(host.name)
                 if host_state_task is None:
@@ -122,35 +136,41 @@ class StrategyModule(StrategyBase):
                 else:
                     rvals.append((host, noop_task))
             display.debug("done advancing hosts to next task")
+            log.debug("done advancing hosts to next task")
             return rvals
 
         # if any hosts are in ITERATING_SETUP, return the setup task
         # while all other hosts get a noop
         if num_setups:
             display.debug("advancing hosts in ITERATING_SETUP")
+            log.debug("advancing hosts in ITERATING_SETUP")
             return _advance_selected_hosts(hosts, lowest_cur_block, PlayIterator.ITERATING_SETUP)
 
         # if any hosts are in ITERATING_TASKS, return the next normal
         # task for these hosts, while all other hosts get a noop
         if num_tasks:
             display.debug("advancing hosts in ITERATING_TASKS")
+            log.debug("advancing hosts in ITERATING_TASKS")
             return _advance_selected_hosts(hosts, lowest_cur_block, PlayIterator.ITERATING_TASKS)
 
         # if any hosts are in ITERATING_RESCUE, return the next rescue
         # task for these hosts, while all other hosts get a noop
         if num_rescue:
             display.debug("advancing hosts in ITERATING_RESCUE")
+            log.debug("advancing hosts in ITERATING_RESCUE")
             return _advance_selected_hosts(hosts, lowest_cur_block, PlayIterator.ITERATING_RESCUE)
 
         # if any hosts are in ITERATING_ALWAYS, return the next always
         # task for these hosts, while all other hosts get a noop
         if num_always:
             display.debug("advancing hosts in ITERATING_ALWAYS")
+            log.debug("advancing hosts in ITERATING_ALWAYS")
             return _advance_selected_hosts(hosts, lowest_cur_block, PlayIterator.ITERATING_ALWAYS)
 
         # at this point, everything must be ITERATING_COMPLETE, so we
         # return None for all hosts in the list
         display.debug("all hosts are done, so returning None's for all hosts")
+        log.debug("all hosts are done, so returning None's for all hosts")
         return [(host, None) for host in hosts]
 
     def run(self, iterator, play_context):
@@ -167,8 +187,10 @@ class StrategyModule(StrategyBase):
 
             try:
                 display.debug("getting the remaining hosts for this loop")
+                log.debug("getting the remaining hosts for this loop")
                 hosts_left = [host for host in self._inventory.get_hosts(iterator._play.hosts) if host.name not in self._tqm._unreachable_hosts]
                 display.debug("done getting the remaining hosts for this loop")
+                log.debug("done getting the remaining hosts for this loop")
 
                 # queue up this task for each host in the inventory
                 callback_sent = False
@@ -213,6 +235,7 @@ class StrategyModule(StrategyBase):
                         # if there is metadata, check to see if the allow_duplicates flag was set to true
                         if task._role._metadata is None or task._role._metadata and not task._role._metadata.allow_duplicates:
                             display.debug("'%s' skipped because role has already run" % task)
+                            log.debug("'%s' skipped because role has already run", task)
                             continue
 
                     if task.action == 'meta':
@@ -231,10 +254,12 @@ class StrategyModule(StrategyBase):
                                 break
 
                         display.debug("getting variables")
+                        log.debug("getting variables")
                         task_vars = self._variable_manager.get_vars(loader=self._loader, play=iterator._play, host=host, task=task)
                         self.add_tqm_variables(task_vars, play=iterator._play)
                         templar = Templar(loader=self._loader, variables=task_vars)
                         display.debug("done getting variables")
+                        log.debug("done getting variables")
 
                         run_once = templar.template(task.run_once) or action and getattr(action, 'BYPASS_HOST_LOOP', False)
 
@@ -243,21 +268,27 @@ class StrategyModule(StrategyBase):
 
                         if not callback_sent:
                             display.debug("sending task start callback, copying the task so we can template it temporarily")
+                            log.debug("sending task start callback, copying the task so we can template it temporarily")
                             saved_name = task.name
                             display.debug("done copying, going to template now")
+                            log.debug("done copying, going to template now")
                             try:
                                 task.name = to_text(templar.template(task.name, fail_on_undefined=False), nonstring='empty')
                                 display.debug("done templating")
+                                log.debug("done templating")
                             except:
                                 # just ignore any errors during task name templating,
                                 # we don't care if it just shows the raw name
                                 display.debug("templating failed for some reason")
+                                log.debug("templating failed for some reason")
                                 pass
                             display.debug("here goes the callback...")
+                            log.debug("here goes the callback...")
                             self._tqm.send_callback('v2_playbook_on_task_start', task, is_conditional=False)
                             task.name = saved_name
                             callback_sent = True
                             display.debug("sending task start callback")
+                            log.debug("sending task start callback")
 
                         self._blocked_hosts[host.get_name()] = True
                         self._queue_task(host, task, task_vars, play_context)
@@ -274,6 +305,7 @@ class StrategyModule(StrategyBase):
                     continue
 
                 display.debug("done queuing things up, now waiting for results queue to drain")
+                log.debug("done queuing things up, now waiting for results queue to drain")
                 if self._pending_results > 0:
                     results += self._wait_on_pending_results(iterator)
                 host_results.extend(results)
@@ -296,6 +328,7 @@ class StrategyModule(StrategyBase):
                                 continue
 
                             display.debug("generating all_blocks data for role")
+                            log.debug("generating all_blocks data for role")
                             new_ir = hr._task.copy()
                             new_ir.vars.update(include_result.get('include_variables', dict()))
                             if loop_var and loop_var in include_result:
@@ -323,22 +356,28 @@ class StrategyModule(StrategyBase):
                 include_failure = False
                 if len(included_files) > 0:
                     display.debug("we have included files to process")
+                    log.debug("we have included files to process")
                     noop_task = Task()
                     noop_task.action = 'meta'
                     noop_task.args['_raw_params'] = 'noop'
                     noop_task.set_loader(iterator._play._loader)
 
                     display.debug("generating all_blocks data")
+                    log.debug("generating all_blocks data")
                     all_blocks = dict((host, []) for host in hosts_left)
                     display.debug("done generating all_blocks data")
+                    log.debug("done generating all_blocks data")
                     for included_file in included_files:
                         display.debug("processing included file: %s" % included_file._filename)
+                        log.debug("processing included file: %s", included_file._filename)
                         # included hosts get the task list while those excluded get an equal-length
                         # list of noop tasks, to make sure that they continue running in lock-step
                         try:
                             new_blocks = self._load_included_file(included_file, iterator=iterator)
 
                             display.debug("iterating over new_blocks loaded from include file")
+                            log.debug("iterating over new_blocks loaded from include file")
+
                             for new_block in new_blocks:
                                 task_vars = self._variable_manager.get_vars(
                                     loader=self._loader,
@@ -346,8 +385,9 @@ class StrategyModule(StrategyBase):
                                     task=included_file._task,
                                 )
                                 display.debug("filtering new block on tags")
+                                log.debug("filtering new block on tags")
                                 final_block = new_block.filter_tagged_tasks(play_context, task_vars)
-                                display.debug("done filtering new block on tags")
+                                log.debug("done filtering new block on tags")
 
                                 noop_block = Block(parent_block=task._parent)
                                 noop_block.block  = [noop_task for t in new_block.block]
@@ -360,28 +400,35 @@ class StrategyModule(StrategyBase):
                                     else:
                                         all_blocks[host].append(noop_block)
                             display.debug("done iterating over new_blocks loaded from include file")
+                            log.debug("done iterating over new_blocks loaded from include file")
 
                         except AnsibleError as e:
                             for host in included_file._hosts:
                                 self._tqm._failed_hosts[host.name] = True
                                 iterator.mark_host_failed(host)
                             display.error(to_text(e), wrap_text=False)
+                            display.exception(e)
                             include_failure = True
                             continue
 
                     # finally go through all of the hosts and append the
                     # accumulated blocks to their list of tasks
                     display.debug("extending task lists for all hosts with included blocks")
+                    log.debug("extending task lists for all hosts with included blocks")
 
                     for host in hosts_left:
                         iterator.add_tasks(host, all_blocks[host])
 
                     display.debug("done extending task lists")
+                    log.debug("done extending task lists")
                     display.debug("done processing included files")
+                    log.debug("done processing included files")
 
                 display.debug("results queue empty")
+                log.debug("results queue empty")
 
                 display.debug("checking for any_errors_fatal")
+                log.debug("checking for any_errors_fatal")
                 failed_hosts = []
                 unreachable_hosts = []
                 for res in results:
@@ -399,8 +446,10 @@ class StrategyModule(StrategyBase):
                             self._tqm._failed_hosts[host.name] = True
                             result |= self._tqm.RUN_FAILED_BREAK_PLAY
                 display.debug("done checking for any_errors_fatal")
+                log.debug("done checking for any_errors_fatal")
 
                 display.debug("checking for max_fail_percentage")
+                log.debug("checking for max_fail_percentage")
                 if iterator._play.max_fail_percentage is not None and len(results) > 0:
                     percentage = iterator._play.max_fail_percentage / 100.0
 
@@ -414,6 +463,7 @@ class StrategyModule(StrategyBase):
                         self._tqm.send_callback('v2_playbook_on_no_hosts_remaining')
                         result |= self._tqm.RUN_FAILED_BREAK_PLAY
                 display.debug("done checking for max_fail_percentage")
+                log.debug("done checking for max_fail_percentage")
 
                 display.debug("checking to see if all hosts have failed and the running result is not ok")
                 if result != self._tqm.RUN_OK and len(self._tqm._failed_hosts) >= len(hosts_left):
@@ -424,6 +474,9 @@ class StrategyModule(StrategyBase):
 
             except (IOError, EOFError) as e:
                 display.debug("got IOError/EOFError in task loop: %s" % e)
+                log.debug("got IOError/EOFError in task loop: %s", e)
+                log.exception(e)
+
                 # most likely an abort, return failed
                 return self._tqm.RUN_UNKNOWN_ERROR
 

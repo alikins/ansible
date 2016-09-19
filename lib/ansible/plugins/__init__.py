@@ -23,6 +23,7 @@ __metaclass__ = type
 import glob
 import imp
 import inspect
+import logging
 import os
 import os.path
 import sys
@@ -39,6 +40,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 # Global so that all instances of a PluginLoader will share the caches
 MODULE_CACHE = {}
@@ -254,6 +257,8 @@ class PluginLoader:
                 full_paths = (os.path.join(path, f) for f in os.listdir(path))
             except OSError as e:
                 display.warning("Error accessing plugin paths: %s" % to_text(e))
+                log.warning("Error accessing plugin paths")
+                log.exception(e)
 
             for full_path in (f for f in full_paths if os.path.isfile(f) and not f.endswith('__init__.py')):
                 full_name = os.path.basename(full_path)
@@ -369,6 +374,7 @@ class PluginLoader:
             msg = '%s (found_in_cache=%s, class_only=%s)' % (msg, found_in_cache, class_only)
 
         display.debug(msg)
+        log.debug(msg)
 
     def all(self, *args, **kwargs):
         ''' instantiates all plugins with the same arguments '''
@@ -398,6 +404,8 @@ class PluginLoader:
                 obj = getattr(self._module_cache[path], self.class_name)
             except AttributeError as e:
                 display.warning("Skipping plugin (%s) as it seems to be invalid: %s" % (path, to_text(e)))
+                log.warning("Skipping plugin (%s) as it seems to be invalid: %s", path, to_text(e))
+                log.exception(e)
                 continue
 
             if self.base_class:
