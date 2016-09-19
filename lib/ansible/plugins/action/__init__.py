@@ -21,6 +21,7 @@ __metaclass__ = type
 
 import base64
 import json
+import logging
 import os
 import random
 import re
@@ -39,13 +40,15 @@ from ansible.module_utils.json_utils import _filter_non_json_lines
 from ansible.parsing.utils.jsonify import jsonify
 from ansible.playbook.play_context import MAGIC_VARIABLE_MAPPING
 from ansible.release import __version__
-
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class ActionBase(with_metaclass(ABCMeta, object)):
@@ -577,6 +580,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
         (module_style, shebang, module_data, module_path) = self._configure_module(module_name=module_name, module_args=module_args, task_vars=task_vars)
         display.vvv("Using module file %s" % module_path)
+        log.log(logger.VVV, "Using module file %s", module_path)
         if not shebang and module_style != 'binary':
             raise AnsibleError("module (%s) is missing interpreter line" % module_name)
 
@@ -600,6 +604,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
         if remote_module_path or module_style != 'new':
             display.debug("transferring module to remote %s" % remote_module_path)
+            log.debug("transferring module to remote %s", remote_module_path)
             if module_style == 'binary':
                 self._transfer_file(module_path, remote_module_path)
             else:
@@ -614,6 +619,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             elif module_style in ('non_native_want_json', 'binary'):
                 self._transfer_data(args_file_path, json.dumps(module_args))
             display.debug("done transferring module to remote")
+            log.debug("done transferring module to remote")
 
         environment_string = self._compute_environment_string()
 
@@ -663,8 +669,10 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 tmp_rm_res = self._low_level_execute_command(tmp_rm_cmd, sudoable=False)
                 tmp_rm_data = self._parse_returned_data(tmp_rm_res)
                 if tmp_rm_data.get('rc', 0) != 0:
-                    display.warning('Error deleting remote temporary files (rc: {0}, stderr: {1})'.format(tmp_rm_res.get('rc'),
-                        tmp_rm_res.get('stderr', 'No error string available.')))
+                    msg = 'Error deleting remote temporary files (rc: %s, stderr: %s)'
+                    display.warning(msg % (tmp_rm_res.get('rc'), tmp_rm_res.get('stderr', 'No error string available.')))
+                    log.warning(msg, tmp_rm_res.get('rc'),
+                                tmp_rm_res.get('stderr', 'No error string available.'))
 
         # parse the main result
         data = self._parse_returned_data(res)
@@ -675,6 +683,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             data['stdout_lines'] = data.get('stdout', u'').splitlines()
 
         display.debug("done with _execute_module (%s, %s)" % (module_name, module_args))
+        log.debug("done with _execute_module (%s, %s)", module_name, module_args)
         return data
 
     def _parse_returned_data(self, res):
@@ -745,15 +754,18 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         '''
 
         display.debug("_low_level_execute_command(): starting")
+        log.debug("_low_level_execute_command(): starting")
         if not cmd:
             # this can happen with powershell modules when there is no analog to a Windows command (like chmod)
             display.debug("_low_level_execute_command(): no command, exiting")
+            log.debug("_low_level_execute_command(): no command, exiting")
             return dict(stdout='', stderr='', rc=254)
 
         allow_same_user = C.BECOME_ALLOW_SAME_USER
         same_user = self._play_context.become_user == self._play_context.remote_user
         if sudoable and self._play_context.become and (allow_same_user or not same_user):
             display.debug("_low_level_execute_command(): using become for this command")
+            log.debug("_low_level_execute_command(): using become for this command")
             cmd = self._play_context.make_become_cmd(cmd, executable=executable)
 
         if self._connection.allow_executable:
@@ -766,6 +778,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 cmd = executable + ' -c ' + shlex_quote(cmd)
 
         display.debug("_low_level_execute_command(): executing: %s" % (cmd,))
+        log.debug("_low_level_execute_command(): executing: %s", cmd)
 
         # Change directory to basedir of task for command execution when connection is local
         if self._connection.transport == 'local':
@@ -800,12 +813,15 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         out = self._strip_success_message(out)
 
         display.debug(u"_low_level_execute_command() done: rc=%d, stdout=%s, stderr=%s" % (rc, out, err))
+        log.debug(u"_low_level_execute_command() done: rc=%d, stdout=%s, stderr=%s", rc, out, err)
+
         return dict(rc=rc, stdout=out, stdout_lines=out.splitlines(), stderr=err)
 
     def _get_diff_data(self, destination, source, task_vars, source_file=True):
 
         diff = {}
         display.debug("Going to peek to see if file has changed permissions")
+        log.debug("Going to peek to see if file has changed permissions")
         peek_result = self._execute_module(module_name='file', module_args=dict(path=destination, diff_peek=True), task_vars=task_vars, persist_files=True)
 
         if not peek_result.get('failed', False) or peek_result.get('rc', 0) == 0:
@@ -818,6 +834,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 diff['dst_larger'] = C.MAX_FILE_SIZE_FOR_DIFF
             else:
                 display.debug("Slurping the file %s" % source)
+                log.debug("Slurping the file %s", source)
                 dest_result = self._execute_module(module_name='slurp', module_args=dict(path=destination), task_vars=task_vars, persist_files=True)
                 if 'content' in dest_result:
                     dest_contents = dest_result['content']
@@ -834,6 +851,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                     diff['src_larger'] = C.MAX_FILE_SIZE_FOR_DIFF
                 else:
                     display.debug("Reading local copy of the file %s" % source)
+                    log.debug("Reading local copy of the file %s", source)
                     try:
                         src = open(source)
                         src_contents = src.read()
@@ -847,6 +865,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                         diff['after'] = src_contents
             else:
                 display.debug("source of file passed in")
+                log.debug("source of file passed in")
                 diff['after_header'] = 'dynamically generated'
                 diff['after'] = source
 

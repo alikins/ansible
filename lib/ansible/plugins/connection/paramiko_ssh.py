@@ -185,11 +185,13 @@ class Connection(ConnectionBase):
             try:
                 sock_kwarg = {'sock': paramiko.ProxyCommand(proxy_command)}
                 display.vvv("CONFIGURE PROXY COMMAND FOR CONNECTION: %s" % proxy_command, host=self._play_context.remote_addr)
-                log.log(logger.VVV, "CONFIGURE PROXY COMMAND FOR CONNECTION: %s", proxy_command, extra={'host':self._play_context.remote_addr})
+                self.host_log.log(logger.VVV, "CONFIGURE PROXY COMMAND FOR CONNECTION: %s", proxy_command)
             except AttributeError:
-                display.warning('Paramiko ProxyCommand support unavailable. '
-                                'Please upgrade to Paramiko 1.9.0 or newer. '
-                                'Not using configured ProxyCommand')
+                msg = 'Paramiko ProxyCommand support unavailable. ' \
+                    'Please upgrade to Paramiko 1.9.0 or newer. ' \
+                    'Not using configured ProxyCommand'
+                display.warning(msg)
+                log.warning(msg)
 
         return sock_kwarg
 
@@ -201,6 +203,8 @@ class Connection(ConnectionBase):
 
         port = self._play_context.port or 22
         display.vvv("ESTABLISH CONNECTION FOR USER: %s on PORT %s TO %s" % (self._play_context.remote_user, port, self._play_context.remote_addr), host=self._play_context.remote_addr)
+        # TODO/FIXME: add remote host as 'extra' ?
+        self.host_log.log(logger.VVV, "ESTABLISH CONNECTION FOR USER: %s on PORT %s TO %s", self._play_context.remote_user, port, self._play_context.remote_addr)
 
         ssh = paramiko.SSHClient()
 
@@ -280,6 +284,8 @@ class Connection(ConnectionBase):
             chan.get_pty(term=os.getenv('TERM', 'vt100'), width=int(os.getenv('COLUMNS', 0)), height=int(os.getenv('LINES', 0)))
 
         display.vvv("EXEC %s" % cmd, host=self._play_context.remote_addr)
+        # TODO/FIXME: remote host... maybe a per remote host logger?
+        self.host_log.log(logger.VVV, "EXEC %s", cmd)
 
         cmd = to_bytes(cmd, errors='surrogate_or_strict')
 
@@ -294,9 +300,12 @@ class Connection(ConnectionBase):
                 become_sucess = False
                 while not (become_sucess or passprompt):
                     display.debug('Waiting for Privilege Escalation input')
+                    log.debug('Waiting for Privilege Escalation input')
 
                     chunk = chan.recv(bufsize)
                     display.debug("chunk is: %s" % chunk)
+                    log.debug("chunk is: %s", chunk)
+
                     if not chunk:
                         if 'unknown user' in become_output:
                             raise AnsibleError( 'user %s does not exist' % self._play_context.become_user)
@@ -337,6 +346,8 @@ class Connection(ConnectionBase):
         super(Connection, self).put_file(in_path, out_path)
 
         display.vvv("PUT %s TO %s" % (in_path, out_path), host=self._play_context.remote_addr)
+        # TODO/FIXME: remote host log
+        self.host_log.log(logger.VVV, "PUT %s TO %s", in_path, out_path)
 
         if not os.path.exists(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound("file or module does not exist: %s" % in_path)
@@ -366,6 +377,7 @@ class Connection(ConnectionBase):
         super(Connection, self).fetch_file(in_path, out_path)
 
         display.vvv("FETCH %s TO %s" % (in_path, out_path), host=self._play_context.remote_addr)
+        self.host_log.log(logger.VVV, "FETCH %s TO %s", in_path, out_path)
 
         try:
             self.sftp = self._connect_sftp()

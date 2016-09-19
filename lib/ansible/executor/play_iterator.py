@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import fnmatch
+import logging
 
 from ansible.compat.six import iteritems
 from ansible import constants as C
@@ -37,6 +38,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class HostState:
@@ -252,11 +255,13 @@ class PlayIterator:
     def get_next_task_for_host(self, host, peek=False):
 
         display.debug("getting the next task for host %s" % host.name)
+        log.debug("getting the next task for host %s", host.name)
         s = self.get_host_state(host)
 
         task = None
         if s.run_state == self.ITERATING_COMPLETE:
             display.debug("host %s is done iterating, returning" % host.name)
+            log.debug("host %s is done iterating, returning", host.name)
             return (s, None)
 
         old_s = s
@@ -290,6 +295,9 @@ class PlayIterator:
         display.debug("done getting next task for host %s" % host.name)
         display.debug(" ^ task is: %s" % task)
         display.debug(" ^ state is: %s" % s)
+        log.debug("done getting next task for host %s", host.name)
+        log.debug(" ^ task is: %s", task)
+        log.debug(" ^ state is: %s", s)
         return (s, task)
 
 
@@ -504,8 +512,10 @@ class PlayIterator:
     def mark_host_failed(self, host):
         s = self.get_host_state(host)
         display.debug("marking host %s failed, current state: %s" % (host, s))
+        log.debug("marking host %s failed, current state: %s", host, s)
         s = self._set_failed_state(s)
         display.debug("^ failed state is now: %s" % s)
+        log.debug("^ failed state is now: %s", s)
         self._host_states[host.name] = s
         self._play._removed_hosts.append(host.name)
 

@@ -17,17 +17,21 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 
 from ansible.errors import AnsibleError
 from ansible.plugins.lookup import LookupBase
 from ansible.module_utils._text import to_bytes, to_text
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class LookupModule(LookupBase):
@@ -39,9 +43,12 @@ class LookupModule(LookupBase):
 
         for term in terms:
             display.debug("File lookup term: %s" % term)
+            log.debug("File lookup term: %s" % term)
 
             lookupfile = self.find_file_in_search_path(variables, 'templates', term)
             display.vvvv("File lookup using %s as file" % lookupfile)
+            log.log(logger.VVVV, "File lookup using %s as file", lookupfile)
+
             if lookupfile:
                 with open(to_bytes(lookupfile, errors='surrogate_or_strict'), 'rb') as f:
                     template_data = to_text(f.read(), errors='surrogate_or_strict')

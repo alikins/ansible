@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import shlex
 import shutil
@@ -72,6 +73,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 # OpenSSL pbkdf2_hmac
 HAS_PBKDF2HMAC = False

@@ -23,6 +23,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import datetime
+import logging
 import os
 import tarfile
 import tempfile
@@ -35,12 +36,16 @@ from ansible.errors import AnsibleError
 from ansible.module_utils.urls import open_url
 from ansible.playbook.role.requirement import RoleRequirement
 from ansible.galaxy.api import GalaxyAPI
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
+
 
 class GalaxyRole(object):
 
@@ -56,6 +61,7 @@ class GalaxyRole(object):
         self._validate_certs = not galaxy.options.ignore_certs
 
         display.debug('Validate TLS certificates: %s' % self._validate_certs)
+        log.debug('Validate TLS certificates: %s', self._validate_certs)
 
         self.options = galaxy.options
         self.galaxy  = galaxy
@@ -99,6 +105,7 @@ class GalaxyRole(object):
                     self._metadata = yaml.safe_load(f)
                 except:
                     display.vvvvv("Unable to load metadata for %s" % self.name)
+                    log.log(logger.VVVVV, "Unable to load metadata for %s", self.name)
                     return False
                 finally:
                     f.close()
@@ -120,6 +127,7 @@ class GalaxyRole(object):
                     self._install_info = yaml.safe_load(f)
                 except:
                     display.vvvvv("Unable to load Galaxy install info for %s" % self.name)
+                    log.log(logger.VVVVV, "Unable to load Galaxy install info for %s", self.name)
                     return False
                 finally:
                     f.close()
@@ -187,6 +195,8 @@ class GalaxyRole(object):
                 return temp_file.name
             except Exception as e:
                 display.error("failed to download the file: %s" % str(e))
+                log.error("failed to download the file: %s" % str(e))
+                log.exception(e)
 
         return False
 
@@ -249,6 +259,7 @@ class GalaxyRole(object):
         if tmp_file:
 
             display.debug("installing from %s" % tmp_file)
+            log.debug("installing from %s", tmp_file)
 
             if not tarfile.is_tarfile(tmp_file):
                 raise AnsibleError("the file downloaded was not a tar.gz")
@@ -327,6 +338,8 @@ class GalaxyRole(object):
                         os.unlink(tmp_file)
                     except (OSError,IOError) as e:
                         display.warning("Unable to remove tmp file (%s): %s" % (tmp_file, str(e)))
+                        log.warning("Unable to remove tmp file (%s): %s", tmp_file, str(e))
+                        log.exception(e)
                 return True
 
         return False

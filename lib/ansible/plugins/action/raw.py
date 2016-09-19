@@ -17,7 +17,11 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
+
 from ansible.plugins.action import ActionBase
+
+log = logging.getLogger(__name__)
 
 
 class ActionModule(ActionBase):
@@ -29,6 +33,7 @@ class ActionModule(ActionBase):
 
         if self._task.environment:
             self._display.warning('raw module does not support the environment keyword')
+            log.warning('raw module does not support the environment keyword')
 
         result = super(ActionModule, self).run(tmp, task_vars)
 

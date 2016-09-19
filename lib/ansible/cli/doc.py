@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import datetime
+import logging
 import os
 import traceback
 import textwrap
@@ -31,12 +32,15 @@ from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.plugins import module_loader, action_loader
 from ansible.cli import CLI
 from ansible.utils import module_docs
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class DocCLI(CLI):
@@ -102,6 +106,7 @@ class DocCLI(CLI):
                 filename = module_loader.find_plugin(module, mod_type='.py')
                 if filename is None:
                     display.warning("module %s not found in %s\n" % (module, DocCLI.print_paths(module_loader)))
+                    log.warning("module %s not found in %s", module, DocCLI.print_paths(module_loader))
                     continue
 
                 if any(filename.endswith(x) for x in C.BLACKLIST_EXTS):
@@ -109,9 +114,11 @@ class DocCLI(CLI):
 
                 try:
                     doc, plainexamples, returndocs, metadata = module_docs.get_docstring(filename, verbose=(self.options.verbosity > 0))
-                except:
+                except Exception as e:
                     display.vvv(traceback.format_exc())
+                    log.exeption(e)
                     display.error("module %s has a documentation error formatting or is missing documentation\nTo see exact traceback use -vvv" % module)
+                    log.error("module %s has a documentation error formatting or is missing documentation", module)
                     continue
 
                 if doc is not None:
@@ -145,6 +152,8 @@ class DocCLI(CLI):
                     raise AnsibleError("Parsing produced an empty object.")
             except Exception as e:
                 display.vvv(traceback.format_exc())
+                log.log(logger.VVV, traceback.print_exc())
+                log.exception(e)
                 raise AnsibleError("module %s missing documentation (or could not parse documentation): %s\n" % (module, str(e)))
 
         if text:

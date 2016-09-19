@@ -18,6 +18,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import select
 import shutil
@@ -32,13 +33,15 @@ import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleFileNotFound
 from ansible.module_utils._text import to_bytes, to_native
 from ansible.plugins.connection import ConnectionBase
-
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class Connection(ConnectionBase):
@@ -57,6 +60,7 @@ class Connection(ConnectionBase):
 
         if not self._connected:
             display.vvv(u"ESTABLISH LOCAL CONNECTION FOR USER: {0}".format(self._play_context.remote_user), host=self._play_context.remote_addr)
+            self.host_log.log(logger.VVV, "ESTABLISH LOCAL CONNECTION FOR USER: %s", self._play_context.remote_user)
             self._connected = True
         return self
 
@@ -66,11 +70,15 @@ class Connection(ConnectionBase):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
         display.debug("in local.exec_command()")
+        log.debug("in local.exec_command()")
 
         executable = C.DEFAULT_EXECUTABLE.split()[0] if C.DEFAULT_EXECUTABLE else None
 
         display.vvv(u"EXEC {0}".format(cmd), host=self._play_context.remote_addr)
+        self.host_log.log(logger.VVV, "EXEC %s", cmd)
+
         display.debug("opening command with Popen()")
+        log.debug("opening command with Popen()")
 
         if isinstance(cmd, (text_type, binary_type)):
             cmd = to_bytes(cmd)
@@ -86,6 +94,7 @@ class Connection(ConnectionBase):
             stderr=subprocess.PIPE,
         )
         display.debug("done running command with Popen()")
+        log.debug("done running command with Popen()")
 
         if self._play_context.prompt and sudoable:
             fcntl.fcntl(p.stdout, fcntl.F_SETFL, fcntl.fcntl(p.stdout, fcntl.F_GETFL) | os.O_NONBLOCK)
@@ -111,10 +120,15 @@ class Connection(ConnectionBase):
             fcntl.fcntl(p.stderr, fcntl.F_SETFL, fcntl.fcntl(p.stderr, fcntl.F_GETFL) & ~os.O_NONBLOCK)
 
         display.debug("getting output with communicate()")
+        log.debug("getting output with communicate()")
+
         stdout, stderr = p.communicate(in_data)
+
         display.debug("done communicating")
+        log.debug("done communicating")
 
         display.debug("done with local.exec_command()")
+        log.debug("done with local.exec_command()")
         return (p.returncode, stdout, stderr)
 
     def put_file(self, in_path, out_path):
@@ -123,6 +137,7 @@ class Connection(ConnectionBase):
         super(Connection, self).put_file(in_path, out_path)
 
         display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self._play_context.remote_addr)
+        self.host_log(logger.VVV, "PUT %s TO %s", in_path, out_path)
         if not os.path.exists(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_native(in_path)))
         try:
@@ -138,6 +153,7 @@ class Connection(ConnectionBase):
         super(Connection, self).fetch_file(in_path, out_path)
 
         display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self._play_context.remote_addr)
+        self.host_log(logger.VVV, "FETCH %s TO %s", in_path, out_path)
         self.put_file(in_path, out_path)
 
     def close(self):

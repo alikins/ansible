@@ -18,6 +18,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import datetime
+import logging
 import signal
 import termios
 import time
@@ -32,6 +33,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 class AnsibleTimeoutExceeded(Exception):
@@ -146,6 +149,7 @@ class ActionModule(ActionBase):
                     if not seconds:
                         if fd is None or not isatty(fd):
                             display.warning("Not waiting from prompt as stdin is not interactive")
+                            log.warning("Not waiting from prompt as stdin is not interactive")
                             break
                         # read key presses and act accordingly
                         if key_pressed == '\r':

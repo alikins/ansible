@@ -44,7 +44,7 @@ from ansible.template import Templar
 from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.vars import combine_vars
 from ansible.vars.unsafe_proxy import wrap_var
-from ansible.module_utils._text import to_native
+from ansible import logger
 
 try:
     from __main__ import display
@@ -223,9 +223,11 @@ class VariableManager:
         '''
 
         display.debug("in VariableManager get_vars()")
+        log.debug("in VariableManager get_vars()")
         cache_entry = self._get_cache_entry(play=play, host=host, task=task)
         if cache_entry in VARIABLE_CACHE and use_cache:
             display.debug("vars are cached, returning them now")
+            log.debug("vars are cached, returning them now")
             return VARIABLE_CACHE[cache_entry]
 
         all_vars = dict()
@@ -334,7 +336,9 @@ class VariableManager:
                     else:
                         # we do not have a full context here, and the missing variable could be
                         # because of that, so just show a warning and continue
-                        display.vvv("skipping vars_file '%s' due to an undefined variable" % vars_file_item)
+                        msg = "skipping vars_file '%s' due to an undefined variable"
+                        display.vvv(msg % vars_file_item)
+                        log.log(logger.VVV, msg, vars_file_item)
                         continue
 
             # By default, we now merge in all vars from all roles in the play,
@@ -391,6 +395,7 @@ class VariableManager:
             all_vars['vars'] = all_vars.copy()
 
         display.debug("done with get_vars()")
+        log.debug("done with get_vars()")
         return all_vars
 
     def invalidate_hostvars_cache(self, play):

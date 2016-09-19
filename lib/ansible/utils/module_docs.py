@@ -21,6 +21,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import sys
 import ast
@@ -37,6 +38,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 # modules that are ok that they do not have documentation strings
 BLACKLIST_MODULES = frozenset((
@@ -71,6 +74,7 @@ def get_docstring(filename, verbose=False):
                     except AttributeError as e:
                         # skip errors can happen when trying to use the normal code
                         display.warning("Failed to assign id for %s on %s, skipping" % (t, filename))
+                        log.warning("Failed to assign id for %s on %s, skipping", t, filename)
                         continue
 
                     if 'DOCUMENTATION' == theid:
@@ -135,6 +139,7 @@ def get_docstring(filename, verbose=False):
 
     except:
         display.error("unable to parse %s" % filename)
+        log.error("unable to parse %s", filename)
         if verbose == True:
             display.display("unable to parse %s" % filename)
             raise

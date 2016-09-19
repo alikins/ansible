@@ -18,6 +18,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 
 from ansible import constants as C
@@ -30,6 +31,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 def load_list_of_blocks(ds, play, parent_block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None):
     '''
@@ -283,6 +285,7 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                     is_static = ir.static
                 else:
                     display.debug('Determine if include_role is static')
+                    log.debug('Determine if include_role is static')
                     # Check to see if this include is dynamic or static:
                     all_vars = variable_manager.get_vars(loader=loader, play=play, task=ir)
                     templar = Templar(loader=loader, variables=all_vars)
@@ -296,6 +299,7 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                                 (use_handlers and C.DEFAULT_HANDLER_INCLUDES_STATIC)  or \
                                 (not needs_templating and ir.all_parents_static() and not ir.loop)
                     display.debug('Determined that if include_role static is %s' % str(is_static))
+                    log.debug('Determined that if include_role static is %s', str(is_static))
                 if is_static:
                     # uses compiled list from object
                     t = task_list.extend(ir.get_block_list(variable_manager=variable_manager, loader=loader))
