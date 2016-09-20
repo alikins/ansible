@@ -45,7 +45,7 @@ import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
 from ansible.module_utils._text import to_text
-
+from ansible import logger
 
 ########################################
 ### OUTPUT OF LAST RESORT ###
