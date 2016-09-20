@@ -17,6 +17,7 @@
 
 import getpass
 import logging
+import multiprocessing
 
 # TODO: config based logging setup
 # TODO: Any log Formatters or Handlers that are ansible specific
@@ -32,6 +33,7 @@ VVVV = 9
 VVVVV = 10
 #DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s %(playbook)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
 DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
+THREAD_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
 # rough approx of existing display format
 # based on:
@@ -59,7 +61,8 @@ def log_setup():
     log = logging.getLogger('ansible')
     log.setLevel(logging.DEBUG)
     # log.setLevel(logging.CRITICAL)
-    formatter = logging.Formatter(DEBUG_LOG_FORMAT)
+    #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
+    formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
     # log.propagate = True
 
     # stream_handler = logging.StreamHandler()
@@ -71,6 +74,10 @@ def log_setup():
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
+    mplog = multiprocessing.get_logger()
+    #mplog.setLevel(logging.DEBUG)
+    mplog.setLevel(multiprocessing.SUBDEBUG)
+    mplog.propagate = True
     # log.addHandler(null_handler)
     # log.addHandler(stream_handler)
     # log.addHandler(file_handler)
@@ -80,6 +87,5 @@ def log_setup():
     #                    format=DEBUG_LOG_FORMAT)
     #                   format=DISPLAY_LOG_FORMAT)
 
-logging_tree.printout()
 log_setup()
 logging_tree.printout()
