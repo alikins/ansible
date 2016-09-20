@@ -137,7 +137,7 @@ class Connection(ConnectionBase):
         super(Connection, self).put_file(in_path, out_path)
 
         display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self._play_context.remote_addr)
-        self.host_log(logger.VVV, "PUT %s TO %s", in_path, out_path)
+        self.host_log.log(logger.VVV, "PUT %s TO %s", in_path, out_path)
         if not os.path.exists(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_native(in_path)))
         try:
@@ -153,7 +153,7 @@ class Connection(ConnectionBase):
         super(Connection, self).fetch_file(in_path, out_path)
 
         display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self._play_context.remote_addr)
-        self.host_log(logger.VVV, "FETCH %s TO %s", in_path, out_path)
+        self.host_log.log(logger.VVV, "FETCH %s TO %s", in_path, out_path)
         self.put_file(in_path, out_path)
 
     def close(self):
