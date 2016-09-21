@@ -45,6 +45,11 @@ from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
 from ansible.module_utils._text import to_text
 
+import logging
+log_format = "%(asctime)s %(name)s %(levelname)s %(process)d %(filename)s:%(lineno)d -- %(message)s"
+logging.basicConfig(level=logging.DEBUG, format=log_format)
+log = logging.getLogger('ansible')
+log.debug('logging intialized')
 
 ########################################
 ### OUTPUT OF LAST RESORT ###
