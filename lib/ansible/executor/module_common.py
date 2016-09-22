@@ -60,6 +60,11 @@ ENCODING_STRING = u'# -*- coding: utf-8 -*-'
 # we've moved the module_common relative to the snippets, so fix the path
 _SNIPPET_PATH = os.path.join(os.path.dirname(__file__), '..', 'module_utils')
 
+# log format to use in the module bootstrap code below
+LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(processName)s:%(process)d %(filename)s:%(lineno)d -- %(message)s"
+# The name of the log file to use from the bootstrap module. The path will refer to fs on the machine the module
+# is running on. Ie, the remote node.
+LOG_FILE = "/home/adrian/ansible_module_common.log"
 # ******************************************************************************
 
 ANSIBALLZ_TEMPLATE = u'''%(shebang)s
@@ -131,6 +136,12 @@ import shutil
 import zipfile
 import tempfile
 import subprocess
+import logging
+log = logging.getLogger('ansible.modules.%(ansible_module)s')
+
+log_format = "%(log_format)s"
+log_file = "%(log_file)s"
+logging.basicConfig(level=logging.DEBUG, filename=log_file, format=log_format)
 
 if sys.version_info < (3,):
     bytes = str
@@ -165,6 +176,8 @@ def invoke_module(module, modlib_path, json_params):
         sys.stderr.buffer.write(stderr)
         sys.stdout.buffer.write(stdout)
     else:
+#        log.debug('module stdout:')
+#        log.debug('%%s', stdout)
         sys.stderr.write(stderr)
         sys.stdout.write(stdout)
     return p.returncode
@@ -711,6 +724,8 @@ def _find_snippet_imports(module_name, module_data, module_path, module_args, ta
             hour=now.hour,
             minute=now.minute,
             second=now.second,
+            log_format=LOG_FORMAT,
+            log_file=LOG_FILE
         )))
         module_data = output.getvalue()
 
