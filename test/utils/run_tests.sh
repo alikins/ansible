@@ -13,7 +13,7 @@ fi
 set -e
 set -u
 set -x
-
+PY24_EXCLUDE_MODULE_GLOB="module_utils/(a10|rax|openstack|ec2|gce|docker_common|azure_rm_common|vca|vmware|gcp|gcdns).py"
 LINKS="--link=httptester:ansible.http.tests --link=httptester:sni1.ansible.http.tests --link=httptester:sni2.ansible.http.tests --link=httptester:fail.ansible.http.tests"
 TOXENV=${TOXENV:-}
 TARGET_OPTIONS="${TARGET_OPTIONS:-}"
@@ -67,7 +67,7 @@ if [ "${TARGET}" = "sanity" ]; then
     fi
 
     if [ "${TOXENV}" = 'py24' ] ; then
-        python2.4 -V && python2.4 -m compileall -fq -x 'module_utils/(a10|rax|openstack|ec2|gce|docker_common|azure_rm_common|vca|vmware).py' lib/ansible/module_utils ;
+        python2.4 -V && python2.4 -m compileall -fq -x "${PY24_EXCLUDE_MODULE_GLOB}" lib/ansible/module_utils ;
     fi
 else
     if [ ! -e /tmp/cid_httptester ]; then
@@ -86,9 +86,9 @@ else
     # enable colors if output is going to a terminal
     COLOR_SETTINGS=""
     if [ -t 1 ]; then
-	COLOR_SETTINGS="--env TERM=$TERM"
+	    COLOR_SETTINGS="--env TERM=$TERM"
     fi
-    
+
     guess_root_of_ansible_src_dir
 
     CONTAINER_ID=$(docker run -d --volume=${ANSIBLE_SRC_DIR}:/root/ansible:Z ${LINKS} --name ${CONTAINER_NAME} --env "${DOCKER_RUN_ENV}" ${TARGET_OPTIONS} ansible/ansible:${TARGET})
