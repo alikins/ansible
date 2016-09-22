@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import multiprocessing
 import os
 import sys
@@ -44,6 +45,11 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+mplog = multiprocessing.get_logger()
+mplog.setLevel(logging.DEBUG)
+mplog.debug('mplog started')
+mplog.propagate = True
 
 __all__ = ['WorkerProcess']
 
@@ -94,7 +100,8 @@ class WorkerProcess(multiprocessing.Process):
         #import cProfile, pstats, StringIO
         #pr = cProfile.Profile()
         #pr.enable()
-
+        mplog.debug('worker process starting for task="%s" on host="%s"', self._task, self._host)
+        mplog.debug('play_context="%s"', self._play_context)
         if HAS_ATFORK:
             atfork()
 
