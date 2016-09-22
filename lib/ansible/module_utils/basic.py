@@ -62,6 +62,7 @@ FILE_ATTRIBUTES = {
 # be used to do many common tasks
 
 import locale
+import logging
 import os
 import re
 import pipes
@@ -166,6 +167,13 @@ from ansible.module_utils.six import (PY2, PY3, b, binary_type, integer_types,
         iteritems, text_type, string_types)
 from ansible.module_utils.six.moves import map, reduce
 from ansible.module_utils._text import to_native, to_bytes, to_text
+
+log = logging.getLogger(__name__)
+log_format = "%(asctime)s %(name)s %(levelname)s %(processName)s:%(process)d %(filename)s:%(lineno)d -- %(message)s"
+
+LOG_FILE = "/home/adrian/ansible_module.log"
+
+logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, format=log_format)
 
 _NUMBERTYPES = tuple(list(integer_types) + [float])
 
