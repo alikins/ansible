@@ -309,7 +309,6 @@ class Connection(ConnectionBase):
 
         return b''.join(output), remainder
 
-
     def _run(self, cmd, in_data, sudoable=True):
         '''
         Will retry execution if ssh were unable to connect or timeout
@@ -318,37 +317,27 @@ class Connection(ConnectionBase):
         cmd_summary = ' '.join(cmd)
         for attempt in range(remaining_tries):
             try:
-                return_tuple = self._run_once(cmd=cmd, in_data=in_data, sudoable=sudoable)
-                # 0 = success
-                # 1-254 = remote command return code
-                # 255 = failure from the ssh command itself
-                if return_tuple[0] != 255:
-                    break
-                else:
-                    raise AnsibleConnectionFailure("Failed to connect to the host via ssh.")
+                # done, ssh command didn't throw an error but remote command may have
+                return self._run_once(cmd=cmd, in_data=in_data, sudoable=sudoable)
             except (AnsibleConnectionFailure, AnsibleConnectionTimeout, Exception) as e:
                 if attempt == remaining_tries - 1:
                     raise
+
+                pause = 2 ** attempt - 1
+                if pause > 30:
+                    pause = 30
+
+                if isinstance(e, AnsibleConnectionFailure):
+                    msg = "ssh_retry [%s]: attempt: %d, ssh return code is 255." % (self.host, attempt)
+                elif isinstance(e, AnsibleConnectionTimeout):
+                    msg = "ssh_retry [%s]: attempt: %d, ssh timeout." % (self.host, attempt)
                 else:
-                    pause = 2 ** attempt - 1
-                    if pause > 30:
-                        pause = 30
+                    msg = "ssh_retry [%s]: attempt: %d, caught exception(%s) from" % (self.host, attempt, e)
 
-                    if isinstance(e, AnsibleConnectionFailure):
-                        msg = "ssh_retry [%s]: attempt: %d, ssh return code is 255." % (self.host, attempt)
-                    elif isinstance(e, AnsibleConnectionTimeout):
-                        msg = "ssh_retry [%s]: attempt: %d, ssh timeout." % (self.host, attempt)
-                    else:
-                        msg = "ssh_retry [%s]: attempt: %d, caught exception(%s) from" % (self.host, attempt, e)
+                msg += " cmd (%s), pausing for %d seconds" % (cmd_summary, pause)
+                display.warning(msg)
 
-                    msg += " cmd (%s), pausing for %d seconds" % (cmd_summary, pause)
-                    display.warning(msg)
-
-                    time.sleep(pause)
-                    continue
-
-        return return_tuple
-
+                time.sleep(pause)
 
     def _run_once(self, cmd, in_data, sudoable=True):
         '''
@@ -592,9 +581,11 @@ class Connection(ConnectionBase):
         if p.returncode != 0 and controlpersisterror:
             raise AnsibleError('using -c ssh on certain older ssh versions may not support ControlPersist, set ANSIBLE_SSH_ARGS="" (or ssh_args in [ssh_connection] section of the config file) before running again')
 
-        if p.returncode == 255 and in_data:
-            raise AnsibleConnectionFailure('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh')
-
+        # 0 = success
+        # 1-254 = remote command return code
+        # 255 = failure from the ssh command itself
+        if p.returncode == 255:
+            raise AnsibleConnectionFailure('SSH Error: Failed to connect to the host via ssh. The cmd (%s) returned 255 indicating failure' % ' '.join(cmd))
         return (p.returncode, b_stdout, b_stderr)
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
@@ -621,7 +612,6 @@ class Connection(ConnectionBase):
         (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=sudoable)
 
         return (returncode, stdout, stderr)
-
 
     def put_file(self, in_path, out_path):
         ''' transfer a file from local to remote '''
