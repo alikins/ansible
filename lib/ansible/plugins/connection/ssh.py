@@ -43,6 +43,32 @@ except ImportError:
 
 SSHPASS_AVAILABLE = None
 
+def pause_exponential_backoff(attempt_count):
+    pause = 2 ** attempt_count - 1
+    if pause > 30:
+        pause = 30
+    return pause
+
+def retry_with_pause_generator(total_attempts, pause_function=None):
+    '''Generator yielding the attempt counter and pause size.
+
+    The generator will pause between iterations after the first
+    attempt.
+
+    pause_function is a method that will be called with the attempt_count
+    and is expected to return an int indicating how long to pause.
+    If not provided, the default is pause_exponential_backoff.
+
+    The attempt counter starts at 0.
+    '''
+    pause_function = pause_function or pause_exponential_backoff
+
+    for attempt in range(total_attempts):
+        pause = pause_function(attempt)
+        yield attempt, pause
+
+        time.sleep(pause)
+
 
 class Connection(ConnectionBase):
     ''' ssh based connections '''
@@ -309,29 +335,13 @@ class Connection(ConnectionBase):
 
         return b''.join(output), remainder
 
-    def _retries_with_pause(self, total_attempts):
-        '''Generator yielding the attempt counter and pause size.
-
-        The generator will pause between iterations after the first
-        attempt.
-
-        The attempt counter starts at 0.
-        '''
-        for attempt in range(total_attempts):
-            pause = 2 ** attempt - 1
-            if pause > 30:
-                pause = 30
-            yield attempt, pause
-
-            time.sleep(pause)
-
     def _run(self, cmd, in_data, sudoable=True):
         '''
         Will retry execution if ssh were unable to connect or timeout
         '''
         max_retries = int(C.ANSIBLE_SSH_RETRIES)   # 0 by default
         total_attempts = max_retries + 1
-        for attempt_count, pause in self._retries_with_pause(total_attempts):
+        for attempt_count, pause in retry_with_pause_generator(total_attempts):
             human_attempt_count = attempt_count + 1
 
             try:
