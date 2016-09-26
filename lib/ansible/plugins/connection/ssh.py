@@ -309,46 +309,46 @@ class Connection(ConnectionBase):
 
         return b''.join(output), remainder
 
+    def _retries_with_pause(self, total_attempts):
+        '''Generator yielding the attempt counter and pause size.
+
+        The generator will pause between iterations after the first
+        attempt.
+
+        The attempt counter starts at 0.
+        '''
+        for attempt in range(total_attempts):
+            pause = 2 ** attempt - 1
+            if pause > 30:
+                pause = 30
+            yield attempt, pause
+
+            time.sleep(pause)
 
     def _run(self, cmd, in_data, sudoable=True):
         '''
         Will retry execution if ssh were unable to connect or timeout
         '''
-        remaining_tries = int(C.ANSIBLE_SSH_RETRIES) + 1
-        cmd_summary = ' '.join(cmd)
-        for attempt in range(remaining_tries):
+        max_retries = int(C.ANSIBLE_SSH_RETRIES)   # 0 by default
+        total_attempts = max_retries + 1
+        for attempt_count, pause in self._retries_with_pause(total_attempts):
+            human_attempt_count = attempt_count + 1
+
             try:
-                return_tuple = self._run_once(cmd=cmd, in_data=in_data, sudoable=sudoable)
-                # 0 = success
-                # 1-254 = remote command return code
-                # 255 = failure from the ssh command itself
-                if return_tuple[0] != 255:
-                    break
-                else:
-                    raise AnsibleConnectionFailure("Failed to connect to the host via ssh.")
+                return self._run_once(cmd=cmd, in_data=in_data, sudoable=sudoable)
             except (AnsibleConnectionFailure, AnsibleConnectionTimeout, Exception) as e:
-                if attempt == remaining_tries - 1:
+                if attempt_count >= max_retries:
+                    if attempt_count:
+                        # if we made more than one attempt, indicate the final attempt failed as well.
+                        msg = "ssh_retry [%s]: attempt #%d of %d, final retry attempt failed." % (self.host, human_attempt_count, total_attempts)
+                        display.warning(msg)
                     raise
-                else:
-                    pause = 2 ** attempt - 1
-                    if pause > 30:
-                        pause = 30
 
-                    if isinstance(e, AnsibleConnectionFailure):
-                        msg = "ssh_retry [%s]: attempt: %d, ssh return code is 255." % (self.host, attempt)
-                    elif isinstance(e, AnsibleConnectionTimeout):
-                        msg = "ssh_retry [%s]: attempt: %d, ssh timeout." % (self.host, attempt)
-                    else:
-                        msg = "ssh_retry [%s]: attempt: %d, caught exception(%s) from" % (self.host, attempt, e)
+            msg = "ssh_retry [%s]: attempt #%d of %d, the error was: %s" % (self.host, human_attempt_count, total_attempts, e)
+            display.warning(msg)
 
-                    msg += " cmd (%s), pausing for %d seconds" % (cmd_summary, pause)
-                    display.warning(msg)
-
-                    time.sleep(pause)
-                    continue
-
-        return return_tuple
-
+            msg = "ssh_retry [%s]: attempt #%d of %d, pausing for %d seconds" % (self.host, human_attempt_count, total_attempts,  pause)
+            display.warning(msg)
 
     def _run_once(self, cmd, in_data, sudoable=True):
         '''
@@ -592,9 +592,12 @@ class Connection(ConnectionBase):
         if p.returncode != 0 and controlpersisterror:
             raise AnsibleError('using -c ssh on certain older ssh versions may not support ControlPersist, set ANSIBLE_SSH_ARGS="" (or ssh_args in [ssh_connection] section of the config file) before running again')
 
-        if p.returncode == 255 and in_data:
-            raise AnsibleConnectionFailure('SSH Error: data could not be sent to the remote host. Make sure this host can be reached over ssh')
-
+        # 0 = success
+        # 1-254 = remote command return code
+        # 255 = failure from the ssh command itself
+        if p.returncode == 255:
+            cmd_summary = ' '.join(cmd)
+            raise AnsibleConnectionFailure('SSH Error: Failed to connect to the host via ssh. The cmd (%s) returned 255 indicating failure' % cmd_summary)
         return (p.returncode, b_stdout, b_stderr)
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
