@@ -218,7 +218,6 @@ class PluginLoader:
                 directory = os.path.join(directory, self.subdir)
             if directory not in self._extra_dirs:
                 # append the directory and invalidate the path cache
-                self._module_cache = {}
                 self._plugin_path_cache = defaultdict(dict)
                 self._extra_dirs.append(directory)
                 self._paths = None
