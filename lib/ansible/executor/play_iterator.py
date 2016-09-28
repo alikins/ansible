@@ -58,9 +58,38 @@ def _should_gather(gathering, host_gathered_facts, play_gather_facts):
     #if implied:
     #    gather facts
 
+    if gathering == 'smart':
+        if host_gathered_facts:
+            return False
+        if play_gather_facts is None:
+            return True
+
+    elif gathering == 'implicit':
+        # do gather if we haven't set play_gather_facts
+        if play_gather_facts is None:
+            return True
+        return boolean(play_gather_facts)
+    elif gathering == 'explicit':
+        if play_gather_facts is None:
+            return False
+
+    return implied
+    #return boolean(play_gather_facts)
+
+
+def _should_gather2(gathering, host_gathered_facts, play_gather_facts):
+    # Gather facts if the default is 'smart' and we have not yet
+    # done it for this host; or if 'explicit' and the play sets
+    # gather_facts to True; or if 'implicit' and the play does
+    # NOT explicitly set gather_facts to False.
+
+    # gathering = C.DEFAULT_GATHERING
+    # host_gather_facts = host._gathered_facts
+    # play_gather_facts = self._play.gather_facts
+    implied = play_gather_facts is None or boolean(play_gather_facts)
     if (gathering == 'implicit' and implied) or \
             (gathering == 'explicit' and boolean(play_gather_facts)) or \
-            (gathering == 'smart' and not host_gathered_facts):
+            (gathering == 'smart' and implied and not host_gathered_facts):
         return True
     return False
 

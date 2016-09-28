@@ -24,7 +24,7 @@ from ansible.compat.tests.mock import patch, MagicMock
 
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleParserError
-from ansible.executor.play_iterator import HostState, PlayIterator, _should_gather
+from ansible.executor.play_iterator import HostState, PlayIterator, _should_gather, _should_gather2
 from ansible.playbook import Playbook
 from ansible.playbook.task import Task
 from ansible.playbook.play_context import PlayContext
@@ -37,6 +37,8 @@ from units.mock.path import mock_unfrackpath_noop
 # host_gathered_facts  None, true, false
 # gather_facts  None, true, false
 class TestShouldGather(unittest.TestCase):
+    host_gathered_facts = False
+
     def test(self):
         print(C.DEFAULT_GATHERING)
         gathering = C.DEFAULT_GATHERING
@@ -78,7 +80,7 @@ class TestShouldGather(unittest.TestCase):
         gathering = "explicit"
         host_gathered_facts = False
         play_gather_facts = None
-        self._assert_true(gathering, host_gathered_facts, play_gather_facts)
+        self._assert_false(gathering, host_gathered_facts, play_gather_facts)
 
     def test_gathering_implicit_play_gather_false(self):
         gathering = "implicit"
@@ -104,13 +106,34 @@ class TestShouldGather(unittest.TestCase):
         play_gather_facts = None
         self._assert_true(gathering, host_gathered_facts, play_gather_facts)
 
-    def _assert_true(self, gathering, host_gathered_facts, play_gather_facts):
-        res = _should_gather(gathering, host_gathered_facts, play_gather_facts)
+    def _assert_true(self, gathering,host_gathered_facts, play_gather_facts):
+        res = _should_gather(gathering, self.host_gathered_facts, play_gather_facts)
         self.assertTrue(res)
 
     def _assert_false(self, gathering, host_gathered_facts, play_gather_facts):
-        res = _should_gather(gathering, host_gathered_facts, play_gather_facts)
+        res = _should_gather(gathering, self.host_gathered_facts, play_gather_facts)
         self.assertFalse(res)
+
+
+class TestShouldGatherHostGatheredTrue(TestShouldGather):
+    host_gathered_facts = True
+    def test_gathering_smart_play_gather_true(self):
+        gathering = "smart"
+        host_gathered_facts = False
+        play_gather_facts = True
+        self._assert_false(gathering, host_gathered_facts, play_gather_facts)
+
+    def test_gathering_smart_play_gather_none(self):
+        gathering = "smart"
+        host_gathered_facts = False
+        play_gather_facts = None
+        self._assert_false(gathering, host_gathered_facts, play_gather_facts)
+
+    def test_gathering_explicit_play_gather_false(self):
+        gathering = "explicit"
+        host_gathered_facts = False
+        play_gather_facts = False
+        self._assert_false(gathering, host_gathered_facts, play_gather_facts)
 
 
 class TestPlayIterator(unittest.TestCase):
