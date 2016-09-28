@@ -40,6 +40,29 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+def _should_gather(gathering, host_gathered_facts, play_gather_facts):
+    # Gather facts if the default is 'smart' and we have not yet
+    # done it for this host; or if 'explicit' and the play sets
+    # gather_facts to True; or if 'implicit' and the play does
+    # NOT explicitly set gather_facts to False.
+
+    # gathering = C.DEFAULT_GATHERING
+    # host_gather_facts = host._gathered_facts
+    # play_gather_facts = self._play.gather_facts
+    implied = play_gather_facts is None or boolean(play_gather_facts)
+
+    # gathering = 'implicit', gather_facts = True
+
+    # gathering = explicit and gather_facts = True
+    #task_gather = boolean(self._play.gather_facts)
+    #if implied:
+    #    gather facts
+
+    if (gathering == 'implicit' and implied) or \
+            (gathering == 'explicit' and boolean(play_gather_facts)) or \
+            (gathering == 'smart' and not host_gathered_facts):
+        return True
+    return False
 
 class HostState:
     def __init__(self, blocks):
@@ -318,17 +341,10 @@ class PlayIterator:
                 if not state.pending_setup:
                     state.pending_setup = True
 
-                    # Gather facts if the default is 'smart' and we have not yet
-                    # done it for this host; or if 'explicit' and the play sets
-                    # gather_facts to True; or if 'implicit' and the play does
-                    # NOT explicitly set gather_facts to False.
-
-                    gathering = C.DEFAULT_GATHERING
-                    implied = self._play.gather_facts is None or boolean(self._play.gather_facts)
-
-                    if (gathering == 'implicit' and implied) or \
-                       (gathering == 'explicit' and boolean(self._play.gather_facts)) or \
-                       (gathering == 'smart' and not host._gathered_facts):
+                    # gathering = C.DEFAULT_GATHERING
+                    # host_gather_facts = host._gathered_facts
+                    # play_gather_facts = self._play.gather_facts
+                    if _should_gather(C.DEFAULT_GATHERING, host._gathered_facts, self._play.gather_facts):
                         # The setup block is always self._blocks[0], as we inject it
                         # during the play compilation in __init__ above.
                         setup_block = self._blocks[0]
