@@ -58,6 +58,8 @@ def _should_gather(gathering, host_gathered_facts, play_gather_facts):
     #if implied:
     #    gather facts
 
+    print('gathering=%s, host_gathered_facts=%s, play_gather_facts=%s, implied=%s' %
+          (gathering, host_gathered_facts, play_gather_facts, implied))
     if gathering == 'smart':
         if host_gathered_facts:
             return False
