@@ -21,6 +21,13 @@ __metaclass__ = type
 
 from ansible.plugins.callback import CallbackBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
+
 class CallbackModule(CallbackBase):
     """
     This is a very trivial example of how any callback function can get at play and task objects.
@@ -37,15 +44,15 @@ class CallbackModule(CallbackBase):
         self.play = None
 
     def v2_on_any(self, *args, **kwargs):
-        self._display.display("--- play: {} task: {} ---".format(getattr(self.play, 'name', None), self.task))
+        display.display("--- play: {} task: {} ---".format(getattr(self.play, 'name', None), self.task))
 
-        self._display.display("     --- ARGS ")
+        display.display("     --- ARGS ")
         for i, a in enumerate(args):
-            self._display.display('     %s: %s' % (i, a))
+            display.display('     %s: %s' % (i, a))
 
-        self._display.display("      --- KWARGS ")
+        display.display("      --- KWARGS ")
         for k in kwargs:
-            self._display.display('     %s: %s' % (k, kwargs[k]))
+            display.display('     %s: %s' % (k, kwargs[k]))
 
     def v2_playbook_on_play_start(self, play):
         self.play = play

@@ -23,6 +23,12 @@ from ansible import constants as C
 from ansible.plugins.callback import CallbackBase
 from ansible.utils.color import colorize, hostcolor
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 class CallbackModule(CallbackBase):
 
     '''
@@ -47,26 +53,26 @@ class CallbackModule(CallbackBase):
 
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
         if 'exception' in result._result:
-            if self._display.verbosity < 3:
+            if display.verbosity < 3:
                 # extract just the actual error message from the exception text
                 error = result._result['exception'].strip().split('\n')[-1]
                 msg = "An exception occurred during task execution. To see the full traceback, use -vvv. The error was: %s" % error
             else:
                 msg = "An exception occurred during task execution. The full traceback is:\n" + result._result['exception']
 
-            self._display.display(msg, color=C.COLOR_ERROR)
+            display.display(msg, color=C.COLOR_ERROR)
 
         if result._task.loop and 'results' in result._result:
             self._process_items(result)
 
         else:
             if delegated_vars:
-                self._display.display("fatal: [%s -> %s]: FAILED! => %s" % (result._host.get_name(), delegated_vars['ansible_host'], self._dump_results(result._result)), color=C.COLOR_ERROR)
+                display.display("fatal: [%s -> %s]: FAILED! => %s" % (result._host.get_name(), delegated_vars['ansible_host'], self._dump_results(result._result)), color=C.COLOR_ERROR)
             else:
-                self._display.display("fatal: [%s]: FAILED! => %s" % (result._host.get_name(), self._dump_results(result._result)), color=C.COLOR_ERROR)
+                display.display("fatal: [%s]: FAILED! => %s" % (result._host.get_name(), self._dump_results(result._result)), color=C.COLOR_ERROR)
 
         if result._task.ignore_errors:
-            self._display.display("...ignoring", color=C.COLOR_SKIP)
+            display.display("...ignoring", color=C.COLOR_SKIP)
 
     def v2_runner_on_ok(self, result):
 
@@ -96,9 +102,9 @@ class CallbackModule(CallbackBase):
             self._process_items(result)
         else:
 
-            if (self._display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
+            if (display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
                 msg += " => %s" % (self._dump_results(result._result),)
-            self._display.display(msg, color=color)
+            display.display(msg, color=color)
 
         self._handle_warnings(result._result)
 
@@ -111,9 +117,9 @@ class CallbackModule(CallbackBase):
                 self._process_items(result)
             else:
                 msg = "skipping: [%s]" % result._host.get_name()
-                if (self._display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
+                if (display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
                     msg += " => %s" % self._dump_results(result._result)
-                self._display.display(msg, color=C.COLOR_SKIP)
+                display.display(msg, color=C.COLOR_SKIP)
 
     def v2_runner_on_unreachable(self, result):
         if self._play.strategy == 'free' and self._last_task_banner != result._task._uuid:
@@ -121,15 +127,15 @@ class CallbackModule(CallbackBase):
 
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
         if delegated_vars:
-            self._display.display("fatal: [%s -> %s]: UNREACHABLE! => %s" % (result._host.get_name(), delegated_vars['ansible_host'], self._dump_results(result._result)), color=C.COLOR_UNREACHABLE)
+            display.display("fatal: [%s -> %s]: UNREACHABLE! => %s" % (result._host.get_name(), delegated_vars['ansible_host'], self._dump_results(result._result)), color=C.COLOR_UNREACHABLE)
         else:
-            self._display.display("fatal: [%s]: UNREACHABLE! => %s" % (result._host.get_name(), self._dump_results(result._result)), color=C.COLOR_UNREACHABLE)
+            display.display("fatal: [%s]: UNREACHABLE! => %s" % (result._host.get_name(), self._dump_results(result._result)), color=C.COLOR_UNREACHABLE)
 
     def v2_playbook_on_no_hosts_matched(self):
-        self._display.display("skipping: no hosts matched", color=C.COLOR_SKIP)
+        display.display("skipping: no hosts matched", color=C.COLOR_SKIP)
 
     def v2_playbook_on_no_hosts_remaining(self):
-        self._display.banner("NO MORE HOSTS LEFT")
+        display.banner("NO MORE HOSTS LEFT")
 
     def v2_playbook_on_task_start(self, task, is_conditional):
 
@@ -150,19 +156,19 @@ class CallbackModule(CallbackBase):
             args = u', '.join(u'%s=%s' % a for a in task.args.items())
             args = u' %s' % args
 
-        self._display.banner(u"TASK [%s%s]" % (task.get_name().strip(), args))
-        if self._display.verbosity >= 2:
+        display.banner(u"TASK [%s%s]" % (task.get_name().strip(), args))
+        if display.verbosity >= 2:
             path = task.get_path()
             if path:
-                self._display.display(u"task path: %s" % path, color=C.COLOR_DEBUG)
+                display.display(u"task path: %s" % path, color=C.COLOR_DEBUG)
 
         self._last_task_banner = task._uuid
 
     def v2_playbook_on_cleanup_task_start(self, task):
-        self._display.banner("CLEANUP TASK [%s]" % task.get_name().strip())
+        display.banner("CLEANUP TASK [%s]" % task.get_name().strip())
 
     def v2_playbook_on_handler_task_start(self, task):
-        self._display.banner("RUNNING HANDLER [%s]" % task.get_name().strip())
+        display.banner("RUNNING HANDLER [%s]" % task.get_name().strip())
 
     def v2_playbook_on_play_start(self, play):
         name = play.get_name().strip()
@@ -173,7 +179,7 @@ class CallbackModule(CallbackBase):
 
         self._play = play
 
-        self._display.banner(msg)
+        display.banner(msg)
 
     def v2_on_file_diff(self, result):
         if result._task.loop and 'results' in result._result:
@@ -181,11 +187,11 @@ class CallbackModule(CallbackBase):
                 if 'diff' in res and res['diff'] and res.get('changed', False):
                     diff = self._get_diff(res['diff'])
                     if diff:
-                        self._display.display(diff)
+                        display.display(diff)
         elif 'diff' in result._result and result._result['diff'] and result._result.get('changed', False):
             diff = self._get_diff(result._result['diff'])
             if diff:
-                self._display.display(diff)
+                display.display(diff)
 
     def v2_runner_item_on_ok(self, result):
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
@@ -205,21 +211,21 @@ class CallbackModule(CallbackBase):
 
         msg += " => (item=%s)" % (self._get_item(result._result),)
 
-        if (self._display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
+        if (display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
             msg += " => %s" % self._dump_results(result._result)
-        self._display.display(msg, color=color)
+        display.display(msg, color=color)
 
     def v2_runner_item_on_failed(self, result):
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
         if 'exception' in result._result:
-            if self._display.verbosity < 3:
+            if display.verbosity < 3:
                 # extract just the actual error message from the exception text
                 error = result._result['exception'].strip().split('\n')[-1]
                 msg = "An exception occurred during task execution. To see the full traceback, use -vvv. The error was: %s" % error
             else:
                 msg = "An exception occurred during task execution. The full traceback is:\n" + result._result['exception']
 
-            self._display.display(msg, color=C.COLOR_ERROR)
+            display.display(msg, color=C.COLOR_ERROR)
 
         msg = "failed: "
         if delegated_vars:
@@ -227,28 +233,28 @@ class CallbackModule(CallbackBase):
         else:
             msg += "[%s]" % (result._host.get_name())
 
-        self._display.display(msg + " (item=%s) => %s" % (self._get_item(result._result), self._dump_results(result._result)), color=C.COLOR_ERROR)
+        display.display(msg + " (item=%s) => %s" % (self._get_item(result._result), self._dump_results(result._result)), color=C.COLOR_ERROR)
         self._handle_warnings(result._result)
 
     def v2_runner_item_on_skipped(self, result):
         if C.DISPLAY_SKIPPED_HOSTS:
             msg = "skipping: [%s] => (item=%s) " % (result._host.get_name(), self._get_item(result._result))
-            if (self._display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
+            if (display.verbosity > 0 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
                 msg += " => %s" % self._dump_results(result._result)
-            self._display.display(msg, color=C.COLOR_SKIP)
+            display.display(msg, color=C.COLOR_SKIP)
 
     def v2_playbook_on_include(self, included_file):
         msg = 'included: %s for %s' % (included_file._filename, ", ".join([h.name for h in included_file._hosts]))
-        self._display.display(msg, color=C.COLOR_SKIP)
+        display.display(msg, color=C.COLOR_SKIP)
 
     def v2_playbook_on_stats(self, stats):
-        self._display.banner("PLAY RECAP")
+        display.banner("PLAY RECAP")
 
         hosts = sorted(stats.processed.keys())
         for h in hosts:
             t = stats.summarize(h)
 
-            self._display.display(u"%s : %s %s %s %s" % (
+            display.display(u"%s : %s %s %s %s" % (
                 hostcolor(h, t),
                 colorize(u'ok', t['ok'], C.COLOR_OK),
                 colorize(u'changed', t['changed'], C.COLOR_CHANGED),
@@ -257,7 +263,7 @@ class CallbackModule(CallbackBase):
                 screen_only=True
             )
 
-            self._display.display(u"%s : %s %s %s %s" % (
+            display.display(u"%s : %s %s %s %s" % (
                 hostcolor(h, t, False),
                 colorize(u'ok', t['ok'], None),
                 colorize(u'changed', t['changed'], None),
@@ -266,24 +272,24 @@ class CallbackModule(CallbackBase):
                 log_only=True
             )
 
-        self._display.display("", screen_only=True)
+        display.display("", screen_only=True)
 
     def v2_playbook_on_start(self, playbook):
-        if self._display.verbosity > 1:
+        if display.verbosity > 1:
             from os.path import basename
-            self._display.banner("PLAYBOOK: %s" % basename(playbook._file_name))
+            display.banner("PLAYBOOK: %s" % basename(playbook._file_name))
 
-        if self._display.verbosity > 3:
+        if display.verbosity > 3:
             if self._options is not None:
                 for option in dir(self._options):
                     if option.startswith('_') or option in ['read_file', 'ensure_value', 'read_module']:
                         continue
-                    val =  getattr(self._options,option)
+                    val = getattr(self._options,option)
                     if val:
-                        self._display.vvvv('%s: %s' % (option,val))
+                        display.vvvv('%s: %s' % (option,val))
 
     def v2_runner_retry(self, result):
         msg = "FAILED - RETRYING: %s (%d retries left)." % (result._task, result._result['retries'] - result._result['attempts'])
-        if (self._display.verbosity > 2 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
+        if (display.verbosity > 2 or '_ansible_verbose_always' in result._result) and not '_ansible_verbose_override' in result._result:
             msg += "Result was: %s" % self._dump_results(result._result)
-        self._display.display(msg, color=C.COLOR_DEBUG)
+        display.display(msg, color=C.COLOR_DEBUG)

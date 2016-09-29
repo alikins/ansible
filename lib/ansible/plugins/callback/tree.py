@@ -25,6 +25,12 @@ from ansible.module_utils._text import to_bytes
 from ansible.plugins.callback import CallbackBase
 from ansible.utils.path import makedirs_safe
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class CallbackModule(CallbackBase):
     '''
@@ -42,7 +48,7 @@ class CallbackModule(CallbackBase):
         self.tree = TREE_DIR
         if not self.tree:
             self.tree = os.path.expanduser("~/.ansible/tree")
-            self._display.warning("The tree callback is defaulting to ~/.ansible/tree, as an invalid directory was provided: %s" % self.tree)
+            display.warning("The tree callback is defaulting to ~/.ansible/tree, as an invalid directory was provided: %s" % self.tree)
 
     def write_tree_file(self, hostname, buf):
         ''' write something into treedir/hostname '''
@@ -54,7 +60,7 @@ class CallbackModule(CallbackBase):
             with open(path, 'wb+') as fd:
                 fd.write(buf)
         except (OSError, IOError) as e:
-            self._display.warning("Unable to write to %s's file: %s" % (hostname, str(e)))
+            display.warning("Unable to write to %s's file: %s" % (hostname, str(e)))
 
     def result_to_tree(self, result):
         if self.tree:

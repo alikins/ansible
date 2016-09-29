@@ -38,6 +38,12 @@ try:
 except ImportError:
     HAS_PRETTYTABLE = False
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class CallbackModule(CallbackBase):
     """This is an ansible callback plugin that sends status
@@ -73,7 +79,7 @@ class CallbackModule(CallbackBase):
 
         if not HAS_PRETTYTABLE:
             self.disabled = True
-            self._display.warning('The `prettytable` python module is not '
+            display.warning('The `prettytable` python module is not '
                                   'installed. Disabling the Slack callback '
                                   'plugin.')
 
@@ -81,12 +87,12 @@ class CallbackModule(CallbackBase):
         self.channel = os.getenv('SLACK_CHANNEL', '#ansible')
         self.username = os.getenv('SLACK_USERNAME', 'ansible')
         self.show_invocation = mk_boolean(
-            os.getenv('SLACK_INVOCATION', self._display.verbosity > 1)
+            os.getenv('SLACK_INVOCATION', display.verbosity > 1)
         )
 
         if self.webhook_url is None:
             self.disabled = True
-            self._display.warning('Slack Webhook URL was not provided. The '
+            display.warning('Slack Webhook URL was not provided. The '
                                   'Slack Webhook URL can be provided using '
                                   'the `SLACK_WEBHOOK_URL` environment '
                                   'variable.')
@@ -109,13 +115,13 @@ class CallbackModule(CallbackBase):
         }
 
         data = json.dumps(payload)
-        self._display.debug(data)
-        self._display.debug(self.webhook_url)
+        display.debug(data)
+        display.debug(self.webhook_url)
         try:
             response = open_url(self.webhook_url, data=data)
             return response.read()
         except Exception as e:
-            self._display.warning('Could not submit message to Slack: %s' %
+            display.warning('Could not submit message to Slack: %s' %
                                   str(e))
 
     def v2_playbook_on_start(self, playbook):

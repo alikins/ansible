@@ -77,6 +77,11 @@ except ImportError:
 
 from ansible.plugins.callback import CallbackBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
 
 def is_unicode(ch):
     return isinstance(ch, unicode)
@@ -121,7 +126,7 @@ class PlainTextSocketAppender(object):
                 return
             except Exception:
                 if self.verbose:
-                    self._display.warning("Unable to connect to Logentries")
+                    display.warning("Unable to connect to Logentries")
 
             root_delay *= 2
             if (root_delay > self.MAX_DELAY):
@@ -196,16 +201,16 @@ class CallbackModule(CallbackBase):
         super(CallbackModule, self).__init__()
 
         if not HAS_SSL:
-            self._display.warning("Unable to import ssl module. Will send over port 80.")
+            display.warning("Unable to import ssl module. Will send over port 80.")
 
         if not HAS_CERTIFI:
             self.disabled =True
-            self._display.warning('The `certifi` python module is not installed. '
+            display.warning('The `certifi` python module is not installed. '
                                  'Disabling the Logentries callback plugin.')
 
         if not HAS_FLATDICT:
             self.disabled =True
-            self._display.warning('The `flatdict` python module is not installed. '
+            display.warning('The `flatdict` python module is not installed. '
                                  'Disabling the Logentries callback plugin.')
 
         config_path = os.path.abspath(os.path.dirname(__file__))
@@ -254,7 +259,7 @@ class CallbackModule(CallbackBase):
             self.token = os.getenv('LOGENTRIES_ANSIBLE_TOKEN')
             if self.token is None:
                 self.disabled = True
-                self._display.warning('Logentries token could not be loaded. The logentries token can be provided using the `LOGENTRIES_TOKEN` environment variable')
+                display.warning('Logentries token could not be loaded. The logentries token can be provided using the `LOGENTRIES_TOKEN` environment variable')
 
             self.flatten = os.getenv('LOGENTRIES_FLATTEN')
             if self.flatten is None:

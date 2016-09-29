@@ -6,6 +6,12 @@ from datetime import datetime
 
 from ansible.plugins.callback import CallbackBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class CallbackModule(CallbackBase):
     """
@@ -33,4 +39,4 @@ class CallbackModule(CallbackBase):
     def v2_playbook_on_stats(self, stats):
         end_time = datetime.now()
         runtime = end_time - self.start_time
-        self._display.display("Playbook run took %s days, %s hours, %s minutes, %s seconds" % (self.days_hours_minutes_seconds(runtime)))
+        display.display("Playbook run took %s days, %s hours, %s minutes, %s seconds" % (self.days_hours_minutes_seconds(runtime)))
