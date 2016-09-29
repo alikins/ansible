@@ -30,10 +30,10 @@ from ansible.utils.color import stringc
 from ansible.vars import strip_internal_keys
 
 try:
-    from __main__ import display as global_display
+    from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
-    global_display = Display()
+    display = Display()
 
 try:
     from __main__ import cli
@@ -52,22 +52,17 @@ class CallbackBase:
     custom actions.
     '''
 
-    def __init__(self, display=None):
-        if display:
-            self._display = display
-        else:
-            self._display = global_display
-
+    def __init__(self):
         if cli:
             self._options = cli.options
         else:
             self._options = None
 
-        if self._display.verbosity >= 4:
+        if display.verbosity >= 4:
             name = getattr(self, 'CALLBACK_NAME', 'unnamed')
             ctype = getattr(self, 'CALLBACK_TYPE', 'old')
             version = getattr(self, 'CALLBACK_VERSION', '1.0')
-            self._display.vvvv('Loading callback plugin %s of type %s, v%s from %s' % (name, ctype, version, __file__))
+            display.vvvv('Loading callback plugin %s of type %s, v%s from %s' % (name, ctype, version, __file__))
 
     ''' helper for callbacks, so they don't all have to include deepcopy '''
     _copy_result = deepcopy
@@ -88,18 +83,18 @@ class CallbackBase:
         if result.get('_ansible_no_log', False):
             return json.dumps(dict(censored="the output has been hidden due to the fact that 'no_log: true' was specified for this result"))
 
-        if not indent and (result.get('_ansible_verbose_always') or self._display.verbosity > 2):
+        if not indent and (result.get('_ansible_verbose_always') or display.verbosity > 2):
             indent = 4
 
         # All result keys stating with _ansible_ are internal, so remove them from the result before we output anything.
         abridged_result = strip_internal_keys(result)
 
         # remove invocation unless specifically wanting it
-        if not keep_invocation and self._display.verbosity < 3 and 'invocation' in result:
+        if not keep_invocation and display.verbosity < 3 and 'invocation' in result:
             del abridged_result['invocation']
 
         # remove diff information from screen output
-        if self._display.verbosity < 3 and 'diff' in result:
+        if display.verbosity < 3 and 'diff' in result:
             del abridged_result['diff']
 
         # remove exception from screen output
@@ -112,7 +107,7 @@ class CallbackBase:
         ''' display warnings, if enabled and any exist in the result '''
         if C.COMMAND_WARNINGS and 'warnings' in res and res['warnings']:
             for warning in res['warnings']:
-                self._display.warning(warning)
+                display.warning(warning)
 
     def _get_diff(self, difflist):
 
