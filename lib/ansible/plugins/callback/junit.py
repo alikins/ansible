@@ -40,6 +40,12 @@ except ImportError:
     except ImportError:
         HAS_ORDERED_DICT = False
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class CallbackModule(CallbackBase):
     """
@@ -79,15 +85,15 @@ class CallbackModule(CallbackBase):
 
         if not HAS_JUNIT_XML:
             self.disabled = True
-            self._display.warning('The `junit_xml` python module is not installed. '
-                                  'Disabling the `junit` callback plugin.')
+            display.warning('The `junit_xml` python module is not installed. '
+                            'Disabling the `junit` callback plugin.')
 
         if HAS_ORDERED_DICT:
             self._task_data = OrderedDict()
         else:
             self.disabled = True
-            self._display.warning('The `ordereddict` python module is not installed. '
-                                  'Disabling the `junit` callback plugin.')
+            display.warning('The `ordereddict` python module is not installed. '
+                            'Disabling the `junit` callback plugin.')
 
         if not os.path.exists(self._output_dir):
             os.mkdir(self._output_dir)

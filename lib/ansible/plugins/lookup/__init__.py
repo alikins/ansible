@@ -36,8 +36,6 @@ class LookupBase(with_metaclass(ABCMeta, object)):
     def __init__(self, loader=None, templar=None, **kwargs):
         self._loader = loader
         self._templar = templar
-        # Backwards compat: self._display isn't really needed, just import the global display and use that.
-        self._display = display
 
     def get_basedir(self, variables):
         if 'role_path' in variables:
@@ -114,6 +112,6 @@ class LookupBase(with_metaclass(ABCMeta, object)):
 
         result = self._loader.path_dwim_relative_stack(paths, subdir, needle)
         if result is None:
-            self._display.warning("Unable to find '%s' in expected paths." % needle)
+            display.warning("Unable to find '%s' in expected paths." % needle)
 
         return result

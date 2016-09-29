@@ -29,6 +29,12 @@ import time
 
 from ansible.plugins.callback import CallbackBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 # define start time
 t0 = tn = time.time()
 
@@ -94,13 +100,13 @@ class CallbackModule(CallbackBase):
         """
         Logs the start of each task
         """
-        self._display.display(tasktime())
+        display.display(tasktime())
         timestamp(self)
 
         # Record the start time of the current task
         self.current = task._uuid
         self.stats[self.current] = {'time': time.time(), 'name': task.get_name()}
-        if self._display.verbosity >= 2:
+        if display.verbosity >= 2:
             self.stats[self.current][ 'path'] = task.get_path()
 
     def v2_playbook_on_task_start(self, task, is_conditional):
@@ -110,11 +116,11 @@ class CallbackModule(CallbackBase):
         self._record_task(task)
 
     def playbook_on_setup(self):
-        self._display.display(tasktime())
+        display.display(tasktime())
 
     def playbook_on_stats(self, stats):
-        self._display.display(tasktime())
-        self._display.display(filled("", fchar="="))
+        display.display(tasktime())
+        display.display(filled("", fchar="="))
 
         timestamp(self)
 
@@ -136,4 +142,4 @@ class CallbackModule(CallbackBase):
             msg=u"{0:-<70}{1:->9}".format(result['name'] + u' ',u' {0:.02f}s'.format(result['time']))
             if 'path' in result:
                 msg += u"\n{0:-<79}".format(result['path'] + u' ')
-            self._display.display(msg)
+            display.display(msg)

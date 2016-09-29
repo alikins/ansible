@@ -26,6 +26,12 @@ from ansible.errors import AnsibleError, AnsibleConnectionFailure, AnsibleFileNo
 from ansible.module_utils._text import to_bytes, to_text
 from ansible.plugins.connection import ConnectionBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class Connection(ConnectionBase):
     """ lxd based connections """
@@ -43,21 +49,21 @@ class Connection(ConnectionBase):
             raise AnsibleError("lxc command not found in PATH")
 
         if self._play_context.remote_user is not None and self._play_context.remote_user != 'root':
-            self._display.warning('lxd does not support remote_user, using container default: root')
+            display.warning('lxd does not support remote_user, using container default: root')
 
     def _connect(self):
         """connect to lxd (nothing to do here) """
         super(Connection, self)._connect()
 
         if not self._connected:
-            self._display.vvv(u"ESTABLISH LXD CONNECTION FOR USER: root", host=self._host)
+            display.vvv(u"ESTABLISH LXD CONNECTION FOR USER: root", host=self._host)
             self._connected = True
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         """ execute a command on the lxd host """
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
-        self._display.vvv(u"EXEC {0}".format(cmd), host=self._host)
+        display.vvv(u"EXEC {0}".format(cmd), host=self._host)
 
         local_cmd = [self._lxc_cmd, "exec", self._host, "--", self._play_context.executable, "-c", cmd]
 
@@ -82,7 +88,7 @@ class Connection(ConnectionBase):
         """ put a file from local to lxd """
         super(Connection, self).put_file(in_path, out_path)
 
-        self._display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self._host)
+        display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self._host)
 
         if not os.path.isfile(to_bytes(in_path, errors='surrogate_or_strict')):
             raise AnsibleFileNotFound("input path is not a file: %s" % in_path)
@@ -97,7 +103,7 @@ class Connection(ConnectionBase):
         """ fetch a file from lxd to local """
         super(Connection, self).fetch_file(in_path, out_path)
 
-        self._display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self._host)
+        display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self._host)
 
         local_cmd = [self._lxc_cmd, "file", "pull", self._host + "/" + in_path, out_path]
 

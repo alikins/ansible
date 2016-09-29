@@ -95,7 +95,7 @@ class Connection(ConnectionBase):
                 if self.actual_user != self._play_context.remote_user:
                     display.warning('docker {0} does not support remote_user, using container default: {1}'
                                     .format(docker_version, self.actual_user or '?'))
-        elif self._display.verbosity > 2:
+        elif display.verbosity > 2:
             # Since we're not setting the actual_user, look it up so we have it for logging later
             # Only do this if display verbosity is high enough that we'll need the value
             # This saves overhead from calling into docker when we don't need to

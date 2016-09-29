@@ -33,8 +33,6 @@ class FactCache(MutableMapping):
 
     def __init__(self, *args, **kwargs):
         self._plugin = cache_loader.get(C.CACHE_PLUGIN)
-        # Backwards compat: self._display isn't really needed, just import the global display and use that.
-        self._display = display
 
         if self._plugin is None:
             display.warning("Failed to load fact cache plugins")

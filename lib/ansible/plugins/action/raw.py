@@ -19,6 +19,12 @@ __metaclass__ = type
 
 from ansible.plugins.action import ActionBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class ActionModule(ActionBase):
     TRANSFERS_FILES = False
@@ -28,7 +34,7 @@ class ActionModule(ActionBase):
             task_vars = dict()
 
         if self._task.environment:
-            self._display.warning('raw module does not support the environment keyword')
+            display.warning('raw module does not support the environment keyword')
 
         result = super(ActionModule, self).run(tmp, task_vars)
 

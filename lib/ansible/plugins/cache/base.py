@@ -30,10 +30,6 @@ except ImportError:
 
 
 class BaseCacheModule(with_metaclass(ABCMeta, object)):
-
-    # Backwards compat only.  Just import the global display instead
-    _display = display
-
     @abstractmethod
     def get(self, key):
         pass
@@ -61,4 +57,3 @@ class BaseCacheModule(with_metaclass(ABCMeta, object)):
     @abstractmethod
     def copy(self):
         pass
-

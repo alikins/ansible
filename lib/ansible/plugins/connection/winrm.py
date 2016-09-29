@@ -305,7 +305,7 @@ class Connection(ConnectionBase):
         with open(to_bytes(in_path, errors='surrogate_or_strict'), 'rb') as in_file:
             for out_data in iter((lambda:in_file.read(buffer_size)), ''):
                 offset += len(out_data)
-                self._display.vvvvv('WINRM PUT "%s" to "%s" (offset=%d size=%d)' % (in_path, out_path, offset, len(out_data)), host=self._winrm_host)
+                display.vvvvv('WINRM PUT "%s" to "%s" (offset=%d size=%d)' % (in_path, out_path, offset, len(out_data)), host=self._winrm_host)
                 # yes, we're double-encoding over the wire in this case- we want to ensure that the data shipped to the end PS pipeline is still b64-encoded
                 b64_data = base64.b64encode(out_data) + '\r\n'
                 # cough up the data, as well as an indicator if this is the last chunk so winrm_send knows to set the End signal

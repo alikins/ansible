@@ -37,6 +37,12 @@ from ansible import errors
 from ansible.module_utils._text import to_bytes
 from ansible.plugins.connection import ConnectionBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class Connection(ConnectionBase):
     ''' Local lxc based connections '''
@@ -62,7 +68,7 @@ class Connection(ConnectionBase):
         if self.container:
             return
 
-        self._display.vvv("THIS IS A LOCAL LXC DIR", host=self.container_name)
+        display.vvv("THIS IS A LOCAL LXC DIR", host=self.container_name)
         self.container = _lxc.Container(self.container_name)
         if self.container.state == "STOPPED":
             raise errors.AnsibleError("%s is not running" % self.container_name)
@@ -125,7 +131,7 @@ class Connection(ConnectionBase):
                 read_stdin, write_stdin = os.pipe()
                 kwargs['stdin'] = self._set_nonblocking(read_stdin)
 
-            self._display.vvv("EXEC %s" % (local_cmd), host=self.container_name)
+            display.vvv("EXEC %s" % (local_cmd), host=self.container_name)
             pid = self.container.attach(_lxc.attach_run_command, local_cmd, **kwargs)
             if pid == -1:
                 msg = "failed to attach to container %s" % self.container_name
@@ -155,7 +161,7 @@ class Connection(ConnectionBase):
     def put_file(self, in_path, out_path):
         ''' transfer a file from local to lxc '''
         super(Connection, self).put_file(in_path, out_path)
-        self._display.vvv("PUT %s TO %s" % (in_path, out_path), host=self.container_name)
+        display.vvv("PUT %s TO %s" % (in_path, out_path), host=self.container_name)
         in_path = to_bytes(in_path, errors='surrogate_or_strict')
         out_path = to_bytes(out_path, errors='surrogate_or_strict')
 
@@ -183,7 +189,7 @@ class Connection(ConnectionBase):
     def fetch_file(self, in_path, out_path):
         ''' fetch a file from lxc to local '''
         super(Connection, self).fetch_file(in_path, out_path)
-        self._display.vvv("FETCH %s TO %s" % (in_path, out_path), host=self.container_name)
+        display.vvv("FETCH %s TO %s" % (in_path, out_path), host=self.container_name)
         in_path = to_bytes(in_path, errors='surrogate_or_strict')
         out_path = to_bytes(out_path, errors='surrogate_or_strict')
 

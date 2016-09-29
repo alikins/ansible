@@ -107,9 +107,6 @@ class StrategyBase:
         self._step              = getattr(tqm._options, 'step', False)
         self._diff              = getattr(tqm._options, 'diff', False)
 
-        # Backwards compat: self._display isn't really needed, just import the global display and use that.
-        self._display           = display
-
         # internal counters
         self._pending_results   = 0
         self._cur_worker        = 0

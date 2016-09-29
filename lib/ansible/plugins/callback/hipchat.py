@@ -31,6 +31,12 @@ except ImportError:
 from ansible.plugins.callback import CallbackBase
 from ansible.module_utils.urls import open_url
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class CallbackModule(CallbackBase):
     """This is an example ansible callback plugin that sends status
@@ -57,7 +63,7 @@ class CallbackModule(CallbackBase):
 
         if not HAS_PRETTYTABLE:
             self.disabled = True
-            self._display.warning('The `prettytable` python module is not installed. '
+            display.warning('The `prettytable` python module is not installed. '
                           'Disabling the HipChat callback plugin.')
 
         self.msg_uri = 'https://api.hipchat.com/v1/rooms/message'
@@ -68,7 +74,7 @@ class CallbackModule(CallbackBase):
 
         if self.token is None:
             self.disabled = True
-            self._display.warning('HipChat token could not be loaded. The HipChat '
+            display.warning('HipChat token could not be loaded. The HipChat '
                           'token can be provided using the `HIPCHAT_TOKEN` '
                           'environment variable.')
 
@@ -92,7 +98,7 @@ class CallbackModule(CallbackBase):
             response = open_url(url, data=urllib.urlencode(params))
             return response.read()
         except:
-            self._display.warning('Could not submit message to hipchat')
+            display.warning('Could not submit message to hipchat')
 
     def v2_playbook_on_play_start(self, play):
         """Display Playbook and play start messages"""

@@ -63,8 +63,6 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         self._loader            = loader
         self._templar           = templar
         self._shared_loader_obj = shared_loader_obj
-        # Backwards compat: self._display isn't really needed, just import the global display and use that.
-        self._display           = display
 
         self._cleanup_remote_tmp  = False
         self._supports_check_mode = True

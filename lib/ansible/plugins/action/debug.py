@@ -23,6 +23,12 @@ from ansible.errors import AnsibleUndefinedVariable
 from ansible.module_utils._text import to_text
 from ansible.plugins.action import ActionBase
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class ActionModule(ActionBase):
     ''' Print statements during execution '''
@@ -48,7 +54,7 @@ class ActionModule(ActionBase):
         if 'verbosity' in self._task.args:
             verbosity = int(self._task.args['verbosity'])
 
-        if verbosity <= self._display.verbosity:
+        if verbosity <= display.verbosity:
             if 'msg' in self._task.args:
                 result['msg'] = self._task.args['msg']
 

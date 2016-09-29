@@ -73,9 +73,6 @@ class ConnectionBase(with_metaclass(ABCMeta, object)):
             self._play_context = play_context
         if not hasattr(self, '_new_stdin'):
             self._new_stdin = new_stdin
-        # Backwards compat: self._display isn't really needed, just import the global display and use that.
-        if not hasattr(self, '_display'):
-            self._display = display
         if not hasattr(self, '_connected'):
             self._connected = False
 
