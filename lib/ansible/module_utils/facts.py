@@ -34,7 +34,7 @@ import pwd
 
 from ansible.module_utils.basic import get_all_subclasses
 from ansible.module_utils.six import PY3, iteritems
-from ansible.module_utils._text import to_native
+from ansible.module_utils._text import to_native, to_text
 
 # py2 vs py3; replace with six via ansiballz
 try:
@@ -2134,10 +2134,12 @@ class Darwin(Hardware):
         if rc != 0:
             return dict()
         sysctl = dict()
-        for line in out.splitlines():
-            if line.rstrip("\n"):
-                (key, value) = re.split(' = |: ', line, maxsplit=1)
-                sysctl[key] = value.strip()
+
+        for line in to_text(out).splitlines():
+            if not line:
+                continue
+            (key, value) = re.split(' = |: ', line, maxsplit=1)
+            sysctl[key] = value.strip()
         return sysctl
 
     def get_system_profile(self):
@@ -2525,8 +2527,7 @@ class GenericBsdIfconfigNetwork(Network):
                 # v6 routing may result in
                 #   RTNETLINK answers: Invalid argument
                 continue
-            lines = out.split('\n')
-            for line in lines:
+            for line in out.splitlines():
                 words = line.split()
                 # Collect output from route command
                 if len(words) > 1:
@@ -2549,7 +2550,7 @@ class GenericBsdIfconfigNetwork(Network):
         # Solaris must explicitly run the command 'ifconfig -a'.
         rc, out, err = self.module.run_command([ifconfig_path, ifconfig_options])
 
-        for line in out.split('\n'):
+        for line in to_text(out).splitlines():
 
             if line:
                 words = line.split()
@@ -2810,7 +2811,7 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
         )
         rc, out, err = self.module.run_command([ifconfig_path, ifconfig_options])
 
-        for line in out.split('\n'):
+        for line in out.splitlines():
 
             if line:
                 words = line.split()
