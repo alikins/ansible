@@ -2524,12 +2524,13 @@ class GenericBsdIfconfigNetwork(Network):
 
             if v == 'v6' and not socket.has_ipv6:
                 continue
-            rc, out, err = self.module.run_command(command[v])
-            if not out:
+            rc, b_out, b_err = self.module.run_command(command[v])
+            out_text = to_text(b_out)
+            if not out_text:
                 # v6 routing may result in
                 #   RTNETLINK answers: Invalid argument
                 continue
-            for line in out.splitlines():
+            for line in out_text.splitlines():
                 words = line.split()
                 # Collect output from route command
                 if len(words) > 1:
@@ -2550,9 +2551,10 @@ class GenericBsdIfconfigNetwork(Network):
         # FreeBSD, DragonflyBSD, NetBSD, OpenBSD and OS X all implicitly add '-a'
         # when running the command 'ifconfig'.
         # Solaris must explicitly run the command 'ifconfig -a'.
-        rc, out, err = self.module.run_command([ifconfig_path, ifconfig_options])
+        rc, b_out, b_err = self.module.run_command([ifconfig_path, ifconfig_options])
 
-        for line in to_text(out).splitlines():
+        out_text = to_text(b_out)
+        for line in out_text.splitlines():
 
             if line:
                 words = line.split()
@@ -2811,9 +2813,10 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
             all_ipv4_addresses = [],
             all_ipv6_addresses = [],
         )
-        rc, out, err = self.module.run_command([ifconfig_path, ifconfig_options])
+        rc, b_out, b_err = self.module.run_command([ifconfig_path, ifconfig_options])
+        out_text = to_text(b_out)
 
-        for line in out.splitlines():
+        for line in out_text.splitlines():
 
             if line:
                 words = line.split()
