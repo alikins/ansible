@@ -1600,12 +1600,12 @@ class OpenBSDHardware(Hardware):
         return self.facts
 
     def get_sysctl(self):
-        rc, b_out, b_err = self.module.run_command(["/sbin/sysctl", "hw"])
+        rc, out, err = self.module.run_command(["/sbin/sysctl", "hw"])
         if rc != 0:
             return dict()
         sysctl = dict()
-        out_text = to_text(b_out)
-        for line in out_text.splitlines():
+        out = to_native(out)
+        for line in out.splitlines():
             (key, value) = line.split('=')
             sysctl[key] = value.strip()
         return sysctl
@@ -2131,13 +2131,13 @@ class Darwin(Hardware):
         return self.facts
 
     def get_sysctl(self):
-        rc, b_out, b_err = self.module.run_command(["/usr/sbin/sysctl", "hw", "machdep", "kern"])
+        rc, out, err = self.module.run_command(["/usr/sbin/sysctl", "hw", "machdep", "kern"])
         if rc != 0:
             return dict()
         sysctl = dict()
+        out = to_native(out)
 
-        out_text = to_text(b_out)
-        for line in out_text.splitlines():
+        for line in out.splitlines():
             if not line:
                 continue
             (key, value) = re.split(' = |: ', line, maxsplit=1)
@@ -2524,13 +2524,13 @@ class GenericBsdIfconfigNetwork(Network):
 
             if v == 'v6' and not socket.has_ipv6:
                 continue
-            rc, b_out, b_err = self.module.run_command(command[v])
-            out_text = to_text(b_out)
-            if not out_text:
+            rc, out, err = self.module.run_command(command[v])
+            out = to_native(out)
+            if not out:
                 # v6 routing may result in
                 #   RTNETLINK answers: Invalid argument
                 continue
-            for line in out_text.splitlines():
+            for line in out.splitlines():
                 words = line.split()
                 # Collect output from route command
                 if len(words) > 1:
@@ -2551,10 +2551,10 @@ class GenericBsdIfconfigNetwork(Network):
         # FreeBSD, DragonflyBSD, NetBSD, OpenBSD and OS X all implicitly add '-a'
         # when running the command 'ifconfig'.
         # Solaris must explicitly run the command 'ifconfig -a'.
-        rc, b_out, b_err = self.module.run_command([ifconfig_path, ifconfig_options])
+        rc, out, err = self.module.run_command([ifconfig_path, ifconfig_options])
 
-        out_text = to_text(b_out)
-        for line in out_text.splitlines():
+        out = to_native(out)
+        for line in out.splitlines():
 
             if line:
                 words = line.split()
@@ -2813,10 +2813,10 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
             all_ipv4_addresses = [],
             all_ipv6_addresses = [],
         )
-        rc, b_out, b_err = self.module.run_command([ifconfig_path, ifconfig_options])
-        out_text = to_text(b_out)
+        rc, out, err = self.module.run_command([ifconfig_path, ifconfig_options])
+        out = to_native(out)
 
-        for line in out_text.splitlines():
+        for line in out.splitlines():
 
             if line:
                 words = line.split()
@@ -2845,19 +2845,19 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
                     self.parse_unknown_line(words, current_if, ips)
             uname_path = self.module.get_bin_path('uname')
             if uname_path:
-                rc, b_out, err = self.module.run_command([uname_path, '-W'])
-                out_text = to_text(b_out)
+                rc, out, err = self.module.run_command([uname_path, '-W'])
+                out = to_native(out)
                 # don't bother with wpars it does not work
                 # zero means not in wpar
-                if not rc and out_text.split()[0] == '0':
+                if not rc and out.split()[0] == '0':
                     if current_if['macaddress'] == 'unknown' and re.match('^en', current_if['device']):
                         entstat_path = self.module.get_bin_path('entstat')
                         if entstat_path:
-                            rc, b_out, b_err = self.module.run_command([entstat_path, current_if['device'] ])
-                            out_text = to_text(b_out)
+                            rc, out, err = self.module.run_command([entstat_path, current_if['device'] ])
+                            out = to_native(out)
                             if rc != 0:
                                 break
-                            for line in out_text.splitlines():
+                            for line in out.splitlines():
                                 if not line:
                                     pass
                                 buff = re.match('^Hardware Address: (.*)', line)
@@ -2871,11 +2871,11 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
                     if 'mtu' not in current_if:
                         lsattr_path = self.module.get_bin_path('lsattr')
                         if lsattr_path:
-                            rc, b_out, b_err = self.module.run_command([lsattr_path,'-El', current_if['device'] ])
-                            out_text = to_text(b_out)
+                            rc, out, err = self.module.run_command([lsattr_path,'-El', current_if['device'] ])
+                            out = to_native(out)
                             if rc != 0:
                                 break
-                            for line in out_text.splitlines():
+                            for line in out.splitlines():
                                 if line:
                                     words = line.split()
                                     if words[0] == 'mtu':
