@@ -1600,11 +1600,12 @@ class OpenBSDHardware(Hardware):
         return self.facts
 
     def get_sysctl(self):
-        rc, out, err = self.module.run_command(["/sbin/sysctl", "hw"])
+        rc, b_out, b_err = self.module.run_command(["/sbin/sysctl", "hw"])
         if rc != 0:
             return dict()
         sysctl = dict()
-        for line in out.splitlines():
+        out_text = to_text(b_out)
+        for line in out_text.splitlines():
             (key, value) = line.split('=')
             sysctl[key] = value.strip()
         return sysctl
@@ -2130,12 +2131,13 @@ class Darwin(Hardware):
         return self.facts
 
     def get_sysctl(self):
-        rc, out, err = self.module.run_command(["/usr/sbin/sysctl", "hw", "machdep", "kern"])
+        rc, b_out, b_err = self.module.run_command(["/usr/sbin/sysctl", "hw", "machdep", "kern"])
         if rc != 0:
             return dict()
         sysctl = dict()
 
-        for line in to_text(out).splitlines():
+        out_text = to_text(b_out)
+        for line in out_text.splitlines():
             if not line:
                 continue
             (key, value) = re.split(' = |: ', line, maxsplit=1)
