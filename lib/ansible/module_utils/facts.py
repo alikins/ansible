@@ -3159,8 +3159,9 @@ class LinuxVirtual(Virtual):
                     lscpu = self.module.get_bin_path('lscpu')
                     if lscpu:
                         rc, out, err = self.module.run_command(["lscpu"])
+                        out = to_native(out)
                         if rc == 0:
-                            for line in out.split("\n"):
+                            for line in out.splitlines():
                                 data = line.split(":", 1)
                                 key = data[0].strip()
                                 if key == 'Hypervisor':
