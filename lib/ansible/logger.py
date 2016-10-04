@@ -17,12 +17,12 @@
 
 import getpass
 import logging
+import logging.handlers
 import multiprocessing
 
-# TODO: config based logging setup
-# TODO: Any log Formatters or Handlers that are ansible specific
-# TODO: base logging setup
-# TODO: NullHandler for py2.4
+from ansible import constants as C
+
+#import logging_tree
 
 # logging.INFO = 20
 V = 17
@@ -47,15 +47,120 @@ user = getpass.getuser()
 hostname = 'FIXME'
 OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
 
-import logging_tree
+
+# TODO: color log formatter or handler for stdout
+# TODO: HostLogger class for logging remote host specific info with hostname log record attribute added
+#       via a logging filter
+#       See subman loggers for examples
+# TODO/maybe: Logger subclass with v/vv/vvv etc methods?
+# TODO: add logging filter that implements no_log
+#       - ideally via '__unsafe__'
+#       - AnsibleError could use it in it's str/repr
+# TODO: add AnsibleContextLoggingFilter
+#       extra records for current_cmd, sys.argv
+# TODO: add AnsiblePlaybookLoggingFilter
+#       extra records for playbook/play/task/block ?
+# TODO: config based logging setup
+# TODO: Any log Formatters or Handlers that are ansible specific
+# TODO: base logging setup
+# TODO: NullHandler for py2.4
+# TODO: for unsafe, no_log, in some ways we want the Logger to censor unsafe item, before they
+#       get sent to handlers or formatters. We can do that with a custom Logger and
+#       logger.setLoggerClass(). The custom logger would define a makeRecord() that would example
+#       any passed in records and scrub out sensitive ones. setLoggerClass() is gloabl for entire
+#       process, so any used modules that use getLogger will get it as well, so it needs to be
+#       robust.
+# TODO: exception logging... if we end up using custom Logger, we can add methods for low priority
+#       captured exceptions and send to DEBUG instead of ERROR or CRITICAL. Or use a seperate handler
+#       and filter exceptions records from main handler.
+
+
+class AnsibleDebugFormatter(logging.Formatter):
+    debug_format = DEBUG_LOG_FORMAT
+
+    def __init__(self, fmt=None, datefmt=None):
+        fmt = fmt or self.debug_format
+        super(AnsibleDebugFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+
+    # TODO: add fancy tty color
+    # TODO: add formatException() ?
+
+
+class AnsibleDebugLoggingFilter(object):
+    """Filter all log records unless env ANSIBLE_DEBUG env or DEFAULT_DEBUG cfg exists
+
+    Used to turn on stdout logging for cli debugging."""
+
+    def __init__(self, name):
+        self.name = name
+        self.on = C.DEFAULT_DEBUG
+
+    def filter(self, record):
+        return self.on
+
+
+class AnsibleDebugHandler(logging.StreamHandler, object):
+    """Logging Handler for cli debugging.
+
+    This handler only emits records if ANSIBLE_DEBUG exists in os.environ."""
+
+    # This handler is always added, but the filter doesn't let anything propagate
+    # unless C.DEFAULT_DEBUG is True.
+    #
+    # This should let debug output be turned on and off withing one invocation
+    # TODO: verify
+
+    def __init__(self, *args, **kwargs):
+        super(AnsibleDebugHandler, self).__init__(*args, **kwargs)
+        # self.addFilter(ContextLoggingFilter(name=""))
+        self.addFilter(AnsibleDebugLoggingFilter(name=""))
+
+
+# I don't think this is a good idea. People really don't like it when
+# you log to CRITICAL anything aside from 'The universe has exlp...'
+class ElevateExceptionToCriticalLoggingFilter(object):
+    """Elevate the log level of log.exception from ERROR to CRITICAL."""
+    def __init__(self, name):
+        self.name = name
+
+    def filter(self, record):
+        if record.exc_info:
+            record.levelname = 'CRITICAL'
+            record.levelno = logging.CRITICAL
+        return True
+
+
+class UnsafeFilter(object):
+    """Used to filter out msg args that are AnsibleUnsafe or have __UNSAFE__ attr."""
+    def __init__(self, name):
+        self.name = name
+
+    def filter(self, record):
+        return True
+
+print('logging=%s' % logging)
+print('logging.handlers=%s' % logging.handlers)
+# NOTE: python 2.6 and earlier versions of the logging module
+#       defined the log handlers as old style classes. In order
+#       to use super(), we also inherit from 'object'
+class AnsibleWatchedFileHandler(logging.handlers.WatchedFileHandler, object):
+    def __init__(self, *args, **kwargs):
+        try:
+            super(AnsibleWatchedFileHandler, self).__init__(*args, **kwargs)
+        # fallback to stdout if we can't open our logger
+        except Exception:
+            logging.NullHandler(self)
+
+        self.addFilter(UnsafeFilter(name=""))
+        self.addFilter(ElevateExceptionToCriticalLoggingFilter(name=""))
 
 
 def log_setup():
     null_handler = logging.NullHandler()
 
     root_logger = logging.getLogger()
-    # root_logger.setLevel(logging.CRITICAL)
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.CRITICAL)
+    #root_logger.setLevel(logging.DEBUG)
     root_logger.propagate = True
     # root_logger.addHandler(null_handler)
 
@@ -71,22 +176,34 @@ def log_setup():
     # stream_handler.setFormatter(formatter)
 
     # file_handler = logging.FileHandler(filename='/home/adrian/ansible.log')
-    file_handler = logging.handlers.WatchedFileHandler(filename='/home/adrian/ansible.log')
+    file_handler = AnsibleWatchedFileHandler(filename='/home/adrian/ansible.log')
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
+    debug_handler = AnsibleDebugHandler()
+    debug_handler.setLevel(logging.DEBUG)
+    debug_handler.setFormatter(AnsibleDebugFormatter())
+
     mplog = multiprocessing.get_logger()
-    #mplog.setLevel(logging.DEBUG)
-    mplog.setLevel(multiprocessing.SUBDEBUG)
+    mplog.setLevel(logging.INFO)
+    #mplog.setLevel(multiprocessing.SUBDEBUG)
     mplog.propagate = True
+
     # log.addHandler(null_handler)
     # log.addHandler(stream_handler)
     # log.addHandler(file_handler)
+    # NOTE: This defines a root '' logger, so any of the modules we use that using logging
+    #       will log to our log file as well. This is mostly a dev setup, so disable before release
+    # FIXME: disable in future
     root_logger.addHandler(null_handler)
     root_logger.addHandler(file_handler)
-    # logging.basicConfig(level=logging.DEBUG,
-    #                    filename='/home/adrian/ansible.log',
-    #                    format=DEBUG_LOG_FORMAT)
-    #                   format=DISPLAY_LOG_FORMAT)
+    root_logger.addHandler(debug_handler)
 
-    logging_tree.printout()
+    # turn down some loggers. One of many reasons logging is useful
+    logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins.strategy.linear').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
+    logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
+    logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
+
+#    logging_tree.printout()
