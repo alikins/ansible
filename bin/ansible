@@ -67,6 +67,8 @@ if __name__ == '__main__':
     cli = None
     me = os.path.basename(sys.argv[0])
 
+    logger.log_setup()
+
     try:
         display = Display()
         display.debug("starting run")

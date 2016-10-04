@@ -49,6 +49,7 @@ OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " 
 
 import logging_tree
 
+
 def log_setup():
     null_handler = logging.NullHandler()
 
@@ -81,11 +82,11 @@ def log_setup():
     # log.addHandler(null_handler)
     # log.addHandler(stream_handler)
     # log.addHandler(file_handler)
+    root_logger.addHandler(null_handler)
     root_logger.addHandler(file_handler)
     # logging.basicConfig(level=logging.DEBUG,
     #                    filename='/home/adrian/ansible.log',
     #                    format=DEBUG_LOG_FORMAT)
     #                   format=DISPLAY_LOG_FORMAT)
 
-log_setup()
-logging_tree.printout()
+    logging_tree.printout()
