@@ -32,7 +32,6 @@ except Exception:
     # want to fail here.
     pass
 
-import logging
 import os
 import shutil
 import sys
@@ -45,7 +44,6 @@ import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
 from ansible.module_utils._text import to_text
-from ansible import logger
 
 ########################################
 ### OUTPUT OF LAST RESORT ###
@@ -56,18 +54,20 @@ class LastResort(object):
     def error(self, msg, wrap_text=None):
         print(msg, file=sys.stderr)
 
-# or 'ansible.cli' etc
-log = logging.getLogger(__name__)
 
 ########################################
 
 if __name__ == '__main__':
+    # or 'ansible.cli' etc
+    import logging
+    log = logging.getLogger('ansible')
+    from ansible import logger
+    logger.log_setup()
 
     display = LastResort()
     cli = None
     me = os.path.basename(sys.argv[0])
 
-    logger.log_setup()
 
     try:
         display = Display()
