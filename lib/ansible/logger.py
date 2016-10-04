@@ -75,18 +75,18 @@ OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " 
 #       and filter exceptions records from main handler.
 
 
-class AnsibleDebugFormatter(logging.Formatter):
+class DebugFormatter(logging.Formatter):
     debug_format = DEBUG_LOG_FORMAT
 
     def __init__(self, fmt=None, datefmt=None):
         fmt = fmt or self.debug_format
-        super(AnsibleDebugFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+        super(DebugFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
 
     # TODO: add fancy tty color
     # TODO: add formatException() ?
 
 
-class AnsibleDebugLoggingFilter(object):
+class DebugLoggingFilter(object):
     """Filter all log records unless env ANSIBLE_DEBUG env or DEFAULT_DEBUG cfg exists
 
     Used to turn on stdout logging for cli debugging."""
@@ -99,7 +99,7 @@ class AnsibleDebugLoggingFilter(object):
         return self.on
 
 
-class AnsibleDebugHandler(logging.StreamHandler, object):
+class DebugHandler(logging.StreamHandler, object):
     """Logging Handler for cli debugging.
 
     This handler only emits records if ANSIBLE_DEBUG exists in os.environ."""
@@ -111,9 +111,9 @@ class AnsibleDebugHandler(logging.StreamHandler, object):
     # TODO: verify
 
     def __init__(self, *args, **kwargs):
-        super(AnsibleDebugHandler, self).__init__(*args, **kwargs)
+        super(DebugHandler, self).__init__(*args, **kwargs)
         # self.addFilter(ContextLoggingFilter(name=""))
-        self.addFilter(AnsibleDebugLoggingFilter(name=""))
+        self.addFilter(DebugLoggingFilter(name=""))
 
 
 # I don't think this is a good idea. People really don't like it when
@@ -138,8 +138,7 @@ class UnsafeFilter(object):
     def filter(self, record):
         return True
 
-print('logging=%s' % logging)
-print('logging.handlers=%s' % logging.handlers)
+
 # NOTE: python 2.6 and earlier versions of the logging module
 #       defined the log handlers as old style classes. In order
 #       to use super(), we also inherit from 'object'
@@ -180,9 +179,9 @@ def log_setup():
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
-    debug_handler = AnsibleDebugHandler()
+    debug_handler = DebugHandler()
     debug_handler.setLevel(logging.DEBUG)
-    debug_handler.setFormatter(AnsibleDebugFormatter())
+    debug_handler.setFormatter(DebugFormatter())
 
     mplog = multiprocessing.get_logger()
     mplog.setLevel(logging.INFO)
