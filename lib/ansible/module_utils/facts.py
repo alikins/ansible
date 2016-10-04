@@ -2209,6 +2209,93 @@ class Network(Facts):
     def populate(self):
         return self.facts
 
+def parse_ip_output(output, device, secondary=False):
+    # FIXME: mv
+    for line in output.split('\n'):
+        if not line:
+            continue
+        words = line.split()
+        broadcast = ''
+        # FIXME: split inet/inet6 into methods
+        if words[0] == 'inet':
+            if '/' in words[1]:
+                address, netmask_length = words[1].split('/')
+                if len(words) > 3:
+                    broadcast = words[3]
+            else:
+                # pointopoint interfaces do not have a prefix
+                address = words[1]
+                netmask_length = "32"
+            address_bin = struct.unpack('!L', socket.inet_aton(address))[0]
+            netmask_bin = (1<<32) - (1<<32>>int(netmask_length))
+            netmask = socket.inet_ntoa(struct.pack('!L', netmask_bin))
+            network = socket.inet_ntoa(struct.pack('!L', address_bin & netmask_bin))
+            iface = words[-1]
+            if iface != device:
+                interfaces[iface] = {}
+            if not secondary and "ipv4" not in interfaces[iface]:
+                interfaces[iface]['ipv4'] = {'address': address,
+                                                'broadcast': broadcast,
+                                                'netmask': netmask,
+                                                'network': network}
+            else:
+                if "ipv4_secondaries" not in interfaces[iface]:
+                    interfaces[iface]["ipv4_secondaries"] = []
+                interfaces[iface]["ipv4_secondaries"].append({
+                    'address': address,
+                    'broadcast': broadcast,
+                    'netmask': netmask,
+                    'network': network,
+                })
+
+            # add this secondary IP to the main device
+            if secondary:
+                if "ipv4_secondaries" not in interfaces[device]:
+                    interfaces[device]["ipv4_secondaries"] = []
+                interfaces[device]["ipv4_secondaries"].append({
+                    'address': address,
+                    'broadcast': broadcast,
+                    'netmask': netmask,
+                    'network': network,
+                })
+
+            # If this is the default address, update default_ipv4
+            if 'address' in default_ipv4 and default_ipv4['address'] == address:
+                default_ipv4['broadcast'] = broadcast
+                default_ipv4['netmask'] = netmask
+                default_ipv4['network'] = network
+                default_ipv4['macaddress'] = macaddress
+                default_ipv4['mtu'] = interfaces[device]['mtu']
+                default_ipv4['type'] = interfaces[device].get("type", "unknown")
+                default_ipv4['alias'] = words[-1]
+            if not address.startswith('127.'):
+                ips['all_ipv4_addresses'].append(address)
+        elif words[0] == 'inet6':
+            if 'peer' == words[2]:
+                address = words[1]
+                _, prefix = words[3].split('/')
+                scope = words[5]
+            else:
+                address, prefix = words[1].split('/')
+                scope = words[3]
+            if 'ipv6' not in interfaces[device]:
+                interfaces[device]['ipv6'] = []
+            interfaces[device]['ipv6'].append({
+                'address' : address,
+                'prefix'  : prefix,
+                'scope'   : scope
+            })
+            # If this is the default address, update default_ipv6
+            if 'address' in default_ipv6 and default_ipv6['address'] == address:
+                default_ipv6['prefix']     = prefix
+                default_ipv6['scope']      = scope
+                default_ipv6['macaddress'] = macaddress
+                default_ipv6['mtu']        = interfaces[device]['mtu']
+                default_ipv6['type']       = interfaces[device].get("type", "unknown")
+            if not address == '::1':
+                ips['all_ipv6_addresses'].append(address)
+
+
 class LinuxNetwork(Network):
     """
     This is a Linux-specific subclass of Network.  It defines
@@ -2274,6 +2361,8 @@ class LinuxNetwork(Network):
             all_ipv6_addresses = [],
         )
 
+        # FIXME: would a ftw be quicker here?
+        # FIXME: mv logic to a get_interface_info()
         for path in glob.glob('/sys/class/net/*'):
             if not os.path.isdir(path):
                 continue
@@ -2283,6 +2372,7 @@ class LinuxNetwork(Network):
                 macaddress = get_file_content(os.path.join(path, 'address'), default='')
                 if macaddress and macaddress != '00:00:00:00:00:00':
                     interfaces[device]['macaddress'] = macaddress
+            # FIXME: os.path.exists is redundant since get_file_content does it as well
             if os.path.exists(os.path.join(path, 'mtu')):
                 interfaces[device]['mtu'] = int(get_file_content(os.path.join(path, 'mtu')))
             if os.path.exists(os.path.join(path, 'operstate')):
@@ -2291,12 +2381,14 @@ class LinuxNetwork(Network):
                 interfaces[device]['module'] = os.path.basename(os.path.realpath(os.path.join(path, 'device', 'driver', 'module')))
             if os.path.exists(os.path.join(path, 'type')):
                 _type = get_file_content(os.path.join(path, 'type'))
+                # FIXME: use a dict? maybe faster and less obtuse
                 if _type == '1':
                     interfaces[device]['type'] = 'ether'
                 elif _type == '512':
                     interfaces[device]['type'] = 'ppp'
                 elif _type == '772':
                     interfaces[device]['type'] = 'loopback'
+            # FIXME: split into minimal/full
             if os.path.exists(os.path.join(path, 'bridge')):
                 interfaces[device]['type'] = 'bridge'
                 interfaces[device]['interfaces'] = [ os.path.basename(b) for b in glob.glob(os.path.join(path, 'brif', '*')) ]
@@ -2333,90 +2425,6 @@ class LinuxNetwork(Network):
                 promisc_mode = (data & 0x0100 > 0)
                 interfaces[device]['promisc'] = promisc_mode
 
-            def parse_ip_output(output, secondary=False):
-                for line in output.splitlines():
-                    if not line:
-                        continue
-                    words = line.split()
-                    broadcast = ''
-                    if words[0] == 'inet':
-                        if '/' in words[1]:
-                            address, netmask_length = words[1].split('/')
-                            if len(words) > 3:
-                                broadcast = words[3]
-                        else:
-                            # pointopoint interfaces do not have a prefix
-                            address = words[1]
-                            netmask_length = "32"
-                        address_bin = struct.unpack('!L', socket.inet_aton(address))[0]
-                        netmask_bin = (1<<32) - (1<<32>>int(netmask_length))
-                        netmask = socket.inet_ntoa(struct.pack('!L', netmask_bin))
-                        network = socket.inet_ntoa(struct.pack('!L', address_bin & netmask_bin))
-                        iface = words[-1]
-                        if iface != device:
-                            interfaces[iface] = {}
-                        if not secondary and "ipv4" not in interfaces[iface]:
-                            interfaces[iface]['ipv4'] = {'address': address,
-                                                         'broadcast': broadcast,
-                                                         'netmask': netmask,
-                                                         'network': network}
-                        else:
-                            if "ipv4_secondaries" not in interfaces[iface]:
-                                interfaces[iface]["ipv4_secondaries"] = []
-                            interfaces[iface]["ipv4_secondaries"].append({
-                                'address': address,
-                                'broadcast': broadcast,
-                                'netmask': netmask,
-                                'network': network,
-                            })
-
-                        # add this secondary IP to the main device
-                        if secondary:
-                            if "ipv4_secondaries" not in interfaces[device]:
-                                interfaces[device]["ipv4_secondaries"] = []
-                            interfaces[device]["ipv4_secondaries"].append({
-                                'address': address,
-                                'broadcast': broadcast,
-                                'netmask': netmask,
-                                'network': network,
-                            })
-
-                        # If this is the default address, update default_ipv4
-                        if 'address' in default_ipv4 and default_ipv4['address'] == address:
-                            default_ipv4['broadcast'] = broadcast
-                            default_ipv4['netmask'] = netmask
-                            default_ipv4['network'] = network
-                            default_ipv4['macaddress'] = macaddress
-                            default_ipv4['mtu'] = interfaces[device]['mtu']
-                            default_ipv4['type'] = interfaces[device].get("type", "unknown")
-                            default_ipv4['alias'] = words[-1]
-                        if not address.startswith('127.'):
-                            ips['all_ipv4_addresses'].append(address)
-                    elif words[0] == 'inet6':
-                        if 'peer' == words[2]:
-                            address = words[1]
-                            _, prefix = words[3].split('/')
-                            scope = words[5]
-                        else:
-                            address, prefix = words[1].split('/')
-                            scope = words[3]
-                        if 'ipv6' not in interfaces[device]:
-                            interfaces[device]['ipv6'] = []
-                        interfaces[device]['ipv6'].append({
-                            'address' : address,
-                            'prefix'  : prefix,
-                            'scope'   : scope
-                        })
-                        # If this is the default address, update default_ipv6
-                        if 'address' in default_ipv6 and default_ipv6['address'] == address:
-                            default_ipv6['prefix']     = prefix
-                            default_ipv6['scope']      = scope
-                            default_ipv6['macaddress'] = macaddress
-                            default_ipv6['mtu']        = interfaces[device]['mtu']
-                            default_ipv6['type']       = interfaces[device].get("type", "unknown")
-                        if not address == '::1':
-                            ips['all_ipv6_addresses'].append(address)
-
             ip_path = self.module.get_bin_path("ip")
 
             args = [ip_path, 'addr', 'show', 'primary', device]
@@ -2425,8 +2433,11 @@ class LinuxNetwork(Network):
             args = [ip_path, 'addr', 'show', 'secondary', device]
             rc, secondary_data, stderr = self.module.run_command(args, errors='surrogate_or_replace')
 
-            parse_ip_output(primary_data)
-            parse_ip_output(secondary_data, secondary=True)
+            # FIXME: use 'ip' batch mode (ip -batch)
+            # FIXME: use -oneline 'parseable' mode
+            #         could get in one or two subprocess
+            primary_ip_info = parse_ip_output(primary_data, device)
+            secondary_ip_info = parse_ip_output(secondary_data, device, secondary=True)
 
             interfaces[device]['features'] = self.get_ethtool_data(device)
 
@@ -2439,10 +2450,13 @@ class LinuxNetwork(Network):
                 new_interfaces[i] = interfaces[i]
         return new_interfaces, ips
 
+    # FIXME: mv to an optional gathering
+    #        does anyone need this info?
     def get_ethtool_data(self, device):
 
         features = {}
         ethtool_path = self.module.get_bin_path("ethtool")
+        # FIXME: quick exit
         if ethtool_path:
             args = [ethtool_path, '-k', device]
             rc, stdout, stderr = self.module.run_command(args, errors='surrogate_or_replace')
