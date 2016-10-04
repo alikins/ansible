@@ -20,7 +20,7 @@ import logging
 import logging.handlers
 import multiprocessing
 
-from ansible import constants as C
+from ansible.logger import debug
 
 #import logging_tree
 
@@ -32,7 +32,6 @@ VVV = 15
 VVVV = 9
 VVVVV = 10
 #DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s %(playbook)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
-DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
 THREAD_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
 # rough approx of existing display format
@@ -73,47 +72,6 @@ OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " 
 # TODO: exception logging... if we end up using custom Logger, we can add methods for low priority
 #       captured exceptions and send to DEBUG instead of ERROR or CRITICAL. Or use a seperate handler
 #       and filter exceptions records from main handler.
-
-
-class DebugFormatter(logging.Formatter):
-    debug_format = DEBUG_LOG_FORMAT
-
-    def __init__(self, fmt=None, datefmt=None):
-        fmt = fmt or self.debug_format
-        super(DebugFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
-
-    # TODO: add fancy tty color
-    # TODO: add formatException() ?
-
-
-class DebugLoggingFilter(object):
-    """Filter all log records unless env ANSIBLE_DEBUG env or DEFAULT_DEBUG cfg exists
-
-    Used to turn on stdout logging for cli debugging."""
-
-    def __init__(self, name):
-        self.name = name
-        self.on = C.DEFAULT_DEBUG
-
-    def filter(self, record):
-        return self.on
-
-
-class DebugHandler(logging.StreamHandler, object):
-    """Logging Handler for cli debugging.
-
-    This handler only emits records if ANSIBLE_DEBUG exists in os.environ."""
-
-    # This handler is always added, but the filter doesn't let anything propagate
-    # unless C.DEFAULT_DEBUG is True.
-    #
-    # This should let debug output be turned on and off withing one invocation
-    # TODO: verify
-
-    def __init__(self, *args, **kwargs):
-        super(DebugHandler, self).__init__(*args, **kwargs)
-        # self.addFilter(ContextLoggingFilter(name=""))
-        self.addFilter(DebugLoggingFilter(name=""))
 
 
 # I don't think this is a good idea. People really don't like it when
@@ -179,9 +137,9 @@ def log_setup():
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
-    debug_handler = DebugHandler()
+    debug_handler = debug.DebugHandler()
     debug_handler.setLevel(logging.DEBUG)
-    debug_handler.setFormatter(DebugFormatter())
+    debug_handler.setFormatter(debug.DebugFormatter())
 
     mplog = multiprocessing.get_logger()
     mplog.setLevel(logging.INFO)
