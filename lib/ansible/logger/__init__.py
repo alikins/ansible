@@ -21,16 +21,9 @@ import logging.handlers
 import multiprocessing
 
 from ansible.logger import debug
-
+from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV    # noqa
 #import logging_tree
 
-# logging.INFO = 20
-V = 17
-VV = 16
-VVV = 15
-# logging.DEBUG = 10
-VVVV = 9
-VVVVV = 10
 THREAD_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
 # rough approx of existing display format
@@ -45,11 +38,6 @@ user = getpass.getuser()
 hostname = 'FIXME'
 OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
 
-# TODO: console stream handler
-# TODO: color log formatter or handler for stdout
-# TODO: HostLogger class for logging remote host specific info with hostname log record attribute added
-#       via a logging filter
-#       See subman loggers for examples
 # TODO/maybe: Logger subclass with v/vv/vvv etc methods?
 # TODO: add logging filter that implements no_log
 #       - ideally via '__unsafe__'
