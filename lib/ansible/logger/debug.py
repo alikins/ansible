@@ -52,8 +52,13 @@ class DebugHandler(logging.StreamHandler, object):
 
     def __init__(self, *args, **kwargs):
         super(DebugHandler, self).__init__(*args, **kwargs)
-        # self.addFilter(ContextLoggingFilter(name=""))
         self.addFilter(DebugLoggingFilter(name=""))
+        self.setFormatter(DebugFormatter())
+
+    def __repr__(self):
+        # Mostly just so logging_tree shows the stream info and if it is a tty or not.
+        return '%s(stream=%s, <isatty=%s>)' % (self.__class__.__name__,
+                                               self.stream, self.isatty)
 
 
 # TODO: add 'VVV' levels
@@ -68,13 +73,18 @@ level_to_ansible_color = {logging.NOTSET: None,
 class ConsoleDebugFormatter(DebugFormatter):
     def format(self, record):
         message = super(ConsoleDebugFormatter, self).format(record)
-        return self.color(message, record.levelno)
+        return self._color(message, record.levelno)
 
-    def color(self, message, level):
+    def _color(self, message, level):
         color_code = level_to_ansible_color.get(level, None)
         if not color_code:
             return message
-        return color.stringc(message, color_code)
+        return self._colorize(message, color_code)
+
+    # more or less ansible.utils.color.stringc, except without the check if stdout is a tty, since
+    # we are going to log to stderr by default and we let the handler decide if stream is a tty
+    def _colorize(self, message, color_code):
+        return u"\033[%sm%s\033[0m" % (color.codeCodes[color_code], message)
 
 
 class ConsoleDebugHandler(DebugHandler):
@@ -82,11 +92,9 @@ class ConsoleDebugHandler(DebugHandler):
     def __init__(self, *args, **kwargs):
         print('init')
         super(ConsoleDebugHandler, self).__init__(*args, **kwargs)
+        # Default will use a DebugFormatter
         if self.isatty:
-            self.formatter = ConsoleDebugFormatter()
-        else:
-            print('self.stream=%s dir=%s' % (self.stream, dir(self.stream)))
-            self.formatter = DebugFormatter()
+            self.setFormatter(ConsoleDebugFormatter())
 
     @property
     def isatty(self):

@@ -45,7 +45,7 @@ user = getpass.getuser()
 hostname = 'FIXME'
 OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
 
-
+# TODO: console stream handler
 # TODO: color log formatter or handler for stdout
 # TODO: HostLogger class for logging remote host specific info with hostname log record attribute added
 #       via a logging filter
@@ -58,7 +58,7 @@ OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " 
 #       extra records for current_cmd, sys.argv
 # TODO: add AnsiblePlaybookLoggingFilter
 #       extra records for playbook/play/task/block ?
-# TODO: config based logging setup
+# TODO: (yaml?) config based logging setup
 # TODO: Any log Formatters or Handlers that are ansible specific
 # TODO: base logging setup
 # TODO: NullHandler for py2.4
@@ -71,6 +71,11 @@ OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " 
 # TODO: exception logging... if we end up using custom Logger, we can add methods for low priority
 #       captured exceptions and send to DEBUG instead of ERROR or CRITICAL. Or use a seperate handler
 #       and filter exceptions records from main handler.
+# TODO: handler/logger filters for populating log records with defaults for any custom
+#       format attributes we use  (so handlers dont get a record that is references in a format string)
+# TODO: mv filters to a module?
+# TODO: hook up logging for run_command argv/in/out/rc (env)?
+# TODO: logging plugin? plugin would need to be able to run very early
 
 
 # I don't think this is a good idea. People really don't like it when
@@ -152,9 +157,10 @@ def log_setup():
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
-    debug_handler = debug.DebugHandler()
+    #debug_handler = debug.DebugHandler()
+    debug_handler = debug.ConsoleDebugHandler()
     debug_handler.setLevel(logging.DEBUG)
-    debug_handler.setFormatter(debug.DebugFormatter())
+    #debug_handler.setFormatter(debug.DebugFormatter())
 
     mplog = multiprocessing.get_logger()
     mplog.setLevel(logging.INFO)
