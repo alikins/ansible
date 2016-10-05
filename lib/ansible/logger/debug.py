@@ -29,15 +29,14 @@ class DebugLoggingFilter(object):
 
     def __init__(self, name):
         self.name = name
-        self.on = C.DEFAULT_DEBUG
+        # self.on = C.DEFAULT_DEBUG
 
         # TODO/FIXME/REMOVE
         # so we can test this without also turning on regular ansible debug
         self.on = 'ANSIBLE_LOG_DEBUG' in os.environ
 
     def filter(self, record):
-        #return self.on
-        return True
+        return self.on
 
 
 class DebugHandler(logging.StreamHandler, object):
@@ -74,7 +73,7 @@ level_to_ansible_color = {logging.NOTSET: None,
                           levels.VV: C.COLOR_VERBOSE,
                           levels.VVV: C.COLOR_VERBOSE,
                           levels.VVVV: C.COLOR_VERBOSE,
-                          levels.VVVVV: C.COLOR_VERBOSE,
+                          levels.VVVVV: C.COLOR_DEBUG,
                           }
 
 
@@ -98,7 +97,6 @@ class ConsoleDebugFormatter(DebugFormatter):
 class ConsoleDebugHandler(DebugHandler):
     """Logging handler for output to a console, with optional colors."""
     def __init__(self, *args, **kwargs):
-        print('init')
         super(ConsoleDebugHandler, self).__init__(*args, **kwargs)
         # Default will use a DebugFormatter
         if self.isatty:
