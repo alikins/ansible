@@ -42,7 +42,6 @@ from ansible.utils.unicode import to_bytes, to_unicode, to_str
 from ansible.compat.six import text_type, binary_type
 from ansible import logger
 
-
 try:
     from __main__ import display
 except ImportError:
@@ -52,6 +51,7 @@ except ImportError:
 SSHPASS_AVAILABLE = None
 
 log = logging.getLogger(__name__)
+
 
 class Connection(ConnectionBase):
     ''' ssh based connections '''
@@ -124,8 +124,10 @@ class Connection(ConnectionBase):
         .. note:: This function does its work via side-effect.  The b_command list has the new arguments appended.
         """
         b_command += b_args
-	display.vvvvv(u'SSH: %s: (%s)' % (explanation, ')('.join(to_text(a) for a in b_args)), host=self._play_context.remote_addr)
-        # FIXME: add back log
+        display.vvvvv(u'SSH: %s: (%s)' % (explanation, ')('.join(to_text(a) for a in b_args)), host=self._play_context.remote_addr)
+        self.host_log.log(logger.VVVVV, u'SSH: %s: (%s)',
+                          explanation,
+                          ')('.join(to_text(a) for a in b_args))
 
     def _build_command(self, binary, *other_args):
         '''
@@ -293,9 +295,9 @@ class Connection(ConnectionBase):
 
         output = []
         for b_line in b_chunk.splitlines(True):
-            display_line = to_text(b_line).rstrip('\r\n')
             suppress_output = False
 
+            l = to_text(b_line).rstrip('\r\n')
             #display.debug("Examining line (source=%s, state=%s): '%s'" % (source, state, l.rstrip('\r\n')))
             if self._play_context.prompt and self.check_password_prompt(l):
                 display.debug("become_prompt: (source=%s, state=%s): '%s'" % (source, state, l.rstrip('\r\n')))
@@ -724,7 +726,6 @@ class Connection(ConnectionBase):
         ''' transfer a file from local to remote '''
 
         super(Connection, self).put_file(in_path, out_path)
-
         display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self.host)
         log.log(logger.VVV, u"PUT %s TO %s", in_path, out_path, extra={'host':self.host})
         if not os.path.exists(to_bytes(in_path, errors='strict')):
