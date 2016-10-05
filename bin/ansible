@@ -70,6 +70,11 @@ if __name__ == '__main__':
         logger.log_setup()
         log.debug('================ ansible startup argv=%s ===================', sys.argv[:])
         log.debug('The logger is %s', log)
+        log.debug('||| debug |||')
+        log.info('||| info |||')
+        log.warning('||| warning |||')
+        log.error('||| error |||')
+        log.critical('||| critical |||')
 
         display = Display()
         display.debug("starting run")
