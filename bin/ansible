@@ -58,18 +58,19 @@ class LastResort(object):
 ########################################
 
 if __name__ == '__main__':
-    # or 'ansible.cli' etc
-    import logging
-    log = logging.getLogger('ansible')
-    from ansible import logger
-    logger.log_setup()
-
     display = LastResort()
     cli = None
     me = os.path.basename(sys.argv[0])
 
-
     try:
+        from ansible import logger
+        import logging
+        # or 'ansible.cli' etc
+        log = logging.getLogger('ansible')
+        logger.log_setup()
+        log.debug('================ ansible startup argv=%s ===================', sys.argv[:])
+        log.debug('The logger is %s', log)
+
         display = Display()
         display.debug("starting run")
         log.debug("starting run")
