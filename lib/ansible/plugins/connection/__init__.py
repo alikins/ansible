@@ -35,6 +35,7 @@ from ansible.plugins import AnsiblePlugin
 from ansible.plugins.loader import shell_loader
 from ansible.plugins import shell_loader
 from ansible import logger
+from ansible.logger.host import HostLoggerAdapter
 
 try:
     from __main__ import display
@@ -92,7 +93,8 @@ class ConnectionBase(AnsiblePlugin):
         # Will make for a slightly odd logger name.
         # TODO/FIXME: do we want a top level logging namespace for this?
         # TODO/FIXME: recreate if hostname changes?
-        self.host_log = logging.getLogger('ansible.remote_host.' + self._play_context.remote_addr)
+        self.host_log = HostLoggerAdapter(log, extra={'remote_addr': self._play_context.remote_addr})
+        self.host_log.debug('init of self.host_log done')
 
         # load the shell plugin for this action/connection
         if play_context.shell:
