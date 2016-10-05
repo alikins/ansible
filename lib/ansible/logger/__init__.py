@@ -31,7 +31,6 @@ VVV = 15
 # logging.DEBUG = 10
 VVVV = 9
 VVVVV = 10
-#DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s %(playbook)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
 THREAD_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
 # rough approx of existing display format
@@ -94,6 +93,7 @@ class UnsafeFilter(object):
         self.name = name
 
     def filter(self, record):
+        # FIXME: filter stuff
         return True
 
 
@@ -112,6 +112,20 @@ class AnsibleWatchedFileHandler(logging.handlers.WatchedFileHandler, object):
         self.addFilter(ElevateExceptionToCriticalLoggingFilter(name=""))
 
 
+# yeah, the getLoggerClass() is weird, but the docs suggest it
+# https://docs.python.org/2/library/logging.html#logging.getLoggerClass
+# I'll see if it's troubleprone.
+class AnsibleLogger(logging.getLoggerClass()):
+    def __init__(self, name, level=logging.NOTSET, host=None):
+        super(AnsibleLogger, self).__init__(name, level=level)
+
+        self.addFilter(UnsafeFilter(name=""))
+
+
+# Make AnsibleLogger the default logger that logging.getLogger() returns instance of
+logging.setLoggerClass(AnsibleLogger)
+
+
 def log_setup():
     null_handler = logging.NullHandler()
 
@@ -121,6 +135,7 @@ def log_setup():
     root_logger.propagate = True
     # root_logger.addHandler(null_handler)
 
+    #log = logging.getLogger('ansible')
     log = logging.getLogger('ansible')
     log.setLevel(logging.DEBUG)
     # log.setLevel(logging.CRITICAL)
@@ -157,10 +172,10 @@ def log_setup():
     root_logger.addHandler(debug_handler)
 
     # turn down some loggers. One of many reasons logging is useful
-    logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
-    logging.getLogger('ansible.plugins.strategy.linear').setLevel(logging.INFO)
-    logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
-    logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
-    logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
+    #get_logger('ansible.plugins.action').setLevel(logging.INFO)
+    #get_logger('ansible.plugins.strategy.linear').setLevel(logging.INFO)
+    #get_logger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
+    #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
+    #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
 #    logging_tree.printout()
