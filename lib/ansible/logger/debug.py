@@ -5,6 +5,7 @@ import os
 
 from ansible import constants as C
 from ansible.utils import color
+from ansible.logger import levels
 
 #DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s %(playbook)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
 DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
@@ -67,7 +68,14 @@ level_to_ansible_color = {logging.NOTSET: None,
                           logging.INFO: None,
                           logging.WARN: C.COLOR_WARN,
                           logging.ERROR: C.COLOR_ERROR,
-                          logging.CRITICAL: C.COLOR_UNREACHABLE}
+                          logging.CRITICAL: C.COLOR_UNREACHABLE,
+                          # the old 'vvv' levels
+                          levels.V: C.COLOR_VERBOSE,
+                          levels.VV: C.COLOR_VERBOSE,
+                          levels.VVV: C.COLOR_VERBOSE,
+                          levels.VVVV: C.COLOR_VERBOSE,
+                          levels.VVVVV: C.COLOR_VERBOSE,
+                          }
 
 
 class ConsoleDebugFormatter(DebugFormatter):
