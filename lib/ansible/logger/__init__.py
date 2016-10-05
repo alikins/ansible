@@ -74,7 +74,7 @@ OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " 
 
 
 # I don't think this is a good idea. People really don't like it when
-# you log to CRITICAL anything aside from 'The universe has exlp...'
+# you log to CRITICAL
 class ElevateExceptionToCriticalLoggingFilter(object):
     """Elevate the log level of log.exception from ERROR to CRITICAL."""
     def __init__(self, name):
@@ -172,10 +172,10 @@ def log_setup():
     root_logger.addHandler(debug_handler)
 
     # turn down some loggers. One of many reasons logging is useful
-    #get_logger('ansible.plugins.action').setLevel(logging.INFO)
-    #get_logger('ansible.plugins.strategy.linear').setLevel(logging.INFO)
-    #get_logger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
-    #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
-    #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins.strategy.linear').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
+    logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
+    logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
 #    logging_tree.printout()
