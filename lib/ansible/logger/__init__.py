@@ -34,9 +34,6 @@ THREAD_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d) ti
 # user and hostname attributes would be up to a logging.Filter to add
 # DISPLAY_LOG_FORMAT = "%(asctime)s p=%(process)d u=%(user)s <%(hostname)s> %(message)s"
 
-user = getpass.getuser()
-hostname = 'FIXME'
-OLD_LOG_FORMAT = "%(asctime)s p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
 
 # TODO/maybe: Logger subclass with v/vv/vvv etc methods?
 # TODO: add logging filter that implements no_log
@@ -148,6 +145,9 @@ def log_setup():
     #debug_handler = debug.DebugHandler()
     debug_handler = debug.ConsoleDebugHandler()
     debug_handler.setLevel(logging.DEBUG)
+
+    #display_debug_handler = debug.DisplayConsoleDebugHandler()
+    #display_debug_handler.setLevel(logging.DEBUG)
     #debug_handler.setFormatter(debug.DebugFormatter())
 
     mplog = multiprocessing.get_logger()
@@ -164,6 +164,7 @@ def log_setup():
     root_logger.addHandler(null_handler)
     root_logger.addHandler(file_handler)
     root_logger.addHandler(debug_handler)
+    #root_logger.addHandler(display_debug_handler)
 
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
