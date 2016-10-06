@@ -40,6 +40,7 @@ from ansible.parsing.utils.jsonify import jsonify
 from ansible.playbook.play_context import MAGIC_VARIABLE_MAPPING
 from ansible.release import __version__
 from ansible.vars.unsafe_proxy import wrap_var
+from ansible.utils import deprecated
 
 
 try:
@@ -320,6 +321,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
         """
 
+        deprecated.check('FIXUP_PERMS')
         display.deprecated('_fixup_perms is deprecated. Use _fixup_perms2 instead.', version='2.4', removed=False)
 
         if recursive:
