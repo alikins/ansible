@@ -157,4 +157,5 @@ if __name__ == '__main__':
         # Remove ansible tempdir
         shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
+    log.debug('Exiting with exit_code=%d', exit_code)
     sys.exit(exit_code)
