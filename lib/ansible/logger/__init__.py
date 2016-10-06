@@ -29,7 +29,7 @@ EVERYTHING_VLOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s argv='
 THREAD_DEBUG_LOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (pid=%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
 # aka, splunk or elk
-LOG_INDEXER_FRIENDLY_FORMAT = "%(asctime)s logger_level=%(levelname)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' process_name=%(processName)s pid=%(process)d tid=%(thread)d thread_name=%(threadName)s remote_user=%(remote_user)s remote_addr=%(remote_addr)s logger_name=%(name)s function=%(funcName)s line_number=%(lineno)d message=%(message)s"
+LOG_INDEXER_FRIENDLY_FORMAT = "%(asctime)s logger_name=%(name)s logger_level=%(levelname)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' process_name=%(processName)s pid=%(process)d tid=%(thread)d thread_name=%(threadName)s remote_user=%(remote_user)s remote_addr=%(remote_addr)s module=%(module)s function=%(funcName)s line_number=%(lineno)d message=%(message)s"
 
 # TODO/maybe: Logger subclass with v/vv/vvv etc methods?
 # TODO: add logging filter that implements no_log
@@ -52,6 +52,7 @@ LOG_INDEXER_FRIENDLY_FORMAT = "%(asctime)s logger_level=%(levelname)s user=%(use
 # TODO: exception logging... if we end up using custom Logger, we can add methods for low priority
 #       captured exceptions and send to DEBUG instead of ERROR or CRITICAL. Or use a seperate handler
 #       and filter exceptions records from main handler.
+# MAYBE: custom exception formatter
 # TODO: mv filters to a module?
 # TODO: hook up logging for run_command argv/in/out/rc (env)?
 # TODO: merge worker logging
@@ -100,6 +101,8 @@ class DefaultAttributesFilter(object):
 
     def __init__(self, name):
         self.name = name
+        # FIXME: should try to decouple this so it doesn't have to be kept in
+        #        sync with the filters/adapters that add record attributes. Maybe not worth the effort.
         self.defaults = {'remote_addr': '',
                          'remote_user': '',
                          'user': '',
@@ -120,11 +123,7 @@ class DefaultAttributesFilter(object):
 #       to use super(), we also inherit from 'object'
 class AnsibleWatchedFileHandler(logging.handlers.WatchedFileHandler, object):
     def __init__(self, *args, **kwargs):
-        try:
-            super(AnsibleWatchedFileHandler, self).__init__(*args, **kwargs)
-        # fallback to stdout if we can't open our logger
-        except Exception:
-            logging.NullHandler(self)
+        super(AnsibleWatchedFileHandler, self).__init__(*args, **kwargs)
 
         self.addFilter(UnsafeFilter(name=""))
         self.addFilter(ElevateExceptionToCriticalLoggingFilter(name=""))
@@ -168,7 +167,12 @@ def log_setup():
     # stream_handler.setFormatter(formatter)
 
     # file_handler = logging.FileHandler(filename='/home/adrian/ansible.log')
-    file_handler = AnsibleWatchedFileHandler(filename='/home/adrian/ansible.log')
+    try:
+        file_handler = AnsibleWatchedFileHandler(filename='/home/adrian/ansible.log')
+    # fallback to NullHandler if we can't open our log file
+    except Exception:
+        file_handler = logging.NullHandler()
+
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
@@ -176,6 +180,7 @@ def log_setup():
     debug_handler = debug.ConsoleDebugHandler()
     debug_handler.setLevel(logging.DEBUG)
 
+    # emulate display.debug output
     #display_debug_handler = debug.DisplayConsoleDebugHandler()
     #display_debug_handler.setLevel(logging.DEBUG)
     #debug_handler.setFormatter(debug.DebugFormatter())
