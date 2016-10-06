@@ -9,9 +9,16 @@ from ansible.logger import debug
 user = getpass.getuser()
 hostname = 'FIXME'
 
+# rough approx of existing display format
+# based on:
+#logger = logging.getLogger("p=%s u=%s | " % (mypid, user))
+# logging.basicConfig(filename=path, level=logging.DEBUG, format='%(asctime)s %(name)s %(message)s')
+# self.display("<%s> %s" % (host, msg), color=C.COLOR_VERBOSE, screen_only=True)
+# user and hostname attributes would be up to a logging.Filter to add
+# DISPLAY_LOG_FORMAT = "%(asctime)s p=%(process)d u=%(user)s <%(hostname)s> %(message)s"
 DISPLAY_LOG_FORMAT = " %(process)d %(created)f: p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
-OLD_DISPLAY_LOG_FORMAT = " %(process)6d %(created)0.5f: %(message)s"
-
+DISPLAY_DEBUG_LOG_FORMAT = " hostname=|%(hostname)s| %(process)6d %(created)0.5f: %(message)s"
+DISPLAY_VERBOSE_LOG_FORMAT = "<%(hostname)s> %(message)s"
 # TODO: remove, these are just for testing that we can emulate existing behavior
 
 
@@ -25,12 +32,16 @@ class DisplayConsoleDebugLoggingFilter(object):
         self.on = C.DEFAULT_DEBUG
 
     def filter(self, record):
+        # display.debug equiv only display messages sent to DEBUG
+        # and not any higher levels (INFO for ex)
+        if record.levelno != logging.DEBUG:
+            return False
         return self.on
 
 
 # emulate the format of 'display.debug'
 class DisplayConsoleDebugFormatter(debug.ConsoleDebugFormatter):
-    debug_format = OLD_DISPLAY_LOG_FORMAT
+    debug_format = DISPLAY_DEBUG_LOG_FORMAT
 
 
 # Intentional bad name since this is temp.
