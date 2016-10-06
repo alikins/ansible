@@ -23,7 +23,7 @@ from ansible.logger import debug
 from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV    # noqa
 #import logging_tree
 
-THREAD_DEBUG_LOG_FORMAT = "%(asctime)s <%(remote_addr)s> [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
+THREAD_DEBUG_LOG_FORMAT = "%(asctime)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
 # TODO/maybe: Logger subclass with v/vv/vvv etc methods?
 # TODO: add logging filter that implements no_log
@@ -78,6 +78,9 @@ class UnsafeFilter(object):
         return True
 
 
+# Another way to do this:
+#  since we have a custom default Logger class, we can change it's makeRecord to
+#  generate records with these fields populated
 class DefaultAttributesFilter(object):
     """Used to make sure every LogRecord has all of our custom attributes.
 
@@ -88,12 +91,15 @@ class DefaultAttributesFilter(object):
 
     def __init__(self, name):
         self.name = name
+        self.defaults = {'remote_addr': '',
+                         'remote_user': ''}
 
     def filter(self, record):
         # hostname
-        if not hasattr(record, 'remote_addr'):
-            # Suppose this could be 'localhost' or 'local' etc
-            record.remote_addr = ''
+        for attr_name, default_value in self.defaults.items():
+            if not hasattr(record, attr_name):
+                # Suppose this could be 'localhost' or 'local' etc
+                setattr(record, attr_name, default_value)
         return True
 
 
