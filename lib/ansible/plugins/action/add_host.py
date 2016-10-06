@@ -36,6 +36,7 @@ except ImportError:
 import logging
 log = logging.getLogger(__name__)
 
+
 class ActionModule(ActionBase):
     ''' Create inventory hosts and groups in the memory inventory'''
 
@@ -57,7 +58,7 @@ class ActionModule(ActionBase):
         # Parse out any hostname:port patterns
         new_name = self._task.args.get('name', self._task.args.get('hostname', None))
         display.vv("creating host via 'add_host': hostname=%s" % new_name)
-        logger.log(logger.VV, "creating host via 'add_host': hostname=%s", new_name)
+        log.log(logger.VV, "creating host via 'add_host': hostname=%s", new_name)
 
         try:
             name, port = parse_address(new_name, allow_ranges=False)
