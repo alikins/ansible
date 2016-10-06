@@ -20,10 +20,16 @@ import logging.handlers
 import multiprocessing
 
 from ansible.logger import debug
+from ansible.logger import process_context
 from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV    # noqa
 #import logging_tree
 
-THREAD_DEBUG_LOG_FORMAT = "%(asctime)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
+EVERYTHING_VLOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' %(processName)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (pid=%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
+
+THREAD_DEBUG_LOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (pid=%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
+
+# aka, splunk or elk
+LOG_INDEXER_FRIENDLY_FORMAT = "%(asctime)s logger_level=%(levelname)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' process_name=%(processName)s pid=%(process)d tid=%(thread)d thread_name=%(threadName)s remote_user=%(remote_user)s remote_addr=%(remote_addr)s logger_name=%(name)s function=%(funcName)s line_number=%(lineno)d message=%(message)s"
 
 # TODO/maybe: Logger subclass with v/vv/vvv etc methods?
 # TODO: add logging filter that implements no_log
@@ -46,16 +52,19 @@ THREAD_DEBUG_LOG_FORMAT = "%(asctime)s <%(remote_user)s@%(remote_addr)s> [%(name
 # TODO: exception logging... if we end up using custom Logger, we can add methods for low priority
 #       captured exceptions and send to DEBUG instead of ERROR or CRITICAL. Or use a seperate handler
 #       and filter exceptions records from main handler.
-# TODO: handler/logger filters for populating log records with defaults for any custom
-#       format attributes we use  (so handlers dont get a record that is references in a format string)
 # TODO: mv filters to a module?
 # TODO: hook up logging for run_command argv/in/out/rc (env)?
+# TODO: merge worker logging
+# TODO: merge module logging
 # TODO: logging plugin? plugin would need to be able to run very early
+# TODO: add 'deprecated' log... method? deprecated should probably be it's own module, with log/display
+#       as possibilities, but seperated from deprecation tracking logic. (so deprecated.seen_deprecation object would be
+#       shared and only have one instance per process)
+#       But probably just add the deprecated() to AnsibleLogger
+
 
 # I don't think this is a good idea. People really don't like it when
 # you log to CRITICAL
-
-
 class ElevateExceptionToCriticalLoggingFilter(object):
     """Elevate the log level of log.exception from ERROR to CRITICAL."""
     def __init__(self, name):
@@ -92,7 +101,10 @@ class DefaultAttributesFilter(object):
     def __init__(self, name):
         self.name = name
         self.defaults = {'remote_addr': '',
-                         'remote_user': ''}
+                         'remote_user': '',
+                         'user': '',
+                         'cmd_name': '',
+                         'cmd_line': ''}
 
     def filter(self, record):
         # hostname
@@ -127,6 +139,7 @@ class AnsibleLogger(logging.getLoggerClass()):
 
         self.addFilter(UnsafeFilter(name=""))
         self.addFilter(DefaultAttributesFilter(name=""))
+        self.addFilter(process_context.ProcessContextLoggingFilter(name=""))
 
 # Make AnsibleLogger the default logger that logging.getLogger() returns instance of
 logging.setLoggerClass(AnsibleLogger)
@@ -146,7 +159,8 @@ def log_setup():
     log.setLevel(logging.DEBUG)
     # log.setLevel(logging.CRITICAL)
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
-    formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
+    #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
+    formatter = logging.Formatter(LOG_INDEXER_FRIENDLY_FORMAT)
     # log.propagate = True
 
     # stream_handler = logging.StreamHandler()
