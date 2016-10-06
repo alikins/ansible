@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-import getpass
 import logging
 import logging.handlers
 import multiprocessing
@@ -24,16 +23,7 @@ from ansible.logger import debug
 from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV    # noqa
 #import logging_tree
 
-THREAD_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
-
-# rough approx of existing display format
-# based on:
-#logger = logging.getLogger("p=%s u=%s | " % (mypid, user))
-# logging.basicConfig(filename=path, level=logging.DEBUG, format='%(asctime)s %(name)s %(message)s')
-# self.display("<%s> %s" % (host, msg), color=C.COLOR_VERBOSE, screen_only=True)
-# user and hostname attributes would be up to a logging.Filter to add
-# DISPLAY_LOG_FORMAT = "%(asctime)s p=%(process)d u=%(user)s <%(hostname)s> %(message)s"
-
+THREAD_DEBUG_LOG_FORMAT = "%(asctime)s <%(remote_addr)s> [%(name)s %(levelname)s] (%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
 # TODO/maybe: Logger subclass with v/vv/vvv etc methods?
 # TODO: add logging filter that implements no_log
@@ -62,9 +52,10 @@ THREAD_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (%(process)d) ti
 # TODO: hook up logging for run_command argv/in/out/rc (env)?
 # TODO: logging plugin? plugin would need to be able to run very early
 
-
 # I don't think this is a good idea. People really don't like it when
 # you log to CRITICAL
+
+
 class ElevateExceptionToCriticalLoggingFilter(object):
     """Elevate the log level of log.exception from ERROR to CRITICAL."""
     def __init__(self, name):
@@ -84,6 +75,25 @@ class UnsafeFilter(object):
 
     def filter(self, record):
         # FIXME: filter stuff
+        return True
+
+
+class DefaultAttributesFilter(object):
+    """Used to make sure every LogRecord has all of our custom attributes.
+
+    if the record doesn't populate an attribute, add it with a default value.
+
+    This prevents log formats that reference custom log record attributes
+    from causing a LogFormatter to fail when attempt to format the message."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def filter(self, record):
+        # hostname
+        if not hasattr(record, 'remote_addr'):
+            # Suppose this could be 'localhost' or 'local' etc
+            record.remote_addr = ''
         return True
 
 
@@ -110,7 +120,7 @@ class AnsibleLogger(logging.getLoggerClass()):
         super(AnsibleLogger, self).__init__(name, level=level)
 
         self.addFilter(UnsafeFilter(name=""))
-
+        self.addFilter(DefaultAttributesFilter(name=""))
 
 # Make AnsibleLogger the default logger that logging.getLogger() returns instance of
 logging.setLoggerClass(AnsibleLogger)
@@ -170,7 +180,7 @@ def log_setup():
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
     logging.getLogger('ansible.plugins.strategy.linear').setLevel(logging.INFO)
     logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
-    logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
-    logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
+    #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
+    #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
 #    logging_tree.printout()
