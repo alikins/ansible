@@ -168,8 +168,6 @@ from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.module_utils.parsing.convert_bool import BOOLEANS, boolean
 from ansible.plugins.connection import ConnectionBase, BUFSIZE
 from ansible.utils.path import unfrackpath, makedirs_safe
-from ansible.utils.unicode import to_bytes, to_unicode, to_str
-from ansible.compat.six import text_type, binary_type
 from ansible import logger
 
 try:
