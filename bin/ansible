@@ -36,6 +36,7 @@ import os
 import shutil
 import sys
 import traceback
+import textwrap
 
 # for debug
 from multiprocessing import Lock
@@ -59,6 +60,8 @@ class LastResort(object):
 
 ########################################
 
+
+
 if __name__ == '__main__':
 
     display = LastResort()
@@ -68,6 +71,25 @@ if __name__ == '__main__':
     try:
         display = Display()
         display.debug("starting run")
+
+        def deprecation_display_callback(msg):
+            # FIXME: seems like this should be display.Display's problem
+            #        but would like to avoid adding more stuff to display.Display
+            wrapped = textwrap.wrap(msg, display.columns,
+                                    replace_whitespace=False, drop_whitespace=False)
+            msg = "\n".join(wrapped) + "\n"
+
+            display.display(msg.strip(), color=C.COLOR_DEPRECATE, stderr=True)
+
+#        def print_callback(msg):
+#            print(msg)
+
+        deprecated.add_display_callback(deprecation_display_callback)
+#        deprecated.add_display_callback(print_callback)
+        deprecated.check(deprecated.ALWAYS)
+
+        deprecated.check(deprecated.NOW)
+        deprecated.check(deprecated.FUTURE)
 
         sub = None
         try:
