@@ -108,50 +108,50 @@ class TaskAlwaysRun(Deprecation):
 def display_callback(msg):
     print(msg)
 
-# what are the potential actions after checking a dep?
-# - throw an exception
-#     - attempting to use removed feature
-# - warn that a feature used will be removed in 'the future'
-# - warn that a feature used will be removed in version X.Y
-#  all just output aside from exception
 
-class Deprecations(object):
+class OutputHandler(object):
     future_warning = "This feature will be removed in a future release."
     version_warning = "This feature will be removed in version %s."
     warning_slug = "[DEPRECATION WARNING]: "
     quiet_msg = "Deprecation warnings can be disabled by setting deprecation_warnings=False in ansible.cfg.\n\n"
 
-    def __init__(self):
-        self._registry = {}
-        self.display_callbacks = []
+    def __init__(self, output_callbacks=None):
         self._quiet_instructions_have_been_shown = False
+
         # set of all deprecation messages to prevent duplicate display
         self._deprecations_issued = set()
-        self._results = Results()
 
-    def add(self, deprecation):
-        self._registry[deprecation.label] = deprecation
+        self.output_callbacks = output_callbacks or []
 
-    # TODO/FIXME: too much display logic in here
+    # FIXME: ugly name
+    def process(self, deprecation, result):
+        # Suppose we could put the full Deprecation instance in the set if we make it
+        # hashable. That could potentially allow for more sophisticated matching...
+        if deprecation.label not in self._deprecations_issued:
+            self._deprecations_issued.add(deprecation.label)
+
+        if result == Results.FUTURE:
+            self.warn(deprecation.message,
+                      postscript=self.future_warning)
+        elif result == Results.VERSION:
+            self.warn(deprecation.message,
+                      postscript=self.version_warning % deprecation.version)
+
     def _display(self, msg):
-        for display_callback in self.display_callbacks:
-            display_callback(msg)
+        for output_callback in self.output_callbacks:
+            output_callback(msg)
 
-    def _warn(self, deprecation, version=None):
-        msg = "%s%s\n%s" % (self.warning_slug,
-                          deprecation.message,
-                          self.future_warning)
+    def warn(self, message, postscript=None):
+        lines = ["%s%s" % (self.warning_slug, message)]
+        lines.append(postscript or '')
+        msg = '\n'.join(lines)
+
         self._display(msg)
         self._offer_silence()
 
-    def _warn_version(self, deprecation):
-        # FIXME: implicit int->str
-        msg = "%s%s\n%s" % (self.warning_slug,
-                          deprecation.message,
-                          self.version_warning % deprecation.version)
-        self._display(msg)
-
     def _offer_silence(self):
+        'Expain how to turn off deprecation warnings _once_'
+
         # TODO: this assumes we only want to show the quiest message once
         if self._quiet_instructions_have_been_shown:
             return
@@ -160,16 +160,36 @@ class Deprecations(object):
 
         self._quiet_instructions_have_been_shown = True
 
-    def check(self, deprecation):
+
+# what are the potential actions after checking a dep?
+# - throw an exception
+#     - attempting to use removed feature
+# - warn that a feature used will be removed in 'the future'
+# - warn that a feature used will be removed in version X.Y
+#  all just output aside from exception
+
+
+class Deprecations(object):
+
+    def __init__(self):
+        self._registry = {}
+        self._results = Results()
+        self.output_handler = None
+
+    def add(self, deprecation):
+        self._registry[deprecation.label] = deprecation
+
+    def process_result(self, deprecation, result):
+        if self.output_handler:
+            self.output_handler.process(deprecation, result)
+
+    def check(self, label):
+        deprecation = self._registry.get(label, None)
         result = self.evaluate(deprecation)
         # handle results/print it
 
-        # Suppose we could put the full Deprecation instance in the set if we make it
-        # hashable. That could potentially allow for more sophisticated matching...
-        if deprecation.label not in self._deprecations_issued:
-            self._deprecations_issued.add(deprecation.label)
-        # else:
-        #     display callbacks
+        # FIXME: ugh, terrible name
+        self.process_result(deprecation, result)
 
         if result == Results.REMOVED:
             raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
@@ -177,8 +197,7 @@ class Deprecations(object):
         return result
 
     # TODO: return a status here
-    def evaluate(self, label):
-        deprecation = self._registry.get(label, None)
+    def evaluate(self, deprecation):
 
         # TODO: make an assert/except/error?
         if not deprecation:
@@ -199,7 +218,7 @@ class Deprecations(object):
             print('d.removed=%s' % deprecation.removed)
             print('deprecaton removed and we are using it, raise')
             # TODO: reasonable place to raise a DeprecationError
-            return Results.FATAL
+            return Results.REMOVED
 
         if deprecation.version is not None:
             print('d.version=%s' % deprecation.version)
@@ -209,8 +228,6 @@ class Deprecations(object):
                 return Results.VERSION
 
         return Results.FUTURE
-        #self._warn(deprecation)
-
 
 
 # deprecation instance don't have to be defined and created here,
@@ -233,5 +250,5 @@ def check(label):
     return _deprecations.check(label)
 
 
-def add_display_callback(display_callback):
-    _deprecations.display_callbacks.append(display_callback)
+def add_output_handler(output_handler):
+    _deprecations.output_handler = output_handler

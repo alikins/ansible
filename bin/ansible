@@ -84,7 +84,8 @@ if __name__ == '__main__':
 #        def print_callback(msg):
 #            print(msg)
 
-        deprecated.add_display_callback(deprecation_display_callback)
+        output_handler = deprecated.OutputHandler(output_callbacks=[deprecation_display_callback])
+        deprecated.add_output_handler(output_handler)
 #        deprecated.add_display_callback(print_callback)
         deprecated.check(deprecated.ALWAYS)
 
