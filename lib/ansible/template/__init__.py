@@ -40,6 +40,7 @@ from ansible.template.safe_eval import safe_eval
 from ansible.template.template import AnsibleJ2Template
 from ansible.template.vars import AnsibleJ2Vars
 from ansible.module_utils._text import to_native, to_text
+from ansible.utils import deprecated
 
 try:
     from hashlib import sha1
@@ -62,6 +63,9 @@ __all__ = ['Templar']
 NON_TEMPLATED_TYPES = ( bool, Number )
 
 JINJA2_OVERRIDE = '#jinja2:'
+
+BARE_VARIABLE_DEPRECATION = "Using bare variables is deprecated."
+" Update your playbooks so that the environment value uses the full variable syntax ('%s')"
 
 
 def _escape_backslashes(data, jinja_env):
@@ -476,11 +480,11 @@ class Templar:
             contains_filters = "|" in variable
             first_part = variable.split("|")[0].split(".")[0].split("[")[0]
             if (contains_filters or first_part in self._available_variables) and self.environment.variable_start_string not in variable:
+                new_style = "%s%s%s" % (self.environment.variable_start_string, variable, self.environment.variable_end_string)
                 if bare_deprecated:
-                    display.deprecated("Using bare variables is deprecated."
-                            " Update your playbooks so that the environment value uses the full variable syntax ('%s%s%s')" %
-                            (self.environment.variable_start_string, variable, self.environment.variable_end_string))
-                return "%s%s%s" % (self.environment.variable_start_string, variable, self.environment.variable_end_string)
+                    deprecated.check(deprecated.BARE_VARIABLES,
+                                     message=BARE_VARIABLE_DEPRECATION % new_style)
+                return new_style
 
         # the variable didn't meet the conditions to be converted,
         # so just return it as-is
