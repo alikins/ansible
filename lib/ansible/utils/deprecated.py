@@ -17,6 +17,10 @@ FIXUP_PERMS = 'FIXUP_PERMS'
 MERGE_MULTIPLE_CLI_TAGS = 'MERGE_MULTIPLE_CLI_TAGS'
 MERGE_MULTIPLE_CLI_SKIP_TAGS = 'MERGE_MULTIPLE_CLI_SKIP_TAGS'
 TASK_ALWAYS_RUN = 'TASK_ALWAYS_RUN'
+BARE_VARIABLES = 'BARE_VARIABLES'
+
+# Deprecation() classes for dev/test
+# TODO: remove, or better, move to unittest
 ALWAYS = 'ALWAYS'
 NOW = 'NOW'
 FUTURE = 'FUTURE'
@@ -98,6 +102,13 @@ class TaskAlwaysRun(Deprecation):
     removed = False
     message = 'always_run is deprecated. Use check_mode = no instead.'
 
+
+class BareVariables(Deprecation):
+    label = BARE_VARIABLES
+    version = None
+    removed = None
+    message = "Using bare variables is deprecated. Update your playbooks so that the environment value uses the full variable syntax."
+
 #TODO:
 # task.py include_vars_at_top_of_File
 # task_executor using_vars_for_task_params
@@ -124,17 +135,19 @@ class OutputHandler(object):
         self.output_callbacks = output_callbacks or []
 
     # FIXME: ugly name
-    def process(self, deprecation, result):
+    def process(self, deprecation, result, message=None):
         # Suppose we could put the full Deprecation instance in the set if we make it
         # hashable. That could potentially allow for more sophisticated matching...
         if deprecation.label not in self._deprecations_issued:
             self._deprecations_issued.add(deprecation.label)
 
+        # A message passed in from a check() will be used instead of Deprecation default.
+        msg = message or deprecation.message
         if result == Results.FUTURE:
-            self.warn(deprecation.message,
+            self.warn(msg,
                       postscript=self.future_warning)
         elif result == Results.VERSION:
-            self.warn(deprecation.message,
+            self.warn(msg,
                       postscript=self.version_warning % deprecation.version)
 
     def _display(self, msg):
@@ -184,17 +197,18 @@ class Deprecations(object):
     def add(self, deprecation):
         self._registry[deprecation.label] = deprecation
 
-    def process_result(self, deprecation, result):
+    def process_result(self, deprecation, result, message=None):
         if self.output_handler:
-            self.output_handler.process(deprecation, result)
+            self.output_handler.process(deprecation, result, message=message)
 
-    def check(self, label):
+    def check(self, label, message=None):
         deprecation = self._registry.get(label, None)
+
         result = self.evaluate(deprecation)
         # handle results/print it
 
         # FIXME: ugh, terrible name
-        self.process_result(deprecation, result)
+        self.process_result(deprecation, result, message=message)
 
         if result == Results.REMOVED:
             raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
@@ -254,9 +268,9 @@ _deprecations.add(Now())
 _deprecations.add(Future())
 
 
-def check(label):
+def check(label, message=None):
     # side-effects include displaying of messages via display_callback
-    return _deprecations.check(label)
+    return _deprecations.check(label, message=message)
 
 
 def add_output_handler(output_handler):
