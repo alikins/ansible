@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from ansible.module_utils._text import to_bytes as _to_bytes, to_text, to_native
+from ansible.utils import deprecated
 
 try:
     from __main__ import display
@@ -35,25 +36,27 @@ __all__ = ('to_bytes', 'to_unicode', 'to_str', 'unicode_wrap')
 ### Backwards compat
 ###
 
+
 def to_bytes(*args, **kwargs):
-    display.deprecated(u'ansible.utils.unicode.to_bytes is deprecated.  Use ansible.module_utils._text.to_bytes instead', version=u'2.4')
+    deprecated.check(deprecated.TO_BYTES)
     if 'errors' not in kwargs:
         kwargs['errors'] = 'replace'
     return _to_bytes(*args, **kwargs)
 
 
 def to_unicode(*args, **kwargs):
-    display.deprecated(u'ansible.utils.unicode.to_unicode is deprecated.  Use ansible.module_utils._text.to_text instead', version=u'2.4')
+    deprecated.check(deprecated.TO_UNICODE)
     if 'errors' not in kwargs:
         kwargs['errors'] = 'replace'
     return to_text(*args, **kwargs)
 
 
 def to_str(*args, **kwargs):
-    display.deprecated(u'ansible.utils.unicode.to_str is deprecated.  Use ansible.module_utils._text.to_native instead', version=u'2.4')
+    deprecated.check(deprecated.TO_STR)
     if 'errors' not in kwargs:
         kwargs['errors'] = 'replace'
     return to_native(*args, **kwargs)
+
 
 ### End Backwards compat
 

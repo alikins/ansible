@@ -18,6 +18,12 @@ MERGE_MULTIPLE_CLI_TAGS = 'MERGE_MULTIPLE_CLI_TAGS'
 MERGE_MULTIPLE_CLI_SKIP_TAGS = 'MERGE_MULTIPLE_CLI_SKIP_TAGS'
 TASK_ALWAYS_RUN = 'TASK_ALWAYS_RUN'
 BARE_VARIABLES = 'BARE_VARIABLES'
+TAGS_IN_INCLUDE_PARAMETERS = 'TAGS_IN_INCLUDE_PARAMETERS'
+
+# API usage
+TO_BYTES = 'TO_BYTES'
+TO_UNICODE = 'TO_UNICODE'
+TO_STR = 'TO_STR'
 
 # Deprecation() classes for dev/test
 # TODO: remove, or better, move to unittest
@@ -108,6 +114,35 @@ class BareVariables(Deprecation):
     version = None
     removed = None
     message = "Using bare variables is deprecated. Update your playbooks so that the environment value uses the full variable syntax."
+
+
+class TagsInIncludeParameters(Deprecation):
+    lable = TAGS_IN_INCLUDE_PARAMETERS
+    version = None
+    removed = None
+    message = "You should not specify tags in the include parameters. All tags should be specified using the task-level option"
+
+# TODO: it would be useful to seperate deprecations from user facing features from developer features
+class ToBytes(Deprecation):
+    label = TO_BYTES
+    version = 2.4
+    removed = None
+    message = u'ansible.utils.unicode.to_bytes is deprecated.  Use ansible.module_utils._text.to_bytes instead'
+
+
+class ToUnicode(Deprecation):
+    label = TO_UNICODE
+    version = 2.4
+    removed = None
+    message = 'ansible.utils.unicode.to_unicode is deprecated.  Use ansible.module_utils._text.to_text instead'
+
+
+class ToStr(Deprecation):
+    label = TO_STR
+    version = 2.4
+    removed = None
+    message = 'ansible.utils.unicode.to_str is deprecated.  Use ansible.module_utils._text.to_native instead'
+
 
 #TODO:
 # task.py include_vars_at_top_of_File

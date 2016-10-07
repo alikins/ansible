@@ -43,6 +43,7 @@ from ansible.plugins import action_loader, connection_loader, filter_loader, loo
 from ansible.template import Templar
 from ansible.vars import combine_vars, strip_internal_keys
 from ansible.module_utils._text import to_text
+from ansible.utils import deprecated
 
 
 try:
@@ -695,7 +696,7 @@ class StrategyBase:
                 if len(included_file._task.tags) > 0:
                     raise AnsibleParserError("Include tasks should not specify tags in more than one way (both via args and directly on the task). Mixing tag specify styles is prohibited for whole import hierarchy, not only for single import statement",
                             obj=included_file._task._ds)
-                display.deprecated("You should not specify tags in the include parameters. All tags should be specified using the task-level option")
+                deprecated.check(deprecated.TAGS_IN_INCLUDE_PARAMETERS)
                 included_file._task.tags = tags
 
             ti_copy.vars = temp_vars
