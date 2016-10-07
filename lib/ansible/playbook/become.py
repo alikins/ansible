@@ -90,7 +90,7 @@ class Become:
                 ds['become_user'] = ds['su_user']
                 del ds['su_user']
 
-            display.deprecated("Instead of su/su_user, use become/become_user and set become_method to 'su' (default is sudo)")
+            display.check(deprecated.SU_USAGE)
 
         return ds
 

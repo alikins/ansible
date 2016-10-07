@@ -19,6 +19,8 @@ MERGE_MULTIPLE_CLI_SKIP_TAGS = 'MERGE_MULTIPLE_CLI_SKIP_TAGS'
 TASK_ALWAYS_RUN = 'TASK_ALWAYS_RUN'
 BARE_VARIABLES = 'BARE_VARIABLES'
 TAGS_IN_INCLUDE_PARAMETERS = 'TAGS_IN_INCLUDE_PARAMETERS'
+SUDO_USAGE = 'SUDO_USAGE
+SU_USAGE = 'SU_USAGE'
 
 # API usage
 TO_BYTES = 'TO_BYTES'
@@ -117,11 +119,26 @@ class BareVariables(Deprecation):
 
 
 class TagsInIncludeParameters(Deprecation):
-    lable = TAGS_IN_INCLUDE_PARAMETERS
+    label = TAGS_IN_INCLUDE_PARAMETERS
     version = None
     removed = None
     message = "You should not specify tags in the include parameters. All tags should be specified using the task-level option"
 
+
+class SudoUsage(Deprecation):
+    label = SUDO_USAGE
+    version = None
+    removed = None
+    message = "Instead of sudo/sudo_user, use become/become_user and set become_method to 'sudo' (default is sudo)")
+
+
+class SuUsage(Deprecation):
+    label = SU_USAGE
+    version = None
+    removed = None
+    message = "Instead of su/su_user, use become/become_user and set become_method to 'su' (default is sudo)")
+
+# API stuff
 # TODO: it would be useful to seperate deprecations from user facing features from developer features
 class ToBytes(Deprecation):
     label = TO_BYTES
