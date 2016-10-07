@@ -169,6 +169,11 @@ class OutputHandler(object):
 #  all just output aside from exception
 
 
+# TODO: make Deprecations more container/dict like (getitem/setitem/__contains__/len, etc)
+#       so deprecated.Deprecations[SOME_LABEL] = MyDeprecation() would work
+#       and check:
+#       deprecated.Deprecations[SOME_LABEL].check() and deprecated.Deprecations.check() for all
+# TODO: split container/iteratable parts from evaluation.
 class Deprecations(object):
 
     def __init__(self):
@@ -196,7 +201,11 @@ class Deprecations(object):
 
         return result
 
-    # TODO: return a status here
+    # TODO: could be static or module level method
+    #       if module method, Deprecation class could implement self.evaluate() with it
+    #       Deprecation.check() could use module ver of process_result/handler. Per Deprecation
+    #       .check() would also allow a Deprecation() to raise a particular exception on REMOVE
+    #       - would also make Deprecations() more of a pure container
     def evaluate(self, deprecation):
 
         # TODO: make an assert/except/error?
