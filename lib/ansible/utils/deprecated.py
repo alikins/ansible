@@ -10,12 +10,25 @@ except ImportError:
 
 
 # FIXME: floats?
-current_version = 2.3
+# TODO:
+current_version = 2.2
 
 FIXUP_PERMS = 'FIXUP_PERMS'
 MERGE_MULTIPLE_CLI_TAGS = 'MERGE_MULTIPLE_CLI_TAGS'
 MERGE_MULTIPLE_CLI_SKIP_TAGS = 'MERGE_MULTIPLE_CLI_SKIP_TAGS'
 TASK_ALWAYS_RUN = 'TASK_ALWAYS_RUN'
+ALWAYS = 'ALWAYS'
+NOW = 'NOW'
+FUTURE = 'FUTURE'
+
+
+class Results(object):
+    NOT_FOUND = 0
+    MUTED = 1
+    MITIGATED = 2
+    REMOVED = 3
+    FUTURE = 4
+    VERSION = 5
 
 
 class Deprecation(object):
@@ -23,6 +36,31 @@ class Deprecation(object):
     version = None
     removed = None
     message = None
+
+    def mitigated(self):
+        return False
+
+
+class Always(Deprecation):
+    label = ALWAYS
+    # a DeprecationVersion may be useful if... the evaluation semantics get weird.
+    version = None
+    removed = False
+    message = 'This is a test deprecation that is always deprecated'
+
+
+class Now(Deprecation):
+    label = NOW
+    version = 2.2
+    removed = False
+    message = 'This is a test deprecation that matches current version'
+
+
+class Future(Deprecation):
+    label = FUTURE
+    version = 3.0
+    removed = False
+    message = 'This is a test deprecation that is from the future.'
 
 
 class FixupPerms(Deprecation):
@@ -35,7 +73,7 @@ class FixupPerms(Deprecation):
 class MergeMultipleCliTags(Deprecation):
     label = MERGE_MULTIPLE_CLI_TAGS
     version = 2.5
-    removed = False,
+    removed = False
     message = 'Specifying --tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
 
     def mitigated(self):
@@ -46,7 +84,7 @@ class MergeMultipleCliTags(Deprecation):
 class MergeMultipleCliSkipTags(Deprecation):
     label = MERGE_MULTIPLE_CLI_SKIP_TAGS
     version = 2.5
-    removed = False,
+    removed = False
     message = 'Specifying --skip-tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
 
     def mitigated(self):
@@ -57,7 +95,7 @@ class MergeMultipleCliSkipTags(Deprecation):
 class TaskAlwaysRun(Deprecation):
     label = TASK_ALWAYS_RUN
     version = 2.4
-    removed = False,
+    removed = False
     message = 'always_run is deprecated. Use check_mode = no instead.'
 
 #TODO:
@@ -70,6 +108,12 @@ class TaskAlwaysRun(Deprecation):
 def display_callback(msg):
     print(msg)
 
+# what are the potential actions after checking a dep?
+# - throw an exception
+#     - attempting to use removed feature
+# - warn that a feature used will be removed in 'the future'
+# - warn that a feature used will be removed in version X.Y
+#  all just output aside from exception
 
 class Deprecations(object):
     future_warning = "This feature will be removed in a future release."
@@ -79,80 +123,115 @@ class Deprecations(object):
 
     def __init__(self):
         self._registry = {}
-        self._display_callback = display_callback
+        self.display_callbacks = []
         self._quiet_instructions_have_been_shown = False
         # set of all deprecation messages to prevent duplicate display
         self._deprecations_issued = set()
+        self._results = Results()
 
     def add(self, deprecation):
         self._registry[deprecation.label] = deprecation
 
-    def _version_compare(self, a, b):
-        # not sure if version is last with, or first without
-        return a > b
+    # TODO/FIXME: too much display logic in here
+    def _display(self, msg):
+        for display_callback in self.display_callbacks:
+            display_callback(msg)
 
-    def _warn(self, deprecation):
+    def _warn(self, deprecation, version=None):
         msg = "%s%s\n%s" % (self.warning_slug,
                           deprecation.message,
                           self.future_warning)
-        self._display_callback(msg)
+        self._display(msg)
+        self._offer_silence()
 
     def _warn_version(self, deprecation):
         # FIXME: implicit int->str
         msg = "%s%s\n%s" % (self.warning_slug,
-                          deprecation.version,
+                          deprecation.message,
                           self.version_warning % deprecation.version)
-        self._display_callback(msg)
+        self._display(msg)
 
     def _offer_silence(self):
         # TODO: this assumes we only want to show the quiest message once
         if self._quiet_instructions_have_been_shown:
             return
 
-        self._display_callback("Deprecation warnings can be disabled by setting deprecation_warnings=False in ansible.cfg.\n\n")
+        self._display("Deprecation warnings can be disabled by setting deprecation_warnings=False in ansible.cfg.\n\n")
 
         self._quiet_instructions_have_been_shown = True
 
-    def check(self, label):
-        deprecation = self._registry.get(label, None)
-
-        # TODO: make an assert/except/error?
-        if not deprecation:
-            return
-
-        # Yes, it is deprecated. Removed even, but stop telling me.
-        if not deprecation.removed and not C.DEPRECATION_WARNINGS:
-            return
-
-        if deprecation.mitigated():
-            return
-
-        # We are using something that has been removed, fail loudly.
-        if not deprecation.removed:
-            # TODO: reasonable place to raise a DeprecationError
-            raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
-
-        if deprecation.version:
-            if current_version > deprecation.version:
-                self._warn_version(deprecation)
-            else:
-                self._warn(deprecation)
+    def check(self, deprecation):
+        result = self.evaluate(deprecation)
+        # handle results/print it
 
         # Suppose we could put the full Deprecation instance in the set if we make it
         # hashable. That could potentially allow for more sophisticated matching...
         if deprecation.label not in self._deprecations_issued:
             self._deprecations_issued.add(deprecation.label)
+        # else:
+        #     display callbacks
+
+        if result == Results.REMOVED:
+            raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
+
+        return result
+
+    # TODO: return a status here
+    def evaluate(self, label):
+        deprecation = self._registry.get(label, None)
+
+        # TODO: make an assert/except/error?
+        if not deprecation:
+            print('deprecation is None/False?')
+            return Results.NOT_FOUND
+
+        # Yes, it is deprecated. Removed even, but stop telling me.
+        if not deprecation.removed and not C.DEPRECATION_WARNINGS:
+            print('not deprecation.removed %s' % C.DEPRECATION_WARNINGS)
+            return Results.MUTED
+
+        if deprecation.mitigated():
+            print('deprecation/mitigated()')
+            return Results.MITIGATED
+
+        # We are using something that has been removed, fail loudly.
+        if deprecation.removed:
+            print('d.removed=%s' % deprecation.removed)
+            print('deprecaton removed and we are using it, raise')
+            # TODO: reasonable place to raise a DeprecationError
+            return Results.FATAL
+
+        if deprecation.version is not None:
+            print('d.version=%s' % deprecation.version)
+            if current_version < deprecation.version:
+                # the current version of ansible is newer than the latest depr version
+                #self._warn_version(deprecation)
+                return Results.VERSION
+
+        return Results.FUTURE
+        #self._warn(deprecation)
+
 
 
 # deprecation instance don't have to be defined and created here,
 # other modules could create them and register them here.
+
+# TODO: worth trying to be clever about registering these
+#       auto-magically (ie, a metaclass that keeps track?)
 _deprecations = Deprecations()
 _deprecations.add(FixupPerms())
 _deprecations.add(MergeMultipleCliTags())
 _deprecations.add(MergeMultipleCliSkipTags())
 _deprecations.add(TaskAlwaysRun())
+_deprecations.add(Always())
+_deprecations.add(Now())
+_deprecations.add(Future())
 
 
 def check(label):
     # side-effects include displaying of messages via display_callback
     return _deprecations.check(label)
+
+
+def add_display_callback(display_callback):
+    _deprecations.display_callbacks.append(display_callback)
