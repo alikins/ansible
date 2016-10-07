@@ -15,6 +15,7 @@ current_version = 2.3
 FIXUP_PERMS = 'FIXUP_PERMS'
 MERGE_MULTIPLE_CLI_TAGS = 'MERGE_MULTIPLE_CLI_TAGS'
 MERGE_MULTIPLE_CLI_SKIP_TAGS = 'MERGE_MULTIPLE_CLI_SKIP_TAGS'
+TASK_ALWAYS_RUN = 'TASK_ALWAYS_RUN'
 
 
 class Deprecation(object):
@@ -54,7 +55,7 @@ class MergeMultipleCliSkipTags(Deprecation):
 
 
 class TaskAlwaysRun(Deprecation):
-    label = 'TASK_ALWAYS_RUN'
+    label = TASK_ALWAYS_RUN
     version = 2.4
     removed = False,
     message = 'always_run is deprecated. Use check_mode = no instead.'
@@ -65,9 +66,9 @@ class TaskAlwaysRun(Deprecation):
 # accelerated mode
 
 
+# Default, provide a different one if needed
 def display_callback(msg):
-    print('ffffffffffffffffff %s' % msg)
-    display.display(msg.strip(), color=C.COLOR_DEPRECATE, stderr=True)
+    print(msg)
 
 
 class Deprecations(object):
@@ -124,7 +125,6 @@ class Deprecations(object):
             return
 
         if deprecation.mitigated():
-            print('mitigated')
             return
 
         # We are using something that has been removed, fail loudly.
@@ -144,6 +144,8 @@ class Deprecations(object):
             self._deprecations_issued.add(deprecation.label)
 
 
+# deprecation instance don't have to be defined and created here,
+# other modules could create them and register them here.
 _deprecations = Deprecations()
 _deprecations.add(FixupPerms())
 _deprecations.add(MergeMultipleCliTags())
