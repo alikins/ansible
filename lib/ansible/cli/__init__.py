@@ -442,10 +442,9 @@ class CLI(with_metaclass(ABCMeta, object)):
             # optparse defaults does not do what's expected
             self.options.tags = ['all']
         if hasattr(self.options, 'tags') and self.options.tags:
-            deprecated.check(deprecated.MERGE_MULTIPLE_CLI_TAGS)
             if not C.MERGE_MULTIPLE_CLI_TAGS:
                 if len(self.options.tags) > 1:
-                    display.deprecated('cccccccccccccccccccccccccc Specifying --tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.', version=2.5, removed=False)
+                    deprecated.check(deprecated.MERGE_MULTIPLE_CLI_TAGS)
                     self.options.tags = [self.options.tags[-1]]
 
             tags = set()
@@ -455,10 +454,9 @@ class CLI(with_metaclass(ABCMeta, object)):
             self.options.tags = list(tags)
 
         if hasattr(self.options, 'skip_tags') and self.options.skip_tags:
-            deprecated.check(deprecated.MERGE_MULTIPLE_CLI_SKIP_TAGS)
             if not C.MERGE_MULTIPLE_CLI_TAGS:
                 if len(self.options.skip_tags) > 1:
-                    display.deprecated('cccffffffffffffffffff Specifying --skip-tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.', version=2.5, removed=False)
+                    deprecated.check(deprecated.MERGE_MULTIPLE_CLI_SKIP_TAGS)
                     self.options.skip_tags = [self.options.skip_tags[-1]]
 
             skip_tags = set()
