@@ -1,0 +1,77 @@
+---
+version: 1
+disable_existing_loggers: True
+formatters:
+    simple:
+        format: "%(asctime)s [%(name)s - %(levelname)s] - %(message)s"
+    debug:
+        format: "%(asctime)s [%(name)s %(levelname)s] pid=%(process)d) %(funcName)s:%(lineno)d - %(message)s"
+    thread_debug:
+        format: "%(asctime)s [%(name)s %(levelname)s] pid=%(process)d tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
+    remote_debug:
+        format: "%(asctime)s [%(name)s %(levelname)s] <%(remote_user)s@%(remote_addr)s> pid=%(process)d,tname=%(threadName)s) %(funcName)s:%(lineno)d - %(message)s"
+    # useful for tools that recognize key=value in log lines
+    key_equals_value:
+        format: "%(asctime)s logger_name=%(name)s logger_level=%(levelname)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' process_name=%(processName)s pid=%(process)d tid=%(thread)d thread_name=%(threadName)s remote_user=%(remote_user)s remote_addr=%(remote_addr)s module=%(module)s function=%(funcName)s line_number=%(lineno)d message=%(message)s"
+    # emulate existing 'display.vv' or 'display.debug' output
+    display_debug_compat:
+        format: " %(process)6d %(created)0.5f: %(message)s"
+    # emulate the format used if 'logpath' is set in ansible.cfg
+    display_log_compat:
+        format: " %(process)d %(created)f: p=%(process)d u=%(user)s <%(remote_addr)> %(message)s"
+
+#filters:
+#    display_console_debug_filter:
+#        class: ansible.logger.display_compat.DisplayConsoleDebugLoggingFilter
+
+handlers:
+    console:
+        class: logging.StreamHandler
+        level: ERROR
+        formatter: simple
+        stream: ext://sys.stdout
+
+    console_compat:
+        class: ansible.logger.handlers.console_debug.ConsoleDebugHandler
+        #formatter: display_debug_compat
+        #formatter: console_display_debug_compat
+#        filters: [display_console_debug_filter]
+
+    info_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: INFO
+        formatter: simple
+        filename: /home/adrian/ansible_info.log
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+
+    error_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: ERROR
+        formatter: simple
+        filename: errors.log
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+
+    debug_file_handler:
+        class: logging.handlers.RotatingFileHandler
+        level: DEBUG
+        formatter: simple
+        filename: /home/adrian/ansilble_debug.log
+        maxBytes: 10485760 # 10MB
+        backupCount: 20
+        encoding: utf8
+
+loggers:
+    ansible:
+        class: ansible.logger.loggers.default.AnsibleLogger
+        level: DEBUG
+        handlers: [console, console_compat, debug_file_handler]
+
+root:
+    level: INFO
+    handlers: [console, info_file_handler, error_file_handler]
+...
+
