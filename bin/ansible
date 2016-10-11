@@ -55,6 +55,7 @@ class LastResort(object):
         print(msg, file=sys.stderr)
 
 
+
 ########################################
 
 if __name__ == '__main__':
@@ -68,6 +69,7 @@ if __name__ == '__main__':
         # or 'ansible.cli' etc
         log = logging.getLogger('ansible')
         logger.log_setup()
+
         log.debug('================ ansible startup argv=%s ===================', sys.argv[:])
         log.debug('The logger is %s', log)
         log.debug('||| debug |||')
@@ -94,6 +96,7 @@ if __name__ == '__main__':
                 raise AnsibleError("Unknown Ansible alias: %s" % me)
         except ImportError as e:
             # ImportError members have changed in py3
+            log.exception()
             if 'msg' in dir(e):
                 msg = e.msg
             else:
