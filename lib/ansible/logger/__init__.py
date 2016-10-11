@@ -22,7 +22,9 @@ import multiprocessing
 from ansible.logger import debug
 from ansible.logger import process_context
 from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV    # noqa
-#import logging_tree
+import logging_tree
+
+import json_log_formatter
 
 EVERYTHING_VLOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' %(processName)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (pid=%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
@@ -144,6 +146,20 @@ class AnsibleLogger(logging.getLoggerClass()):
 logging.setLoggerClass(AnsibleLogger)
 
 
+import logmatic
+import json
+
+json_format = "%(asctime) %(name) %(processName) %(process) %(filename)  %(funcName) %(levelname) %(levelno) %(lineno) %(module) %(threadName) %(thread) %(message)"
+
+class JsonFormat(logmatic.JsonFormatter):
+    def jsonify_log_record(self, log_record):
+        return json.dumps(log_record,
+                          sort_keys=True,
+                          indent=2,
+                          default=self.json_default,
+                          cls=self.json_encoder)
+
+
 def log_setup():
     null_handler = logging.NullHandler()
 
@@ -160,6 +176,12 @@ def log_setup():
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
     #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
     formatter = logging.Formatter(LOG_INDEXER_FRIENDLY_FORMAT)
+
+    #from pythonjsonlogger import jsonlogger
+    #json_formatter = jsonlogger.JsonFormatter()
+    #json_formatter = json_log_formatter.JSONFormatter()
+    json_formatter = JsonFormat(fmt=json_format)
+    formatter = json_formatter
     # log.propagate = True
 
     # stream_handler = logging.StreamHandler()
@@ -168,7 +190,8 @@ def log_setup():
 
     # file_handler = logging.FileHandler(filename='/home/adrian/ansible.log')
     try:
-        file_handler = AnsibleWatchedFileHandler(filename='/home/adrian/ansible.log')
+        #file_handler = AnsibleWatchedFileHandler(filename='~/ansible.log')
+        file_handler = AnsibleWatchedFileHandler(filename='/Users/adrian/ansible.log')
     # fallback to NullHandler if we can't open our log file
     except Exception:
         file_handler = logging.NullHandler()
@@ -208,4 +231,10 @@ def log_setup():
     #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
-#    logging_tree.printout()
+    try:
+        0/0
+    except Exception:
+        log.exception('oh crap, zero')
+
+    import logging_tree
+    logging_tree.printout()
