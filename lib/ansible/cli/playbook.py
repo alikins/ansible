@@ -23,6 +23,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import os
+import logging
 import stat
 
 from ansible.cli import CLI
@@ -41,6 +42,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 #---------------------------------------------------------------------------------------------------
@@ -140,6 +143,7 @@ class PlaybookCLI(CLI):
         if len(inventory.list_hosts()) == 0:
             # Empty inventory
             display.warning("provided hosts list is empty, only localhost is available")
+            log.warning("provided hosts list is empty, only localhost is available")
             no_hosts = True
         inventory.subset(self.options.subset)
         if len(inventory.list_hosts()) == 0 and no_hosts is False:
@@ -159,6 +163,7 @@ class PlaybookCLI(CLI):
             for p in results:
 
                 display.display('\nplaybook: %s' % p['playbook'])
+                log.info('playbook: %s', p['playbook'])
                 for idx, play in enumerate(p['plays']):
                     msg = "\n  play #%d (%s): %s" % (idx + 1, ','.join(play.hosts), play.name)
                     mytags = set(play.tags)
@@ -171,6 +176,7 @@ class PlaybookCLI(CLI):
                             msg += "\n      %s" % host
 
                     display.display(msg)
+                    log.info(msg)
 
                     all_tags = set()
                     if self.options.listtags or self.options.listtasks:
@@ -213,7 +219,7 @@ class PlaybookCLI(CLI):
                             taskmsg += "      TASK TAGS: [%s]\n" % ', '.join(cur_tags)
 
                         display.display(taskmsg)
-
+                        log.info(taskmsg)
             return 0
         else:
             return results
