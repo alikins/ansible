@@ -1,13 +1,11 @@
 
-import getpass
 import logging
+import os
 import sys
 
-from ansible.constants import C
-from ansible.logger import debug
-
-user = getpass.getuser()
-hostname = 'FIXME'
+from ansible import constants as C
+from ansible.logger.formatters import console_debug
+from ansible.logger.formatters import debug as debug_formatter
 
 # rough approx of existing display format
 # based on:
@@ -16,7 +14,7 @@ hostname = 'FIXME'
 # self.display("<%s> %s" % (host, msg), color=C.COLOR_VERBOSE, screen_only=True)
 # user and hostname attributes would be up to a logging.Filter to add
 # DISPLAY_LOG_FORMAT = "%(asctime)s p=%(process)d u=%(user)s <%(hostname)s> %(message)s"
-DISPLAY_LOG_FORMAT = " %(process)d %(created)f: p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
+#DISPLAY_LOG_FORMAT = " %(process)d %(created)f: p=%(process)d u=" + user + " <" + hostname + "> " + "%(message)s"
 DISPLAY_DEBUG_LOG_FORMAT = " hostname=|%(hostname)s| %(process)6d %(created)0.5f: %(message)s"
 DISPLAY_VERBOSE_LOG_FORMAT = "<%(hostname)s> %(message)s"
 # TODO: remove, these are just for testing that we can emulate existing behavior
@@ -30,6 +28,7 @@ class DisplayConsoleDebugLoggingFilter(object):
     def __init__(self, name):
         self.name = name
         self.on = C.DEFAULT_DEBUG
+        self.on = os.environ['ANSIBLE_LOG_DEBUG'] or False
 
     def filter(self, record):
         # display.debug equiv only display messages sent to DEBUG
@@ -40,7 +39,7 @@ class DisplayConsoleDebugLoggingFilter(object):
 
 
 # emulate the format of 'display.debug'
-class DisplayConsoleDebugFormatter(debug.ConsoleDebugFormatter):
+class DisplayConsoleDebugFormatter(console_debug.ConsoleDebugFormatter):
     debug_format = DISPLAY_DEBUG_LOG_FORMAT
 
 
@@ -55,7 +54,7 @@ class DisplayConsoleDebugHandler(logging.StreamHandler, object):
         if self.isatty:
             self.setFormatter(DisplayConsoleDebugFormatter())
         else:
-            self.setFormatter(debug.DebugFormatter())
+            self.setFormatter(debug_formatter.DebugFormatter())
 
     @property
     def isatty(self):
