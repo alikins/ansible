@@ -64,11 +64,11 @@ if __name__ == '__main__':
     me = os.path.basename(sys.argv[0])
 
     try:
-        from ansible import logger
+        from ansible.logger import setup
         import logging
         # or 'ansible.cli' etc
         log = logging.getLogger('ansible')
-        logger.log_setup()
+        setup.log_setup()
 
         log.debug('================ ansible startup argv=%s ===================', sys.argv[:])
         log.debug('The logger is %s', log)
@@ -77,6 +77,11 @@ if __name__ == '__main__':
         log.warning('||| warning |||')
         log.error('||| error |||')
         log.critical('||| critical |||')
+    except Exception as e:
+        sys.stderr.write('%s\n' % e)
+        raise
+
+    try:
 
         display = Display()
         display.debug("starting run")
