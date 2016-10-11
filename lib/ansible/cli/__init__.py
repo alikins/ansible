@@ -51,13 +51,6 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
-LOGGING_TREE = False
-try:
-    import logging_tree
-    LOGGING_TREE = True
-except ImportError:
-    pass
-
 
 class SortedOptParser(optparse.OptionParser):
     '''Optparser which sorts the options by opt before outputting --help'''
@@ -175,8 +168,6 @@ class CLI(with_metaclass(ABCMeta, object)):
         else:
             display.v(u"No config file found; using defaults")
 
-        if LOGGING_TREE:
-            logging_tree.printout()
 
     @staticmethod
     def split_vault_id(vault_id):
