@@ -1,0 +1,96 @@
+
+import logging
+import multiprocessing
+import sys
+
+from ansible.logger import formats
+from ansible.logger.loggers import default
+from ansible.logger.handlers import default_handler
+
+# Make AnsibleLogger the default logger that logging.getLogger() returns instance of
+logging.setLoggerClass(default.AnsibleLogger)
+
+
+def log_setup():
+    #null_handler = logging.NullHandler()
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.CRITICAL)
+    #root_logger.setLevel(logging.DEBUG)
+    #root_logger.propagate = True
+    # root_logger.addHandler(null_handler)
+
+    #log = logging.getLogger('ansible')
+    log = logging.getLogger('ansible')
+    #log.setLevel(logging.INFO)
+    log.setLevel(logging.DEBUG)
+    # log.setLevel(logging.CRITICAL)
+    #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
+    #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
+    formatter = logging.Formatter(formats.REMOTE_DEBUG_LOG_FORMAT)
+
+    #import logmatic
+    #j_f = logmatic.JsonFormatter()
+    #formatter = j_f
+    #formatter = logging.Formatter(LOG_INDEXER_FRIENDLY_FORMAT)
+    # log.propagate = True
+
+    # stream_handler = logging.StreamHandler()
+    # stream_handler.setLevel(logging.DEBUG)
+    # stream_handler.setFormatter(formatter)
+
+    # file_handler = logging.FileHandler(filename='/home/adrian/ansible.log')
+    try:
+        file_handler = default_handler.AnsibleWatchedFileHandler(filename='/home/adrian/ansible.log')
+    # fallback to NullHandler if we can't open our log file
+    except Exception as e:
+        sys.stderr.write('%s\n' % e)
+        log.error(e)
+        log.exception()
+        raise
+        log.exception('error setting up default_handler.AnsibleWatchedFileHandler')
+        file_handler = logging.NullHandler()
+
+    #file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(multiprocessing.SUBDEBUG)
+    #file_handler.setLevel(logging.ERROR)
+    file_handler.setFormatter(formatter)
+
+    #debug_handler = debug.DebugHandler()
+
+    #debug_handler = debug.ConsoleDebugHandler()
+    #debug_handler.setLevel(logging.DEBUG)
+
+    # emulate display.debug output
+    #display_debug_handler = debug.DisplayConsoleDebugHandler()
+    #display_debug_handler.setLevel(logging.DEBUG)
+    #debug_handler.setFormatter(debug.DebugFormatter())
+
+    mplog = multiprocessing.get_logger()
+    #mplog.setLevel(multiprocessing.SUBDEBUG)
+    mplog.setLevel(logging.INFO)
+    #mplog.setLevel(multiprocessing.SUBDEBUG)
+    mplog.propagate = True
+
+    # log.addHandler(null_handler)
+    # log.addHandler(stream_handler)
+    # log.addHandler(file_handler)
+    # NOTE: This defines a root '' logger, so any of the modules we use that using logging
+    #       will log to our log file as well. This is mostly a dev setup, so disable before release
+    # FIXME: disable in future
+    #root_logger.addHandler(null_handler)
+    root_logger.addHandler(file_handler)
+    #root_logger.addHandler(debug_handler)
+    #root_logger.addHandler(display_debug_handler)
+
+    # turn down some loggers. One of many reasons logging is useful
+    logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins.strategy').setLevel(logging.DEBUG)
+
+    logging.getLogger('ansible.executor').setLevel(logging.DEBUG)
+    logging.getLogger('ansible.plugins.connection').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
+    #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
+    #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
+
+#    logging_tree.printout()
