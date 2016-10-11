@@ -33,7 +33,8 @@ handlers:
 
     console_compat:
         class: ansible.logger.handlers.console_debug.ConsoleDebugHandler
-        #formatter: display_debug_compat
+        # FIXME: need to make display_debug_compat smarter about istty
+        formatter: display_debug_compat
         #formatter: console_display_debug_compat
 #        filters: [display_console_debug_filter]
 
