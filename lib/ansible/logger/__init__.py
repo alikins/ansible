@@ -22,15 +22,9 @@ import multiprocessing
 from ansible.logger import debug
 from ansible.logger import process_context
 from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV    # noqa
+from ansible.logger import formats
 #import logging_tree
 
-EVERYTHING_VLOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' %(processName)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (pid=%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
-
-THREAD_DEBUG_LOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (pid=%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
-
-REMOTE_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (pid=%(process)d,tname=%(threadName)s) %(funcName)s:%(lineno)d - %(message)s"
-# aka, splunk or elk
-LOG_INDEXER_FRIENDLY_FORMAT = "%(asctime)s logger_name=%(name)s logger_level=%(levelname)s user=%(user)s cmd_name=%(cmd_name)s argv='%(cmd_line)s' process_name=%(processName)s pid=%(process)d tid=%(thread)d thread_name=%(threadName)s remote_user=%(remote_user)s remote_addr=%(remote_addr)s module=%(module)s function=%(funcName)s line_number=%(lineno)d message=%(message)s"
 
 # TODO/maybe: Logger subclass with v/vv/vvv etc methods?
 # TODO: add logging filter that implements no_log
@@ -161,7 +155,7 @@ def log_setup():
     # log.setLevel(logging.CRITICAL)
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
     #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
-    formatter = logging.Formatter(REMOTE_DEBUG_LOG_FORMAT)
+    formatter = logging.Formatter(formats.REMOTE_DEBUG_LOG_FORMAT)
 
     #import logmatic
     #j_f = logmatic.JsonFormatter()
