@@ -20,6 +20,7 @@ __metaclass__ = type
 
 ########################################################
 
+import logging
 import os
 
 from ansible import constants as C
@@ -37,6 +38,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+
+log = logging.getLogger(__name__)
 
 ########################################################
 
@@ -114,6 +117,7 @@ class AdHocCLI(CLI):
         if len(inventory.list_hosts()) == 0:
             # Empty inventory
             display.warning("provided hosts list is empty, only localhost is available")
+            log.warning("provided hosts list is empty, only localhost is available")
             no_hosts = True
 
         inventory.subset(self.options.subset)
@@ -124,6 +128,7 @@ class AdHocCLI(CLI):
                 raise AnsibleError("Specified --limit does not match any hosts")
             else:
                 display.warning("No hosts matched, nothing to do")
+                log.warning("No hosts matched, nothing to do")
 
         if self.options.listhosts:
             display.display('  hosts (%d):' % len(hosts))
