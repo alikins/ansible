@@ -6,12 +6,26 @@ import sys
 from ansible.logger import formats
 from ansible.logger.loggers import default
 from ansible.logger.handlers import default_handler
+from ansible.logger import dict_setup
 
 # Make AnsibleLogger the default logger that logging.getLogger() returns instance of
 logging.setLoggerClass(default.AnsibleLogger)
 
+# TODO: suppose we need to make the config file location configurable
+DEFAULT_YAML_LOGGING_CONF = "/home/adrian/ansible_logging.yaml"
+
 
 def log_setup():
+    # TODO: if we decide we need a way to configure our configuration style, figure it out here
+    try:
+        return dict_setup.log_setup_yaml_file(DEFAULT_YAML_LOGGING_CONF)
+    except Exception as e:
+        sys.stderr.write('error setting up logging: %s' % e)
+        # TODO: raise a logging setup exception since we likely want to setup logging first, then the big try/except for cli
+        raise
+
+
+def log_setup_code():
     #null_handler = logging.NullHandler()
 
     root_logger = logging.getLogger()
