@@ -1,11 +1,11 @@
 
 class Levels(object):
     # logging.INFO = 20
-    V = 17
+    V = 18
     VV = 16
-    VVV = 15
+    VVV = 14
+    VVVV = 12
     # logging.DEBUG = 10
-    VVVV = 9
     VVVVV = 10
 
 V = Levels.V
