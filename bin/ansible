@@ -64,6 +64,14 @@ if __name__ == '__main__':
     cli = None
     me = os.path.basename(sys.argv[0])
 
+    import logging
+    log_format = "%(asctime)s [%(name)s %(levelname)s] %(process)d @%(filename)s:%(lineno)d - %(message)s"
+    logging.basicConfig(level=logging.DEBUG, format=log_format)
+    log = logging.getLogger('ansible')
+    log.setLevel(logging.DEBUG)
+    log.debug('test')
+
+
     try:
         display = Display()
         display.debug("starting run")

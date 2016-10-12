@@ -38,7 +38,7 @@ from ansible.plugins.callback import CallbackBase
 
 DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s %(playbook)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
 CONTEXT_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] [playbook=%(playbook)s:%(playbook_uuid)s play=%(play)s:%(play_uuid)s task=%(task)s:%(task_uuid)s] (%(process)d):%(funcName)s:%(lineno)d - %(message)s"
-LOG_FORMAT = "%(asctime)s [%(levelname)s] %(process)d @%(filename)s:%(lineno)d - %(message)s"
+LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] %(process)d @%(filename)s:%(lineno)d - %(message)s"
 MIN_LOG_FORMAT = "%(asctime)s %(funcName)s:%(lineno)d - %(message)s"
 
 def sluggify(value):
@@ -167,7 +167,7 @@ class CallbackModule(CallbackBase):
     CALLBACK_TYPE = 'notification'
     # CALLBACK_TYPE = "aggregate"
     CALLBACK_NAME = 'stdlog'
-    # CALLBACK_NEEDS_WHITELIST = True
+    CALLBACK_NEEDS_WHITELIST = True
 
     log_level = logging.DEBUG
     log_name = 'ansible_stdlog'
@@ -208,6 +208,8 @@ class CallbackModule(CallbackBase):
         for k, v in kwargs.items():
             self.logger.debug('kw_k=%s', k)
             self.logger.debug('kw_v=%s', v)
+
+    v2_on_all = _handle_v2_on_any
 
     # TODO: remove, not used at,
     def context_logger(self, host=None):

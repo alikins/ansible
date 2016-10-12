@@ -224,7 +224,6 @@ class PluginLoader:
     def find_plugin(self, name, mod_type=''):
         ''' Find a plugin named name '''
 
-
         if mod_type:
             suffix = mod_type
         elif self.class_name:
@@ -320,7 +319,7 @@ class PluginLoader:
             # See https://github.com/ansible/ansible/issues/13110
             return sys.modules[name]
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
+            #warnings.simplefilter("ignore", RuntimeWarning)
             with open(path, 'rb') as module_file:
                 module = imp.load_source(name, path, module_file)
         return module
@@ -337,8 +336,19 @@ class PluginLoader:
             return None
 
         if path not in self._module_cache:
-            self._module_cache[path] = self._load_module_source('.'.join([self.package, name]), path)
+            res = self._load_module_source('.'.join([self.package, name]), path)
+            self._module_cache[path] = res
             found_in_cache = False
+
+            if 'generic_stdlog' in name:
+                print('get _load_module_source self.package=%s name=%s path=%s' % (self.package, name, path))
+                print('get _load_module_source')
+                print('getres=%s' % res)
+                import traceback
+                traceback.print_stack()
+                print('get module __name__ = %s', res.__name__)
+                print('get self.base_class=%s', self.base_class)
+                print('get class_only=%s', class_only)
 
         obj = getattr(self._module_cache[path], self.class_name)
         if self.base_class:
@@ -356,7 +366,7 @@ class PluginLoader:
         self._display_plugin_load(self.class_name, name, self._searched_paths, path,
                                   found_in_cache=found_in_cache, class_only=class_only)
         if not class_only:
-            display.vvvvv('Searched for %s plugins \'%s\' in paths: %s' % \
+            display.vvvvv('Searched for %s plugins \'%s\' in paths: %s' %
                           (self.class_name, name, self.format_paths(self._searched_paths)))
             display.vvvv('loading %s plugin \'%s\' from %s' % (self.class_name, name, path))
             obj = obj(*args, **kwargs)
@@ -364,12 +374,12 @@ class PluginLoader:
         return obj
 
     def _display_plugin_load(self, class_name, name, searched_paths, path, found_in_cache=None, class_only=None):
-        msg = 'Loading %s \'%s\' from %s' % (class_name, os.path.basename(name), path)
+        msg = 'Loading %s \'%s\' from %s' % (class_name, name, path)
 
         if len(searched_paths) > 1:
             msg = '%s (searched paths: %s)' % (msg, self.format_paths(searched_paths))
 
-        if found_in_cache or class_only:
+        if found_in_cache or not class_only:
             msg = '%s (found_in_cache=%s, class_only=%s)' % (msg, found_in_cache, class_only)
 
         display.debug(msg)
@@ -381,16 +391,44 @@ class PluginLoader:
         all_matches = []
         found_in_cache = True
 
+        counter = 0
         for i in self._get_paths():
             all_matches.extend(glob.glob(os.path.join(i, "*.py")))
 
         for path in sorted(all_matches, key=lambda match: os.path.basename(match)):
             name, _ = os.path.splitext(path)
-            if '__init__' in name:
+
+            # path_tail should be in form like 'sh' or 'ssh'
+            path_head, path_tail = os.path.split(name)
+
+            # got a dir for name...
+            if not path_tail:
+                continue
+            # FIXME: any particular reason a dir package couldn't be a valid plugin?
+            #        ie,  /usr/ansible/my-plugins/callbacks/neato/*.py inc __init__.py
+            #if '__init__' in name:
+            if '__init__' in path_tail:
                 continue
 
             if path not in self._module_cache:
-                self._module_cache[path] = self._load_module_source(name, path)
+                # Use a ansible.plugins.whatever.plugin_name style module name
+                # NOTE: that means two plugins with the same name on different paths will collide and last one found
+                #       will win. But, it also means foo/bar/blip.py and other-foo/bar/blip.pyc wont interact. And
+                #       __name__ becomes something sane for plugins
+                res = self._load_module_source('.'.join([self.package, path_tail]), path)
+                #res = self._load_module_source(name, path)
+
+                if 'generic_stdlog' in name:
+                    print('all _load_module_source self.package=%s name=%s path=%s' % (self.package, name, path))
+                    print('all _load_module_source')
+                    print('res=%s' % res)
+                    import traceback
+                    traceback.print_stack()
+                    print('module __name__ = %s' % res.__name__)
+                    print('self.base_class=%s' % self.base_class)
+                    print('self.class_name=%s' % self.class_name)
+                    print('class_only=%s' % class_only)
+                self._module_cache[path] = res
                 found_in_cache = False
 
             try:
