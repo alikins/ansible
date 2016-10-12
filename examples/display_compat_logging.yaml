@@ -1,0 +1,42 @@
+---
+version: 1
+disable_existing_loggers: True
+formatters:
+    #display_debug_compat:
+    #    format: " %(process)6d %(created)0.5f: %(message)s"
+    # emulate the format used if 'logpath' is set in ansible.cfg
+    #display_log_compat:
+    #    format: " %(process)d %(created)f: p=%(process)d u=%(user)s <%(remote_addr)> %(message)s"
+    display_compat_debug:
+        (): ansible.logger.formatters.display_compat.DisplayCompatDebugFormatter
+    display_compat:
+        (): ansible.logger.formatters.display_compat.DisplayCompatFormatter
+#filters:
+#    display_console_debug_filter:
+#        class: ansible.logger.display_compat.DisplayConsoleDebugLoggingFilter
+
+handlers:
+    console_compat_debug:
+        (): ansible.logger.handlers.display_compat.DisplayCompatDebugHandler
+        # FIXME: need to make display_debug_compat smarter about istty
+        formatter: display_compat_debug
+
+    console_compat:
+        (): ansible.logger.handlers.display_compat.DisplayCompatHandler
+        # FIXME: need to make display_debug_compat smarter about istty
+        formatter: display_compat
+        level: 17
+        #formatter: console_display_debug_compat
+#        filters: [display_console_debug_filter]
+
+loggers:
+    ansible:
+        class: ansible.logger.loggers.default.AnsibleLogger
+        level: DEBUG
+        handlers: [console_compat]
+    multiprocessing:
+        class: ansible.logger.loggers.default.AnsibleLogger
+        level: CRITICAL
+        handlers: [console_compat]
+...
+
