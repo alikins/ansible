@@ -1,6 +1,7 @@
 
 import logging
 import logging.config
+import os
 import sys
 
 import yaml
@@ -10,12 +11,14 @@ import yaml
 # TODO: env var setting?
 #
 def log_setup_yaml_file(yaml_config_file):
+    config_file = os.environ.get('ANSIBLE_LOG_CONFIG', None) or yaml_config_file
+    print('config %s' % config_file)
     try:
-        with open(yaml_config_file, 'r') as log_f:
+        with open(config_file, 'r') as log_f:
             logging_conf = yaml.load(log_f.read())
             return log_setup_dict(logging_conf)
     except Exception as e:
-        sys.stderr.write('Error reading logging config file (%s) : %s' % (yaml_config_file, e))
+        sys.stderr.write('Error reading logging config file (%s) : %s' % (config_file, e))
         raise
 
 
