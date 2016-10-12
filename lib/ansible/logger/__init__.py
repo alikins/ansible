@@ -21,13 +21,8 @@ from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV
 # TODO: add logging filter that implements no_log
 #       - ideally via '__unsafe__'
 #       - AnsibleError could use it in it's str/repr
-# TODO: add AnsibleContextLoggingFilter
-#       extra records for current_cmd, sys.argv
 # TODO: add AnsiblePlaybookLoggingFilter
 #       extra records for playbook/play/task/block ?
-# TODO: (yaml?) config based logging setup
-# TODO: Any log Formatters or Handlers that are ansible specific
-# TODO: base logging setup
 # TODO: NullHandler for py2.4
 # TODO: for unsafe, no_log, in some ways we want the Logger to censor unsafe item, before they
 #       get sent to handlers or formatters. We can do that with a custom Logger and
@@ -39,7 +34,6 @@ from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV
 #       captured exceptions and send to DEBUG instead of ERROR or CRITICAL. Or use a seperate handler
 #       and filter exceptions records from main handler.
 # MAYBE: custom exception formatter
-# TODO: mv filters to a module?
 # TODO: hook up logging for run_command argv/in/out/rc (env)?
 # TODO: merge worker logging
 # TODO: merge module logging
