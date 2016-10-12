@@ -347,8 +347,11 @@ class TaskQueueManager:
         for method_name in method_names:
             gotit = getattr(callback_plugin, method_name, None)
             if gotit is not None:
-                log.debug('EXACT using %s.%s callback', callback_plugin, method_name)
+                print(getattr(gotit, '_callback_disabled', '3333'))
+                if hasattr(gotit, '_callback_disabled'):
+                    continue
                 return gotit
+        return None
 
     def find_cb_method_v1(self, callback_plugin, method_name):
         method_names = self._callback_method_expand(method_name)
@@ -367,34 +370,27 @@ class TaskQueueManager:
 
             # try to find v2 method, fallback to v1 method, ignore callback if no method found
             methods = []
-            methods = self.find_callback_method(callback_plugin, [method_name, method_name.replace('v2_', '')])
-            gotit = getattr(callback_plugin, method_name, None)
-            if gotit is None:
-                gotit = getattr(callback_plugin, method_name.replace('v2_', ''), None)
-            if gotit is not None:
-                methods.append(gotit)
+            new_method = self.find_callback_method(callback_plugin, [method_name, method_name.replace('v2_', '')])
+            if new_method:
                 log.debug('EXACT using %s.%s callback', callback_plugin, method_name)
+                methods.append(new_method)
 
             # if the plugin does not have any method that could match (ie, the correct one or the v1 version)
             # then check for a 'v2_on_missing'.
             # NOTE: a 'v2_on_missing' will be called if it exists in preference to 'v2_on_any'
-            gotit = getattr(callback_plugin, 'v2_on_missing', None)
-            # There is no v1 'on_missing'
-            if gotit is not None:
+            new_method = self.find_callback_method(callback_plugin, ['v2_on_missing'])
+            if new_method:
                 log.debug('MISSING No exact matching callback found, but a v2_on_missing was found. Using %s.v2_on_missing to handle request for method %s', callback_plugin, method_name)
-                methods.append(gotit)
+                methods.append(new_method)
 
             # if there isn't a matching method and there is no 'v2_on_missing', then check for 'v2_on_any'
             # In other worse, v2_on_any is not called if there is a v2_on_missing or a exact match.
+            # Note: Callback methods that subclass CallbackBase will provide most methods by default
             if not methods:
-
-                gotit = getattr(callback_plugin, 'v2_on_any', None)
-                log.debug('ANY callback plugin %s provides a v2_on_any', callback_plugin)
-                if gotit is None:
-                    gotit = getattr(callback_plugin, 'on_any', None)
-                if gotit is not None:
-                    log.debug('ANY callback plugin %s provides a on_any method (%s) that will be used for a %s call', callback_plugin, gotit, method_name)
-                    methods.append(gotit)
+                new_method = self.find_callback_method(callback_plugin, ['v2_on_any', 'on_any'])
+                if new_method:
+                    log.debug('ANY callback plugin %s provides a on_any method (%s) that will be used for a %s call', callback_plugin, new_method, method_name)
+                    methods.append(new_method)
 
             # look for a 'v2_on_all' method. A 'v2_on_all' if it exists, will always be called. Even if
             # there was an exact match, or a 'v2_on_missing', or a 'v2_on_any'. If it exists, it is always called.
@@ -402,11 +398,11 @@ class TaskQueueManager:
             # in addition to another matching method. More than one method from a single callback plugin could be called
             # if the plugin provides a 'v2_on_all'
             # If there is a 'v2_on_all', always call it. Always.
-            gotit = getattr(callback_plugin, 'v2_on_all', None)
+            new_method = self.find_callback_method(callback_plugin, ['v2_on_all'])
             # There is no v1 'on_missing'
-            if gotit is not None:
+            if new_method:
                 log.debug('ALL callback plugin %s provides a on_all method that will be used for all calls including method %s', callback_plugin, method_name)
-                methods.append(gotit)
+                methods.append(new_method)
 
             for method in methods:
                 try:
