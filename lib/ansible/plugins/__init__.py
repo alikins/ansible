@@ -396,15 +396,35 @@ class PluginLoader:
 
         for path in sorted(all_matches, key=lambda match: os.path.basename(match)):
             name, _ = os.path.splitext(path)
-            if '__init__' in name:
+            # path_tail should be in form like 'sh' or 'ssh'
+            path_head, path_tail = os.path.split(name)
+
+            # got a dir for name, can't do anything with that yet.
+            if not path_tail:
                 continue
+            # FIXME: any particular reason a dir package couldn't be a valid plugin?
+            #        ie,  /usr/ansible/my-plugins/callbacks/neato/*.py inc __init__.py
+            #if '__init__' in name:
+            if '__init__' in path_tail:
+                continue
+
+            # a not-real name ala 'ansible.plugins.callback.default' for plugins loaded from
+            # arbitrary paths not on sys.path. Mostly useful for user facing things and logger names.
+            # Could be used in lieu of __name__ for for setting up loggers.
+            # We will set module._faux_name_ on the loaded modules when we load it (similar to '_original_path')
+            faux_module_name = '.'.join([self.package, path_tail])
+
+            # This will be bogus for module_loader. Bogus and faux.
+            faux_class_name = '%s.%s' % (faux_module_name, self.class_name or 'AnsibleModule')
 
             if path not in self._module_cache:
                 self._module_cache[path] = self._load_module_source(name, path)
                 found_in_cache = False
+                setattr(self._module_cache[path], '_faux_name', faux_module_name)
 
             try:
                 obj = getattr(self._module_cache[path], self.class_name)
+                setattr(obj, '_faux_name', faux_class_name)
             except AttributeError as e:
                 display.warning("Skipping plugin (%s) as it seems to be invalid: %s" % (path, to_text(e)))
                 log.warning("Skipping plugin (%s) as it seems to be invalid: %s", path, to_text(e))
@@ -427,6 +447,9 @@ class PluginLoader:
                                       found_in_cache=found_in_cache, class_only=class_only)
             if not class_only:
                 obj = obj(*args, **kwargs)
+                setattr(obj, '_faux_name', faux_class_name)
+            else:
+                setattr(obj, '_faux_name', faux_module_name)
 
             # set extra info on the module, in case we want it later
             setattr(obj, '_original_path', path)
