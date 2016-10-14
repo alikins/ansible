@@ -38,6 +38,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class StrategyModule(StrategyBase):
 
@@ -163,6 +166,7 @@ class StrategyModule(StrategyBase):
         # iteratate over each task, while there is one left to run
         result = self._tqm.RUN_OK
         work_to_do = True
+        log.debug('run self._tqm._terminated=%s', self._tqm._terminated)
         while work_to_do and not self._tqm._terminated:
 
             try:
@@ -190,6 +194,7 @@ class StrategyModule(StrategyBase):
                         continue
 
                     if self._tqm._terminated:
+                        log.debug('WE WERE self._tqm._terminated=%s', self._tqm._terminated)
                         break
 
                     run_once = False

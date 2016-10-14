@@ -47,6 +47,8 @@ except ImportError:
 
 SSHPASS_AVAILABLE = None
 
+import logging
+log = logging.getLogger(__name__)
 
 class Connection(ConnectionBase):
     ''' ssh based connections '''
@@ -266,10 +268,13 @@ class Connection(ConnectionBase):
     @staticmethod
     def _terminate_process(p):
         """ Terminate a process, ignoring errors """
+        log.warn('ssh connection about to terminate p=%s', p)
         try:
             p.terminate()
         except (OSError, IOError):
+            log.exception()
             pass
+        log.warn('ssh connection AFTER terminating p=%s', p)
 
     # This is separate from _run() because we need to do the same thing for stdout
     # and stderr.

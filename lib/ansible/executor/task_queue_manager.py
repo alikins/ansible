@@ -45,6 +45,9 @@ except ImportError:
 
 __all__ = ['TaskQueueManager']
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class TaskQueueManager:
 
@@ -66,7 +69,7 @@ class TaskQueueManager:
     RUN_UNKNOWN_ERROR     = 255
 
     def __init__(self, inventory, variable_manager, loader, options, passwords, stdout_callback=None, run_additional_callbacks=True, run_tree=False):
-
+        log.warn('task_queue_manager init CCCCCCCCCCCCCCCCCCCCCCCCCCC')
         self._inventory        = inventory
         self._variable_manager = variable_manager
         self._loader           = loader
@@ -301,6 +304,7 @@ class TaskQueueManager:
                 rslt_q.close()
                 if worker_prc and worker_prc.is_alive():
                     try:
+                        log.debug('about to terminate worker_prc: %s', worker_prc)
                         worker_prc.terminate()
                     except AttributeError:
                         pass

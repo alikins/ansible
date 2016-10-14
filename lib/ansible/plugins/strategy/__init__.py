@@ -45,11 +45,15 @@ from ansible.vars import combine_vars, strip_internal_keys
 from ansible.module_utils._text import to_text
 
 
+
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ['StrategyBase']
 
@@ -522,10 +526,12 @@ class StrategyBase:
         Wait for the shared counter to drop to zero, using a short sleep
         between checks to ensure we don't spin lock
         '''
-
+        log.info('waiting...')
         ret_results = []
 
         display.debug("waiting for pending results...")
+        log.debug('waiting for pending results...')
+        log.debug('self._tqm._terminated=%s', self._tqm._terminated)
         while self._pending_results > 0 and not self._tqm._terminated:
 
             if self._tqm.has_dead_workers():
@@ -536,6 +542,7 @@ class StrategyBase:
             if self._pending_results > 0:
                 time.sleep(C.DEFAULT_INTERNAL_POLL_INTERVAL)
 
+        log.debug(' after while loop, did we get because we were terminated? self._tqm._terminated=%s', self._tqm._terminated)
         display.debug("no more pending results, returning what we have")
 
         return ret_results
