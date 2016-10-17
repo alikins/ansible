@@ -314,7 +314,8 @@ class CLI(object):
                 action="callback", callback=CLI.expand_tilde, type=str)
 
         if subset_opts:
-            parser.add_option('-t', '--tags', dest='tags', default='all',
+            parser.add_option('-t', '--tags', action='callback', dest='tags',
+                              type=str, callback=CLI.tags_callback,
                 help="only run plays and tasks tagged with these values")
             parser.add_option('--skip-tags', dest='skip_tags',
                 help="only run plays and tasks whose tags do not match these values")
@@ -510,6 +511,14 @@ class CLI(object):
                 result += "\n  {0}: {1}".format(submodule_path, submodule_info)
         f.close()
         return result
+
+    @staticmethod
+    def tags_callback(option, opt, value, parser, *args, **kwargs):
+        if hasattr(parser.values, 'tags_seen'):
+            display.deprecated('Specifying --tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.', version=2.5, removed=False)
+
+        setattr(parser.values, option.dest, value)
+        setattr(parser.values, 'tags_seen', True)
 
     def pager(self, text):
         ''' find reasonable way to display text '''
