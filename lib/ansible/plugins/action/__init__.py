@@ -73,6 +73,9 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         self._cleanup_remote_tmp  = False
         self._supports_check_mode = True
 
+        log.debug('ActionBase init')
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log.debug('action init')
 
     @abstractmethod
     def run(self, tmp=None, task_vars=None):
@@ -92,6 +95,8 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         * Module parameters.  These are stored in self._task.args
         """
         # store the module invocation details into the results
+        self.log.debug('base action class run')
+        log.debug('dddddddddd')
         results = {}
         if self._task.async == 0:
             results['invocation'] = dict(

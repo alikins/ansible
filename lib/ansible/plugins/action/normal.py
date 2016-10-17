@@ -20,10 +20,13 @@ __metaclass__ = type
 from ansible.plugins.action import ActionBase
 from ansible.utils.vars import merge_hash
 
+import logging
+log = logging.getLogger(__name__)
 
 class ActionModule(ActionBase):
 
     def run(self, tmp=None, task_vars=None):
+        log.debug('normal run()')
         if task_vars is None:
             task_vars = dict()
 
@@ -41,4 +44,5 @@ class ActionModule(ActionBase):
             if field in results:
                 results.pop(field)
 
+        log.debug('finished normal run()')
         return results
