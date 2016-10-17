@@ -76,6 +76,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         self._supports_check_mode = True
         self._supports_async = False
 
+
     @abstractmethod
     def run(self, tmp=None, task_vars=None):
         """ Action Plugins should implement this method to perform their
