@@ -44,6 +44,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class SortedOptParser(optparse.OptionParser):
     '''Optparser which sorts the options by opt before outputting --help'''
@@ -596,8 +599,10 @@ class CLI(with_metaclass(ABCMeta, object)):
             cmd = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=sys.stdout)
             cmd.communicate(input=to_bytes(text))
         except IOError:
+            log.exception()
             pass
         except KeyboardInterrupt:
+            log.exception()
             pass
 
     @classmethod
