@@ -126,17 +126,17 @@ class WorkerProcess(multiprocessing.Process):
             ).run()
 
             display.debug("done running TaskExecutor() for %s/%s" % (self._host, self._task))
-            #log.debug("done running TaskExecutor() for %s/%s", self._host, self._task)
+            self.log.debug("done running TaskExecutor() for %s/%s", self._host, self._task)
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(self._host.name, self._task._uuid, executor_result)
 
             # put the result on the result queue
             display.debug("sending task result")
-            #log.debug("sending task result")
+            self.log.debug("sending task result")
             self._rslt_q.put(task_result)
             display.debug("done sending task result")
-            #log.debug("done sending task result")
+            self.log.debug("done sending task result")
 
         except AnsibleConnectionFailure:
             self._host.vars = dict()
@@ -145,7 +145,6 @@ class WorkerProcess(multiprocessing.Process):
             self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
-            self.log.debug('_host=%s _task=%s play_context=%s', self._host, self._task, self._play_context)
             self.log.exception(e)
             #if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
@@ -161,7 +160,7 @@ class WorkerProcess(multiprocessing.Process):
             self.log.error('Got an exception %s and silently dropped it', e)
 
         display.debug("WORKER PROCESS EXITING")
-        #log.debug("WORKER PROCESS EXITING")
+        self.log.debug("WORKER PROCESS EXITING")
 
 
         #pr.disable()
