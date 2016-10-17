@@ -153,6 +153,7 @@ class TaskExecutor:
         except AnsibleError as e:
             return dict(failed=True, msg=to_text(e, nonstring='simplerepr'))
         except Exception as e:
+            log.exception('task_executor.run()')
             return dict(failed=True, msg='Unexpected failure during module execution.', exception=to_text(traceback.format_exc()), stdout='')
         finally:
             try:
@@ -379,7 +380,7 @@ class TaskExecutor:
         on the specified host (which may be the delegated_to host) and handles
         the retry/until and block rescue/always execution
         '''
-
+        log.debug('_execute started')
         if variables is None:
             variables = self._job_vars
 
@@ -423,6 +424,7 @@ class TaskExecutor:
             # skip conditional exception in the case of includes as the vars needed might not be avaiable except in the included tasks or due to tags
             if self._task.action not in ['include', 'include_role']:
                 raise
+            log.exception('dropped evaluated_conditional exception')
 
         # if we ran into an error while setting up the PlayContext, raise it now
         if context_validation_error is not None:
@@ -506,10 +508,12 @@ class TaskExecutor:
         for attempt in range(1, retries + 1):
             display.debug("running the handler")
             log.debug("running the handler")
+            log.debug('attempt=%s', attempt)
 
             try:
                 result = self._handler.run(task_vars=variables)
             except AnsibleConnectionFailure as e:
+                log.exception('around self._handler.run')
                 return dict(unreachable=True, msg=to_text(e))
             display.debug("handler run complete")
             log.debug("handler run complete")
@@ -560,6 +564,8 @@ class TaskExecutor:
                 _evaluate_changed_when_result(result)
                 _evaluate_failed_when_result(result)
 
+            log.debug('retries=%s', retries)
+            log.debug('delay=%s', delay)
             if retries > 1:
                 cond = Conditional(loader=self._loader)
                 cond.when = self._task.until
