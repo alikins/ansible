@@ -43,31 +43,6 @@ import multiprocessing
 import logging
 import debug_logger
 
-#LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] pid=%(process)d,%(processName)s tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
-#log = logging.getLogger("ansible")
-#log.setLevel(multiprocessing.SUBDEBUG)
-#handler = logging.StreamHandler(sys.stderr)
-#handler.setLevel(multiprocessing.SUBDEBUG)
-#formatter = debug_logger.ColorFormatter(use_color=True)
-#formatter.use_thread_color = True
-#handler.setFormatter(formatter)
-#root_log = logging.getLogger()
-#root_log.setLevel(multiprocessing.SUBDEBUG)
-#root_log.addHandler(handler)
-#mplog = multiprocessing.get_logger()
-#mplog.setLevel(multiprocessing.SUBDEBUG)
-#mplog2 = logging.getLogger('multiprocessing')
-#mplog2.setLevel(multiprocessing.SUBDEBUG)
-#mplog2.propagate = True
-
-#import coloredlogs
-#styles = coloredlogs.DEFAULT_FIELD_STYLES
-#styles['threadName'] = {'color':'red'}
-#coloredlogs.install(fmt=LOG_FORMAT, field_styles=styles)
-
-import logging_tree
-logging_tree.printout()
-
 import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
