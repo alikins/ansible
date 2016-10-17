@@ -41,12 +41,17 @@ import traceback
 from multiprocessing import Lock
 import multiprocessing
 import logging
+import debug_logger
+
 LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] pid=%(process)d,%(processName)s tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 log = logging.getLogger("ansible")
 log.setLevel(multiprocessing.SUBDEBUG)
 handler = logging.StreamHandler(sys.stderr)
 handler.setLevel(multiprocessing.SUBDEBUG)
-handler.setFormatter(logging.Formatter(LOG_FORMAT))
+formatter = debug_logger.ColorFormatter(use_color=True)
+formatter.use_thread_color = True
+#handler.setFormatter(logging.Formatter(LOG_FORMAT))
+handler.setFormatter(formatter)
 root_log = logging.getLogger()
 root_log.setLevel(multiprocessing.SUBDEBUG)
 root_log.addHandler(handler)
@@ -57,6 +62,11 @@ mplog.setLevel(multiprocessing.SUBDEBUG)
 mplog2 = logging.getLogger('multiprocessing')
 mplog2.setLevel(multiprocessing.SUBDEBUG)
 mplog2.propagate = True
+
+#import coloredlogs
+#styles = coloredlogs.DEFAULT_FIELD_STYLES
+#styles['threadName'] = {'color':'red'}
+#coloredlogs.install(fmt=LOG_FORMAT, field_styles=styles)
 
 import logging_tree
 logging_tree.printout()
@@ -72,6 +82,7 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, signal_handler)
+#signal.signal(signal.SIGINT, signal_handler)
 
 ########################################
 ### OUTPUT OF LAST RESORT ###
@@ -147,7 +158,9 @@ if __name__ == '__main__':
     except AnsibleError as e:
         display.error(to_text(e), wrap_text=False)
         exit_code = 1
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
+        log.exception(e)
+        log.debug('ctrl-CCCCCCCCCCCCCCCCCCC')
         display.error("User interrupted execution")
         exit_code = 99
     except Exception as e:
@@ -162,6 +175,8 @@ if __name__ == '__main__':
         exit_code = 250
     finally:
         # Remove ansible tempdir
+        log.debug('finally cleanup')
         shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
+    log.debug('exiting with code %s', exit_code)
     sys.exit(exit_code)
