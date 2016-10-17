@@ -106,7 +106,7 @@ if __name__ == '__main__':
         import logging
         # or 'ansible.cli' etc
         log = logging.getLogger('ansible')
-        setup.log_setup()
+        setup.log_setup_code()
     # TODO: if we totally fail to setup any logging, decide if thats fatal
     except Exception as e:
         sys.stderr.write('%s\n' % e)

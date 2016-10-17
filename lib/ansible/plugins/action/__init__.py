@@ -73,6 +73,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         self._cleanup_remote_tmp  = False
         self._supports_check_mode = True
 
+
     @abstractmethod
     def run(self, tmp=None, task_vars=None):
         """ Action Plugins should implement this method to perform their

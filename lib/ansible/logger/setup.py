@@ -2,6 +2,7 @@
 import logging
 import multiprocessing
 import sys
+import debug_logger
 
 from ansible.logger import formats
 from ansible.logger.loggers import default
@@ -41,7 +42,9 @@ def log_setup_code():
     # log.setLevel(logging.CRITICAL)
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
     #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
-    formatter = logging.Formatter(formats.REMOTE_DEBUG_LOG_FORMAT)
+    formatter = debug_logger.ColorFormatter(use_color=True)
+    formatter.use_thread_color = True
+    # formatter = logging.Formatter(formats.REMOTE_DEBUG_LOG_FORMAT)
 
     #import logmatic
     #j_f = logmatic.JsonFormatter()
