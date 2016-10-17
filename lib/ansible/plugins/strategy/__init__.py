@@ -46,8 +46,6 @@ from ansible.template import Templar
 from ansible.vars import combine_vars, strip_internal_keys
 from ansible.module_utils._text import to_text
 
-from ansible import logger
-from ansible.logger import setup
 
 try:
     from __main__ import display
@@ -218,7 +216,7 @@ class StrategyBase:
             while True:
                 (worker_prc, rslt_q) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
-                    worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj, logger_queue=setup.log_queue)
+                    worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
                     log.debug("worker is %d (out of %d available)", self._cur_worker+1, len(self._workers))
