@@ -39,6 +39,7 @@ from ansible.errors import AnsibleConnectionFailure
 from ansible.executor.task_executor import TaskExecutor
 from ansible.executor.task_result import TaskResult
 from ansible.module_utils._text import to_text
+from ansible.logger.handlers import queue_handler
 
 try:
     from __main__ import display
@@ -48,14 +49,6 @@ except ImportError:
 
 __all__ = ['WorkerProcess']
 
-# TODO: Most of worker is a seperate process, so it will need to
-# do it's own logging setup (or use the multiprocessing logging)
-#log = logging.getLogger(__name__)
-#mplog = multiprocessing.get_logger()
-#mplog.debug('mplog started')
-
-from ansible.logger.handlers import queue_handler
-import logging_tree
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -105,17 +98,12 @@ class WorkerProcess(multiprocessing.Process):
         #import cProfile, pstats, StringIO
         #pr = cProfile.Profile()
         #pr.enable()
-        #self.qh = queue_handler.QueueHandler(self._logger_queue)
         self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
-        #self.log.addHandler(self.qh)
         self.log.debug('process/worker/init to queue handler %s', os.getpid())
+
         self.mplog = multiprocessing.get_logger()
         self.mplog.setLevel(logging.DEBUG)
         self.mplog.propagate = True
-        self.mplog.debug('where am I?')
-        self.log.debug('_host=%s _task=%s', self._host, self._task)
-        self.mplog.debug('ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc')
-        #logging_tree.printout()
 
         if HAS_ATFORK:
             self.log.debug('HAS_ATFORK')
@@ -125,7 +113,7 @@ class WorkerProcess(multiprocessing.Process):
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
             self.log.debug("running TaskExecutor() for %s/%s", self._host, self._task)
-            #mplog.debug("running TaskExecutor() for %s/%s", self._host, self._task)
+
             executor_result = TaskExecutor(
                 self._host,
                 self._task,
