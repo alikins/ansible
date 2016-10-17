@@ -76,6 +76,9 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         self._supports_check_mode = True
         self._supports_async = False
 
+        log.debug('ActionBase init')
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log.debug('action init')
 
     @abstractmethod
     def run(self, tmp=None, task_vars=None):
@@ -94,7 +97,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
         * Module parameters.  These are stored in self._task.args
         """
-
+        self.log.debug('base action class run')
         result = {}
 
         if self._task.async and not self._supports_async:

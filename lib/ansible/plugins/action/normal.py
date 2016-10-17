@@ -20,6 +20,8 @@ __metaclass__ = type
 from ansible.plugins.action import ActionBase
 from ansible.utils.vars import merge_hash
 
+import logging
+log = logging.getLogger(__name__)
 
 class ActionModule(ActionBase):
 
@@ -28,6 +30,8 @@ class ActionModule(ActionBase):
         # individual modules might disagree but as the generic the action plugin, pass at this point.
         self._supports_check_mode = True
         self._supports_async = True
+        log.debug('normal run()')
+
 
         results = super(ActionModule, self).run(tmp, task_vars)
 
@@ -49,4 +53,5 @@ class ActionModule(ActionBase):
             if self._task.action == 'setup':
                 results['_ansible_verbose_override'] = True
 
+        log.debug('finished normal run()')
         return results

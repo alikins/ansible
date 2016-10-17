@@ -92,7 +92,7 @@ class WorkerProcess(multiprocessing.Process):
                         pass
             except (AttributeError, ValueError):
                 # couldn't get stdin's fileno, so we just carry on
-                pass
+                mplog.exception()
         else:
             # set to /dev/null
             self._new_stdin = os.devnull
@@ -157,6 +157,9 @@ class WorkerProcess(multiprocessing.Process):
             self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
+            mplog.debug('_host=%s _task=%s play_context=%s', self._host, self._task, self._play_context)
+            mplog.exception(e)
+            #if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
                 try:
                     self._host.vars = dict()
@@ -171,7 +174,8 @@ class WorkerProcess(multiprocessing.Process):
                 except Exception as e:
                     display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
                     display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
-                    #log.exception(e)
+                    mplog.exception(e)
+            mplog.error('Got an exception %s and silently dropped it', e)
 
         display.debug("WORKER PROCESS EXITING")
         #log.debug("WORKER PROCESS EXITING")

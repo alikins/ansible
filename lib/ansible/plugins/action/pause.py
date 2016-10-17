@@ -55,6 +55,8 @@ class ActionModule(ActionBase):
 
     def run(self, tmp=None, task_vars=None):
         ''' run the pause action module '''
+        self.log.debug('Pause action run()')
+
         if task_vars is None:
             task_vars = dict()
 
@@ -113,6 +115,7 @@ class ActionModule(ActionBase):
         fd = None
         old_settings = None
         try:
+            self.log.debug('starting pause of %s', seconds)
             if seconds is not None:
                 if seconds < 1:
                     seconds = 1
@@ -148,6 +151,7 @@ class ActionModule(ActionBase):
                     termios.tcflush(stdin, termios.TCIFLUSH)
             while True:
                 try:
+                    self.log.debug('while True looping in pause')
                     if fd is not None:
                         key_pressed = stdin.read(1)
                         if key_pressed == b'\x03':
