@@ -43,25 +43,22 @@ import multiprocessing
 import logging
 import debug_logger
 
-LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] pid=%(process)d,%(processName)s tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
-log = logging.getLogger("ansible")
-log.setLevel(multiprocessing.SUBDEBUG)
-handler = logging.StreamHandler(sys.stderr)
-handler.setLevel(multiprocessing.SUBDEBUG)
-formatter = debug_logger.ColorFormatter(use_color=True)
-formatter.use_thread_color = True
-#handler.setFormatter(logging.Formatter(LOG_FORMAT))
-handler.setFormatter(formatter)
-root_log = logging.getLogger()
-root_log.setLevel(multiprocessing.SUBDEBUG)
-root_log.addHandler(handler)
-#logging.basicConfig(level=multiprocessing.SUBDEBUG, format=LOG_FORMAT)
-#mplog = multiprocessing.log_to_stderr()
-mplog = multiprocessing.get_logger()
-mplog.setLevel(multiprocessing.SUBDEBUG)
-mplog2 = logging.getLogger('multiprocessing')
-mplog2.setLevel(multiprocessing.SUBDEBUG)
-mplog2.propagate = True
+#LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] pid=%(process)d,%(processName)s tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
+#log = logging.getLogger("ansible")
+#log.setLevel(multiprocessing.SUBDEBUG)
+#handler = logging.StreamHandler(sys.stderr)
+#handler.setLevel(multiprocessing.SUBDEBUG)
+#formatter = debug_logger.ColorFormatter(use_color=True)
+#formatter.use_thread_color = True
+#handler.setFormatter(formatter)
+#root_log = logging.getLogger()
+#root_log.setLevel(multiprocessing.SUBDEBUG)
+#root_log.addHandler(handler)
+#mplog = multiprocessing.get_logger()
+#mplog.setLevel(multiprocessing.SUBDEBUG)
+#mplog2 = logging.getLogger('multiprocessing')
+#mplog2.setLevel(multiprocessing.SUBDEBUG)
+#mplog2.propagate = True
 
 #import coloredlogs
 #styles = coloredlogs.DEFAULT_FIELD_STYLES
@@ -81,7 +78,7 @@ def signal_handler(signum, frame):
     log.warning('signal_handler %s %s', signum, frame)
     sys.exit(0)
 
-#signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 ########################################
 ### OUTPUT OF LAST RESORT ###
@@ -106,7 +103,7 @@ if __name__ == '__main__':
         import logging
         # or 'ansible.cli' etc
         log = logging.getLogger('ansible')
-        setup.log_setup_code()
+        qh, ql = setup.log_setup_code()
     # TODO: if we totally fail to setup any logging, decide if thats fatal
     except Exception as e:
         sys.stderr.write('%s\n' % e)
@@ -216,7 +213,7 @@ if __name__ == '__main__':
         shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
     try:
-        queue_handler.ql.stop()
+        ql.stop()
     except Exception as e:
         print(e)
         raise

@@ -45,8 +45,9 @@ from ansible.plugins import action_loader, connection_loader, filter_loader, loo
 from ansible.template import Templar
 from ansible.vars import combine_vars, strip_internal_keys
 from ansible.module_utils._text import to_text
-from ansible import logger
 
+from ansible import logger
+from ansible.logger import setup
 
 try:
     from __main__ import display
@@ -187,6 +188,7 @@ class StrategyBase:
         ''' handles queueing the task up to be sent to a worker '''
 
         display.debug("entering _queue_task() for %s/%s" % (host.name, task.action))
+        log.debug("entering _queue_task() for %s/%s", host.name, task.action)
 
         # Add a write lock for tasks.
         # Maybe this should be added somewhere further up the call stack but
@@ -201,6 +203,7 @@ class StrategyBase:
 
         if task.action not in action_write_locks.action_write_locks:
             display.debug('Creating lock for %s' % task.action)
+            log.debug('Creating lock for %s', task.action)
             action_write_locks.action_write_locks[task.action] = Lock()
 
         # and then queue the new task
@@ -215,9 +218,10 @@ class StrategyBase:
             while True:
                 (worker_prc, rslt_q) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
-                    worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj)
+                    worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj, logger_queue=setup.log_queue)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
+                    log.debug("worker is %d (out of %d available)", self._cur_worker+1, len(self._workers))
                     display.debug("worker is %d (out of %d available)" % (self._cur_worker+1, len(self._workers)))
                     queued = True
                 self._cur_worker += 1

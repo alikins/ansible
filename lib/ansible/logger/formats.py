@@ -19,6 +19,7 @@ EVERYTHING_VLOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s argv='
 
 THREAD_DEBUG_LOG_FORMAT = "%(asctime)s user=%(user)s cmd_name=%(cmd_name)s <%(remote_user)s@%(remote_addr)s> [%(name)s %(levelname)s] (pid=%(process)d) tid=%(thread)d:%(threadName)s %(funcName)s:%(lineno)d - %(message)s"
 
+SHORT_FORMAT = "%(asctime)s [%(name)s] p=%(process)d:%(funcName)s:%(lineno)d %(message)s"
 REMOTE_DEBUG_LOG_FORMAT = "%(asctime)s [%(name)s %(levelname)s] (pid=%(process)d,tname=%(threadName)s) %(funcName)s:%(lineno)d - %(message)s"
 
 # aka, splunk or elk
