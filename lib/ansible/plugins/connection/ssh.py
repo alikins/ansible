@@ -554,7 +554,7 @@ class Connection(ConnectionBase):
 
         display_cmd = list(map(shlex_quote, map(to_text, cmd)))
         display.vvv(u'SSH: EXEC {0}'.format(u' '.join(display_cmd)), host=self.host)
-        log.log(logger.VVV, u'SSH: EXEC %s', u' '.join(display_cmd), extra={'host':self.host})
+        log.log(logger.VVV, u'SSH: EXEC %s', u' '.join(display_cmd), extra={'host': self.host})
 
         # Start the given command. If we don't need to pipeline data, we can try
         # to use a pseudo-tty (ssh will have been invoked with -tt). If we are
@@ -943,9 +943,9 @@ class Connection(ConnectionBase):
 
         super(Connection, self).put_file(in_path, out_path)
         display.vvv(u"PUT {0} TO {1}".format(in_path, out_path), host=self.host)
-        log.log(logger.VVV, u"PUT %s TO %s", in_path, out_path, extra={'host':self.host})
+        log.log(logger.VVV, u"PUT %s TO %s", in_path, out_path, extra={'host': self.host})
         if not os.path.exists(to_bytes(in_path, errors='strict')):
-            raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_str(in_path)))
+            raise AnsibleFileNotFound("file or module does not exist: {0}".format(to_native(in_path)))
 
         return self._file_transport_command(in_path, out_path, 'put')
 
