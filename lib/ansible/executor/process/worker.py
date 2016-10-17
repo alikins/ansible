@@ -130,7 +130,7 @@ class WorkerProcess(multiprocessing.Process):
             ).run()
 
             display.debug("done running TaskExecutor() for %s/%s [%s]" % (self._host, self._task, self._task._uuid))
-            # log.debug("done running TaskExecutor() for %s/%s [%s]", self._host, self._task, self._task._uuid))
+            self.log.debug("done running TaskExecutor() for %s/%s [%s]", self._host, self._task, self._task._uuid))
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(
@@ -142,10 +142,10 @@ class WorkerProcess(multiprocessing.Process):
 
             # put the result on the result queue
             display.debug("sending task result for task %s" % self._task._uuid)
-            # log.debug("sending task result for task %s", self._task._uuid)
+            self.log.debug("sending task result for task %s", self._task._uuid)
             self._rslt_q.put(task_result)
             display.debug("done sending task result for task %s" % self._task._uuid)
-            # log.debug("done sending task result for task %s", self._task._uuid)
+            self.log.debug("done sending task result for task %s", self._task._uuid)
 
         except AnsibleConnectionFailure:
             self._host.vars = dict()
@@ -159,7 +159,6 @@ class WorkerProcess(multiprocessing.Process):
             self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
-            self.log.debug('_host=%s _task=%s play_context=%s', self._host, self._task, self._play_context)
             self.log.exception(e)
             #if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
@@ -180,7 +179,7 @@ class WorkerProcess(multiprocessing.Process):
             self.log.error('Got an exception %s and silently dropped it', e)
 
         display.debug("WORKER PROCESS EXITING")
-        #log.debug("WORKER PROCESS EXITING")
+        self.log.debug("WORKER PROCESS EXITING")
 
 
         # pr.disable()
