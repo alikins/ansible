@@ -215,5 +215,11 @@ if __name__ == '__main__':
         log.debug('finally cleanup')
         shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
+    try:
+        queue_handler.ql.stop()
+    except Exception as e:
+        print(e)
+        raise
+
     log.debug('exiting with code %s', exit_code)
     sys.exit(exit_code)
