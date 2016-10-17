@@ -46,6 +46,7 @@ import debug_logger
 import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
+
 from ansible.module_utils._text import to_text
 
 
@@ -79,12 +80,6 @@ if __name__ == '__main__':
         raise
 
     log.debug('================ ansible startup argv=%s ===================', sys.argv[:])
-    log.debug('The logger is %s', log)
-    log.debug('||| debug |||')
-    log.info('||| info |||')
-    log.warning('||| warning |||')
-    log.error('||| error |||')
-    log.critical('||| critical |||')
 
     # FIXME: remove...  dump out the logging config post yaml setup
     # NOTE: since we don't log all the python modules we are going to use until much later (plugins, etc)
