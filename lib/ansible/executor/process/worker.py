@@ -51,9 +51,11 @@ __all__ = ['WorkerProcess']
 # TODO: Most of worker is a seperate process, so it will need to
 # do it's own logging setup (or use the multiprocessing logging)
 #log = logging.getLogger(__name__)
+#mplog = multiprocessing.get_logger()
+#mplog.debug('mplog started')
 
-mplog = multiprocessing.get_logger()
-mplog.debug('mplog started')
+from ansible.logger.handlers import queue_handler
+import logging_tree
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -62,7 +64,7 @@ class WorkerProcess(multiprocessing.Process):
     for reading later.
     '''
 
-    def __init__(self, rslt_q, task_vars, host, task, play_context, loader, variable_manager, shared_loader_obj):
+    def __init__(self, rslt_q, task_vars, host, task, play_context, loader, variable_manager, shared_loader_obj, logger_queue=None):
 
         super(WorkerProcess, self).__init__()
         # takes a task queue manager as the sole param:
@@ -74,6 +76,7 @@ class WorkerProcess(multiprocessing.Process):
         self._loader            = loader
         self._variable_manager  = variable_manager
         self._shared_loader_obj = shared_loader_obj
+        self._logger_queue      = logger_queue
 
         # dupe stdin, if we have one
         self._new_stdin = sys.stdin
@@ -89,7 +92,7 @@ class WorkerProcess(multiprocessing.Process):
                     pass
         except (AttributeError, ValueError):
             # couldn't get stdin's fileno, so we just carry on
-            mplog.exception()
+            self.log.exception()
             pass
 
     def run(self):
@@ -102,15 +105,26 @@ class WorkerProcess(multiprocessing.Process):
         #import cProfile, pstats, StringIO
         #pr = cProfile.Profile()
         #pr.enable()
+        #self.qh = queue_handler.QueueHandler(self._logger_queue)
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        #self.log.addHandler(self.qh)
+        self.log.debug('process/worker/init to queue handler %s', os.getpid())
+        self.mplog = multiprocessing.get_logger()
+        self.mplog.setLevel(logging.DEBUG)
+        self.mplog.propagate = True
+        self.mplog.debug('where am I?')
+        self.log.debug('_host=%s _task=%s', self._host, self._task)
+        self.mplog.debug('ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc')
+        #logging_tree.printout()
 
         if HAS_ATFORK:
-            mplog.debug('HAS_ATFORK')
+            self.log.debug('HAS_ATFORK')
             atfork()
 
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
-            mplog.debug("running TaskExecutor() for %s/%s", self._host, self._task)
+            self.log.debug("running TaskExecutor() for %s/%s", self._host, self._task)
             #mplog.debug("running TaskExecutor() for %s/%s", self._host, self._task)
             executor_result = TaskExecutor(
                 self._host,
@@ -143,8 +157,8 @@ class WorkerProcess(multiprocessing.Process):
             self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
-            mplog.debug('_host=%s _task=%s play_context=%s', self._host, self._task, self._play_context)
-            mplog.exception(e)
+            self.log.debug('_host=%s _task=%s play_context=%s', self._host, self._task, self._play_context)
+            self.log.exception(e)
             #if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
                 try:
@@ -155,8 +169,8 @@ class WorkerProcess(multiprocessing.Process):
                 except Exception as e:
                     display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
                     display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
-                    mplog.exception(e)
-            mplog.error('Got an exception %s and silently dropped it', e)
+                    self.log.exception(e)
+            self.log.error('Got an exception %s and silently dropped it', e)
 
         display.debug("WORKER PROCESS EXITING")
         #log.debug("WORKER PROCESS EXITING")

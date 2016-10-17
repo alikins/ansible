@@ -29,11 +29,11 @@ def log_setup():
 log_queue = None
 
 
-def queue_listener():
+def queue_listener(handler):
     # This seems like a bad idea...
     global log_queue
     log_queue = multiprocessing.Queue()
-    queue_listener = queue_handler.QueueListener(log_queue)
+    queue_listener = queue_handler.QueueListener(log_queue, handler)
 
     queue_listener.start()
     return queue_listener
@@ -41,6 +41,12 @@ def queue_listener():
 
 def log_queue_listener_stop(queue):
     queue.put(None)
+
+
+def setup_listener():
+
+    ql = queue_listener(stream_handler)
+    print(ql)
 
 
 def log_setup_code():
@@ -59,7 +65,7 @@ def log_setup_code():
     # log.setLevel(logging.CRITICAL)
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
     #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
-    formatter = debug_logger.ColorFormatter(use_color=True)
+    formatter = debug_logger.ColorFormatter(use_color=True, default_color_by_attr='process')
     formatter.use_thread_color = True
     # formatter = logging.Formatter(formats.REMOTE_DEBUG_LOG_FORMAT)
 
@@ -69,7 +75,9 @@ def log_setup_code():
     #formatter = logging.Formatter(LOG_INDEXER_FRIENDLY_FORMAT)
     # log.propagate = True
 
-    # stream_handler = logging.StreamHandler()
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(multiprocessing.SUBDEBUG)
+    stream_handler.setFormatter(formatter)
     # stream_handler.setLevel(logging.DEBUG)
     # stream_handler.setFormatter(formatter)
 
@@ -100,11 +108,9 @@ def log_setup_code():
     #display_debug_handler.setLevel(logging.DEBUG)
     #debug_handler.setFormatter(debug.DebugFormatter())
 
-    mplog = multiprocessing.get_logger()
+#    mplog.setLevel(logging.INFO)
     #mplog.setLevel(multiprocessing.SUBDEBUG)
-    mplog.setLevel(logging.INFO)
-    #mplog.setLevel(multiprocessing.SUBDEBUG)
-    mplog.propagate = True
+    #mplog.propagate = True
 
     # log.addHandler(null_handler)
     # log.addHandler(stream_handler)
@@ -113,17 +119,28 @@ def log_setup_code():
     #       will log to our log file as well. This is mostly a dev setup, so disable before release
     # FIXME: disable in future
     #root_logger.addHandler(null_handler)
-    root_logger.addHandler(file_handler)
+
+
+    #root_logger.addHandler(file_handler)
+
+
     #root_logger.addHandler(debug_handler)
+
     #root_logger.addHandler(display_debug_handler)
 
     # setup listener
-    ql = queue_listener()
+    ql = queue_listener(stream_handler)
     print(ql)
 
     qh = queue_handler.QueueHandler(log_queue)
     root_logger.addHandler(qh)
 
+#    mplog.addHandler(qh)
+
+    mplog = multiprocessing.get_logger()
+    mplog.setLevel(logging.DEBUG)
+    mplog.debug('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM')
+    #mplog.propagate = True
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
     logging.getLogger('ansible.plugins.strategy').setLevel(logging.DEBUG)
@@ -134,4 +151,7 @@ def log_setup_code():
     #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
-#    logging_tree.printout()
+    import logging_tree
+    logging_tree.printout()
+#    sys.exit()
+    return qh, ql
