@@ -296,7 +296,7 @@ class TaskQueueManager:
         log.debug("RUNNING CLEANUP")
         self.terminate()
         self._final_q.close()
-        self._cleanup_processes()
+        #self._cleanup_processes()
 
     def _cleanup_processes(self):
         if hasattr(self, '_workers'):
