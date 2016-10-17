@@ -7,6 +7,7 @@ import debug_logger
 from ansible.logger import formats
 from ansible.logger.loggers import default
 from ansible.logger.handlers import default_handler
+from ansible.logger.handlers import queue_handler
 from ansible.logger import dict_setup
 
 # Make AnsibleLogger the default logger that logging.getLogger() returns instance of
@@ -24,6 +25,22 @@ def log_setup():
         sys.stderr.write('error setting up logging: %s' % e)
         # TODO: raise a logging setup exception since we likely want to setup logging first, then the big try/except for cli
         raise
+
+log_queue = None
+
+
+def queue_listener():
+    # This seems like a bad idea...
+    global log_queue
+    log_queue = multiprocessing.Queue()
+    queue_listener = queue_handler.QueueListener(log_queue)
+
+    queue_listener.start()
+    return queue_listener
+
+
+def log_queue_listener_stop(queue):
+    queue.put(None)
 
 
 def log_setup_code():
@@ -99,6 +116,13 @@ def log_setup_code():
     root_logger.addHandler(file_handler)
     #root_logger.addHandler(debug_handler)
     #root_logger.addHandler(display_debug_handler)
+
+    # setup listener
+    ql = queue_listener()
+    print(ql)
+
+    qh = queue_handler.QueueHandler(log_queue)
+    root_logger.addHandler(qh)
 
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
