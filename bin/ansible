@@ -39,9 +39,7 @@ import traceback
 
 # for debug
 from multiprocessing import Lock
-import multiprocessing
 import logging
-import debug_logger
 
 import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
