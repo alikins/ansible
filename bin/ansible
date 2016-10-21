@@ -66,6 +66,9 @@ if __name__ == '__main__':
     cli = None
     me = os.path.basename(sys.argv[0])
 
+    display = Display()
+    display.debug("starting run")
+
     try:
         from ansible.logger import setup
         import logging
@@ -85,13 +88,13 @@ if __name__ == '__main__':
     try:
         import logging_tree
         logging_tree.printout()
-    except Exception:
+    except Exception as e:
         # We have some sort of log setup here, and this isn't important
-        log.exception()
+        log.exception(e)
 
     try:
-        display = Display()
-        display.debug("starting run")
+        #display = Display()
+        display.debug("starting run3")
         log.debug("starting run")
 
         sub = None
@@ -108,7 +111,7 @@ if __name__ == '__main__':
                 raise AnsibleError("Unknown Ansible alias: %s" % me)
         except ImportError as e:
             # ImportError members have changed in py3
-            log.exception()
+            log.exception(e)
             if 'msg' in dir(e):
                 msg = e.msg
             else:

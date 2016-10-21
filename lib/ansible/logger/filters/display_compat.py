@@ -5,6 +5,24 @@ import os
 from ansible import constants as C
 
 
+class DisplayCompatLoggingFilter(object):
+    def __init__(self, name):
+        self.name = name
+        self.logger_name = 'ansible_display'
+
+    def filter(self, record):
+        if record.name != self.logger_name:
+            return False
+        return True
+
+
+class DisplayCompatOtherLoggingFilter(DisplayCompatLoggingFilter):
+    def filter(self, record):
+        if record.name != self.logger_name:
+            return True
+        return False
+
+
 class DisplayCompatDebugLoggingFilter(object):
     """Filter all log records unless env ANSIBLE_DEBUG env or DEFAULT_DEBUG cfg exists
 
