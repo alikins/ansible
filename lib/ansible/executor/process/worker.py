@@ -82,9 +82,8 @@ class WorkerProcess(multiprocessing.Process):
                     # not a valid file descriptor, so we just rely on
                     # using the one that was passed in
                     pass
-        except (AttributeError, ValueError) as e:
+        except (AttributeError, ValueError):
             # couldn't get stdin's fileno, so we just carry on
-            self.log.exception(e)
             pass
 
     def run(self):
@@ -99,9 +98,10 @@ class WorkerProcess(multiprocessing.Process):
         #pr.enable()
         self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         self.log.debug('process/worker/init to queue handler %s', os.getpid())
+#        self.log.setLevel(logging.DEBUG)
 
         self.mplog = multiprocessing.get_logger()
-        self.mplog.setLevel(logging.DEBUG)
+#        self.mplog.setLevel(logging.DEBUG)
         self.mplog.propagate = True
 
         if HAS_ATFORK:
@@ -137,7 +137,8 @@ class WorkerProcess(multiprocessing.Process):
             display.debug("done sending task result")
             self.log.debug("done sending task result")
 
-        except AnsibleConnectionFailure:
+        except AnsibleConnectionFailure as e:
+            self.log.exception(e)
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(self._host.name, self._task._uuid, dict(unreachable=True))

@@ -46,17 +46,11 @@ def log_queue_listener_stop(queue):
     queue.put(None)
 
 
-def setup_listener():
-
-    ql = queue_listener(stream_handler)
-    print(ql)
-
-
 def log_setup_code():
     #null_handler = logging.NullHandler()
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.INFO)
     #root_logger.setLevel(logging.DEBUG)
     #root_logger.propagate = True
     # root_logger.addHandler(null_handler)
@@ -100,7 +94,8 @@ def log_setup_code():
     #file_handler.setLevel(logging.DEBUG)
     file_handler.setLevel(multiprocessing.SUBDEBUG)
     #file_handler.setLevel(logging.ERROR)
-    file_handler.setFormatter(formatter)
+    file_formatter = logging.Formatter(formats.THREAD_DEBUG_LOG_FORMAT)
+    file_handler.setFormatter(file_formatter)
 
     #debug_handler = debug.DebugHandler()
 
@@ -137,7 +132,7 @@ def log_setup_code():
 
 
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
+    stream_handler.setLevel(logging.DEBUG)
     stream_handler.setFormatter(formatter)
     df = display_compat_filter.DisplayCompatOtherLoggingFilter(name='')
     stream_handler.addFilter(df)
@@ -151,25 +146,28 @@ def log_setup_code():
     dh_formatter = logging.Formatter('%(message)s')
     dh.setFormatter(dh_formatter)
 
-    ql = queue_listener([stream_handler, dh])
+    #ql = queue_listener([stream_handler, dh])
+    ql = queue_listener([file_handler])
     print(ql)
 
     qh = queue_handler.QueueHandler(log_queue)
-    qh.setLevel(logging.INFO)
+    qh.setLevel(logging.DEBUG)
 
     root_logger.addHandler(qh)
     d_logger.addHandler(qh)
 #    mplog.addHandler(qh)
 
     mplog = multiprocessing.get_logger()
-    mplog.setLevel(logging.DEBUG)
+    null_handler = logging.NullHandler()
+    mplog.setLevel(logging.WARNING)
+    mplog.addHandler(null_handler)
     mplog.debug('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM')
     #mplog.propagate = True
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
-    logging.getLogger('ansible.plugins.strategy').setLevel(logging.DEBUG)
+    #logging.getLogger('ansible.plugins.strategy').setLevel(logging.DEBUG)
 
-    logging.getLogger('ansible.executor').setLevel(logging.DEBUG)
+    #logging.getLogger('ansible.executor').setLevel(logging.DEBUG)
     logging.getLogger('ansible.plugins.connection').setLevel(logging.INFO)
     logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
