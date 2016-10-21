@@ -2,13 +2,13 @@
 import logging
 import multiprocessing
 import sys
-import debug_logger
 
 from ansible.logger import formats
 from ansible.logger.loggers import default
 from ansible.logger.handlers import default_handler
 from ansible.logger.handlers import queue_handler
 from ansible.logger import dict_setup
+from ansible.logger.formatters import color_debug
 
 # Make AnsibleLogger the default logger that logging.getLogger() returns instance of
 logging.setLoggerClass(default.AnsibleLogger)
@@ -65,7 +65,7 @@ def log_setup_code():
     # log.setLevel(logging.CRITICAL)
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
     #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
-    formatter = debug_logger.ColorFormatter(use_color=True, default_color_by_attr='process')
+    formatter = color_debug.ColorFormatter(use_color=True, default_color_by_attr='process')
     formatter.use_thread_color = True
     # formatter = logging.Formatter(formats.REMOTE_DEBUG_LOG_FORMAT)
 
