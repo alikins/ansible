@@ -1,14 +1,17 @@
 
 import logging
 import multiprocessing
+import os
 import sys
 
 from ansible.logger import formats
 from ansible.logger.loggers import default
 from ansible.logger.handlers import default_handler
 from ansible.logger.handlers import queue_handler
+from ansible.logger.handlers import display_compat
 from ansible.logger import dict_setup
 from ansible.logger.formatters import color_debug
+from ansible.logger.filters import display_compat as display_compat_filter
 
 # Make AnsibleLogger the default logger that logging.getLogger() returns instance of
 logging.setLoggerClass(default.AnsibleLogger)
@@ -29,11 +32,11 @@ def log_setup():
 log_queue = None
 
 
-def queue_listener(handler):
+def queue_listener(handlers):
     # This seems like a bad idea...
     global log_queue
     log_queue = multiprocessing.Queue()
-    queue_listener = queue_handler.QueueListener(log_queue, handler)
+    queue_listener = queue_handler.QueueListener(log_queue, *handlers)
 
     queue_listener.start()
     return queue_listener
@@ -53,15 +56,15 @@ def log_setup_code():
     #null_handler = logging.NullHandler()
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.CRITICAL)
+    root_logger.setLevel(logging.DEBUG)
     #root_logger.setLevel(logging.DEBUG)
     #root_logger.propagate = True
     # root_logger.addHandler(null_handler)
 
     #log = logging.getLogger('ansible')
     log = logging.getLogger('ansible')
-    #log.setLevel(logging.INFO)
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
+    #log.setLevel(logging.DEBUG)
     # log.setLevel(logging.CRITICAL)
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
     #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
@@ -75,22 +78,23 @@ def log_setup_code():
     #formatter = logging.Formatter(LOG_INDEXER_FRIENDLY_FORMAT)
     # log.propagate = True
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(multiprocessing.SUBDEBUG)
-    stream_handler.setFormatter(formatter)
+
+    #stream_handler = logging.StreamHandler()
+    #stream_handler.setLevel(multiprocessing.SUBDEBUG)
+    #stream_handler.setFormatter(formatter)
     # stream_handler.setLevel(logging.DEBUG)
     # stream_handler.setFormatter(formatter)
 
     # file_handler = logging.FileHandler(filename='/home/adrian/ansible.log')
     try:
-        file_handler = default_handler.AnsibleWatchedFileHandler(filename='/home/adrian/ansible.log')
+        filename = os.path.expanduser(os.environ.get('ANSIBLE_LOG_FILE', '~/ansible_debug.log'))
+        file_handler = default_handler.AnsibleWatchedFileHandler(filename=filename)
     # fallback to NullHandler if we can't open our log file
     except Exception as e:
         sys.stderr.write('%s\n' % e)
         log.error(e)
-        log.exception()
+        log.exception(e)
         raise
-        log.exception('error setting up default_handler.AnsibleWatchedFileHandler')
         file_handler = logging.NullHandler()
 
     #file_handler.setLevel(logging.DEBUG)
@@ -129,12 +133,32 @@ def log_setup_code():
     #root_logger.addHandler(display_debug_handler)
 
     # setup listener
-    ql = queue_listener(stream_handler)
+    #ql = queue_listener(stream_handler)
+
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(formatter)
+    df = display_compat_filter.DisplayCompatOtherLoggingFilter(name='')
+    stream_handler.addFilter(df)
+
+    d_logger = logging.getLogger('ansible_display')
+    d_logger.setLevel(logging.DEBUG)
+
+
+    dh = display_compat.DisplayCompatHandler()
+    dh.setLevel(logging.INFO)
+    dh_formatter = logging.Formatter('%(message)s')
+    dh.setFormatter(dh_formatter)
+
+    ql = queue_listener([stream_handler, dh])
     print(ql)
 
     qh = queue_handler.QueueHandler(log_queue)
-    root_logger.addHandler(qh)
+    qh.setLevel(logging.INFO)
 
+    root_logger.addHandler(qh)
+    d_logger.addHandler(qh)
 #    mplog.addHandler(qh)
 
     mplog = multiprocessing.get_logger()
@@ -151,7 +175,11 @@ def log_setup_code():
     #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
-    import logging_tree
-    logging_tree.printout()
+    try:
+        import logging_tree
+        logging_tree.printout()
+    except ImportError as e:
+        log.debug(e)
+
 #    sys.exit()
     return qh, ql
