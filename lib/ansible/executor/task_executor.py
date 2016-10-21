@@ -527,7 +527,7 @@ class TaskExecutor:
             try:
                 result = self._handler.run(task_vars=variables)
             except AnsibleConnectionFailure as e:
-                log.exception('around self._handler.run')
+                log.exception(e)
                 return dict(unreachable=True, msg=to_text(e))
             display.debug("handler run complete")
             log.debug("handler run complete")

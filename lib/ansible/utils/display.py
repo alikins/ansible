@@ -160,14 +160,13 @@ class Display:
             msg = stringc(msg, color)
 
         if not log_only:
-            self.display_log.info(msg)
 
             if not msg.endswith(u'\n'):
                 msg2 = msg + u'\n'
             else:
                 msg2 = msg
 
-            #self._write_to_stream(msg2, stderr=stderr)
+            self._write_to_stream(msg2, stderr=stderr)
 
         if logger and not screen_only:
 
