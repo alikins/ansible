@@ -108,11 +108,16 @@ class ColorFormatter(logging.Formatter):
         'ERROR': RED
     }
 
+    NUMBER_OF_BASE_COLORS = 8
+    NUMBER_OF_THREAD_COLORS = 216
+    # the xterm256 colors 0-8 and 8-16 are normal and bright term colors, 16-231 is from a 6x6x6 rgb cube
+    # 232-255 are the grays (white to gray to black)
+    RGB_COLOR_OFFSET = 16
     BASE_COLORS = dict((color_number, color_seq) for
-                       (color_number, color_seq) in [(x, "\033[38;5;%dm" % x) for x in range(8)])
+                       (color_number, color_seq) in [(x, "\033[38;5;%dm" % x) for x in range(NUMBER_OF_BASE_COLORS)])
     # \ x 1 b [ 38 ; 5; 231m
     THREAD_COLORS = dict((color_number, color_seq) for
-                         (color_number, color_seq) in [(x, "\033[38;5;%dm" % (x + 16)) for x in range(220)])
+                         (color_number, color_seq) in [(x, "\033[38;5;%dm" % (x + RGB_COLOR_OFFSET)) for x in range(NUMBER_OF_THREAD_COLORS)])
 
     LEVEL_COLORS = {'TRACE': BASE_COLORS[BLUE],
                     'SUBDEBUG': BASE_COLORS[BLUE],
@@ -165,14 +170,14 @@ class ColorFormatter(logging.Formatter):
     # TODO: this could be own class/methods like ContextColor(log_record) that returns color info
     def get_thread_color(self, threadid):
         # 220 is useable 256 color term color (forget where that comes from? some min delta-e division of 8x8x8 rgb colorspace?)
-        thread_mod = threadid % 220
+        thread_mod = threadid % self.NUMBER_OF_THREAD_COLORS
         #print threadid, thread_mod % 220
         return self.THREAD_COLORS[thread_mod]
 
     # TODO: This could special case 'MainThread'/'MainProcess' to pick a good predictable color
     def get_name_color(self, name):
         name_hash = hash(name)
-        name_mod = name_hash % 220
+        name_mod = name_hash % self.NUMBER_OF_THREAD_COLORS
         return self.THREAD_COLORS[name_mod]
 
     def get_level_color(self, levelname):

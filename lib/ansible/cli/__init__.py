@@ -598,11 +598,11 @@ class CLI(with_metaclass(ABCMeta, object)):
         try:
             cmd = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=sys.stdout)
             cmd.communicate(input=to_bytes(text))
-        except IOError:
-            log.exception()
+        except IOError as e:
+            log.exception(e)
             pass
-        except KeyboardInterrupt:
-            log.exception()
+        except KeyboardInterrupt as e:
+            log.exception(e)
             pass
 
     @classmethod

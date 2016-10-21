@@ -82,9 +82,9 @@ class WorkerProcess(multiprocessing.Process):
                     # not a valid file descriptor, so we just rely on
                     # using the one that was passed in
                     pass
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError) as e:
             # couldn't get stdin's fileno, so we just carry on
-            self.log.exception()
+            self.log.exception(e)
             pass
 
     def run(self):
