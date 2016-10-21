@@ -554,7 +554,7 @@ class TaskExecutor:
             except AnsibleActionFail as e:
                 return dict(failed=True, msg=to_text(e))
             except AnsibleConnectionFailure as e:
-                log.exception('around self._handler.run')
+                log.exception(e)
                 return dict(unreachable=True, msg=to_text(e))
             display.debug("handler run complete")
             log.debug("handler run complete")

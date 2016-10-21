@@ -87,10 +87,11 @@ class WorkerProcess(multiprocessing.Process):
                         pass
             except (AttributeError, ValueError) as e:
                 # couldn't get stdin's fileno, so we just carry on
-                self.log.exception(e)
+		pass
         else:
             # set to /dev/null
             self._new_stdin = os.devnull
+            pass
 
     def run(self):
         '''
@@ -104,9 +105,10 @@ class WorkerProcess(multiprocessing.Process):
         #pr.enable()
         self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         self.log.debug('process/worker/init to queue handler %s', os.getpid())
+#        self.log.setLevel(logging.DEBUG)
 
         self.mplog = multiprocessing.get_logger()
-        self.mplog.setLevel(logging.DEBUG)
+#        self.mplog.setLevel(logging.DEBUG)
         self.mplog.propagate = True
 
         if HAS_PYCRYPTO_ATFORK:
@@ -146,7 +148,8 @@ class WorkerProcess(multiprocessing.Process):
             display.debug("done sending task result for task %s" % self._task._uuid)
             self.log.debug("done sending task result for task %s", self._task._uuid)
 
-        except AnsibleConnectionFailure:
+        except AnsibleConnectionFailure as e:
+            self.log.exception(e)
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(
