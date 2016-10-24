@@ -83,6 +83,7 @@ class PlaybookExecutor:
         try:
             for playbook_path in self._playbooks:
                 pb = Playbook.load(playbook_path, variable_manager=self._variable_manager, loader=self._loader)
+                log.info('Starting playbook=%s %s', playbook_path, pb)
                 self._inventory.set_playbook_basedir(os.path.realpath(os.path.dirname(playbook_path)))
 
                 if self._tqm is None:  # we are doing a listing
@@ -96,9 +97,10 @@ class PlaybookExecutor:
                 i = 1
                 plays = pb.get_plays()
                 display.vv(u'%d plays in %s' % (len(plays), to_text(playbook_path)))
-                log.log(logger.VV, '%d plays in %s', len(plays), playbook_path)
+                log.info('%d plays in %s', len(plays), playbook_path)
 
                 for play in plays:
+                    log.info('Starting playbook=%s play=%s', playbook_path, play)
                     if play._included_path is not None:
                         self._loader.set_basedir(play._included_path)
                     else:
@@ -207,8 +209,9 @@ class PlaybookExecutor:
                             (retry_name, _) = os.path.splitext(os.path.basename(playbook_path))
                             filename = os.path.join(basedir, "%s.retry" % retry_name)
                             if self._generate_retry_inventory(filename, retries):
+                                # FIXME: use callback
                                 display.warning("\tto retry, use: --limit @%s\n" % filename)
-                                log.warning("to retry, use: --limit @%s", filename)
+                                log.warning("%s failed. To retry, use: --limit @%s", playbook_path, filename)
 
                     self._tqm.send_callback('v2_playbook_on_stats', self._tqm._stats)
 
