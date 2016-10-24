@@ -76,6 +76,7 @@ class SharedPluginLoaderObj:
 
 _sentinel = object()
 def results_thread_main(strategy):
+    log.debug('starting results_thread_main')
     while True:
         try:
             result = strategy._final_q.get()
@@ -83,12 +84,14 @@ def results_thread_main(strategy):
                 break
             else:
                 strategy._results_lock.acquire()
+                log.debug('appending result to queue')
                 strategy._results.append(result)
                 strategy._results_lock.release()
         except (IOError, EOFError):
             break
         except Queue.Empty:
             pass
+    log.debug('ending results_thread_main')
 
 class StrategyBase:
 
