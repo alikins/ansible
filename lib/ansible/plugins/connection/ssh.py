@@ -741,7 +741,7 @@ class Connection(ConnectionBase):
         super(Connection, self).fetch_file(in_path, out_path)
 
         display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self.host)
-        logger.log(logger.VVV, u"FETCH %s TO %s", in_path, out_path, extra={'host':self.host})
+        log.log(logger.VVV, u"FETCH %s TO %s", in_path, out_path, extra={'host':self.host})
         self._file_transport_command(in_path, out_path, 'get')
 
     def close(self):
