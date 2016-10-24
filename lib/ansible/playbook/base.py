@@ -42,6 +42,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def _generic_g(prop_name, self):
     try:
@@ -80,6 +83,53 @@ def _generic_s(prop_name, self, value):
 
 def _generic_d(prop_name, self):
     del self._attributes[prop_name]
+
+
+class Summary(object):
+    def __init__(self, base_obj):
+        self.base_type = None
+        self.base_name = None
+        self.defaults = []
+        self.changed = []
+
+        self._build(base_obj)
+
+    def _build(self, obj):
+        self.base_type = obj.__class__.__name__
+        for (name, attribute) in iteritems(obj._valid_attrs):
+            value = getattr(obj, name)
+
+            if not attribute:
+                continue
+
+            # check if both are None, since None != None, which isnt useful
+            if not isinstance(value, type(attribute.default)):
+                log.debug('The type of the current and default values of %s different: %s is not %s', name, type(value), type(attribute.default))
+                continue
+
+            if attribute.default is None:
+                if value:
+                    continue
+
+            #if value is None and attribute.default is None:
+            #    continue
+
+            log.debug('name=%s, value=%s, default=%s, attribute=%s', name, value, attribute.default, attribute)
+            log.debug('value != default: %s, %s %s', value != attribute.default, type(value), type(attribute.default))
+            if value != attribute.default:
+                self.changed.append((name, value, attribute))
+            else:
+                self.defaults.append((name, value, attribute))
+
+        self.defaults = sorted(self.defaults)
+
+    def __repr__(self):
+        buf = '%s(' % (self.base_type)
+        _change = []
+        for name, value, attribute in self.changed:
+            _change.append('%s=%s' % (name, value))
+        buf = "%s%s)" % (buf, ', '.join(_change))
+        return buf
 
 
 class BaseMeta(type):
@@ -500,6 +550,32 @@ class Base(with_metaclass(BaseMeta, object)):
             combined = value + new_value
 
         return [i for i,_ in itertools.groupby(combined) if i is not None]
+
+    def __not_str__(self):
+        repr_dict = {'_internal_type': self.__class__.__name__}
+        #for name in self._valid_attrs.keys():
+        # for name in self._attributes.keys():
+        lines = [""]
+        lines.append("%s:" % self.__class__.__name__)
+        default_attrs = {}
+        for (name, attribute) in iteritems(self._valid_attrs):
+            value = getattr(self, name)
+
+            if not attribute:
+                continue
+
+            if value != attribute.default:
+                lines.append("    " + "%s: %s  ( %s )" % (name, value, attribute))
+            else:
+                default_attrs[name] = attribute
+        default_str = ','.join(sorted(default_attrs.keys()))
+        lines.append('attrs with default value: %s' % default_str)
+        return '\n'.join(lines)
+
+
+    def __repr__(self):
+        summary = Summary(self)
+        return repr(summary)
 
     def serialize(self):
         '''
