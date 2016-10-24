@@ -151,6 +151,8 @@ class ColorFormatter(logging.Formatter):
 
         # TODO: be able to set the default color by attr name. Ie, make a record default to the thread or processName
         self.default_color_by_attr = default_color_by_attr or 'process'
+        # the name of the record attribute to check for a default color
+        self.default_attr_string = '_cdl_%s' % self.default_color_by_attr
 
         self.default_color = self.BASE_COLORS[self.WHITE]
         self.use_name_color = False
@@ -225,7 +227,6 @@ class ColorFormatter(logging.Formatter):
     # DOWNSIDE: Filter would need to be attach to the Logger not the Handler
     def format(self, record):
 
-
         # 'cdl' is 'context debug logger'. Mostly just an unlikely record name to avod name collisions.
         record._cdl_reset = self.RESET_SEQ
         record._cdl_default = self.default_color
@@ -262,22 +263,23 @@ class ColorFormatter(logging.Formatter):
 
 
         # make the default be colored by the pid/process
-        record._cdl_default = record._cdl_process
+        #record._cdl_default = record._cdl_process
         # or by processName
         #record._cdl_default = record._cdl_processName
         # or can do it by tid
-        record._cdl_default = record._cdl_thread
+        #record._cdl_default = record._cdl_thread
         # or by threadName
-        record._cdl_message = record._cdl_default
+        #record._cdl_message = record._cdl_default
 
         #record._cdl_exc_text = self.BASE_COLORS[self.YELLOW]
         if record.exc_info:
             record.exc_text_sep = '\n'
 
-        default_attr_string = '_cdl_%s' % self.default_color_by_attr
-        if hasattr(record, default_attr_string):
-            record._cdl_default = getattr(record, default_attr_string)
-            self.default_color = record._cdl_default
+        if hasattr(record, self.default_attr_string):
+            record._cdl_default = getattr(record, self.default_attr_string)
+            record._cdl_message = record._cdl_default
+            record._cdl_unset = record._cdl_default
+            #self.default_color = record._cdl_default
 
         s = self._format(record)
         s = s +  record.exc_text
