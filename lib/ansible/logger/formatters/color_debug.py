@@ -25,7 +25,7 @@ def context_color_format_string(format_string):
     '''
 
     # TODO: pass in a list of record/logFormatter attributes to be wrapped for colorization
-    color_attrs = ['name', 'process', 'processName', 'levelname', 'threadName', 'thread', 'message', 'exc_text']
+    color_attrs = ['name', 'process', 'processName', 'levelname', 'threadName', 'thread', 'message', 'exc_text', 'filename', 'funcName', 'lineno']
 
     color_attrs_string = '|'.join(color_attrs)
 
@@ -83,21 +83,34 @@ class ColorFormatter(logging.Formatter):
     funcName = u""
     processName = u""
 
-    FORMAT = ("""%(asctime)-15s """
+    FORMAT = ("""%(asctime)-15s"""
 #              """%(relativeCreated)-8d """
-              """%(levelname)-8s """
+              """ %(levelname)-0.1s"""
 #              """\033[1;35m%(name)s$RESET """
 #              """%(processName)s """
-              """%(processName)-15s %(_cdl_process)spid=%(process)-5d%(_cdl_unset)s """
-              """%(_cdl_thread)stid=%(thread)d %(_cdl_threadName)stname=%(threadName)-15s """
+              """ %(processName)-15s %(_cdl_process)spid=%(process)-5d%(_cdl_unset)s"""
+              """ %(threadName)s"""
+              """ %(thread)d"""
+              #              """%(_cdl_thread)stid=%(thread)d %(_cdl_threadName)stname=%(threadName)-15s """
               #              """[tid: \033[32m%(thread)d$RESET tname:\033[32m%(threadName)s]$RESET """
 #              """%(module)s """
-              """%(_cdl_name)s[%(name)s]%(_cdl_unset)s """
+#              """ %(_cdl_funcName)s"""
+#              """ ["""
+              """ %(name)s"""
+#              """%(_cdl_funcName)s"""
+#              """%(_cdl_unset)s"""
 #              """%(_cdl_thread)s"""
-              """@%(filename)s"""
-#              """%(funcName)s()"""
-              """:%(lineno)-4d """
-              """- %(_cdl_thread)s%(message)s%(_cdl_reset)s""")
+#              """ ["""
+              """ """
+              """%(funcName)s"""
+              """ """
+              """%(filename)s"""
+              """ """
+              """%(lineno)-4d"""
+#              """]"""
+#              """%(_cdl_unset)s"""
+              """ - %(message)s"""
+              """%(_cdl_reset)s""")
 #              """- $BOLD%(message)s$RESET""")
 
     COLORS = {
@@ -147,7 +160,9 @@ class ColorFormatter(logging.Formatter):
         self.use_color = use_color
 
         self.thread_counter = 0
-        self.use_thread_color = False
+        self.use_thread_color = True
+        self.use_level_color = True
+        self.use_name_color = True
 
         # TODO: be able to set the default color by attr name. Ie, make a record default to the thread or processName
         self.default_color_by_attr = default_color_by_attr or 'process'
@@ -155,7 +170,6 @@ class ColorFormatter(logging.Formatter):
         self.default_attr_string = '_cdl_%s' % self.default_color_by_attr
 
         self.default_color = self.BASE_COLORS[self.WHITE]
-        self.use_name_color = False
         #self.default_color = self.BASE_COLORS[self.YELLOW]
 
     # TODO: rename and generalize
@@ -234,19 +248,29 @@ class ColorFormatter(logging.Formatter):
         record._cdl_filename = self.default_color
         record._cdl_lineno = self.default_color
         record._cdl_name = self.default_color
+        record._cdl_funcName = self.default_color
+        record._cdl_message = self.default_color
         record.exc_text_sep = ''
         record.exc_text = ''
 
         # NOTE: the impl here is based on info from justthe LogRecord and should be okay across threads
         #       If this wants to use more global data, beware...
-        if self.use_color:
+        if self.use_level_color:
             level_color = self.get_level_color(record.levelname)
             record._cdl_levelname = level_color
 
-        if self.use_name_color:
-            record._cdl_name = self.get_name_color(record.name)
+        # set a different color for each logger name. And by default, make filename, funcName, and lineno match.
+        if self.use_name_color or True:
+            #module_and_method_color = self.get_name_color('%s.%s' % (record.name, record.funcName))
+            module_and_method_color = self.get_name_color(record.name)
+            # set name, filename, funcName, and lineno to the 'name_color' by default.
+            record._cdl_funcName = module_and_method_color
+            record._cdl_name = module_and_method_color
+            record._cdl_filename = module_and_method_color
+            record._cdl_lineno = module_and_method_color
+            record._cdl_name = module_and_method_color
 
-        if self.use_color and self.use_thread_color:
+        if self.use_thread_color:
             pname_color, pid_color, tname_color, tid_color = self.get_process_colors(record.processName, record.process, record.threadName, record.thread)
 
             # NOTE: and here is where we currently mutate the existing log record (we add attributes to it).
@@ -256,29 +280,42 @@ class ColorFormatter(logging.Formatter):
             record._cdl_thread = tid_color
             record._cdl_threadName = tname_color
             record._cdl_exc_text = tid_color
-            record._cdl_filename = tid_color
-            record._cdl_lineno = tid_color
+#            record._cdl_filename = tid_color
+#            record._cdl_lineno = tid_color
 
-            record._cdl_name = pid_color
+#            record._cdl_name = pid_color
 
-
-        # make the default be colored by the pid/process
-        #record._cdl_default = record._cdl_process
-        # or by processName
-        #record._cdl_default = record._cdl_processName
-        # or can do it by tid
-        #record._cdl_default = record._cdl_thread
-        # or by threadName
-        #record._cdl_message = record._cdl_default
 
         #record._cdl_exc_text = self.BASE_COLORS[self.YELLOW]
         if record.exc_info:
             record.exc_text_sep = '\n'
 
-        if hasattr(record, self.default_attr_string):
-            record._cdl_default = getattr(record, self.default_attr_string)
-            record._cdl_message = record._cdl_default
-            record._cdl_unset = record._cdl_default
+        record._cdl_funcName = self.get_name_color(record.funcName)
+
+        group_by = [('default', ['default', 'message', 'unset'])]
+        custom_group_by = [
+                           ('process', ['default', 'message', 'unset', 'processName', 'exc_text']),
+                           ('thread', ['threadName', 'thread']),
+                           ('funcName', ['name', 'filename', 'lineno']),
+                           #('funcName', ['message', 'unset'])
+                           ]
+        group_by.extend(custom_group_by)
+
+        # fields we don't need to calculate indiv, since they will be a different group
+        in_a_group = set()
+
+        for group, members in group_by:
+            if hasattr(record, '_cdl_%s' % group):
+                group_color = getattr(record, '_cdl_%s' % group)
+                for member in members:
+                    setattr(record, '_cdl_%s' % member, group_color)
+                    in_a_group.add(member)
+
+
+#        if hasattr(record, self.default_attr_string):
+#            record._cdl_default = getattr(record, self.default_attr_string)
+#            record._cdl_message = record._cdl_default
+#            record._cdl_unset = record._cdl_default
             #self.default_color = record._cdl_default
 
         s = self._format(record)
