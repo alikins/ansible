@@ -147,7 +147,8 @@ def log_setup_code():
     dh.setFormatter(dh_formatter)
 
     #ql = queue_listener([stream_handler, dh])
-    ql = queue_listener([file_handler])
+    #ql = queue_listener([file_handler])
+    ql = queue_listener([stream_handler])
     print(ql)
 
     qh = queue_handler.QueueHandler(log_queue)
@@ -166,7 +167,7 @@ def log_setup_code():
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
     #logging.getLogger('ansible.plugins.strategy').setLevel(logging.DEBUG)
-
+    #logging.getLogger('ansible.playbook.base').setLevel(logging.DEBUG)
     #logging.getLogger('ansible.executor').setLevel(logging.DEBUG)
     logging.getLogger('ansible.plugins.connection').setLevel(logging.INFO)
     logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
