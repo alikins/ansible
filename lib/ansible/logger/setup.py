@@ -57,11 +57,12 @@ def log_setup_code():
 
     #log = logging.getLogger('ansible')
     log = logging.getLogger('ansible')
-    log.setLevel(logging.INFO)
-    #log.setLevel(logging.DEBUG)
+    #log.setLevel(logging.INFO)
+    log.setLevel(logging.DEBUG)
     # log.setLevel(logging.CRITICAL)
     #formatter = logging.Formatter(DEBUG_LOG_FORMAT)
     #formatter = logging.Formatter(THREAD_DEBUG_LOG_FORMAT)
+    #formatter = color_debug.ColorFormatter(use_color=True, default_color_by_attr='process')
     formatter = color_debug.ColorFormatter(use_color=True, default_color_by_attr='process')
     formatter.use_thread_color = True
     # formatter = logging.Formatter(formats.REMOTE_DEBUG_LOG_FORMAT)
@@ -160,14 +161,17 @@ def log_setup_code():
 
     mplog = multiprocessing.get_logger()
     null_handler = logging.NullHandler()
-    mplog.setLevel(logging.WARNING)
+    mplog.setLevel(logging.DEBUG)
     mplog.addHandler(null_handler)
+    #mplog.addHandler(qh)
     mplog.debug('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM')
     #mplog.propagate = True
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
+    logging.getLogger('ansible.plugins').setLevel(logging.INFO)
+    logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
     #logging.getLogger('ansible.plugins.strategy').setLevel(logging.DEBUG)
-    #logging.getLogger('ansible.playbook.base').setLevel(logging.DEBUG)
+    logging.getLogger('ansible.playbook').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor').setLevel(logging.DEBUG)
     logging.getLogger('ansible.plugins.connection').setLevel(logging.INFO)
     logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
