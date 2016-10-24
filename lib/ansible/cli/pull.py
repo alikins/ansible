@@ -34,6 +34,7 @@ from ansible.cli import CLI
 from ansible.module_utils._text import to_native
 from ansible.plugins import module_loader
 from ansible.utils.cmd_functions import run_cmd
+from ansible import logger
 
 try:
     from __main__ import display
