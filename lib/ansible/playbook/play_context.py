@@ -303,6 +303,8 @@ class PlayContext(Base):
         if hasattr(options, 'skip_tags'):
             self.skip_tags.update(options.skip_tags)
 
+        log.debug('After setting options play_context=%s', self)
+
     def set_task_and_variable_override(self, task, variables, templar):
         '''
         Sets attributes from the task if they are set, which will override
@@ -456,7 +458,8 @@ class PlayContext(Base):
         if task.check_mode is not None:
             new_info.check_mode = task.check_mode
 
-
+        #log.info('Updating play_context with info from task and built in variables. new_info=%s', new_info)
+        log.info('Updated play_context is now: %s', repr(self))
         return new_info
 
     def make_become_cmd(self, cmd, executable=None):
