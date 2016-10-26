@@ -35,10 +35,20 @@ from ansible.logger.levels import V, VV, VVV, VVVV, VVVVV
 #       and filter exceptions records from main handler.
 # MAYBE: custom exception formatter
 # TODO: hook up logging for run_command argv/in/out/rc (env)?
-# TODO: merge worker logging
 # TODO: merge module logging
 # TODO: logging plugin? plugin would need to be able to run very early
 # TODO: add 'deprecated' log... method? deprecated should probably be it's own module, with log/display
 #       as possibilities, but seperated from deprecation tracking logic. (so deprecated.seen_deprecation object would be
 #       shared and only have one instance per process)
 #       But probably just add the deprecated() to AnsibleLogger
+#       See deprecation branch
+# TODO: cli options for --logging-level  (--logging-level debug)
+# MAYBE: cli options for tweaking level of each logger (--logging-level ansible.executor.task_queue_manager=debug etc)
+# MAYBE: cli option for choosing final output handler (ie, file, console, syslog)
+# MAYBE: cli option for setting output handlers logging format (--logging-format="%(asctime)s LOG LOG LOG %(name)s - %(message)s")
+# MAYBE: metaclass for logging Filters that add attributes, so we can 'register' them and the default attibute filter can set them
+# MAYBE: add TRACE log level that uses sys.set_trace
+# TODO: logging Filters to add context attributes for ansible version
+# TODO: add parent pid to processContextFilter
+# MAYBE: logging Filters to add context attributes for logging config, ansible config (which config files, plugin paths, etc), env vars, euid/gid/egid, cgroups
+# TODO: better use of logging (ie, log useful info like what playbooks/plays are run (args/start/end/result  overlaps with stdlog callbacks), errors or failures
