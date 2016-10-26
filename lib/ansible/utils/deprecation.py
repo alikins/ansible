@@ -54,6 +54,8 @@ REMOVED_NOW = 'REMOVED_NOW'
 # playbook/base.py: comma seperated lists, use yaml instead
 #
 
+_deprecations_registry = {}
+
 
 class Results(object):
     NOT_FOUND = 0
@@ -64,7 +66,17 @@ class Results(object):
     VERSION = 5
 
 
+class Meta(type):
+    def __new__(meta, name, bases, class_dict):
+        cls = type.__new__(meta, name, bases, class_dict)
+        _deprecations_registry[cls.label] = cls
+        return cls
+
+
 class Deprecation(object):
+    # TODO: verify if this is worth metapain
+    __metaclass__ = Meta
+
     label = None
     version = None
     removed = None
@@ -289,29 +301,33 @@ class OutputHandler(object):
 class Deprecations(object):
 
     def __init__(self):
-        self._registry = {}
+        self._registry = _deprecations_registry
         self._results = Results()
         self.output_handler = None
 
     def add(self, deprecation):
-        self._registry[deprecation.label] = deprecation
+        pass
 
     def process_result(self, deprecation, result, message=None):
         if self.output_handler:
             self.output_handler.process(deprecation, result, message=message)
 
     def check(self, label, message=None):
-        deprecation = self._registry.get(label, None)
+        deprecation_class = self._registry.get(label, None)
 
-        result = self.evaluate(deprecation)
+        depr = None
+        if deprecation_class:
+            depr = deprecation_class()
+
+        result = self.evaluate(depr)
         # handle results/print it
 
         # FIXME: ugh, terrible name
-        self.process_result(deprecation, result, message=message)
+        self.process_result(depr, result, message=message)
 
         if result == Results.REMOVED:
             #raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
-            raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
+            raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % depr.message)
 
         return result
 
@@ -358,18 +374,9 @@ class Deprecations(object):
 
 # TODO: worth trying to be clever about registering these
 #       auto-magically (ie, a metaclass that keeps track?)
-_deprecations = Deprecations()
-_deprecations.add(FixupPerms())
-_deprecations.add(MergeMultipleCliTags())
-_deprecations.add(MergeMultipleCliSkipTags())
-_deprecations.add(TaskAlwaysRun())
-_deprecations.add(TaskParamVariables())
-_deprecations.add(AcceleratedMode())
+# REVISIT: remove metaclass if too annoying
 
-_deprecations.add(Always())
-_deprecations.add(Now())
-_deprecations.add(Future())
-_deprecations.add(RemovedNow())
+_deprecations = Deprecations()
 
 
 def check(label, message=None):
@@ -381,5 +388,6 @@ def add_output_handler(output_handler):
     _deprecations.output_handler = output_handler
 
 
+# TODO: could use class registry now...
 def list_deprecations():
     return sorted(_deprecations._registry.values())
