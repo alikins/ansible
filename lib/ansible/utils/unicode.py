@@ -20,7 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from ansible.module_utils._text import to_bytes as _to_bytes, to_text, to_native
-from ansible.utils import deprecated
+from ansible.utils import deprecation
 
 try:
     from __main__ import display
@@ -38,21 +38,21 @@ __all__ = ('to_bytes', 'to_unicode', 'to_str', 'unicode_wrap')
 
 
 def to_bytes(*args, **kwargs):
-    deprecated.check(deprecated.TO_BYTES)
+    deprecation.check(deprecation.TO_BYTES)
     if 'errors' not in kwargs:
         kwargs['errors'] = 'replace'
     return _to_bytes(*args, **kwargs)
 
 
 def to_unicode(*args, **kwargs):
-    deprecated.check(deprecated.TO_UNICODE)
+    deprecation.check(deprecation.TO_UNICODE)
     if 'errors' not in kwargs:
         kwargs['errors'] = 'replace'
     return to_text(*args, **kwargs)
 
 
 def to_str(*args, **kwargs):
-    deprecated.check(deprecated.TO_STR)
+    deprecation.check(deprecation.TO_STR)
     if 'errors' not in kwargs:
         kwargs['errors'] = 'replace'
     return to_native(*args, **kwargs)

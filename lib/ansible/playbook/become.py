@@ -22,7 +22,7 @@ __metaclass__ = type
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleParserError
 from ansible.playbook.attribute import Attribute, FieldAttribute
-from ansible.utils import deprecated
+from ansible.utils import deprecation
 
 try:
     from __main__ import display
@@ -78,7 +78,7 @@ class Become:
                 ds['become_user'] = ds['sudo_user']
                 del ds['sudo_user']
 
-            deprecated.check(deprecated.SUDO_USAGE)
+            deprecation.check(deprecation.SUDO_USAGE)
 
         elif 'su' in ds or 'su_user' in ds:
             ds['become_method'] = 'su'
@@ -90,7 +90,7 @@ class Become:
                 ds['become_user'] = ds['su_user']
                 del ds['su_user']
 
-            display.check(deprecated.SU_USAGE)
+            display.check(deprecation.SU_USAGE)
 
         return ds
 

@@ -34,7 +34,7 @@ from ansible.errors import AnsibleError
 from ansible.module_utils._text import to_bytes
 from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.base import Base
-from ansible.utils import deprecated
+from ansible.utils import deprecation
 
 boolean = C.mk_boolean
 
@@ -453,7 +453,7 @@ class PlayContext(Base):
         task.set_become_defaults(new_info.become, new_info.become_method, new_info.become_user)
 
         if task.always_run:
-            deprecated.check(deprecated.TASK_ALWAYS_RUN)
+            deprecation.check(deprecation.TASK_ALWAYS_RUN)
             new_info.check_mode = False
 
         # check_mode replaces always_run, overwrite always_run if both are given

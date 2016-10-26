@@ -45,7 +45,7 @@ import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
 from ansible.module_utils._text import to_text
-from ansible.utils import deprecated
+from ansible.utils import deprecation
 
 
 ########################################
@@ -84,13 +84,13 @@ if __name__ == '__main__':
 #        def print_callback(msg):
 #            print(msg)
 
-        output_handler = deprecated.OutputHandler(output_callbacks=[deprecation_display_callback])
-        deprecated.add_output_handler(output_handler)
-#        deprecated.add_display_callback(print_callback)
-        deprecated.check(deprecated.ALWAYS)
+        output_handler = deprecation.OutputHandler(output_callbacks=[deprecation_display_callback])
+        deprecation.add_output_handler(output_handler)
+#        deprecation.add_display_callback(print_callback)
+        deprecation.check(deprecation.ALWAYS)
 
-        deprecated.check(deprecated.NOW)
-        deprecated.check(deprecated.FUTURE)
+        deprecation.check(deprecation.NOW)
+        deprecation.check(deprecation.FUTURE)
 
         sub = None
         try:

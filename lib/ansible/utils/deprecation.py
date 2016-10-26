@@ -11,16 +11,19 @@ except ImportError:
 
 # FIXME: floats?
 # TODO:
-current_version = 2.2
+current_version = 2.3
 
+# could classify... cli args, playbook params, config options
+# TODO/FIXME: enum class
 FIXUP_PERMS = 'FIXUP_PERMS'
 MERGE_MULTIPLE_CLI_TAGS = 'MERGE_MULTIPLE_CLI_TAGS'
 MERGE_MULTIPLE_CLI_SKIP_TAGS = 'MERGE_MULTIPLE_CLI_SKIP_TAGS'
 TASK_ALWAYS_RUN = 'TASK_ALWAYS_RUN'
 BARE_VARIABLES = 'BARE_VARIABLES'
 TAGS_IN_INCLUDE_PARAMETERS = 'TAGS_IN_INCLUDE_PARAMETERS'
-SUDO_USAGE = 'SUDO_USAGE
+SUDO_USAGE = 'SUDO_USAGE'
 SU_USAGE = 'SU_USAGE'
+TASK_PARAM_VARIABLES = 'TASK_PARAM_VARIABLES'
 
 # API usage
 TO_BYTES = 'TO_BYTES'
@@ -32,6 +35,25 @@ TO_STR = 'TO_STR'
 ALWAYS = 'ALWAYS'
 NOW = 'NOW'
 FUTURE = 'FUTURE'
+REMOVED_NOW = 'REMOVED_NOW'
+
+# TODO: other deprecations to add
+# vars/ play_hosts
+# executor/task_executor "using variables for task params is unsafe"
+# accelerated mode
+# vaultlib.is_encrypted[_file]
+# action/unarchive 'copy'
+# plugins/loader explicit set of deprecations for deprecated modules/tasks?
+# galaxy text role format
+# playbook/play 'use of user in Play datastructure'
+# playbook/play.py 'using the short form for vars prompt'
+# playbook/task.py "Specifying include variables at the top-level of the task is deprecated"
+# playbook/helpers.py "since this is not explicitly marked as static..."
+# playbook/helpers.py "You should not specify tags in include paramaters"
+# playbook/role/requirement.py: "The comma separated role spec format, use the yaml/explicit format instead."
+# playbook/base.py: deprecated attributes
+# playbook/base.py: comma seperated lists, use yaml instead
+#
 
 
 class Results(object):
@@ -53,6 +75,10 @@ class Deprecation(object):
         return False
 
 
+class AnsibleDeprecation(AnsibleError):
+    pass
+
+
 class Always(Deprecation):
     label = ALWAYS
     # a DeprecationVersion may be useful if... the evaluation semantics get weird.
@@ -66,6 +92,13 @@ class Now(Deprecation):
     version = 2.2
     removed = False
     message = 'This is a test deprecation that matches current version'
+
+
+class RemovedNow(Deprecation):
+    label = REMOVED_NOW
+    version = 2.2
+    removed = True
+    message = 'This is a test deprecation that matches current version for removed feature'
 
 
 class Future(Deprecation):
@@ -129,14 +162,22 @@ class SudoUsage(Deprecation):
     label = SUDO_USAGE
     version = None
     removed = None
-    message = "Instead of sudo/sudo_user, use become/become_user and set become_method to 'sudo' (default is sudo)")
+    message = "Instead of sudo/sudo_user, use become/become_user and set become_method to 'sudo' (default is sudo)"
 
 
 class SuUsage(Deprecation):
     label = SU_USAGE
     version = None
     removed = None
-    message = "Instead of su/su_user, use become/become_user and set become_method to 'su' (default is sudo)")
+    message = "Instead of su/su_user, use become/become_user and set become_method to 'su' (default is sudo)"
+
+
+class TaskParamVariables(Deprecation):
+    label = TASK_PARAM_VARIABLES
+    version = None
+    removed = None
+    message = "Using variables for task params is unsafe, especially if the variables come from an external source like facts"
+
 
 # API stuff
 # TODO: it would be useful to seperate deprecations from user facing features from developer features
@@ -263,7 +304,8 @@ class Deprecations(object):
         self.process_result(deprecation, result, message=message)
 
         if result == Results.REMOVED:
-            raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
+            #raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
+            raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
 
         return result
 
@@ -297,7 +339,7 @@ class Deprecations(object):
 
         if deprecation.version is not None:
             print('d.version=%s' % deprecation.version)
-            if current_version < deprecation.version:
+            if current_version >= deprecation.version:
                 # the current version of ansible is newer than the latest depr version
                 #self._warn_version(deprecation)
                 return Results.VERSION
@@ -315,9 +357,12 @@ _deprecations.add(FixupPerms())
 _deprecations.add(MergeMultipleCliTags())
 _deprecations.add(MergeMultipleCliSkipTags())
 _deprecations.add(TaskAlwaysRun())
+_deprecations.add(TaskParamVariables())
+
 _deprecations.add(Always())
 _deprecations.add(Now())
 _deprecations.add(Future())
+_deprecations.add(RemovedNow())
 
 
 def check(label, message=None):

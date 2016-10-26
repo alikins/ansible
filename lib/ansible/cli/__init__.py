@@ -37,7 +37,7 @@ from ansible import constants as C
 from ansible.compat.six import with_metaclass
 from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.module_utils._text import to_bytes, to_text
-from ansible.utils import deprecated
+from ansible.utils import deprecation
 
 try:
     from __main__ import display
@@ -444,7 +444,7 @@ class CLI(with_metaclass(ABCMeta, object)):
         if hasattr(self.options, 'tags') and self.options.tags:
             if not C.MERGE_MULTIPLE_CLI_TAGS:
                 if len(self.options.tags) > 1:
-                    deprecated.check(deprecated.MERGE_MULTIPLE_CLI_TAGS)
+                    deprecation.check(deprecation.MERGE_MULTIPLE_CLI_TAGS)
                     self.options.tags = [self.options.tags[-1]]
 
             tags = set()
@@ -456,7 +456,7 @@ class CLI(with_metaclass(ABCMeta, object)):
         if hasattr(self.options, 'skip_tags') and self.options.skip_tags:
             if not C.MERGE_MULTIPLE_CLI_TAGS:
                 if len(self.options.skip_tags) > 1:
-                    deprecated.check(deprecated.MERGE_MULTIPLE_CLI_SKIP_TAGS)
+                    deprecation.check(deprecation.MERGE_MULTIPLE_CLI_SKIP_TAGS)
                     self.options.skip_tags = [self.options.skip_tags[-1]]
 
             skip_tags = set()

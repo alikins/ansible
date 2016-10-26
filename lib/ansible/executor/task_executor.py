@@ -38,6 +38,8 @@ from ansible.utils.encrypt import key_for_hostname
 from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.ssh_functions import check_for_controlpersist
 from ansible.vars.unsafe_proxy import UnsafeProxy, wrap_var
+from ansible.utils import deprecation
+
 
 try:
     from __main__ import display
@@ -446,7 +448,7 @@ class TaskExecutor:
         if '_variable_params' in self._task.args:
             variable_params = self._task.args.pop('_variable_params')
             if isinstance(variable_params, dict):
-                display.deprecated("Using variables for task params is unsafe, especially if the variables come from an external source like facts")
+                deprecation.check(deprecation.TASK_PARAM_VARIABLES)
                 variable_params.update(self._task.args)
                 self._task.args = variable_params
 

@@ -40,7 +40,7 @@ from ansible.template.safe_eval import safe_eval
 from ansible.template.template import AnsibleJ2Template
 from ansible.template.vars import AnsibleJ2Vars
 from ansible.module_utils._text import to_native, to_text
-from ansible.utils import deprecated
+from ansible.utils import deprecation
 
 try:
     from hashlib import sha1
@@ -482,8 +482,8 @@ class Templar:
             if (contains_filters or first_part in self._available_variables) and self.environment.variable_start_string not in variable:
                 new_style = "%s%s%s" % (self.environment.variable_start_string, variable, self.environment.variable_end_string)
                 if bare_deprecated:
-                    deprecated.check(deprecated.BARE_VARIABLES,
-                                     message=BARE_VARIABLE_DEPRECATION % new_style)
+                    deprecation.check(deprecation.BARE_VARIABLES,
+                                      message=BARE_VARIABLE_DEPRECATION % new_style)
                 return new_style
 
         # the variable didn't meet the conditions to be converted,
