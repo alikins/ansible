@@ -51,6 +51,7 @@ def log_setup_code():
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(multiprocessing.SUBDEBUG)
     #root_logger.setLevel(logging.DEBUG)
     #root_logger.propagate = True
     # root_logger.addHandler(null_handler)
@@ -154,6 +155,7 @@ def log_setup_code():
 
     qh = queue_handler.QueueHandler(log_queue)
     qh.setLevel(logging.DEBUG)
+    qh.setLevel(multiprocessing.SUBDEBUG)
 
     root_logger.addHandler(qh)
     d_logger.addHandler(qh)
@@ -161,11 +163,11 @@ def log_setup_code():
 
     mplog = multiprocessing.get_logger()
     null_handler = logging.NullHandler()
-    mplog.setLevel(logging.DEBUG)
-    mplog.addHandler(null_handler)
-    #mplog.addHandler(qh)
+    mplog.setLevel(multiprocessing.SUBDEBUG)
+    #mplog.addHandler(null_handler)
+    mplog.addHandler(qh)
     mplog.debug('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM')
-    #mplog.propagate = True
+    mplog.propagate = True
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
     logging.getLogger('ansible.plugins').setLevel(logging.INFO)
