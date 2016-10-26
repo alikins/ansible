@@ -60,16 +60,19 @@ class Results(object):
     VERSION = 5
 
 
-class Meta(type):
+class MetaDeprecation(type):
     def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
-        _deprecations_registry[cls.label] = cls
+
+        # Don't include the base class in the registry
+        if cls.label:
+            _deprecations_registry[cls.label] = cls
         return cls
 
 
 class Deprecation(object):
     # TODO: verify if this is worth metapain
-    __metaclass__ = Meta
+    __metaclass__ = MetaDeprecation
 
     label = None
     version = None
