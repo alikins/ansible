@@ -51,5 +51,5 @@ class TestDeprecation(unittest.TestCase):
         self.assertEquals(res, deprecation.Results.FUTURE)
 
     def test_list(self):
-        res = deprecation.list()
+        res = deprecation.list_deprecations()
         print(res)
