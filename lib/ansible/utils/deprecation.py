@@ -31,12 +31,6 @@ TO_BYTES = 'TO_BYTES'
 TO_UNICODE = 'TO_UNICODE'
 TO_STR = 'TO_STR'
 
-# Deprecation() classes for dev/test
-# TODO: remove, or better, move to unittest
-ALWAYS = 'ALWAYS'
-NOW = 'NOW'
-FUTURE = 'FUTURE'
-REMOVED_NOW = 'REMOVED_NOW'
 
 # TODO: other deprecations to add
 # vars/ play_hosts
@@ -88,35 +82,6 @@ class Deprecation(object):
 
 class AnsibleDeprecation(AnsibleError):
     pass
-
-
-class Always(Deprecation):
-    label = ALWAYS
-    # a DeprecationVersion may be useful if... the evaluation semantics get weird.
-    version = None
-    removed = False
-    message = 'This is a test deprecation that is always deprecated'
-
-
-class Now(Deprecation):
-    label = NOW
-    version = 2.2
-    removed = False
-    message = 'This is a test deprecation that matches current version'
-
-
-class RemovedNow(Deprecation):
-    label = REMOVED_NOW
-    version = 2.2
-    removed = True
-    message = 'This is a test deprecation that matches current version for removed feature'
-
-
-class Future(Deprecation):
-    label = FUTURE
-    version = 3.0
-    removed = False
-    message = 'This is a test deprecation that is from the future.'
 
 
 class FixupPerms(Deprecation):

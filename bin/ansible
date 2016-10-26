@@ -87,10 +87,6 @@ if __name__ == '__main__':
         output_handler = deprecation.OutputHandler(output_callbacks=[deprecation_display_callback])
         deprecation.add_output_handler(output_handler)
 #        deprecation.add_display_callback(print_callback)
-        deprecation.check(deprecation.ALWAYS)
-
-        deprecation.check(deprecation.NOW)
-        deprecation.check(deprecation.FUTURE)
 
         sub = None
         try:
