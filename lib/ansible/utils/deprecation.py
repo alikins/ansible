@@ -10,7 +10,7 @@ except ImportError:
 
 
 # FIXME: floats?
-# TODO:
+# TODO: pull in from __version__ or equilivent so it's populated at runtime.
 current_version = 2.3
 
 # could classify... cli args, playbook params, config options
@@ -64,6 +64,10 @@ class MetaDeprecation(type):
     def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
 
+        # we could register the labels as well to auto populate enum-ish module attrs
+        # but loses the dev utility of compile time check
+        # (ie, avoid runtime check('MISPELEDD_DERPICATION') errors
+
         # Don't include the base class in the registry
         if cls.label:
             _deprecations_registry[cls.label] = cls
@@ -87,6 +91,13 @@ class AnsibleDeprecation(AnsibleError):
     pass
 
 
+# NOTE: Deprecation classes don't have to be defined here, they could be defined where used, but
+#       need to be defined in a scope that gets interpreted (ie, module scope) so they show up
+#       in list_deprecations()
+
+# NOTE: The bulk of these classes could be defined in data/config. The classes that need to extend
+#       mitigated() need a class defination though. The utility of being able to define these
+#       when/where the deprecated code is changed would be lost however.
 class FixupPerms(Deprecation):
     label = FIXUP_PERMS
     version = 2.4
