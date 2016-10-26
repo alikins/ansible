@@ -24,6 +24,7 @@ TAGS_IN_INCLUDE_PARAMETERS = 'TAGS_IN_INCLUDE_PARAMETERS'
 SUDO_USAGE = 'SUDO_USAGE'
 SU_USAGE = 'SU_USAGE'
 TASK_PARAM_VARIABLES = 'TASK_PARAM_VARIABLES'
+ACCELERATED_MODE = 'ACCELERATED_MODE'
 
 # API usage
 TO_BYTES = 'TO_BYTES'
@@ -39,8 +40,6 @@ REMOVED_NOW = 'REMOVED_NOW'
 
 # TODO: other deprecations to add
 # vars/ play_hosts
-# executor/task_executor "using variables for task params is unsafe"
-# accelerated mode
 # vaultlib.is_encrypted[_file]
 # action/unarchive 'copy'
 # plugins/loader explicit set of deprecations for deprecated modules/tasks?
@@ -177,6 +176,13 @@ class TaskParamVariables(Deprecation):
     version = None
     removed = None
     message = "Using variables for task params is unsafe, especially if the variables come from an external source like facts"
+
+
+class AcceleratedMode(Deprecation):
+    label = ACCELERATED_MODE
+    version = None
+    removed = None
+    message = "Accelerated mode is deprecated. Consider using SSH with ControlPersist and pipelining enabled instead"
 
 
 # API stuff
@@ -358,6 +364,7 @@ _deprecations.add(MergeMultipleCliTags())
 _deprecations.add(MergeMultipleCliSkipTags())
 _deprecations.add(TaskAlwaysRun())
 _deprecations.add(TaskParamVariables())
+_deprecations.add(AcceleratedMode())
 
 _deprecations.add(Always())
 _deprecations.add(Now())
@@ -372,3 +379,7 @@ def check(label, message=None):
 
 def add_output_handler(output_handler):
     _deprecations.output_handler = output_handler
+
+
+def list_deprecations():
+    return sorted(_deprecations._registry.values())

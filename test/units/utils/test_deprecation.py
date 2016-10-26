@@ -46,3 +46,10 @@ class TestDeprecation(unittest.TestCase):
         res = deprecation.check(deprecation.FUTURE)
         self.assertEquals(res, deprecation.Results.FUTURE)
 
+    def test_accelerated_mode(self):
+        res = deprecation.check(deprecation.ACCELERATED_MODE)
+        self.assertEquals(res, deprecation.Results.FUTURE)
+
+    def test_list(self):
+        res = deprecation.list()
+        print(res)

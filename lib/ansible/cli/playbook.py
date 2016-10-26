@@ -35,6 +35,8 @@ from ansible.playbook.play_context import PlayContext
 from ansible.utils.vars import load_extra_vars
 from ansible.utils.vars import load_options_vars
 from ansible.vars import VariableManager
+from ansible.utils import deprecation
+
 
 try:
     from __main__ import display
@@ -104,12 +106,15 @@ class PlaybookCLI(CLI):
                 raise AnsibleError("the playbook: %s does not appear to be a file" % playbook)
 
         # don't deal with privilege escalation or passwords when we don't need to
-        if not self.options.listhosts and not self.options.listtasks and not self.options.listtags and not self.options.syntax:
+        if not self.options.listhosts and not self.options.listtasks and not self.options.listtags and not self.options.syntax and not self.options.list_deprecations:
             self.normalize_become_options()
             (sshpass, becomepass) = self.ask_passwords()
             passwords = { 'conn_pass': sshpass, 'become_pass': becomepass }
 
         loader = DataLoader()
+
+        if self.options.list_deprecations:
+            return self._list_deprecations()
 
         if self.options.vault_password_file:
             # read vault_pass from a file
@@ -228,3 +233,10 @@ class PlaybookCLI(CLI):
         for host in inventory.list_hosts():
             hostname = host.get_name()
             variable_manager.clear_facts(hostname)
+
+    def _list_deprecations(self):
+        deprs = deprecation.list_deprecations()
+        # FIXME: make pretty
+        for depr in deprs:
+            display.display('%s: deprecated_in: %s removed_in: %s' % (depr.label, depr.version or 'N/A', depr.removed or 'N/A'))
+        return 0

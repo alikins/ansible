@@ -719,6 +719,7 @@ class TaskExecutor:
         if self._play_context.accelerate:
             # accelerate is deprecated as of 2.1...
             display.deprecated('Accelerated mode is deprecated. Consider using SSH with ControlPersist and pipelining enabled instead')
+            deprecation.check(deprecation.ACCELERATED_MODE)
             # launch the accelerated daemon here
             ssh_connection = connection
             handler = self._shared_loader_obj.action_loader.get(
