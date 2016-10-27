@@ -351,6 +351,12 @@ def display_callback(msg):
 # - warn that a feature used will be removed in version X.Y
 #  all just output aside from exception
 
+class SeenDeprecation(object):
+    def __init__(self, depr, result, where=None):
+        self.depr = depr
+        self.result = result
+        self.where = where
+
 
 # TODO: make Deprecations more container/dict like (getitem/setitem/__contains__/len, etc)
 #       so deprecated.Deprecations[SOME_LABEL] = MyDeprecation() would work
@@ -363,6 +369,7 @@ class Deprecations(object):
         # map of DeprecationData.label to a Deprecation()
         self._registry = {}
         self.output_handler = None
+        self.seen_deprs = []
 
     def add(self, label, depr):
         self._registry[label] = depr
@@ -399,7 +406,9 @@ class Deprecations(object):
         if not depr:
             return Results.NOT_FOUND
 
-        return depr.check(message=message)
+        check_result = depr.check(message=message)
+        self.seen_deprs.append(SeenDeprecation(depr, check_result))
+        return check_result
 
 # TODO: could be static or module level method
 #       if module method, Deprecation class could implement self.evaluate() with it
@@ -426,3 +435,7 @@ def check(label, message=None):
 # TODO: could use class registry now...
 def list_deprecations():
     return sorted(_deprecations_registry.values())
+
+
+def list_seen_deprecations():
+    return _deprecations.seen_deprs
