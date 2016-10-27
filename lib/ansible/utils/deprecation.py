@@ -73,12 +73,13 @@ class Deprecation(object):
     def evaluate(self):
         return self.data.evaluate()
 
-    def react(self, result, message=None):
-        return self.reaction.react(self.data, result, message=message)
+    def react(self, result, message=None, where=None):
+        return self.reaction.react(self.data, result,
+                                   message=message, where=where)
 
-    def check(self, message=None):
+    def check(self, message=None, where=None):
         res = self.evaluate()
-        return self.react(res, message=message)
+        return self.react(res, message=message, where=where)
 
 
 class MetaDeprecationData(type):
@@ -143,7 +144,7 @@ class Reaction(object):
     '''If a deprecation applies, we need to have some reaction.
 
     ie, print a warning, raise an exception, etc.'''
-    def react(self, depr, result, message=None):
+    def react(self, depr, result, message=None, where=None):
         if result == Results.REMOVED:
             raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % depr.message)
         return result
@@ -168,13 +169,14 @@ class OutputHandler(object):
         self.output_callbacks = output_callbacks or []
 
     # FIXME: ugly name
-    def process(self, depr, result, message=None):
+    def process(self, depr, result, message=None, where=None):
         # Suppose we could put the full Deprecation instance in the set if we make it
         # hashable. That could potentially allow for more sophisticated matching...
         if depr.label not in self._deprecations_issued:
             self._deprecations_issued.add(depr.label)
             #self._test_depr_set.add(depr.data)
 
+        # TODO: include where info here
         # A message passed in from a check() will be used instead of Deprecation default.
         msg = message or depr.message
         if result == Results.FUTURE:
@@ -213,7 +215,7 @@ class DefaultReaction(Reaction):
         super(DefaultReaction, self).__init__()
         self.output_handler = OutputHandler(output_callbacks=[output_callback])
 
-    def react(self, depr, result, message=None):
+    def react(self, depr, result, message=None, where=None):
         self.process_result(depr, result, message=message)
 
         if result == Results.REMOVED:
@@ -221,8 +223,8 @@ class DefaultReaction(Reaction):
 
         return result
 
-    def process_result(self, depr, result, message=None):
-            self.output_handler.process(depr, result, message=message)
+    def process_result(self, depr, result, message=None, where=None):
+            self.output_handler.process(depr, result, message=message, where=where)
 
 
 # NOTE: Deprecation classes don't have to be defined here, they could be defined where used, but
@@ -399,16 +401,18 @@ class Deprecations(object):
         # so add with default reaction
         return self.add_depr_data_class(depr_data_class, default_reaction)
 
-    def check(self, label, message=None):
+    def check(self, label, message=None, where=None):
+
         # default to a DeprecationNotFound?
         depr = self._find(label)
 
         if not depr:
             return Results.NOT_FOUND
 
-        check_result = depr.check(message=message)
+        check_result = depr.check(message=message,
+                                  where=where)
 
-        self.seen_deprs.append(SeenDeprecation(depr, check_result))
+        self.seen_deprs.append(SeenDeprecation(depr, check_result, where=where))
 
         return check_result
 
