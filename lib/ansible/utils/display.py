@@ -181,6 +181,13 @@ class Display:
             else:
                 self.display("<%s> %s" % (host, msg), color=C.COLOR_VERBOSE, screen_only=True)
 
+    def deprecated_callback(self, msg):
+        wrapped = textwrap.wrap(msg, self.columns,
+                                replace_whitespace=False, drop_whitespace=False)
+        msg = "\n".join(wrapped) + "\n"
+
+        self.display(msg.strip(), color=C.COLOR_DEPRECATE, stderr=True)
+
     def deprecated(self, msg, version=None, removed=False):
         ''' used to print out a deprecation message.'''
 

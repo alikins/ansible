@@ -72,21 +72,8 @@ if __name__ == '__main__':
         display = Display()
         display.debug("starting run")
 
-        def deprecation_display_callback(msg):
-            # FIXME: seems like this should be display.Display's problem
-            #        but would like to avoid adding more stuff to display.Display
-            wrapped = textwrap.wrap(msg, display.columns,
-                                    replace_whitespace=False, drop_whitespace=False)
-            msg = "\n".join(wrapped) + "\n"
-
-            display.display(msg.strip(), color=C.COLOR_DEPRECATE, stderr=True)
-
-#        def print_callback(msg):
-#            print(msg)
-
-        output_handler = deprecation.OutputHandler(output_callbacks=[deprecation_display_callback])
-        deprecation.add_output_handler(output_handler)
-#        deprecation.add_display_callback(print_callback)
+        depr_reaction = deprecation.DefaultReaction(display.deprecated_callback)
+        deprecation.default_reaction = depr_reaction
 
         sub = None
         try:

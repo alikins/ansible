@@ -31,7 +31,7 @@ FUTURE = 'FUTURE'
 REMOVED_NOW = 'REMOVED_NOW'
 
 
-class Always(deprecation.Deprecation):
+class Always(deprecation.DeprecationData):
     label = ALWAYS
     # a DeprecationVersion may be useful if... the evaluation semantics get weird.
     version = None
@@ -39,21 +39,21 @@ class Always(deprecation.Deprecation):
     message = 'This is a test deprecation that is always deprecated'
 
 
-class Now(deprecation.Deprecation):
+class Now(deprecation.DeprecationData):
     label = NOW
     version = 2.2
     removed = False
     message = 'This is a test deprecation that matches current version'
 
 
-class RemovedNow(deprecation.Deprecation):
+class RemovedNow(deprecation.DeprecationData):
     label = REMOVED_NOW
     version = 2.2
     removed = True
     message = 'This is a test deprecation that matches current version for removed feature'
 
 
-class Future(deprecation.Deprecation):
+class Future(deprecation.DeprecationData):
     label = FUTURE
     version = 3.0
     removed = False

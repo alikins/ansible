@@ -60,7 +60,28 @@ class Results(object):
     VERSION = 5
 
 
-class MetaDeprecation(type):
+class Deprecation(object):
+    def __init__(self, data, reaction):
+        '''Define a deprecation and how to react to it.
+
+        data is an instance of a DeprecationData or equilivent.
+        reaction is an instance of a DeprecationReaction or equilivent.'''
+
+        self.data = data
+        self.reaction = reaction
+
+    def evaluate(self):
+        return self.data.evaluate()
+
+    def react(self, result, message=None):
+        return self.reaction.react(self.data, result, message=message)
+
+    def check(self, message=None):
+        res = self.evaluate()
+        return self.react(res, message=message)
+
+
+class MetaDeprecationData(type):
     def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
 
@@ -74,9 +95,10 @@ class MetaDeprecation(type):
         return cls
 
 
-class Deprecation(object):
+# DeprecationData
+class DeprecationData(object):
     # TODO: verify if this is worth metapain
-    __metaclass__ = MetaDeprecation
+    __metaclass__ = MetaDeprecationData
 
     label = None
     version = None
@@ -86,128 +108,48 @@ class Deprecation(object):
     def mitigated(self):
         return False
 
+    def evaluate(self):
+        # Yes, it is deprecated. Removed even, but stop telling me.
+        if not self.removed and not C.DEPRECATION_WARNINGS:
+            print('not deprecation.removed %s' % C.DEPRECATION_WARNINGS)
+            return Results.MUTED
+
+        if self.mitigated():
+            print('deprecation/mitigated()')
+            return Results.MITIGATED
+
+        # We are using something that has been removed, fail loudly.
+        if self.removed:
+            print('d.removed=%s' % self.removed)
+            print('deprecaton removed and we are using it, raise')
+            # TODO: reasonable place to raise a DeprecationError
+            return Results.REMOVED
+
+        if self.version is not None:
+            print('d.version=%s' % self.version)
+            if current_version >= self.version:
+                # the current version of ansible is newer than the latest depr version
+                #self._warn_version(deprecation)
+                return Results.VERSION
+
+        return Results.FUTURE
+
 
 class AnsibleDeprecation(AnsibleError):
     pass
 
 
-# NOTE: Deprecation classes don't have to be defined here, they could be defined where used, but
-#       need to be defined in a scope that gets interpreted (ie, module scope) so they show up
-#       in list_deprecations()
+class Reaction(object):
+    '''If a deprecation applies, we need to have some reaction.
 
-# NOTE: The bulk of these classes could be defined in data/config. The classes that need to extend
-#       mitigated() need a class defination though. The utility of being able to define these
-#       when/where the deprecated code is changed would be lost however.
-class FixupPerms(Deprecation):
-    label = FIXUP_PERMS
-    version = 2.4
-    removed = False
-    message = '_fixup_perms is deprecated. Use _fixup_perms2 instead.'
+    ie, print a warning, raise an exception, etc.'''
+    def react(self, depr, result, message=None):
+        if result == Results.REMOVED:
+            raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % depr.message)
+        return result
 
-
-class MergeMultipleCliTags(Deprecation):
-    label = MERGE_MULTIPLE_CLI_TAGS
-    version = 2.5
-    removed = False
-    message = 'Specifying --tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
-
-    def mitigated(self):
-        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.'''
-        return C.MERGE_MULTIPLE_CLI_TAGS
-
-
-class MergeMultipleCliSkipTags(Deprecation):
-    label = MERGE_MULTIPLE_CLI_SKIP_TAGS
-    version = 2.5
-    removed = False
-    message = 'Specifying --skip-tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
-
-    def mitigated(self):
-        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.'''
-        return C.MERGE_MULTIPLE_CLI_TAGS
-
-
-class TaskAlwaysRun(Deprecation):
-    label = TASK_ALWAYS_RUN
-    version = 2.4
-    removed = False
-    message = 'always_run is deprecated. Use check_mode = no instead.'
-
-
-class BareVariables(Deprecation):
-    label = BARE_VARIABLES
-    version = None
-    removed = None
-    message = "Using bare variables is deprecated. Update your playbooks so that the environment value uses the full variable syntax."
-
-
-class TagsInIncludeParameters(Deprecation):
-    label = TAGS_IN_INCLUDE_PARAMETERS
-    version = None
-    removed = None
-    message = "You should not specify tags in the include parameters. All tags should be specified using the task-level option"
-
-
-class SudoUsage(Deprecation):
-    label = SUDO_USAGE
-    version = None
-    removed = None
-    message = "Instead of sudo/sudo_user, use become/become_user and set become_method to 'sudo' (default is sudo)"
-
-
-class SuUsage(Deprecation):
-    label = SU_USAGE
-    version = None
-    removed = None
-    message = "Instead of su/su_user, use become/become_user and set become_method to 'su' (default is sudo)"
-
-
-class TaskParamVariables(Deprecation):
-    label = TASK_PARAM_VARIABLES
-    version = None
-    removed = None
-    message = "Using variables for task params is unsafe, especially if the variables come from an external source like facts"
-
-
-class AcceleratedMode(Deprecation):
-    label = ACCELERATED_MODE
-    version = None
-    removed = None
-    message = "Accelerated mode is deprecated. Consider using SSH with ControlPersist and pipelining enabled instead"
-
-
-# API stuff
-# TODO: it would be useful to seperate deprecations from user facing features from developer features
-class ToBytes(Deprecation):
-    label = TO_BYTES
-    version = 2.4
-    removed = None
-    message = u'ansible.utils.unicode.to_bytes is deprecated.  Use ansible.module_utils._text.to_bytes instead'
-
-
-class ToUnicode(Deprecation):
-    label = TO_UNICODE
-    version = 2.4
-    removed = None
-    message = 'ansible.utils.unicode.to_unicode is deprecated.  Use ansible.module_utils._text.to_text instead'
-
-
-class ToStr(Deprecation):
-    label = TO_STR
-    version = 2.4
-    removed = None
-    message = 'ansible.utils.unicode.to_str is deprecated.  Use ansible.module_utils._text.to_native instead'
-
-
-#TODO:
-# task.py include_vars_at_top_of_File
-# task_executor using_vars_for_task_params
-# accelerated mode
-
-
-# Default, provide a different one if needed
-def display_callback(msg):
-    print(msg)
+# For more useful output, set deprecation.reaction to something like DefaultReaction
+default_reaction = Reaction()
 
 
 class OutputHandler(object):
@@ -221,24 +163,26 @@ class OutputHandler(object):
 
         # set of all deprecation messages to prevent duplicate display
         self._deprecations_issued = set()
+        self._test_depr_set = set()
 
         self.output_callbacks = output_callbacks or []
 
     # FIXME: ugly name
-    def process(self, deprecation, result, message=None):
+    def process(self, depr, result, message=None):
         # Suppose we could put the full Deprecation instance in the set if we make it
         # hashable. That could potentially allow for more sophisticated matching...
-        if deprecation.label not in self._deprecations_issued:
-            self._deprecations_issued.add(deprecation.label)
+        if depr.label not in self._deprecations_issued:
+            self._deprecations_issued.add(depr.label)
+            self._test_depr_set.add(depr.data)
 
         # A message passed in from a check() will be used instead of Deprecation default.
-        msg = message or deprecation.message
+        msg = message or depr.message
         if result == Results.FUTURE:
             self.warn(msg,
                       postscript=self.future_warning)
         elif result == Results.VERSION:
             self.warn(msg,
-                      postscript=self.version_warning % deprecation.version)
+                      postscript=self.version_warning % depr.version)
 
     def _display(self, msg):
         for output_callback in self.output_callbacks:
@@ -264,6 +208,142 @@ class OutputHandler(object):
         self._quiet_instructions_have_been_shown = True
 
 
+class DefaultReaction(Reaction):
+    def __init__(self, output_callback):
+        super(DefaultReaction, self).__init__()
+        self.output_handler = OutputHandler(output_callbacks=[output_callback])
+
+    def react(self, depr, result, message=None):
+        self.process_result(depr, result, message=message)
+
+        if result == Results.REMOVED:
+            raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % depr.message)
+
+        return result
+
+    def process_result(self, depr, result, message=None):
+            self.output_handler.process(depr, result, message=message)
+
+
+# NOTE: Deprecation classes don't have to be defined here, they could be defined where used, but
+#       need to be defined in a scope that gets interpreted (ie, module scope) so they show up
+#       in list_deprecations()
+
+# NOTE: The bulk of these classes could be defined in data/config. The classes that need to extend
+#       mitigated() need a class defination though. The utility of being able to define these
+#       when/where the deprecated code is changed would be lost however.
+class FixupPerms(DeprecationData):
+    label = FIXUP_PERMS
+    version = 2.4
+    removed = False
+    message = '_fixup_perms is deprecated. Use _fixup_perms2 instead.'
+
+
+class MergeMultipleCliTags(DeprecationData):
+    label = MERGE_MULTIPLE_CLI_TAGS
+    version = 2.5
+    removed = False
+    message = 'Specifying --tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
+
+    def mitigated(self):
+        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.'''
+        return C.MERGE_MULTIPLE_CLI_TAGS
+
+
+class MergeMultipleCliSkipTags(DeprecationData):
+    label = MERGE_MULTIPLE_CLI_SKIP_TAGS
+    version = 2.5
+    removed = False
+    message = 'Specifying --skip-tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
+
+    def mitigated(self):
+        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.'''
+        return C.MERGE_MULTIPLE_CLI_TAGS
+
+
+class TaskAlwaysRun(DeprecationData):
+    label = TASK_ALWAYS_RUN
+    version = 2.4
+    removed = False
+    message = 'always_run is deprecated. Use check_mode = no instead.'
+
+
+class BareVariables(DeprecationData):
+    label = BARE_VARIABLES
+    version = None
+    removed = None
+    message = "Using bare variables is deprecated. Update your playbooks so that the environment value uses the full variable syntax."
+
+
+class TagsInIncludeParameters(DeprecationData):
+    label = TAGS_IN_INCLUDE_PARAMETERS
+    version = None
+    removed = None
+    message = "You should not specify tags in the include parameters. All tags should be specified using the task-level option"
+
+
+class SudoUsage(DeprecationData):
+    label = SUDO_USAGE
+    version = None
+    removed = None
+    message = "Instead of sudo/sudo_user, use become/become_user and set become_method to 'sudo' (default is sudo)"
+
+
+class SuUsage(DeprecationData):
+    label = SU_USAGE
+    version = None
+    removed = None
+    message = "Instead of su/su_user, use become/become_user and set become_method to 'su' (default is sudo)"
+
+
+class TaskParamVariables(DeprecationData):
+    label = TASK_PARAM_VARIABLES
+    version = None
+    removed = None
+    message = "Using variables for task params is unsafe, especially if the variables come from an external source like facts"
+
+
+class AcceleratedMode(DeprecationData):
+    label = ACCELERATED_MODE
+    version = None
+    removed = None
+    message = "Accelerated mode is deprecated. Consider using SSH with ControlPersist and pipelining enabled instead"
+
+
+# API stuff
+# TODO: it would be useful to seperate deprecations from user facing features from developer features
+class ToBytes(DeprecationData):
+    label = TO_BYTES
+    version = 2.4
+    removed = None
+    message = u'ansible.utils.unicode.to_bytes is deprecated.  Use ansible.module_utils._text.to_bytes instead'
+
+
+class ToUnicode(DeprecationData):
+    label = TO_UNICODE
+    version = 2.4
+    removed = None
+    message = 'ansible.utils.unicode.to_unicode is deprecated.  Use ansible.module_utils._text.to_text instead'
+
+
+class ToStr(Deprecation):
+    label = TO_STR
+    version = 2.4
+    removed = None
+    message = 'ansible.utils.unicode.to_str is deprecated.  Use ansible.module_utils._text.to_native instead'
+
+
+#TODO:
+# task.py include_vars_at_top_of_File
+# task_executor using_vars_for_task_params
+# accelerated mode
+
+
+# Default, provide a different one if needed
+def display_callback(msg):
+    print(msg)
+
+
 # what are the potential actions after checking a dep?
 # - throw an exception
 #     - attempting to use removed feature
@@ -280,72 +360,52 @@ class OutputHandler(object):
 class Deprecations(object):
 
     def __init__(self):
-        self._registry = _deprecations_registry
-        self._results = Results()
+        # map of DeprecationData.label to a Deprecation()
+        self._registry = {}
         self.output_handler = None
 
-    def add(self, deprecation):
-        pass
+    def add(self, label, depr):
+        self._registry[label] = depr
 
-    def process_result(self, deprecation, result, message=None):
-        if self.output_handler:
-            self.output_handler.process(deprecation, result, message=message)
+    def add_depr_data_class(self, depr_data_class, reaction):
+        depr_data = depr_data_class()
+        depr = Deprecation(depr_data, reaction)
+        self.add(depr_data.label, depr)
+        return depr
+
+    def __iter__(self):
+        return iter(self._registry)
+
+    # This is to catch deprecations added
+    def _find(self, label):
+        # we dont have a full Deprecation() object
+        depr = self._registry.get(label, None)
+        if depr:
+            return depr
+
+        # see if the label has a class registered
+        depr_data_class = _deprecations_registry.get(label)
+        if not depr_data_class:
+            return None
+
+        # There was a DeprecationData class registered, but it didn't get added to Deprecations()
+        # so add with default reaction
+        return self.add_depr_data_class(depr_data_class, default_reaction)
 
     def check(self, label, message=None):
-        deprecation_class = self._registry.get(label, None)
+        # default to a DeprecationNotFound?
+        depr = self._find(label)
 
-        depr = None
-        if deprecation_class:
-            depr = deprecation_class()
-
-        result = self.evaluate(depr)
-        # handle results/print it
-
-        # FIXME: ugh, terrible name
-        self.process_result(depr, result, message=message)
-
-        if result == Results.REMOVED:
-            #raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % deprecation.message)
-            raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % depr.message)
-
-        return result
-
-    # TODO: could be static or module level method
-    #       if module method, Deprecation class could implement self.evaluate() with it
-    #       Deprecation.check() could use module ver of process_result/handler. Per Deprecation
-    #       .check() would also allow a Deprecation() to raise a particular exception on REMOVE
-    #       - would also make Deprecations() more of a pure container
-    def evaluate(self, deprecation):
-
-        # TODO: make an assert/except/error?
-        if not deprecation:
-            print('deprecation is None/False?')
+        if not depr:
             return Results.NOT_FOUND
 
-        # Yes, it is deprecated. Removed even, but stop telling me.
-        if not deprecation.removed and not C.DEPRECATION_WARNINGS:
-            print('not deprecation.removed %s' % C.DEPRECATION_WARNINGS)
-            return Results.MUTED
+        return depr.check(message=message)
 
-        if deprecation.mitigated():
-            print('deprecation/mitigated()')
-            return Results.MITIGATED
-
-        # We are using something that has been removed, fail loudly.
-        if deprecation.removed:
-            print('d.removed=%s' % deprecation.removed)
-            print('deprecaton removed and we are using it, raise')
-            # TODO: reasonable place to raise a DeprecationError
-            return Results.REMOVED
-
-        if deprecation.version is not None:
-            print('d.version=%s' % deprecation.version)
-            if current_version >= deprecation.version:
-                # the current version of ansible is newer than the latest depr version
-                #self._warn_version(deprecation)
-                return Results.VERSION
-
-        return Results.FUTURE
+# TODO: could be static or module level method
+#       if module method, Deprecation class could implement self.evaluate() with it
+#       Deprecation.check() could use module ver of process_result/handler. Per Deprecation
+#       .check() would also allow a Deprecation() to raise a particular exception on REMOVE
+#       - would also make Deprecations() more of a pure container
 
 
 # deprecation instance don't have to be defined and created here,
@@ -363,10 +423,6 @@ def check(label, message=None):
     return _deprecations.check(label, message=message)
 
 
-def add_output_handler(output_handler):
-    _deprecations.output_handler = output_handler
-
-
 # TODO: could use class registry now...
 def list_deprecations():
-    return sorted(_deprecations._registry.values())
+    return sorted(_deprecations_registry.values())
