@@ -264,6 +264,7 @@ class PlayContext(Base):
             self.become = play.become
         if play.become_method:
             self.become_method = play.become_method
+
         if play.become_user:
             self.become_user = play.become_user
 
@@ -453,7 +454,8 @@ class PlayContext(Base):
         task.set_become_defaults(new_info.become, new_info.become_method, new_info.become_user)
 
         if task.always_run:
-            deprecation.check(deprecation.TASK_ALWAYS_RUN)
+            where = task._ds.ansible_pos
+            deprecation.check(deprecation.TASK_ALWAYS_RUN, where=where)
             new_info.check_mode = False
 
         # check_mode replaces always_run, overwrite always_run if both are given
