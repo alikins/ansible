@@ -305,7 +305,7 @@ class TaskParamVariables(DeprecationData):
 
 class AcceleratedMode(DeprecationData):
     label = ACCELERATED_MODE
-    version = None
+    version = 2.1
     removed = None
     message = "Accelerated mode is deprecated. Consider using SSH with ControlPersist and pipelining enabled instead"
 
