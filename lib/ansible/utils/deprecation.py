@@ -277,7 +277,7 @@ class BareVariables(DeprecationData):
 
 class TagsInIncludeParameters(DeprecationData):
     label = TAGS_IN_INCLUDE_PARAMETERS
-    version = None
+    version = 2.2
     removed = None
     message = "You should not specify tags in the include parameters. All tags should be specified using the task-level option"
 
