@@ -284,14 +284,14 @@ class TagsInIncludeParameters(DeprecationData):
 
 class SudoUsage(DeprecationData):
     label = SUDO_USAGE
-    version = None
+    version = 2.0
     removed = None
     message = "Instead of sudo/sudo_user, use become/become_user and set become_method to 'sudo' (default is sudo)"
 
 
 class SuUsage(DeprecationData):
     label = SU_USAGE
-    version = None
+    version = 2.0
     removed = None
     message = "Instead of su/su_user, use become/become_user and set become_method to 'su' (default is sudo)"
 
