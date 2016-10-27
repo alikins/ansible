@@ -409,6 +409,8 @@ class CLI(with_metaclass(ABCMeta, object)):
                 help="when changing (small) files and templates, show the differences in those files; works great with --check")
             parser.add_option('--list-deprecations', dest='list_deprecations', action='store_true',
                 help="list feature deprecations")
+            parser.add_option('--list-seen-deprecations', dest='list_seen_deprecations', action='store_true',
+                help="list seen feature deprecations")
 
         if meta_opts:
             parser.add_option('--force-handlers', default=C.DEFAULT_FORCE_HANDLERS, dest='force_handlers', action='store_true',

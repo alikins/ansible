@@ -173,7 +173,7 @@ class OutputHandler(object):
         # hashable. That could potentially allow for more sophisticated matching...
         if depr.label not in self._deprecations_issued:
             self._deprecations_issued.add(depr.label)
-            self._test_depr_set.add(depr.data)
+            #self._test_depr_set.add(depr.data)
 
         # A message passed in from a check() will be used instead of Deprecation default.
         msg = message or depr.message
@@ -407,7 +407,9 @@ class Deprecations(object):
             return Results.NOT_FOUND
 
         check_result = depr.check(message=message)
+
         self.seen_deprs.append(SeenDeprecation(depr, check_result))
+
         return check_result
 
 # TODO: could be static or module level method

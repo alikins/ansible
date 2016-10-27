@@ -114,7 +114,12 @@ class PlaybookCLI(CLI):
         loader = DataLoader()
 
         if self.options.list_deprecations:
-            return self._list_deprecations()
+            self._list_deprecations()
+            return 0
+
+        if self.options.list_seen_deprecations:
+            self._list_seen_deprecations()
+            return 0
 
         if self.options.vault_password_file:
             # read vault_pass from a file
@@ -238,5 +243,24 @@ class PlaybookCLI(CLI):
         deprs = deprecation.list_deprecations()
         # FIXME: make pretty
         for depr in deprs:
-            display.display('%s: deprecated_in: %s removed_in: %s' % (depr.label, depr.version or 'N/A', depr.removed or 'N/A'))
+            lines = ['label: %s' % depr.label]
+            lines.append('deprecated in: %s' % depr.version or 'N/A')
+            lines.append('removed in: %s' % depr.removed or 'N/A')
+            lines.append('message: %s' % depr.message)
+            buf = '\n'.join(lines)
+            display.display('%s\n\n' % buf)
         return 0
+
+    def _list_seen_deprecations(self):
+        seen_deprs = deprecation.list_seen_deprecations()
+        for seen_depr in seen_deprs:
+            depr = seen_depr.depr
+            data = depr.data
+            lines = ['\n', 'label: %s' % data.label]
+            lines.append('deprecated in: %s' % data.version or 'N/A')
+            lines.append('removed in: %s' % data.removed or 'N/A')
+            lines.append('message: %s' % data.message)
+            lines.append('result: %s' % seen_depr.result)
+            lines.append('where: %s' % seen_depr.where)
+            buf = '\n'.join(lines)
+            display.display('%s\n' % buf)
