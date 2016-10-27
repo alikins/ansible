@@ -78,7 +78,7 @@ class Become:
                 ds['become_user'] = ds['sudo_user']
                 del ds['sudo_user']
 
-            deprecation.check(deprecation.SUDO_USAGE)
+            deprecation.check(deprecation.SUDO_USAGE, where=ds.ansible_pos)
 
         elif 'su' in ds or 'su_user' in ds:
             ds['become_method'] = 'su'
@@ -90,7 +90,7 @@ class Become:
                 ds['become_user'] = ds['su_user']
                 del ds['su_user']
 
-            display.check(deprecation.SU_USAGE)
+            deprecation.check(deprecation.SU_USAGE, where=ds.ansible_pos)
 
         return ds
 

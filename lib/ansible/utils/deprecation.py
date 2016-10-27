@@ -433,9 +433,10 @@ class Deprecations(object):
 _deprecations = Deprecations()
 
 
-def check(label, message=None):
+def check(label, message=None, where=None):
+    '''where is an 'ansible_pos' style tuple of ('filename', line_number, column_number)'''
     # side-effects include displaying of messages via display_callback
-    return _deprecations.check(label, message=message)
+    return _deprecations.check(label, message=message, where=where)
 
 
 # TODO: could use class registry now...
