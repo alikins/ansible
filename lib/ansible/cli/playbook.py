@@ -225,16 +225,8 @@ class PlaybookCLI(CLI):
                             taskmsg += "      TASK TAGS: [%s]\n" % ', '.join(cur_tags)
 
                         display.display(taskmsg)
-
-            print('gh1')
-            if self.options.list_seen_deprecations:
-                self._list_seen_deprecations()
-
             return 0
         else:
-            print('gh non list results')
-            if self.options.list_seen_deprecations:
-                self._list_seen_deprecations()
             return results
 
     def _flush_cache(self, inventory, variable_manager):
@@ -253,23 +245,3 @@ class PlaybookCLI(CLI):
             buf = '\n'.join(lines)
             display.display('%s\n\n' % buf)
         return 0
-
-    def _list_seen_deprecations(self):
-        seen_deprs = deprecation.list_seen_deprecations()
-        for seen_depr in seen_deprs:
-            depr = seen_depr.depr
-            data = depr.data
-            lines = ['\n', 'label: %s' % data.label]
-            lines.append('deprecated in: %s' % data.version or 'N/A')
-            lines.append('removed in: %s' % data.removed or 'N/A')
-            lines.append('message: %s' % data.message)
-            lines.append('result: %s' % seen_depr.result)
-            # FIXME: for now where is a tuple of (filename, line_number, column_number)
-            #        but should be replaced something that does formatting in its __str__
-            where = 'N/A'
-            if seen_depr.where:
-                where = "%s:%s:%s" % seen_depr.where
-            lines.append('where: %s' % where)
-
-            buf = '\n'.join(lines)
-            display.display('%s\n' % buf)

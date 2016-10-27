@@ -112,22 +112,17 @@ class DeprecationData(object):
     def evaluate(self):
         # Yes, it is deprecated. Removed even, but stop telling me.
         if not self.removed and not C.DEPRECATION_WARNINGS:
-            print('not deprecation.removed %s' % C.DEPRECATION_WARNINGS)
             return Results.MUTED
 
         if self.mitigated():
-            print('deprecation/mitigated()')
             return Results.MITIGATED
 
         # We are using something that has been removed, fail loudly.
         if self.removed:
-            print('d.removed=%s' % self.removed)
-            print('deprecaton removed and we are using it, raise')
             # TODO: reasonable place to raise a DeprecationError
             return Results.REMOVED
 
         if self.version is not None:
-            print('d.version=%s' % self.version)
             if current_version >= self.version:
                 # the current version of ansible is newer than the latest depr version
                 #self._warn_version(deprecation)
@@ -346,13 +341,9 @@ def display_callback(msg):
     print(msg)
 
 
-# what are the potential actions after checking a dep?
-# - throw an exception
-#     - attempting to use removed feature
-# - warn that a feature used will be removed in 'the future'
-# - warn that a feature used will be removed in version X.Y
-#  all just output aside from exception
-
+# Track deprecations seen, at least for the lifetime of a
+# Deprecations() obj, which isn't super useful atm since it's not
+# shared across WorkerProcesses...
 class SeenDeprecation(object):
     def __init__(self, depr, result, where=None):
         self.depr = depr
@@ -360,13 +351,7 @@ class SeenDeprecation(object):
         self.where = where
 
 
-# TODO: make Deprecations more container/dict like (getitem/setitem/__contains__/len, etc)
-#       so deprecated.Deprecations[SOME_LABEL] = MyDeprecation() would work
-#       and check:
-#       deprecated.Deprecations[SOME_LABEL].check() and deprecated.Deprecations.check() for all
-# TODO: split container/iteratable parts from evaluation.
 class Deprecations(object):
-
     def __init__(self):
         # map of DeprecationData.label to a Deprecation()
         self._registry = {}
@@ -385,7 +370,7 @@ class Deprecations(object):
     def __iter__(self):
         return iter(self._registry)
 
-    # This is to catch deprecations added
+    # This is to catch deprecations added at run time
     def _find(self, label):
         # we dont have a full Deprecation() object
         depr = self._registry.get(label, None)
@@ -402,7 +387,6 @@ class Deprecations(object):
         return self.add_depr_data_class(depr_data_class, default_reaction)
 
     def check(self, label, message=None, where=None):
-
         # default to a DeprecationNotFound?
         depr = self._find(label)
 
@@ -415,12 +399,6 @@ class Deprecations(object):
         self.seen_deprs.append(SeenDeprecation(depr, check_result, where=where))
 
         return check_result
-
-# TODO: could be static or module level method
-#       if module method, Deprecation class could implement self.evaluate() with it
-#       Deprecation.check() could use module ver of process_result/handler. Per Deprecation
-#       .check() would also allow a Deprecation() to raise a particular exception on REMOVE
-#       - would also make Deprecations() more of a pure container
 
 
 # deprecation instance don't have to be defined and created here,
@@ -439,10 +417,9 @@ def check(label, message=None, where=None):
     return _deprecations.check(label, message=message, where=where)
 
 
-# TODO: could use class registry now...
+# FIXME: only the list of deprecations seen in the current process so far
+#        DeprecationData() instances added at runtime from worker process will be missed...
+#        Make need to track multiple isntances and accumulate once/if the per process/play info
+#        is shared.
 def list_deprecations():
     return sorted(_deprecations_registry.values())
-
-
-def list_seen_deprecations():
-    return _deprecations.seen_deprs
