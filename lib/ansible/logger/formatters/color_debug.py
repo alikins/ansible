@@ -122,16 +122,17 @@ class ColorFormatter(logging.Formatter):
     }
 
     NUMBER_OF_BASE_COLORS = 8
-    NUMBER_OF_THREAD_COLORS = 216
+    #NUMBER_OF_THREAD_COLORS = 216
     # the xterm256 colors 0-8 and 8-16 are normal and bright term colors, 16-231 is from a 6x6x6 rgb cube
     # 232-255 are the grays (white to gray to black)
     RGB_COLOR_OFFSET = 16
+    END_OF_THREAD_COLORS = 231
+    NUMBER_OF_THREAD_COLORS = END_OF_THREAD_COLORS - RGB_COLOR_OFFSET
     BASE_COLORS = dict((color_number, color_seq) for
                        (color_number, color_seq) in [(x, "\033[38;5;%dm" % x) for x in range(NUMBER_OF_BASE_COLORS)])
     # \ x 1 b [ 38 ; 5; 231m
     THREAD_COLORS = dict((color_number, color_seq) for
                          (color_number, color_seq) in [(x, "\033[38;5;%dm" % (x + RGB_COLOR_OFFSET)) for x in range(NUMBER_OF_THREAD_COLORS)])
-
     LEVEL_COLORS = {'TRACE': BASE_COLORS[BLUE],
                     'SUBDEBUG': BASE_COLORS[BLUE],
                     'DEBUG': BASE_COLORS[BLUE],
