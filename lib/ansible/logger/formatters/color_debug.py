@@ -25,7 +25,7 @@ def context_color_format_string(format_string):
     '''
 
     # TODO: pass in a list of record/logFormatter attributes to be wrapped for colorization
-    color_attrs = ['name', 'process', 'processName', 'levelname', 'threadName', 'thread', 'message', 'exc_text', 'filename', 'funcName', 'lineno']
+    color_attrs = ['name', 'process', 'processName', 'levelname', 'threadName', 'thread', 'relativeCreated', 'message', 'exc_text', 'filename', 'funcName', 'lineno']
 
     color_attrs_string = '|'.join(color_attrs)
 
@@ -84,7 +84,7 @@ class ColorFormatter(logging.Formatter):
     processName = u""
 
     FORMAT = ("""%(asctime)-15s"""
-#              """%(relativeCreated)-8d """
+#              """ %(relativeCreated)-8d"""
               """ %(levelname)-0.1s"""
 #              """\033[1;35m%(name)s$RESET """
 #              """%(processName)s """
@@ -112,6 +112,27 @@ class ColorFormatter(logging.Formatter):
               """ - %(message)s"""
               """%(_cdl_reset)s""")
 #              """- $BOLD%(message)s$RESET""")
+
+    default_color_groups = [
+        ('process', ['default', 'message', 'unset', 'processName', 'exc_text']),
+        ('thread', ['threadName', 'thread']),
+
+        # color logger name, filename and lineno same as the funcName
+        #('funcName', ['name', 'filename', 'lineno']),
+        # color message same as debug level
+        #('level', ['message']),
+
+        # color funcName, filename, lineno same as logger name
+        ('name', ['funcName', 'filename', 'lineno']),
+
+        # color message and default same as funcName
+        #('funcName', ['message', 'unset'])
+
+        # color almost everything by logger name
+        #('name', ['process', 'processName', 'threadName', 'thread', 'message', 'default']),
+
+        #('funcName', ['relativeCreated', 'asctime'])
+    ]
 
     COLORS = {
         'WARNING': YELLOW,
@@ -154,7 +175,7 @@ class ColorFormatter(logging.Formatter):
         self._base_fmt = value
         self._color_fmt = None
 
-    def __init__(self, fmt=None, use_color=True, default_color_by_attr=None):
+    def __init__(self, fmt=None, use_color=True, default_color_by_attr=None, color_groups=None):
         fmt = fmt or self.FORMAT
         logging.Formatter.__init__(self, fmt)
         self._base_fmt = fmt
@@ -164,6 +185,7 @@ class ColorFormatter(logging.Formatter):
         self.use_thread_color = True
         self.use_level_color = True
         self.use_name_color = True
+        self.color_groups = color_groups or []
 
         # TODO: be able to set the default color by attr name. Ie, make a record default to the thread or processName
         self.default_color_by_attr = default_color_by_attr or 'process'
@@ -192,7 +214,9 @@ class ColorFormatter(logging.Formatter):
         return self.THREAD_COLORS[thread_mod]
 
     # TODO: This could special case 'MainThread'/'MainProcess' to pick a good predictable color
-    def get_name_color(self, name):
+    def get_name_color(self, name, perturb=None):
+        perturb = perturb or ''
+        name = '%s%s' % (name, perturb)
         name_hash = hash(name)
         name_mod = name_hash % self.NUMBER_OF_THREAD_COLORS
         return self.THREAD_COLORS[name_mod]
@@ -218,8 +242,10 @@ class ColorFormatter(logging.Formatter):
             Existing get_*color_ methods attempt to divy up colors by mod 220 on tid/pid, or mod 220 on hash of thread or pid name
             NOTE: This doesn't track any state so there is no ordering or prefence to the colors given out.
         '''
-        #pprint.pprint(self._efmt)
-        pname_color = self.get_name_color(pname)
+        # 'pname' is almost always 'MainProcess' which ends up a ugly yellow. perturb is here to change the color
+        # that 'MainProcess' ends up to a nicer light green
+        perturb = 'pseudoenthusiastically'
+        pname_color = self.get_name_color(pname, perturb=perturb)
         if pname == 'MainProcess':
             pid_color = pname_color
         else:
@@ -293,14 +319,9 @@ class ColorFormatter(logging.Formatter):
 
         record._cdl_funcName = self.get_name_color(record.funcName)
 
-        group_by = [('default', ['default', 'message', 'unset'])]
-        custom_group_by = [
-                           ('process', ['default', 'message', 'unset', 'processName', 'exc_text']),
-                           ('thread', ['threadName', 'thread']),
-                           ('funcName', ['name', 'filename', 'lineno']),
-                           #('funcName', ['message', 'unset'])
-                           ]
-        group_by.extend(custom_group_by)
+        #group_by = [('default', ['default', 'message', 'unset'])]
+        group_by = self.default_color_groups[:]
+        group_by.extend(self.color_groups)
 
         # fields we don't need to calculate indiv, since they will be a different group
         in_a_group = set()
