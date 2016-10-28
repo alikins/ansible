@@ -45,8 +45,6 @@ except NameError:
     # Python 3, we already have raw_input
     pass
 
-import traceback
-
 logger = None
 #TODO: make this a logging callback instead
 if C.DEFAULT_LOG_PATH:
@@ -58,44 +56,6 @@ if C.DEFAULT_LOG_PATH:
         logger = logging.getLogger("p=%s u=%s | " % (mypid, user))
     else:
         print("[WARNING]: log file at %s is not writeable and we cannot create it, aborting\n" % path, file=sys.stderr)
-
-
-# What is stderr used for?
-def get_output_encoding(stderr=False):
-    encoding = locale.getpreferredencoding()
-    # https://bugs.python.org/issue6202
-    # Python2 hardcodes an obsolete value on Mac.  Use MacOSX defaults
-    # instead.
-    if encoding in ('mac-roman',):
-        encoding = 'utf-8'
-    return encoding
-
-
-def write_to_stream(msg2, encoding=None, stderr=False):
-    encoding = encoding or get_output_encoding()
-
-    msg = to_bytes(msg2, encoding=encoding)
-    if sys.version_info >= (3,):
-        # Convert back to text string on python3
-        # We first convert to a byte string so that we get rid of
-        # characters that are invalid in the user's locale
-        msg = to_text(msg2, encoding, errors='replace')
-
-    if not stderr:
-        fileobj = sys.stdout
-    else:
-        fileobj = sys.stderr
-
-    fileobj.write(msg)
-
-    try:
-        fileobj.flush()
-    except IOError as e:
-        # Ignore EPIPE in case fileobj has been prematurely closed, eg.
-        # when piping to "head -n1"
-        if e.errno != errno.EPIPE:
-            raise
-
 
 b_COW_PATHS = (b"/usr/bin/cowsay",
                b"/usr/games/cowsay",
@@ -130,28 +90,18 @@ class Display:
 
         self._set_column_width()
 
-        # could in theory, be different for stdout/stderr. Can it change across invocations?
-        self._encoding = get_output_encoding()
-
-        self.display_log = logging.getLogger('ansible_display')
-
     def set_cowsay_info(self):
         if not C.ANSIBLE_NOCOWS:
             for b_cow_path in b_COW_PATHS:
                 if os.path.exists(b_cow_path):
                     self.b_cowsay = b_cow_path
 
-    def _write_to_stream(self, msg, encoding=None, stderr=False):
-        # check the encoding when Display() is created and reuse unless provided
-        encoding = encoding or self._encoding
-
-        return write_to_stream(msg, encoding, stderr)
-
     def display(self, msg, color=None, stderr=False, screen_only=False, log_only=False):
         """ Display a message to the user
 
         Note: msg *must* be a unicode string to prevent UnicodeError tracebacks.
         """
+
         # FIXME: this needs to be implemented
         # should be a loggingFilter
         #msg = utils.sanitize_output(msg)
@@ -160,19 +110,34 @@ class Display:
             msg = stringc(msg, color)
 
         if not log_only:
-
             if not msg.endswith(u'\n'):
                 msg2 = msg + u'\n'
             else:
                 msg2 = msg
 
-            self._write_to_stream(msg2, stderr=stderr)
+            msg2 = to_bytes(msg2, encoding=self._output_encoding(stderr=stderr))
+            if sys.version_info >= (3,):
+                # Convert back to text string on python3
+                # We first convert to a byte string so that we get rid of
+                # characters that are invalid in the user's locale
+                msg2 = to_text(msg2, self._output_encoding(stderr=stderr), errors='replace')
+
+            if not stderr:
+                fileobj = sys.stdout
+            else:
+                fileobj = sys.stderr
+
+            fileobj.write(msg2)
+
+            try:
+                fileobj.flush()
+            except IOError as e:
+                # Ignore EPIPE in case fileobj has been prematurely closed, eg.
+                # when piping to "head -n1"
+                if e.errno != errno.EPIPE:
+                    raise
 
         if logger and not screen_only:
-
-            return
-
-
             msg2 = nocolor.lstrip(u'\n')
 
             msg2 = to_bytes(msg2)
@@ -180,7 +145,7 @@ class Display:
                 # Convert back to text string on python3
                 # We first convert to a byte string so that we get rid of
                 # characters that are invalid in the user's locale
-                msg2 = to_text(msg2, encoding=self._encoding)
+                msg2 = to_text(msg2, self._output_encoding(stderr=stderr))
 
             if color == C.COLOR_ERROR:
                 logger.error(msg2)
