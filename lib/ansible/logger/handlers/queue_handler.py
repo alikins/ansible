@@ -120,7 +120,6 @@ class QueueListener(object):
         self.handlers = handlers
         self._stop = threading.Event()
         self._thread = None
-        print('handlers=%s' % repr(self.handlers))
 
     def dequeue(self, block):
         """
