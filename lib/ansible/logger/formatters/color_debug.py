@@ -89,6 +89,7 @@ class ColorFormatter(logging.Formatter):
 #              """\033[1;35m%(name)s$RESET """
 #              """%(processName)s """
               """ %(processName)-15s %(_cdl_process)spid=%(process)-5d%(_cdl_unset)s"""
+#              """ %(ppid)-5s"""
 #              """ %(threadName)s"""
 #              """ %(thread)d"""
               #              """%(_cdl_thread)stid=%(thread)d %(_cdl_threadName)stname=%(threadName)-15s """
@@ -114,8 +115,10 @@ class ColorFormatter(logging.Formatter):
 #              """- $BOLD%(message)s$RESET""")
 
     default_color_groups = [
+        #('process', ['default', 'message']),
         ('process', ['default', 'message', 'unset', 'processName', 'exc_text']),
-        ('thread', ['threadName', 'thread']),
+        #('thread', ['default', 'threadName', 'message', 'unset', 'processName', 'exc_text']),
+        ('thread', ['threadName', 'thread',]),
 
         # color logger name, filename and lineno same as the funcName
         #('funcName', ['name', 'filename', 'lineno']),
@@ -227,7 +230,7 @@ class ColorFormatter(logging.Formatter):
         level_color = self.LEVEL_COLORS[levelname]
         return level_color
 
-    def get_process_colors(self, pname, pid, tname, tid):
+    def get_process_colors(self, record):
         '''Given process/thread info, return reasonable colors for them.
 
         Roughly:
@@ -242,6 +245,7 @@ class ColorFormatter(logging.Formatter):
             Existing get_*color_ methods attempt to divy up colors by mod 220 on tid/pid, or mod 220 on hash of thread or pid name
             NOTE: This doesn't track any state so there is no ordering or prefence to the colors given out.
         '''
+        pname, pid, tname, tid = record.processName, record.process, record.threadName, record.thread
         # 'pname' is almost always 'MainProcess' which ends up a ugly yellow. perturb is here to change the color
         # that 'MainProcess' ends up to a nicer light green
         perturb = 'pseudoenthusiastically'
@@ -298,7 +302,7 @@ class ColorFormatter(logging.Formatter):
             record._cdl_name = module_and_method_color
 
         if self.use_thread_color:
-            pname_color, pid_color, tname_color, tid_color = self.get_process_colors(record.processName, record.process, record.threadName, record.thread)
+            pname_color, pid_color, tname_color, tid_color = self.get_process_colors(record)
 
             # NOTE: and here is where we currently mutate the existing log record (we add attributes to it).
             # TODO: create a new/copy LogRecord, and only use it to pass to our use of logging.Formatter.format()
