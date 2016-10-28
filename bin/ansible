@@ -74,23 +74,13 @@ if __name__ == '__main__':
         import logging
         # or 'ansible.cli' etc
         log = logging.getLogger('ansible')
-        qh, ql = setup.log_setup_code()
+        _, ql = setup.log_setup_code()
     # TODO: if we totally fail to setup any logging, decide if thats fatal
     except Exception as e:
         sys.stderr.write('%s\n' % e)
         raise
 
     log.info('ansible startup argv=%s', sys.argv[:])
-
-    # FIXME: remove...  dump out the logging config post yaml setup
-    # NOTE: since we don't log all the python modules we are going to use until much later (plugins, etc)
-    #       the logging_tree output here misses anything setup later (like requests logging setup for ex)
-    try:
-        import logging_tree
-        logging_tree.printout()
-    except Exception as e:
-        # We have some sort of log setup here, and this isn't important
-        log.exception(e)
 
     try:
         #display = Display()
