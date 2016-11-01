@@ -117,6 +117,9 @@ def timeout(seconds=None, error_message="Timer expired"):
 
 # --------------------------------------------------------------
 
+# NOTE: This Facts class is mostly facts gathering implementation.
+#       A FactsModel data structure class would be useful, especially
+#       if we ever plan on documenting what various facts mean -akl
 class Facts(object):
     """
     This class should only attempt to populate those facts that
@@ -136,6 +139,9 @@ class Facts(object):
     # A list of dicts.  If there is a platform with more than one
     # package manager, put the preferred one last.  If there is an
     # ansible module, use that as the value for the 'name' key.
+    # NOTE: This is really constants. This dict is also used in a weird way by
+    #       ansible.executor.action_write_locks that introduces a weird dep that could
+    #       be avoided if this dict was elsewhere. -akl
     PKG_MGRS = [ { 'path' : '/usr/bin/yum',         'name' : 'yum' },
                  { 'path' : '/usr/bin/dnf',         'name' : 'dnf' },
                  { 'path' : '/usr/bin/apt-get',     'name' : 'apt' },
@@ -160,6 +166,9 @@ class Facts(object):
                  { 'path' : '/usr/sbin/sorcery',    'name' : 'sorcery' },
                 ]
 
+    # NOTE: load_on_init is changed for ohai/facter classes. Ideally, all facts
+    #       would be load_on_init=False and this could be removed. -akl
+    # NOTE: cached_facts seems like a misnomer. Seems to be used more like an accumulator -akl
     def __init__(self, module, load_on_init=True, cached_facts=None):
 
         self.module = module
@@ -171,11 +180,17 @@ class Facts(object):
         # some of the values are currently being used by other subclasses (for
         # instance, os_family and distribution).  Have to sort out what to do
         # about those first.
+        # NOTE: if the various gathering methods take a arg that is the 'accumulated' facts
+        #       then this wouldn't need to happen on init. There would still be some ordering required
+        #       though. If the gather methods return a dict of the new facts, then the accumulated facts
+        #       can be read-only to avoid manipulating it by side effect. -akl
         if load_on_init:
             self.get_platform_facts()
+            # Example of returning new facts and updating self.facts with it -akl
             self.facts.update(Distribution(module).populate())
             self.get_cmdline()
             self.get_public_ssh_host_keys()
+            # NOTE: lots of linux specific facts here.  A finer grained gather_subset could drive this. -akl
             self.get_selinux_facts()
             self.get_apparmor_facts()
             self.get_caps_facts()
@@ -197,15 +212,24 @@ class Facts(object):
     # Platform
     # platform.system() can be Linux, Darwin, Java, or Windows
     def get_platform_facts(self):
+        # NOTE: pretty much every method should create a new dict (or whatever the FactsModel ds is)
+        #       and return it and let main Facts() class combine them. -akl
+        # NOTE: a facts.Platform() class that wraps all of this would make mocking/testing easier -akl
         self.facts['system'] = platform.system()
         self.facts['kernel'] = platform.release()
         self.facts['machine'] = platform.machine()
         self.facts['python_version'] = platform.python_version()
+        # NOTE: not platform at all... -akl
         self.facts['fqdn'] = socket.getfqdn()
         self.facts['hostname'] = platform.node().split('.')[0]
         self.facts['nodename'] = platform.node()
+
+        # NOTE: not platform -akl
         self.facts['domain'] = '.'.join(self.facts['fqdn'].split('.')[1:])
+
         arch_bits = platform.architecture()[0]
+
+        # NOTE: this could be split into arch and/or system specific classes/methods -akl
         self.facts['userspace_bits'] = arch_bits.replace('bit', '')
         if self.facts['machine'] == 'x86_64':
             self.facts['architecture'] = self.facts['machine']
@@ -221,9 +245,14 @@ class Facts(object):
                 self.facts['userspace_architecture'] = 'i386'
         else:
             self.facts['architecture'] = self.facts['machine']
+
+        # NOTE: -> aix_platform = AixPlatform(); facts_dict.update(aix_platform) -akl
         if self.facts['system'] == 'AIX':
             # Attempt to use getconf to figure out architecture
             # fall back to bootinfo if needed
+            # NOTE: in general, the various 'get_bin_path(); data=run_command()' could be split to methods/classes for providing info
+            #        one to get the raw data, another to parse it into useful chunks
+            #        then both are easy to mock for testing -akl
             getconf_bin = self.module.get_bin_path('getconf')
             if getconf_bin:
                 rc, out, err = self.module.run_command([getconf_bin, 'MACHINE_ARCHITECTURE'])
@@ -236,6 +265,9 @@ class Facts(object):
                 self.facts['architecture'] = data[0]
         elif self.facts['system'] == 'OpenBSD':
             self.facts['architecture'] = platform.uname()[5]
+
+        # NOTE: the same comment about get_bin_path() above also applies to fetching file content
+        #       attempting to mock a file open and read is a PITA, but mocking read_dbus_machine_id() is easy to mock -akl
         machine_id = get_file_content("/var/lib/dbus/machine-id") or get_file_content("/etc/machine-id")
         if machine_id:
             machine_id = machine_id.splitlines()[0]
@@ -243,7 +275,10 @@ class Facts(object):
 
     def get_local_facts(self):
 
+        # NOTE: -> _has_local_facts()
+        #      or better, a local_facts iterator that is empty if there is no fact_path/etc -kl
         fact_path = self.module.params.get('fact_path', None)
+        # NOTE: pretty much any unwrapped os.path.* is a PITA to unittest -akl
         if not fact_path or not os.path.exists(fact_path):
             return
 
@@ -287,6 +322,7 @@ class Facts(object):
                             fact[sect][opt]=val
 
             local[fact_base] = fact
+        # NOTE: just return the new facts dict, empty or not -akl
         if not local:
             return
         self.facts['local'] = local
@@ -333,6 +369,7 @@ class Facts(object):
                 if os.path.exists(pkg['path']):
                     self.facts['pkg_mgr'] = pkg['name']
 
+    # NOTE: This is definately complicated enough to warrant its own module or class (and tests) -akl
     def get_service_mgr_facts(self):
         #TODO: detect more custom init setups like bootscripts, dmd, s6, Epoch, etc
         # also other OSs other than linux might need to check across several possible candidates
@@ -403,6 +440,7 @@ class Facts(object):
             self.facts['service_mgr'] = 'service'
 
     def get_lsb_facts(self):
+        # NOTE: looks like two seperate methods to me - akl
         lsb_path = self.module.get_bin_path('lsb_release')
         if lsb_path:
             rc, out, err = self.module.run_command([lsb_path, "-a"], errors='surrogate_then_replace')
@@ -438,6 +476,8 @@ class Facts(object):
         if 'lsb' in self.facts and 'release' in self.facts['lsb']:
             self.facts['lsb']['major_release'] = self.facts['lsb']['release'].split('.')[0]
 
+    # NOTE: the weird module deps required for this is confusing. Likely no good approach though... - akl
+    # NOTE: also likely a good candidate for it's own module or class, it barely uses self
     def get_selinux_facts(self):
         if not HAVE_SELINUX:
             self.facts['selinux'] = False
@@ -445,6 +485,7 @@ class Facts(object):
         self.facts['selinux'] = {}
         if not selinux.is_selinux_enabled():
             self.facts['selinux']['status'] = 'disabled'
+        # NOTE: this could just return in the above clause and the rest of this is up an indent -akl
         else:
             self.facts['selinux']['status'] = 'enabled'
             try:
@@ -454,6 +495,8 @@ class Facts(object):
             try:
                 (rc, configmode) = selinux.selinux_getenforcemode()
                 if rc == 0:
+                    # NOTE: not sure I understand why the class attributes are referenced via Facts class here when it's self
+                    #       though that makes the case for all of that constants info to be in a constants class (ie, class SelinuxMode) -akl
                     self.facts['selinux']['config_mode'] = Facts.SELINUX_MODE_DICT.get(configmode, 'unknown')
                 else:
                     self.facts['selinux']['config_mode'] = 'unknown'
@@ -482,7 +525,9 @@ class Facts(object):
 
     def get_caps_facts(self):
         capsh_path = self.module.get_bin_path('capsh')
+        # NOTE: early exit 'if not crash_path' and unindent rest of method -akl
         if capsh_path:
+            # NOTE: -> get_caps_data()/parse_caps_data() for easier mocking -akl
             rc, out, err = self.module.run_command([capsh_path, "--print"], errors='surrogate_then_replace')
             enforced_caps = []
             enforced = 'NA'
@@ -501,6 +546,7 @@ class Facts(object):
 
 
     def get_fips_facts(self):
+        # NOTE: this is populated even if it is not set
         self.facts['fips'] = False
         data = get_file_content('/proc/sys/crypto/fips_enabled')
         if data and data == '1':
@@ -522,6 +568,7 @@ class Facts(object):
         self.facts['date_time']['second'] = now.strftime('%S')
         self.facts['date_time']['epoch'] = now.strftime('%s')
         if self.facts['date_time']['epoch'] == '' or self.facts['date_time']['epoch'][0] == '%':
+            # NOTE: in this case, the epoch wont match the rest of the date_time facts? ie, it's a few milliseconds later..? -akl
             self.facts['date_time']['epoch'] = str(int(time.time()))
         self.facts['date_time']['date'] = now.strftime('%Y-%m-%d')
         self.facts['date_time']['time'] = now.strftime('%H:%M:%S')
