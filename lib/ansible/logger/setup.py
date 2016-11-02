@@ -19,7 +19,7 @@ logging.setLoggerClass(default.AnsibleLogger)
 DEFAULT_YAML_LOGGING_CONF = "/home/adrian/ansible_logging.yaml"
 
 
-def log_setup():
+def log_setup(config_dict=None):
     # TODO: if we decide we need a way to configure our configuration style, figure it out here
     try:
         return dict_setup.log_setup_yaml_file(DEFAULT_YAML_LOGGING_CONF)
@@ -45,18 +45,41 @@ def log_queue_listener_stop(queue):
     queue.put(None)
 
 
+def env_log_level(var_name):
+
+    env_var_value = os.environ.get(var_name, None)
+    print('%s=%s' % (var_name, env_var_value))
+
+    if not env_var_value:
+        return None
+
+    env_var_value = env_var_value.strip()
+
+    log_level = getattr(logging, env_var_value, env_var_value)
+
+    try:
+        log_level = int(log_level)
+    except ValueError:
+        raise Exception('the log level %s is not known' % env_var_value)
+
+    return log_level
+
+
 def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     name = name or 'ansible'
 
     null_handler = logging.NullHandler()
 
-    root_log_level = os.getenv('ROOT_LOG_LEVEL', None) or logging.DEBUG
+    #root_log_level = os.getenv('ROOT_LOG_LEVEL', None) or logging.DEBUG
+    root_log_level = env_log_level('ROOT_LOG_LEVEL') or multiprocessing.SUBDEBUG
+
     root_logger = logging.getLogger()
     root_logger.setLevel(root_log_level)
     root_logger.addHandler(null_handler)
 
-    log_level = level or os.getenv('%s_log_level' % name, None) or logging.DEBUG
+    log_level = level or env_log_level('%s_log_level' % name) or logging.DEBUG
     log = logging.getLogger(name)
+    #log_level = multiprocessing.SUBDEBUG
     log.setLevel(log_level)
 
     filename_env = os.environ.get('ANSIBLE_LOG_FILE', None)
@@ -64,7 +87,6 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     if filename_env:
         filename = os.path.expanduser(filename_env)
 
-        print('filename=%s' % filename)
         try:
             file_handler = default_handler.AnsibleWatchedFileHandler(filename=filename)
         # fallback to NullHandler if we can't open our log file
@@ -81,13 +103,13 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
         file_handler.setFormatter(file_formatter)
 
     stream_handler = None
-    stream_handler_env = log_stdout or os.getenv('ANSIBLE_LOG_STDOUT', None)
+    stream_handler_env = log_stdout or os.environ.get('ANSIBLE_LOG_STDOUT', None)
     if stream_handler_env:
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(log_level)
 
         # fmt=None uses ColorFormatters built in format
-        fmt_string = fmt or os.getenv('%s_fmt_string' % name, None)
+        fmt_string = fmt or os.environ.get('%s_fmt_string' % name, None)
         formatter = color_debug.ColorFormatter(fmt=fmt_string, use_color=True, default_color_by_attr='process')
         formatter.use_thread_color = True
         stream_handler.setFormatter(formatter)
@@ -96,20 +118,25 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
         stream_handler.addFilter(df)
 
     listener_handlers = [x for x in [stream_handler, file_handler] if x]
-    print(listener_handlers)
+    #listener_handlers = [stream_handler]
     ql = queue_listener(listener_handlers)
     qh = queue_handler.QueueHandler(log_queue)
     qh.setLevel(log_level)
 
     root_logger.addHandler(qh)
 
-    mp_log_level = os.getenv('MP_LOG_LEVEL', None)
+    mp_log_level = env_log_level('MP_LOG_LEVEL') or logging.INFO
+    #mp_log_level = logging.DEBUG
+    #mp_log_level = multiprocessing.SUBDEBUG
     if mp_log_level:
         mplog = multiprocessing.get_logger()
         mplog.setLevel(mp_log_level)
-        mplog.propagate = True
+        #mplog.propagate = True
         mplog.addHandler(null_handler)
-        mplog.addHandler(qh)
+        #mplog.addHandler(qh)
+        #mp_stream_handler = logging.StreamHandler(sys.stderr)
+        #mp_stream_handler.setLevel(log_level)
+        #mplog.addHandler(stream_handler)
 
     # turn down some loggers. One of many reasons logging is useful
     logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
