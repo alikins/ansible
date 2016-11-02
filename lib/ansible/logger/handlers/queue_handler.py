@@ -25,7 +25,7 @@ try:
 except ImportError:
     import queue
 import threading
-
+import cPickle
 
 class QueueHandler(logging.Handler):
     """
@@ -77,10 +77,28 @@ class QueueHandler(logging.Handler):
         # msg + args, as these might be unpickleable. We also zap the
         # exc_info attribute, as it's no longer needed and, if not None,
         # will typically not be pickleable.
+
+        # test to see if object is pickable. Ideally, we would try to queue it,
+        # get an exception, and then try to make it pickable, but mp.Queue does not like
+        # non-pickable objects at all, and a feeder thread started will just end.
+        #print('record.args=%s' % str(record.args))
+        #print('record.msg=%s' % str(record.msg))
+        try:
+            s = cPickle.dumps(record)
+            cPickle.loads(s)
+            # return the record as is if pickleable
+            return record
+        except Exception as e:
+            print(e)
+            print(record)
+            print('%s' % str(record.args))
+            #record._pickle_exception = str(e)
+
         self.format(record)
         record.msg = record.message
         record.args = None
         record.exc_info = None
+        record._serialized_by_queue_handler = True
         return record
 
     def emit(self, record):
@@ -91,6 +109,7 @@ class QueueHandler(logging.Handler):
 
         :param record: The record to emit.
         """
+
         try:
             self.enqueue(self.prepare(record))
         except (KeyboardInterrupt, SystemExit):
@@ -210,7 +229,8 @@ class QueueListener(object):
         method if you want to use timeouts or work with custom queue
         implementations.
         """
-        self.queue.put_nowait(self._sentinel)
+        #self.queue.put_nowait(self._sentinel)
+        self.queue.put(self._sentinel, block=True, timeout=5)
 
     def stop(self):
         """
