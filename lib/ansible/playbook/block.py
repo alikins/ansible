@@ -212,10 +212,17 @@ class Block(Base, Become, Conditional, Taggable):
         a task we don't want to include the attribute list of tasks.
         '''
 
+        #my_copy = self.copy()
         data = dict()
-        for attr in self._valid_attrs:
-            if attr not in ('block', 'rescue', 'always'):
-                data[attr] = getattr(self, attr)
+        changed = self._changed_attrs()
+        for name, value, attribute in changed:
+            if name not in ('block', 'rescue', 'always'):
+                data[name] = value
+
+        #
+        #for attr in self._valid_attrs:
+        #    if attr not in ('block', 'rescue', 'always'):
+        #        data[attr] = getattr(self, attr)
 
         data['dep_chain'] = self.get_dep_chain()
         data['eor'] = self._eor

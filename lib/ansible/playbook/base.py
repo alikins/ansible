@@ -530,6 +530,59 @@ class Base(with_metaclass(BaseMeta, object)):
                 else:
                     setattr(self, attr, value)
 
+
+#   def _build(self, obj):
+#        self.base_type = obj.__class__.__name__
+#        for (name, attribute) in iteritems(obj._valid_attrs):
+#            value = getattr(obj, name)
+#
+#            if not attribute:
+#                continue
+
+#            # check if both are None, since None != None, which isnt useful
+#            if not isinstance(value, type(attribute.default)):
+#                log.debug('The type of the current and default values of %s different: %s is not %s', name, type(value), type(attribute.default))
+#                continue
+
+#            if attribute.default is None:
+#                if value:
+#                    continue
+
+#            #if value is None and attribute.default is None:
+#            #    continue
+#
+#            log.debug('name=%s, value=%s, default=%s, attribute=%s', name, value, attribute.default, attribute)
+#            log.debug('value != default: %s, %s %s', value != attribute.default, type(value), type(attribute.default))
+#            if value != attribute.default:
+#                self.changed.append((name, value, attribute))
+#            else:
+#                self.defaults.append((name, value, attribute))
+#
+#        self.defaults = sorted(self.defaults)
+
+    def _changed_attrs(self):
+        changed = []
+        print('self=%s' % repr(self))
+        for (name, attribute) in iteritems(self._valid_attrs):
+            value = getattr(self, name)
+
+            print('%s %s %s' % (name, value, attribute.default))
+            #if not attribute:
+            #    continue
+
+            #if not isinstance(value, type(attribute.default)):
+            #    continue
+
+            # check if both are None, since None != None, which isnt useful
+            if value is None and attribute.default is None:
+                continue
+
+            if value != attribute.default:
+                changed.append((name, value, attribute))
+            # else:
+            #    the builtin default value we can skip
+        return changed
+
     def serialize(self):
         '''
         Serializes the object derived from the base object into
@@ -540,13 +593,21 @@ class Base(with_metaclass(BaseMeta, object)):
         '''
 
         repr = self.dump_attrs()
+        changed = self._changed_attrs()
+        repr_ds = dict()
+
+        #for name in self._valid_attrs.keys():
+        #    repr[name] = getattr(self, name)
 
         # serialize the uuid field
-        repr['uuid'] = self._uuid
-        repr['finalized'] = self._finalized
-        repr['squashed'] = self._squashed
+        repr_ds['uuid'] = self._uuid
+        repr_ds['finalized'] = self._finalized
+        repr_ds['squashed'] = self._squashed
 
-        return repr
+        for name, value, attribute in changed:
+            repr_ds[name] = value
+
+        return repr_ds
 
     def deserialize(self, data):
         '''

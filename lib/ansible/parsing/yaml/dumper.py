@@ -25,6 +25,11 @@ from ansible.module_utils.six import PY3
 from ansible.parsing.yaml.objects import AnsibleUnicode, AnsibleSequence, AnsibleMapping, AnsibleVaultEncryptedUnicode
 from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 from ansible.vars.hostvars import HostVars
+from ansible.vars.unsafe_proxy import AnsibleUnsafeText
+from ansible.playbook import Playbook
+from ansible.playbook.play import Play
+from ansible.playbook.block import Block
+from ansible.playbook.task import Task
 
 
 class AnsibleDumper(yaml.SafeDumper):
@@ -35,8 +40,39 @@ class AnsibleDumper(yaml.SafeDumper):
     pass
 
 
+
+class AnsibleUnsafeDumper(yaml.Dumper):
+    # for debugging
+    def represent_undefined(self, data):
+        print('undefined data=%s' % data)
+        return yaml.Dumper.represent_undefined(self, data)
+
+
+        return yaml.Dumper.represent_undefined(self, data)
+
 def represent_hostvars(self, data):
     return self.represent_dict(dict(data))
+
+
+
+def represent_playbook(self, data):
+    return self.represent_dict(data.__getstate__())
+
+
+def represent_play(self, data):
+    return self.represent_dict(data.serialize())
+
+
+def represent_block(self, data):
+    new_data = {}
+    new_data['block'] = data.serialize()
+    return self.represent_dict(new_data)
+
+
+def represent_task(self, data):
+    new_data = {}
+    new_data['task'] = data.serialize()
+    return self.represent_dict(new_data)
 
 
 # Note: only want to represent the encrypted data
@@ -47,6 +83,54 @@ if PY3:
     represent_unicode = yaml.representer.SafeRepresenter.represent_str
 else:
     represent_unicode = yaml.representer.SafeRepresenter.represent_unicode
+
+AnsibleUnsafeDumper.add_representer(
+    Playbook,
+    represent_playbook
+)
+
+AnsibleUnsafeDumper.add_representer(
+    Play,
+    represent_play
+)
+
+AnsibleUnsafeDumper.add_representer(
+    Block,
+    represent_block
+)
+
+AnsibleUnsafeDumper.add_representer(
+    Task,
+    represent_task
+)
+
+
+AnsibleUnsafeDumper.add_representer(
+    AnsibleUnicode,
+    represent_unicode,
+)
+
+AnsibleUnsafeDumper.add_representer(
+    HostVars,
+    represent_hostvars,
+)
+
+
+AnsibleUnsafeDumper.add_representer(
+    AnsibleSequence,
+    yaml.representer.SafeRepresenter.represent_list,
+)
+
+AnsibleUnsafeDumper.add_representer(
+    AnsibleMapping,
+    yaml.representer.SafeRepresenter.represent_dict,
+)
+
+AnsibleUnsafeDumper.add_representer(
+    AnsibleVaultEncryptedUnicode,
+    represent_vault_encrypted_unicode,
+)
+
 
 AnsibleDumper.add_representer(
     AnsibleUnicode,
@@ -62,6 +146,7 @@ AnsibleDumper.add_representer(
     HostVars,
     represent_hostvars,
 )
+
 
 AnsibleDumper.add_representer(
     AnsibleSequence,

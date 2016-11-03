@@ -48,6 +48,23 @@ class Playbook:
         self._loader = loader
         self._file_name = None
 
+    #def __iter__(self):
+    #    return iter(self._entries)
+
+    def __getstate__(self):
+        data = {}
+        data['entries'] = self._entries
+        data['basedir'] = self._basedir
+        data['file_name'] = self._file_name
+        data['loader'] = self._loader
+        return data
+
+    def __setstate__(self, data):
+        self.__init__(loader=data['loader'])
+        self._entries = data['entries']
+        self._basedir = data['basedir']
+        self._file_name = data['file_name']
+
     @staticmethod
     def load(file_name, variable_manager=None, loader=None):
         pb = Playbook(loader=loader)
