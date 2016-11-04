@@ -563,7 +563,6 @@ class Base(with_metaclass(BaseMeta, object)):
 
     def _changed_attrs(self):
         changed = []
-        print('self=%s' % repr(self))
         fuzzy_defaults = ('bool', 'list')
 
         for (name, attribute) in iteritems(self._valid_attrs):

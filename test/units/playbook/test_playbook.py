@@ -109,6 +109,7 @@ class TestPlaybook(unittest.TestCase):
 #        for play in plays:
 #            print(yaml.safe_dump(play))
         dumper = AnsibleUnsafeDumper
+        print('\n\nyaml repr of playbook follows\n\n')
         print(yaml.dump(p, Dumper=dumper, indent=4, default_flow_style=False))
 
     def test_bad_playbook_files(self):
