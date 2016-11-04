@@ -174,6 +174,7 @@ class Task(Base, Conditional, Taggable, Become):
         # and the delegate_to value from the various possible forms
         # supported as legacy
         args_parser = ModuleArgsParser(task_ds=ds)
+        # TODO: make these AnsibleUnicode  for yaml purposes
         try:
             (action, args, delegate_to) = args_parser.parse()
         except AnsibleParserError as e:

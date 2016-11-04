@@ -70,7 +70,7 @@ class TestPlaybook(unittest.TestCase):
                 - name: task number 1
                   debug: var=string_list
                   no_log: true
-                  when: true
+                  when: false
 
                 - name: the second task
                   ping:
@@ -110,7 +110,9 @@ class TestPlaybook(unittest.TestCase):
 #            print(yaml.safe_dump(play))
         dumper = AnsibleUnsafeDumper
         print('\n\nyaml repr of playbook follows\n\n')
-        print(yaml.dump(p, Dumper=dumper, indent=4, default_flow_style=False))
+        print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
+                        indent=4, default_flow_style=False, canonical=True))
+        #print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
 
     def test_bad_playbook_files(self):
         fake_loader = DictDataLoader({

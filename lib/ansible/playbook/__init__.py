@@ -51,7 +51,7 @@ class Playbook:
     def __iter__(self):
         return iter(self._entries)
 
-    def __getstate__(self):
+    def __not_getstate__(self):
         data = {}
         data['entries'] = self._entries
         for i in self._entries:
@@ -61,7 +61,7 @@ class Playbook:
         data['loader'] = self._loader
         return data
 
-    def __setstate__(self, data):
+    def __not_setstate__(self, data):
         self.__init__(loader=data['loader'])
         self._entries = data['entries']
         self._basedir = data['basedir']
@@ -71,6 +71,7 @@ class Playbook:
     def load(file_name, variable_manager=None, loader=None):
         pb = Playbook(loader=loader)
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
+        print('PLAYBOOK=%s type(pb)=%s repr=%s' % (pb, type(pb), repr(pb)))
         return pb
 
     def _load_playbook_data(self, file_name, variable_manager):
@@ -99,6 +100,7 @@ class Playbook:
             self._loader.set_basedir(cur_basedir)
             raise AnsibleParserError("playbooks must be a list of plays", obj=ds)
 
+        print('PLAYS DS ds=%s type(ds)=%s repr=%s' % (ds, type(ds), repr(ds)))
         # Parse the playbook entries. For plays, we simply parse them
         # using the Play() object, and includes are parsed using the
         # PlaybookInclude() object

@@ -160,6 +160,27 @@ AnsibleDumper.add_representer(
     represent_hostvars,
 )
 
+AnsibleDumper.add_representer(
+    Playbook,
+    #yaml.representer.SafeRepresenter.represent_list,
+    represent_playbook
+)
+
+AnsibleDumper.add_representer(
+    Play,
+    represent_play
+)
+
+AnsibleDumper.add_representer(
+    Block,
+    represent_block
+)
+
+AnsibleDumper.add_representer(
+    Task,
+    represent_task
+)
+
 
 AnsibleDumper.add_representer(
     AnsibleSequence,
