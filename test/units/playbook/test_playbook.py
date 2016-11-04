@@ -91,6 +91,17 @@ class TestPlaybook(unittest.TestCase):
                      a_random_fact: The only member of zztop without a beard is Frank Beard.
                   port: 99999
 
+            - name: The second play in the playbook
+              hosts: localhost
+              gather_facts: true
+              no_log: true
+              vars:
+               some_empty_list: []
+              tasks:
+                - name: second play, first task
+                  no_log: false
+                  when: true
+                  debug: msg="second play, first task"
             """,
         })
         p = Playbook.load("test_file.yml", loader=fake_loader)
@@ -98,7 +109,7 @@ class TestPlaybook(unittest.TestCase):
 #        for play in plays:
 #            print(yaml.safe_dump(play))
         dumper = AnsibleUnsafeDumper
-        print(yaml.dump(p, Dumper=dumper))
+        print(yaml.dump(p, Dumper=dumper, indent=4, default_flow_style=False))
 
     def test_bad_playbook_files(self):
         fake_loader = DictDataLoader({

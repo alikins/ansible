@@ -206,18 +206,16 @@ class Block(Base, Become, Conditional, Taggable):
         new_me.validate()
         return new_me
 
-    def serialize(self):
+    def serialize(self, serialize_parent=True):
         '''
         Override of the default serialize method, since when we're serializing
         a task we don't want to include the attribute list of tasks.
         '''
 
-        #my_copy = self.copy()
         data = dict()
         changed = self._changed_attrs()
         for name, value, attribute in changed:
-            if name not in ('block', 'rescue', 'always'):
-                data[name] = value
+            data[name] = value
 
         #
         #for attr in self._valid_attrs:
@@ -229,7 +227,9 @@ class Block(Base, Become, Conditional, Taggable):
 
         if self._role is not None:
             data['role'] = self._role.serialize()
-        if self._parent is not None:
+
+        # parent could be a ref to let the container place this block in the right place
+        if serialize_parent and self._parent is not None:
             data['parent'] = self._parent.copy(exclude_tasks=True).serialize()
             data['parent_type'] = self._parent.__class__.__name__
 

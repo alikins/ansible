@@ -95,6 +95,9 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
     for task_ds in ds:
         assert isinstance(task_ds, dict), 'The ds (%s) should be a dict but was a %s' % (ds, type(ds))
 
+        print('%s %s %s' % (task_ds, type(task_ds), repr(task_ds)))
+        print('lineno: %s' % getattr(task_ds, '_line_number', 'Nope not there'))
+
         if 'block' in task_ds:
             t = Block.load(
                 task_ds,

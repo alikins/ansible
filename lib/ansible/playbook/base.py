@@ -251,6 +251,7 @@ class Base(with_metaclass(BaseMeta, object)):
                 if method:
                     self._attributes[name] = method(name, ds[name])
                 else:
+                    print('attr %s line_number=%s' % (name, getattr(ds[name], '_line_number', 'doesnt exist')))
                     self._attributes[name] = ds[name]
 
         # run early, non-critical validation
@@ -563,10 +564,12 @@ class Base(with_metaclass(BaseMeta, object)):
     def _changed_attrs(self):
         changed = []
         print('self=%s' % repr(self))
+        fuzzy_defaults = ('bool', 'list')
+
         for (name, attribute) in iteritems(self._valid_attrs):
             value = getattr(self, name)
 
-            print('%s %s %s' % (name, value, attribute.default))
+#            print('%s %s %s' % (name, value, attribute.default))
             #if not attribute:
             #    continue
 
@@ -577,6 +580,13 @@ class Base(with_metaclass(BaseMeta, object)):
             if value is None and attribute.default is None:
                 continue
 
+            # any_errors_fatal is a bool whose default is None
+            # well we dont really know if the value is changed do we...
+            # assume if value is a different type than the default, then it has changed
+            if attribute.isa in fuzzy_defaults and not isinstance(value, type(attribute.default)):
+                continue
+
+            # bool attributes may not have a default
             if value != attribute.default:
                 changed.append((name, value, attribute))
             # else:
@@ -593,6 +603,7 @@ class Base(with_metaclass(BaseMeta, object)):
         '''
 
         repr = self.dump_attrs()
+        # This will clearly break other stuff atm since it changes what serialized means
         changed = self._changed_attrs()
         repr_ds = dict()
 

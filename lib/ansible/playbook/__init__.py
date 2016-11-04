@@ -48,12 +48,14 @@ class Playbook:
         self._loader = loader
         self._file_name = None
 
-    #def __iter__(self):
-    #    return iter(self._entries)
+    def __iter__(self):
+        return iter(self._entries)
 
     def __getstate__(self):
         data = {}
         data['entries'] = self._entries
+        for i in self._entries:
+            print('%s %s %s' % (i, type(i), repr(i)))
         data['basedir'] = self._basedir
         data['file_name'] = self._file_name
         data['loader'] = self._loader

@@ -65,13 +65,24 @@ def represent_play(self, data):
 
 def represent_block(self, data):
     new_data = {}
-    new_data['block'] = data.serialize()
+    block_data = data.serialize(serialize_parent=False)
+    for internal in ('dep_chain',):
+        del block_data[internal]
+    #new_data['block'] = block_data
+    for d in block_data:
+        print('%s t=%s %s' % (d, type(d), repr(d)))
+    new_data.update(block_data)
     return self.represent_dict(new_data)
 
 
 def represent_task(self, data):
     new_data = {}
-    new_data['task'] = data.serialize()
+    task_data = data.serialize(serialize_parent=False)
+
+    for internal in ('uuid', 'squashed', 'finalized'):
+        del task_data[internal]
+    new_data['task'] = task_data
+
     return self.represent_dict(new_data)
 
 
