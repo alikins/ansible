@@ -56,7 +56,8 @@ def represent_hostvars(self, data):
 
 
 def represent_playbook(self, data):
-    return self.represent_dict(data.__getstate__())
+    return self.represent_list(data)
+    # return self.represent_dict(data.__getstate__())
 
 
 def represent_play(self, data):
@@ -69,8 +70,8 @@ def represent_block(self, data):
     for internal in ('dep_chain',):
         del block_data[internal]
     #new_data['block'] = block_data
-    for d in block_data:
-        print('%s t=%s %s' % (d, type(d), repr(d)))
+    #for d in block_data:
+    #    print('%s t=%s %s' % (d, type(d), repr(d)))
     new_data.update(block_data)
     return self.represent_dict(new_data)
 
@@ -97,6 +98,7 @@ else:
 
 AnsibleUnsafeDumper.add_representer(
     Playbook,
+    #yaml.representer.SafeRepresenter.represent_list,
     represent_playbook
 )
 
