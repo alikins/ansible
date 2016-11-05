@@ -31,11 +31,11 @@ def log_setup(config_dict=None):
 log_queue = None
 
 
-def queue_listener(handlers):
+def queue_listener():
     # This seems like a bad idea...
     global log_queue
     log_queue = multiprocessing.Queue()
-    queue_listener = queue_handler.QueueListener(log_queue, *handlers)
+    queue_listener = queue_handler.QueueListener(log_queue)
 
     queue_listener.start()
     return queue_listener
@@ -114,12 +114,14 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
         formatter.use_thread_color = True
         stream_handler.setFormatter(formatter)
 
-        df = display_compat_filter.DisplayCompatOtherLoggingFilter(name='')
-        stream_handler.addFilter(df)
+#        df = display_compat_filter.DisplayCompatOtherLoggingFilter(name='')
+#        stream_handler.addFilter(df)
 
     listener_handlers = [x for x in [stream_handler, file_handler] if x]
-    #listener_handlers = [stream_handler]
-    ql = queue_listener(listener_handlers)
+    print(listener_handlers)
+    for lh in listener_handlers:
+        logging.getLogger('ansible_handler').addHandler(lh)
+    ql = queue_listener()
     qh = queue_handler.QueueHandler(log_queue)
     qh.setLevel(log_level)
 
@@ -150,4 +152,9 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
+    #logging.getLogger('ansible_handler').setFormatter(logging.Formatter('%(asctime)s -%(name)s - %(process)d - %(message)s'))
+    import logging_tree
+    logging_tree.printout()
+
+    #sys.exit()
     return qh, ql
