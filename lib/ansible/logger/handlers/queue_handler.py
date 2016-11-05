@@ -25,7 +25,9 @@ try:
 except ImportError:
     import queue
 import threading
+import multiprocessing
 import cPickle
+
 
 class QueueHandler(logging.Handler):
     """
@@ -130,13 +132,14 @@ class QueueListener(object):
     """
     _sentinel = None
 
-    def __init__(self, queue):
+    def __init__(self):
         """
         Initialise an instance with the specified queue and
         handlers.
         """
-        self.queue = queue
-        #self.handlers = handlers
+        # self.queue = queue
+        self.queue = multiprocessing.Queue()
+        # self.handlers = handlers
         self._stop = threading.Event()
         self._thread = None
         self.logger_name = 'ansible_handler'
