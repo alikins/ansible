@@ -130,15 +130,18 @@ class QueueListener(object):
     """
     _sentinel = None
 
-    def __init__(self, queue, *handlers):
+    def __init__(self, queue):
         """
         Initialise an instance with the specified queue and
         handlers.
         """
         self.queue = queue
-        self.handlers = handlers
+        #self.handlers = handlers
         self._stop = threading.Event()
         self._thread = None
+        self.logger_name = 'ansible_handler'
+        self.logger = logging.getLogger(self.logger_name)
+        self.logger.propagate = False
 
     def dequeue(self, block):
         """
@@ -187,8 +190,9 @@ class QueueListener(object):
         :param record: The record to handle.
         """
         record = self.prepare(record)
-        for handler in self.handlers:
-            handler.handle(record)
+        # for handler in self.handlers:
+        #    handler.handle(record)
+        self.logger.handle(record)
 
     def _monitor(self):
         """
