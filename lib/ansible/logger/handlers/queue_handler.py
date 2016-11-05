@@ -129,6 +129,10 @@ class QueueListener(object):
     :param record: The queue to listen to.
     :param handlers: The handlers to invoke on everything received from
                      the queue.
+
+    Note: This creates a multiprocessing.Queue that will be shared with mp
+          workers, but QueueListener needs to be created in the MainProcess
+          of the app before any multiprocessing workers are created.
     """
     _sentinel = None
 
