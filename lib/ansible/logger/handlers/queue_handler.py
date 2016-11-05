@@ -130,6 +130,8 @@ class QueueListener(object):
         self.logger = logging.getLogger(self.logger_name)
         self.logger.propagate = False
 
+        self.start()
+
     def dequeue(self, block):
         """
         Dequeue a record and return it, optionally blocking.
