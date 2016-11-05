@@ -28,19 +28,6 @@ def log_setup(config_dict=None):
         # TODO: raise a logging setup exception since we likely want to setup logging first, then the big try/except for cli
         raise
 
-# log_queue = None
-
-def get_queue_listener():
-#    log_queue = multiprocessing.Queue()
-    queue_listener = queue_handler.QueueListener()
-
-    queue_listener.start()
-    return queue_listener
-
-
-def log_queue_listener_stop(queue):
-    queue.put(None)
-
 
 def env_log_level(var_name):
 
@@ -114,11 +101,13 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
 #        df = display_compat_filter.DisplayCompatOtherLoggingFilter(name='')
 #        stream_handler.addFilter(df)
 
+    # Could add a NullHandler here
     listener_handlers = [x for x in [stream_handler, file_handler] if x]
-    print(listener_handlers)
+
     for lh in listener_handlers:
         logging.getLogger('ansible_handler').addHandler(lh)
-    ql = get_queue_listener()
+
+    ql = queue_handler.QueueListener()
     qh = queue_handler.QueueHandler(ql.queue)
     qh.setLevel(log_level)
 
