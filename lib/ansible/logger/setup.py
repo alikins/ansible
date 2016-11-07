@@ -64,6 +64,7 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     log_level = level or env_log_level('%s_log_level' % name) or logging.DEBUG
     log = logging.getLogger(name)
     # log_level = logging.INFO
+    #log_level = logging.CRITICAL
     log.setLevel(log_level)
 
     filename_env = os.environ.get('ANSIBLE_LOG_FILE', None)
@@ -127,14 +128,14 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
         #mplog.addHandler(stream_handler)
 
     # turn down some loggers. One of many reasons logging is useful
-    logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
-    logging.getLogger('ansible.plugins').setLevel(logging.INFO)
-    logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
+    ##logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
+    ##logging.getLogger('ansible.plugins').setLevel(logging.INFO)
+    ##logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
     #logging.getLogger('ansible.plugins.strategy').setLevel(logging.DEBUG)
-    logging.getLogger('ansible.playbook').setLevel(logging.INFO)
+    ##logging.getLogger('ansible.playbook').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor').setLevel(logging.DEBUG)
-    logging.getLogger('ansible.plugins.connection').setLevel(multiprocessing.SUBDEBUG)
-    logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
+    ##logging.getLogger('ansible.plugins.connection').setLevel(multiprocessing.SUBDEBUG)
+    ##logging.getLogger('ansible.plugins.PluginLoader').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 

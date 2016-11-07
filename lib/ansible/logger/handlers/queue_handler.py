@@ -27,6 +27,7 @@ except ImportError:
 import threading
 import multiprocessing
 import cPickle
+import operator
 
 
 class QueueHandler(logging.Handler):
@@ -91,9 +92,10 @@ class QueueHandler(logging.Handler):
             # return the record as is if pickleable
             return record
         except Exception as e:
-            print(e)
-            print(record)
-            print('%s' % str(record.args))
+            pass
+            #print(e)
+            #print(record)
+            #print('%s' % str(record.args))
             #record._pickle_exception = str(e)
 
         self.format(record)
@@ -150,6 +152,8 @@ class QueueListener(object):
         self.logger = logging.getLogger(self.logger_name)
         self.logger.propagate = False
 
+        self._sorting_list = []
+
         self.start()
 
     def dequeue(self, block):
@@ -164,7 +168,7 @@ class QueueListener(object):
                       the queue is empty, an :class:`~queue.Empty` exception
                       will be thrown.
         """
-        return self.queue.get(block)
+        return self.queue.get(block=block, timeout=1)
 
     def start(self):
         """
@@ -203,6 +207,23 @@ class QueueListener(object):
         #    handler.handle(record)
         self.logger.handle(record)
 
+    def flush(self):
+        for record in sorted(self._sorting_list, key=operator.attrgetter('created')):
+            self.handle(record)
+        # race condition?
+        self._sorting_list = []
+
+    def buffer_record(self, record):
+        self._sorting_list.append(record)
+
+        if len(self._sorting_list) > 10:
+            self.flush()
+
+    def queue_is_empty(self):
+        print('listiner queue_is_empty')
+        # eventually, flush a buffering handler
+        self.flush()
+
     def _monitor(self):
         """
         Monitor the queue for records, and ask the handler
@@ -218,10 +239,12 @@ class QueueListener(object):
                 record = self.dequeue(True)
                 if record is self._sentinel:
                     break
-                self.handle(record)
+                #self.handle(record)
+                self.buffer_record(record)
                 if has_task_done:
                     q.task_done()
             except queue.Empty:
+                self.queue_is_empty()
                 pass
         # There might still be records in the queue.
         while True:
@@ -229,11 +252,13 @@ class QueueListener(object):
                 record = self.dequeue(False)
                 if record is self._sentinel:
                     break
+                # let these get directly handled
                 self.handle(record)
                 if has_task_done:
                     q.task_done()
             except queue.Empty:
                 break
+        self.flush()
 
     def enqueue_sentinel(self):
         """
@@ -243,7 +268,7 @@ class QueueListener(object):
         implementations.
         """
         #self.queue.put_nowait(self._sentinel)
-        self.queue.put(self._sentinel, block=True, timeout=5)
+        self.queue.put(self._sentinel, block=True, timeout=1)
 
     def stop(self):
         """
