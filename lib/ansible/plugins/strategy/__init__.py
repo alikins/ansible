@@ -189,7 +189,7 @@ class StrategyBase:
         ''' handles queueing the task up to be sent to a worker '''
 
         display.debug("entering _queue_task() for %s/%s" % (host.name, task.action))
-        log.debug("entering _queue_task() for %s/%s", host.name, task.action)
+        log.info("Queueing task=%s for %s", task.action, host.name)
 
         # Add a write lock for tasks.
         # Maybe this should be added somewhere further up the call stack but
@@ -751,7 +751,8 @@ class StrategyBase:
             #        we consider the ability of meta tasks to flush handlers
             for handler in handler_block.block:
                 if handler._uuid in self._notified_handlers and len(self._notified_handlers[handler._uuid]):
-                    result = self._do_handler_run(handler, handler.get_name(), iterator=iterator, play_context=play_context)
+                    log.info('Running handler=%s handler uuid=%s', handler, handler._uuid)
+		    result = self._do_handler_run(handler, handler.get_name(), iterator=iterator, play_context=play_context)
                     if not result:
                         break
         return result

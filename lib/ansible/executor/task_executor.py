@@ -184,7 +184,7 @@ class TaskExecutor:
         # and later restore them to avoid modifying things too early
         play_context_vars = dict()
         self._play_context.update_vars(play_context_vars)
-        log.info('play_context after update_vars is %s', self._play_context)
+        log.debug('play_context after update_vars is %s', self._play_context)
 
         old_vars = dict()
         for k in play_context_vars:
@@ -400,7 +400,7 @@ class TaskExecutor:
             # which may override some fields already set by the play or
             # the options specified on the command line
             self._play_context = self._play_context.set_task_and_variable_override(task=self._task, variables=variables, templar=templar)
-            log.info('play_context updated with task info is now: %s', self._play_context)
+            #log.info('play_context updated with task info is now: %s', self._play_context)
             # fields set from the play/task may be based on variables, so we have to
             # do the same kind of post validation step on it here before we use it.
             self._play_context.post_validate(templar=templar)
@@ -413,7 +413,7 @@ class TaskExecutor:
             # We also add "magic" variables back into the variables dict to make sure
             # a certain subset of variables exist.
             self._play_context.update_vars(variables)
-            log.info('play_context after _execute is %s', self._play_context)
+            #log.info('play_context after _execute is %s', self._play_context)
         except AnsibleError as e:
             # save the error, which we'll raise later if we don't end up
             # skipping this task during the conditional evaluation step

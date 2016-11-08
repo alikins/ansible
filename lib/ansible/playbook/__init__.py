@@ -34,6 +34,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ['Playbook']
 
@@ -51,6 +53,7 @@ class Playbook:
     @staticmethod
     def load(file_name, variable_manager=None, loader=None):
         pb = Playbook(loader=loader)
+        log.info('Loading playbook file_name=%s', file_name)
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
         return pb
 
@@ -95,6 +98,7 @@ class Playbook:
                     self._entries.extend(pb._entries)
                 else:
                     display.display("skipping playbook include '%s' due to conditional test failure" % entry.get('include', entry), color=C.COLOR_SKIP)
+                    log.info("skipping playbook include '%s' due to conditional test failure", entry.get('include', entry))
             else:
                 entry_obj = Play.load(entry, variable_manager=variable_manager, loader=self._loader)
                 self._entries.append(entry_obj)

@@ -127,6 +127,7 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
         #mp_stream_handler.setLevel(log_level)
         #mplog.addHandler(stream_handler)
 
+    logging.getLogger("paramiko").addHandler(qh)
     # turn down some loggers. One of many reasons logging is useful
     ##logging.getLogger('ansible.plugins.action').setLevel(logging.INFO)
     ##logging.getLogger('ansible.plugins').setLevel(logging.INFO)

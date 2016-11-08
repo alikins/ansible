@@ -42,6 +42,9 @@ except ImportError:
 
 __all__ = ['Play']
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class Play(Base, Taggable, Become):
 

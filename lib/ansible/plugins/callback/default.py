@@ -23,6 +23,10 @@ from ansible import constants as C
 from ansible.plugins.callback import CallbackBase
 from ansible.utils.color import colorize, hostcolor
 
+import logging
+log = logging.getLogger(__name__)
+
+
 class CallbackModule(CallbackBase):
 
     '''
@@ -67,6 +71,9 @@ class CallbackModule(CallbackBase):
 
         if ignore_errors:
             self._display.display("...ignoring", color=C.COLOR_SKIP)
+
+    def v2_on_any(self, *args, **kwargs):
+        log.debug('v2_on_any called')
 
     def v2_runner_on_ok(self, result):
 

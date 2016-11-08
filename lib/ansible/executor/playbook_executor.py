@@ -76,7 +76,7 @@ class PlaybookExecutor:
         Run the given playbook, based on the settings in the play which
         may limit the runs to serialized groups, etc.
         '''
-
+        log.debug('FOOOOOOOOOOOOOOOOOOOOOOOOOO')
         result = 0
         entrylist = []
         entry = {}
@@ -158,6 +158,7 @@ class PlaybookExecutor:
                             # restrict the inventory to the hosts in the serialized batch
                             self._inventory.restrict_to_hosts(batch)
                             # and run it...
+                            log.info('Running play=%s for batch=%s', play, batch)
                             result = self._tqm.run(play=play)
 
                             # break the play if the result equals the special return code
@@ -213,6 +214,7 @@ class PlaybookExecutor:
                                 display.warning("\tto retry, use: --limit @%s\n" % filename)
                                 log.warning("%s failed. To retry, use: --limit @%s", playbook_path, filename)
 
+                    log.info('Ending playbook=%s play=%s', playbook_path, play)
                     self._tqm.send_callback('v2_playbook_on_stats', self._tqm._stats)
 
                 # if the last result wasn't zero, break out of the playbook file name loop

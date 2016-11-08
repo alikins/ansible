@@ -352,9 +352,9 @@ class TaskQueueManager:
                 if gotit is None:
                     gotit = getattr(callback_plugin, possible.replace('v2_',''), None)
                 if gotit is not None:
-                    methods.append(gotit)
+                    methods.append((gotit, possible))
 
-            for method in methods:
+            for method, called_as in methods:
                 try:
                     # Previously, the `v2_playbook_on_start` callback API did not accept
                     # any arguments. In recent versions of the v2 callback API, the play-
@@ -371,6 +371,7 @@ class TaskQueueManager:
                         else:
                             method(*args, **kwargs)
                     else:
+                        log.debug('send_callback callback_plugin=%s method_name=%s args=%s kwargs=%s', callback_plugin.CALLBACK_NAME, called_as, args, repr(kwargs))
                         method(*args, **kwargs)
                 except Exception as e:
                     # TODO: add config toggle to make this fatal or not?
