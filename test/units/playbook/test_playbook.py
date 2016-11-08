@@ -111,6 +111,40 @@ class TestPlaybook(unittest.TestCase):
         dumper = AnsibleUnsafeDumper
         print('\n\nyaml repr of playbook follows\n\n')
         print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
+                        indent=4, default_flow_style=False))
+        #print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
+
+    def test_playbook_yaml_dump_2(self):
+        fake_loader = DictDataLoader({
+            "test_file.yml":"""
+            - hosts: localhost
+              gather_facts: no
+              become: yes
+              become_user: root
+              tasks:
+                - command: whoami
+                  notify: it
+                  environment:
+                    foo: bar
+
+                - block:
+                    - name: some block
+                      debug: msg='some block msg'
+                  environment:
+                    blip: baz
+              handlers:
+                - name: it
+                  command: whoami
+                  
+            """,
+        })
+        p = Playbook.load("test_file.yml", loader=fake_loader)
+        print(p)
+#        for play in plays:
+#            print(yaml.safe_dump(play))
+        dumper = AnsibleUnsafeDumper
+        print('\n\nyaml repr of playbook follows\n\n')
+        print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
                         indent=4, default_flow_style=False, canonical=True))
         #print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
 

@@ -98,8 +98,8 @@ else:
 
 AnsibleUnsafeDumper.add_representer(
     Playbook,
-    #yaml.representer.SafeRepresenter.represent_list,
-    represent_playbook
+    yaml.representer.SafeRepresenter.represent_list,
+#    represent_playbook
 )
 
 AnsibleUnsafeDumper.add_representer(
