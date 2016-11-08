@@ -359,9 +359,9 @@ class TaskQueueManager:
                 if gotit is None:
                     gotit = getattr(callback_plugin, possible.replace('v2_', ''), None)
                 if gotit is not None:
-                    methods.append(gotit)
+                    methods.append((gotit, possible))
 
-            for method in methods:
+            for method, called_as in methods:
                 try:
                     method(*args, **kwargs)
                 except Exception as e:

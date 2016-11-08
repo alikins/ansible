@@ -522,7 +522,7 @@ class PlayContext(Base):
             new_info.diff = task.diff
 
         #log.info('Updating play_context with info from task and built in variables. new_info=%s', new_info)
-        log.info('Updated play_context is now: %s', repr(self))
+        log.debug('Updated play_context is now: %s', repr(self))
         return new_info
 
     def make_become_cmd(self, cmd, executable=None):

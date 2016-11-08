@@ -71,6 +71,8 @@ with warnings.catch_warnings():
     try:
         import paramiko
         HAVE_PARAMIKO = True
+        logging.getLogger("paramiko").setLevel(logging.WARNING)
+        logging.getLogger("paramiko").propagate = True
     except ImportError:
         pass
 
