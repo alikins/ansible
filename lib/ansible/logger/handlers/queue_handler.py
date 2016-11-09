@@ -220,8 +220,6 @@ class QueueListener(object):
             self.flush()
 
     def queue_is_empty(self):
-        print('listiner queue_is_empty')
-        # eventually, flush a buffering handler
         self.flush()
 
     def _monitor(self):
