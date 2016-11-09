@@ -31,6 +31,10 @@ from ansible.playbook.conditional import Conditional
 from ansible.playbook.taggable import Taggable
 from ansible.template import Templar
 
+import yaml
+import logging
+log = logging.getLogger(__name__)
+
 
 class PlaybookInclude(Base, Conditional, Taggable):
 
@@ -52,6 +56,7 @@ class PlaybookInclude(Base, Conditional, Taggable):
         from ansible.playbook import Playbook
         from ansible.playbook.play import Play
 
+        from ansible.parsing.yaml.dumper import AnsibleUnsafeDumper
         # first, we use the original parent method to correctly load the object
         # via the load_data/preprocess_data system we normally use for other
         # playbook objects
@@ -72,6 +77,10 @@ class PlaybookInclude(Base, Conditional, Taggable):
 
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
 
+        pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,
+                            indent=4, default_flow_style=False)
+        #log.debug('pb_yaml=%s', pb_yaml)
+        print(pb_yaml)
         # finally, update each loaded playbook entry with any variables specified
         # on the included playbook and/or any tags which may have been set
         for entry in pb._entries:

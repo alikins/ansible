@@ -69,8 +69,16 @@ class Playbook:
 
     @staticmethod
     def load(file_name, variable_manager=None, loader=None):
+
         pb = Playbook(loader=loader)
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
+        import yaml
+        from ansible.parsing.yaml.dumper import AnsibleUnsafeDumper
+        pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,
+                            indent=2, default_flow_style=False)
+        #log.debug('pb_yaml=%s', pb_yaml)
+        print('pb.load')
+        print(pb_yaml)
         print('PLAYBOOK=%s type(pb)=%s repr=%s' % (pb, type(pb), repr(pb)))
         return pb
 
