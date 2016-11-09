@@ -17,6 +17,12 @@ class DefaultAttributesFilter(object):
         #        sync with the filters/adapters that add record attributes. Maybe not worth the effort.
         self.defaults = {'remote_addr': '',
                          'remote_user': '',
+                         'playbook': '',
+                         'playbook_uuid': '',
+                         'play': '',
+                         'play_uuid': '',
+                         'task': '',
+                         'task_uuid': '',
                          'user': '',
                          'cmd_name': '',
                          'cmd_line': ''}
