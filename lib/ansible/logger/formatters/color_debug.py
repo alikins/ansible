@@ -25,7 +25,10 @@ def context_color_format_string(format_string):
     '''
 
     # TODO: pass in a list of record/logFormatter attributes to be wrapped for colorization
-    color_attrs = ['name', 'process', 'processName', 'levelname', 'threadName', 'thread', 'relativeCreated', 'message', 'exc_text', 'filename', 'funcName', 'lineno']
+    color_attrs = ['name', 'process', 'processName',
+                   'levelname', 'threadName', 'thread',
+                   'relativeCreated', 'message', 'exc_text',
+                   'filename', 'funcName', 'lineno', 'playbook', 'play', 'task']
 
     color_attrs_string = '|'.join(color_attrs)
 
@@ -110,6 +113,12 @@ class ColorFormatter(logging.Formatter):
               """%(lineno)-4d"""
 #              """]"""
 #              """%(_cdl_unset)s"""
+#              """ pb=%(playbook)s"""
+#              """ pbu=%(playbook_uuid)s"""
+#              """ pl=%(play)s"""
+#              """ plu=%(play_uuid)s"""
+#              """ tsk=%(task)s"""
+#              """ tsku=%(task_uuid)s"""
               """ - %(message)s"""
               """%(_cdl_reset)s""")
 #              """- $BOLD%(message)s$RESET""")
@@ -135,6 +144,9 @@ class ColorFormatter(logging.Formatter):
         #('name', ['process', 'processName', 'threadName', 'thread', 'message', 'default']),
 
         #('funcName', ['relativeCreated', 'asctime'])
+
+        # color default, msg and playbook/play/task by the play
+        #('play', ['default','message', 'unset', 'play', 'task']),
     ]
 
     COLORS = {
@@ -218,6 +230,8 @@ class ColorFormatter(logging.Formatter):
 
     # TODO: This could special case 'MainThread'/'MainProcess' to pick a good predictable color
     def get_name_color(self, name, perturb=None):
+        if name == '':
+            return self.default_color
         perturb = perturb or ''
         name = '%s%s' % (name, perturb)
         name_hash = hash(name)
@@ -323,6 +337,8 @@ class ColorFormatter(logging.Formatter):
 
         record._cdl_funcName = self.get_name_color(record.funcName)
 
+        #record._cdl_playbook = self.get_name_color(record.playbook)
+        #record._cdl_play = self.get_name_color(record.play)
         #group_by = [('default', ['default', 'message', 'unset'])]
         group_by = self.default_color_groups[:]
         group_by.extend(self.color_groups)
@@ -333,10 +349,12 @@ class ColorFormatter(logging.Formatter):
         for group, members in group_by:
             if hasattr(record, '_cdl_%s' % group):
                 group_color = getattr(record, '_cdl_%s' % group)
-                for member in members:
-                    setattr(record, '_cdl_%s' % member, group_color)
-                    in_a_group.add(member)
+            else:
+                group_color = self.get_name_color(getattr(record, group))
 
+            for member in members:
+                setattr(record, '_cdl_%s' % member, group_color)
+                in_a_group.add(member)
 
 #        if hasattr(record, self.default_attr_string):
 #            record._cdl_default = getattr(record, self.default_attr_string)
