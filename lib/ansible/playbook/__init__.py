@@ -47,18 +47,23 @@ class Playbook:
         self._basedir = to_text(os.getcwd(), errors='surrogate_or_strict')
         self._loader = loader
         self._file_name = None
+        self._includes = []
+        self._imports = []
 
     def __iter__(self):
         return iter(self._entries)
 
-    def __not_getstate__(self):
+    def __getstate__(self):
         data = {}
         data['entries'] = self._entries
-        for i in self._entries:
-            print('%s %s %s' % (i, type(i), repr(i)))
+        #for i in self._entries:
+        #    print('%s %s %s' % (i, type(i), repr(i)))
         data['basedir'] = self._basedir
         data['file_name'] = self._file_name
         data['loader'] = self._loader
+        data['includes'] = self._includes
+        data['imports'] = self._imports
+        data['class_name'] = self.__class__.__name__
         return data
 
     def __not_setstate__(self, data):
@@ -74,8 +79,11 @@ class Playbook:
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
         import yaml
         from ansible.parsing.yaml.dumper import AnsibleUnsafeDumper
+        #canonical = True
+        canonical = False
+        dfs = None
         pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,
-                            indent=2, default_flow_style=False)
+                            indent=2, default_flow_style=dfs, canonical=canonical)
         #log.debug('pb_yaml=%s', pb_yaml)
         print('pb.load')
         print(pb_yaml)
@@ -121,9 +129,12 @@ class Playbook:
             if 'include' in entry or 'import_playbook' in entry:
                 if 'include' in entry:
                     display.deprecated("You should use 'import_playbook' instead of 'include' for playbook includes")
-                pb = PlaybookInclude.load(entry, basedir=self._basedir, variable_manager=variable_manager, loader=self._loader)
+                pbi = PlaybookInclude()
+                pb = pbi.load(entry, basedir=self._basedir, variable_manager=variable_manager, loader=self._loader)
                 if pb is not None:
                     self._entries.extend(pb._entries)
+                    # FIXME: add imports
+                    self._includes.append(pbi)
                 else:
                     display.display("skipping playbook include '%s' due to conditional test failure" % entry.get('include', entry), color=C.COLOR_SKIP)
             else:

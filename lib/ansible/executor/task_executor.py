@@ -496,6 +496,14 @@ class TaskExecutor:
         # And filter out any fields which were set to default(omit), and got the omit token value
         omit_token = variables.get('omit')
         if omit_token is not None:
+            #print('OMITTING1: %s' % omit_token)
+            #_task_args = {}
+            #for i in iteritems(self._task.args):
+            #    if i[1] != omit_token:
+            #        _task_args[i[0]] = i[1]
+            #    else:
+            #        print('OMITTING2 %s=%s' % (i[0], i[1]))
+            #self._task_args = _task_args
             self._task.args = dict((i[0], i[1]) for i in iteritems(self._task.args) if i[1] != omit_token)
 
         # Read some values from the task, so that we can modify them if need be

@@ -271,6 +271,10 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
 
                     # now we extend the tags on each of the included blocks
                     for b in included_blocks:
+                        print('b.when included_block = %s' % b.when)
+                        print('t.when = %s' % t.when)
+                        b.when = t.when
+                        print('after b.when=%s' % b.when)
                         b.tags = list(set(b.tags).union(tags))
                     # END FIXME
 

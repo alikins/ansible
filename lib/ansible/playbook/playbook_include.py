@@ -77,10 +77,10 @@ class PlaybookInclude(Base, Conditional, Taggable):
 
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
 
-        pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,
-                            indent=4, default_flow_style=False)
+#        pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,
+#                            indent=4, default_flow_style=False)
         #log.debug('pb_yaml=%s', pb_yaml)
-        print(pb_yaml)
+#        print(pb_yaml)
         # finally, update each loaded playbook entry with any variables specified
         # on the included playbook and/or any tags which may have been set
         for entry in pb._entries:
@@ -89,6 +89,7 @@ class PlaybookInclude(Base, Conditional, Taggable):
             if new_obj.when and isinstance(entry, Play):
                 entry._included_conditional = new_obj.when[:]
 
+            print('Entry: %s' % entry)
             temp_vars = entry.vars.copy()
             temp_vars.update(new_obj.vars)
             param_tags = temp_vars.pop('tags', None)

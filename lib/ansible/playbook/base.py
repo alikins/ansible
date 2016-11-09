@@ -251,7 +251,7 @@ class Base(with_metaclass(BaseMeta, object)):
                 if method:
                     self._attributes[name] = method(name, ds[name])
                 else:
-                    print('attr %s line_number=%s' % (name, getattr(ds[name], '_line_number', 'doesnt exist')))
+                    #print('attr %s line_number=%s' % (name, getattr(ds[name], '_line_number', 'doesnt exist')))
                     self._attributes[name] = ds[name]
 
         # run early, non-critical validation
@@ -568,7 +568,9 @@ class Base(with_metaclass(BaseMeta, object)):
         for (name, attribute) in iteritems(self._valid_attrs):
             value = getattr(self, name)
 
-#            print('%s %s %s' % (name, value, attribute.default))
+            if name == 'when':
+                changed.append((name, value, attribute))
+            #print('%s %s %s' % (name, value, attribute.default))
             #if not attribute:
             #    continue
 
@@ -582,8 +584,8 @@ class Base(with_metaclass(BaseMeta, object)):
             # any_errors_fatal is a bool whose default is None
             # well we dont really know if the value is changed do we...
             # assume if value is a different type than the default, then it has changed
-            if attribute.isa in fuzzy_defaults and not isinstance(value, type(attribute.default)):
-                continue
+            #if attribute.isa in fuzzy_defaults and not isinstance(value, type(attribute.default)):
+            #    continue
 
             # bool attributes may not have a default
             if value != attribute.default:

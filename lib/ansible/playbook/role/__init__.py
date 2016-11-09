@@ -127,7 +127,7 @@ class Role(Base, Become, Conditional, Taggable):
 
     @staticmethod
     def load(role_include, play, parent_role=None, from_files=None):
-
+        print('loading roles role_include=%s, play=%s' % (role_include, play))
         if from_files is None:
             from_files = {}
         try:

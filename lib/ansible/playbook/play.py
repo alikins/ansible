@@ -307,6 +307,8 @@ class Play(Base, Taggable, Become):
             roles.append(role.serialize())
         data['roles'] = roles
         data['included_path'] = self._included_path
+        data['ClassName'] = self.__class__.__name__
+#        data['foo'] =
 
         return data
 

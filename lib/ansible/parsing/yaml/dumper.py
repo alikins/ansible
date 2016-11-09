@@ -30,6 +30,8 @@ from ansible.playbook import Playbook
 from ansible.playbook.play import Play
 from ansible.playbook.block import Block
 from ansible.playbook.task import Task
+from ansible.playbook.attribute import FieldAttribute
+from ansible.playbook.playbook_include import PlaybookInclude
 
 
 class AnsibleDumper(yaml.SafeDumper):
@@ -56,15 +58,28 @@ def represent_hostvars(self, data):
 
 
 def represent_playbook(self, data):
-    return self.represent_list(data)
-    # return self.represent_dict(data.__getstate__())
+    #return self.represent_list(data)
+    return self.represent_dict(data.__getstate__())
 
 
 def represent_play(self, data):
     return self.represent_dict(data.serialize())
 
 
+def represent_attribute(self, data):
+    print('repr_attribute %s', data)
+    return self.represent_dict(data)
+
+
 def represent_block(self, data):
+    return self.represent_dict(data.serialize(serialize_parent=False))
+
+
+def represent_playbook_include(self, data):
+    return self.represent_dict(data)
+
+
+def represent_bloc2k(self, data):
     new_data = {}
     block_data = data.serialize(serialize_parent=False)
     for internal in ('dep_chain',):
@@ -80,8 +95,8 @@ def represent_task(self, data):
     new_data = {}
     task_data = data.serialize(serialize_parent=False)
 
-    for internal in ('uuid', 'squashed', 'finalized'):
-        del task_data[internal]
+#    for internal in ('uuid', 'squashed', 'finalized'):
+#        del task_data[internal]
     new_data['task'] = task_data
 
     return self.represent_dict(new_data)
@@ -98,8 +113,8 @@ else:
 
 AnsibleUnsafeDumper.add_representer(
     Playbook,
-    yaml.representer.SafeRepresenter.represent_list,
-#    represent_playbook
+#    yaml.representer.SafeRepresenter.represent_list,
+    represent_playbook
 )
 
 AnsibleUnsafeDumper.add_representer(
@@ -117,6 +132,16 @@ AnsibleUnsafeDumper.add_representer(
     represent_task
 )
 
+AnsibleUnsafeDumper.add_representer(
+    FieldAttribute,
+    represent_attribute
+)
+
+#AnsibleUnsafeDumper.add_representer(
+#    PlaybookInclude,
+#    represent_playbook_include
+#)
+
 
 AnsibleUnsafeDumper.add_representer(
     AnsibleUnicode,
@@ -131,7 +156,8 @@ AnsibleUnsafeDumper.add_representer(
 
 AnsibleUnsafeDumper.add_representer(
     AnsibleSequence,
-    yaml.representer.SafeRepresenter.represent_list,
+    #yaml.representer.SafeRepresenter.represent_list,
+    yaml.representer.Representer.represent_list,
 )
 
 AnsibleUnsafeDumper.add_representer(
