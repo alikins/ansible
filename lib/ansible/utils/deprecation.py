@@ -1,6 +1,7 @@
 
 from ansible import constants as C
 from ansible.errors import AnsibleError
+from ansible.compat.six import with_metaclass, add_metaclass
 
 try:
     from __main__ import display
@@ -101,11 +102,15 @@ class MetaDeprecationData(type):
             _deprecations_registry[cls.label] = cls
         return cls
 
+    # we do sort the class objects themselves by label. This can be
+    # removed if we track instances instead in _deprecations_registry
+    def __lt__(self, other):
+        return self.label < other.label
 
-# DeprecationData
-class DeprecationData(object):
+
+@add_metaclass(MetaDeprecationData)
+class DeprecationData():
     # TODO: verify if this is worth metapain
-    __metaclass__ = MetaDeprecationData
 
     label = None
     version = None
