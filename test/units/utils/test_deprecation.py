@@ -110,3 +110,24 @@ class TestDeprecation(unittest.TestCase):
 
         res = deprecation.check(NOW)
         self.assertNotEquals(res, deprecation.Results.MITIGATED)
+
+    def test_mitigation_sub_class(self):
+        deprecation.C.DEFAULT_DEPRECATIONS_TO_IGNORE = []
+        deprecation.C.MERGE_MULTIPLE_CLI_TAGS = False
+        res = deprecation.check(deprecation.MERGE_MULTIPLE_CLI_TAGS)
+        self.assertNotEquals(res, deprecation.Results.MITIGATED)
+
+        deprecation.C.DEFAULT_DEPRECATIONS_TO_IGNORE = []
+        deprecation.C.MERGE_MULTIPLE_CLI_TAGS = True
+        res = deprecation.check(deprecation.MERGE_MULTIPLE_CLI_TAGS)
+        self.assertEquals(res, deprecation.Results.MITIGATED)
+
+        deprecation.C.DEFAULT_DEPRECATIONS_TO_IGNORE = ['MERGE_MULTIPLE_CLI_TAGS']
+        deprecation.C.MERGE_MULTIPLE_CLI_TAGS = False
+        res = deprecation.check(deprecation.MERGE_MULTIPLE_CLI_TAGS)
+        self.assertEquals(res, deprecation.Results.MITIGATED)
+
+        deprecation.C.DEFAULT_DEPRECATIONS_TO_IGNORE = []
+        deprecation.C.MERGE_MULTIPLE_CLI_TAGS = False
+        res = deprecation.check(deprecation.MERGE_MULTIPLE_CLI_TAGS)
+        self.assertNotEquals(res, deprecation.Results.MITIGATED)

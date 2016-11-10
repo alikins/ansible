@@ -251,8 +251,10 @@ class MergeMultipleCliTags(DeprecationData):
     message = 'Specifying --tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
 
     def mitigated(self):
-        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.'''
-        return C.MERGE_MULTIPLE_CLI_TAGS
+        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.
+
+        Also checks if deprecation is in DEFAULT_DEPRECATIONS_TO_IGNORE.'''
+        return C.MERGE_MULTIPLE_CLI_TAGS or super(MergeMultipleCliTags, self).mitigated()
 
 
 class MergeMultipleCliSkipTags(DeprecationData):
@@ -262,8 +264,10 @@ class MergeMultipleCliSkipTags(DeprecationData):
     message = 'Specifying --skip-tags multiple times on the command line currently uses the last specified value. In 2.4, values will be merged instead.  Set merge_multiple_cli_tags=True in ansible.cfg to get this behavior now.'
 
     def mitigated(self):
-        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.'''
-        return C.MERGE_MULTIPLE_CLI_TAGS
+        '''If user has explicitly enable MERGE_MULTIPLE_CLI_TAGS, dont warn.
+
+        Also checks if deprecation is in DEFAULT_DEPRECATIONS_TO_IGNORE.'''
+        return C.MERGE_MULTIPLE_CLI_TAGS or super(MergeMultipleCliSkipTags, self).mitigated()
 
 
 class TaskAlwaysRun(DeprecationData):
