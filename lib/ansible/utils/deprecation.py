@@ -113,6 +113,8 @@ class DeprecationData(object):
     message = None
 
     def mitigated(self):
+        if self.label in C.DEFAULT_DEPRECATIONS_TO_IGNORE:
+            return True
         return False
 
     def evaluate(self):

@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from ansible.compat.tests import unittest
+from ansible.compat.tests import mock
 
 from ansible.utils import deprecation
 
@@ -96,3 +97,16 @@ class TestDeprecation(unittest.TestCase):
     def test_list(self):
         res = deprecation.list_deprecations()
         print(res)
+
+    # FIXME: mock.patch instead
+    def test_mitigation(self):
+        deprecation.C.DEFAULT_DEPRECATIONS_TO_IGNORE = ['Foo']
+        res = deprecation.check(FUTURE)
+        self.assertNotEquals(res, deprecation.Results.MITIGATED)
+
+        deprecation.C.DEFAULT_DEPRECATIONS_TO_IGNORE = ['FUTURE', 'ANOTHER']
+        res = deprecation.check(FUTURE)
+        self.assertEquals(res, deprecation.Results.MITIGATED)
+
+        res = deprecation.check(NOW)
+        self.assertNotEquals(res, deprecation.Results.MITIGATED)

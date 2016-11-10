@@ -120,7 +120,6 @@ def get_config(p, section, key, env_var, default, value_type=None, expand_relati
 
     return to_text(value, errors='surrogate_or_strict', nonstring='passthru')
 
-
 def _get_config(p, section, key, env_var, default):
     ''' helper function for get_config '''
     value = default
@@ -275,6 +274,9 @@ DEFAULT_BECOME_EXE        = get_config(p, 'privilege_escalation', 'become_exe', 
 DEFAULT_BECOME_FLAGS      = get_config(p, 'privilege_escalation', 'become_flags', 'ANSIBLE_BECOME_FLAGS', None)
 DEFAULT_BECOME_ASK_PASS   = get_config(p, 'privilege_escalation', 'become_ask_pass', 'ANSIBLE_BECOME_ASK_PASS', False, value_type='boolean')
 
+# Deprecations
+DEPRECATIONS_TO_IGNORE = []
+DEFAULT_DEPRECATIONS_TO_IGNORE = get_config(p, 'deprecations', 'deprecations_to_ignore', 'ANSIBLE_DEPRECATIONS_TO_IGNORE', DEPRECATIONS_TO_IGNORE, value_type='list')
 
 # PLUGINS
 
