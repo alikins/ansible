@@ -108,13 +108,27 @@ class MetaDeprecationData(type):
         return self.label < other.label
 
 
+# TODO: verify if this is worth metapain
 @add_metaclass(MetaDeprecationData)
 class DeprecationData():
-    # TODO: verify if this is worth metapain
 
+    # A string identifier for a deprecation.
     label = None
+
+    # The version the feature will be removed
     version = None
+
+    # The version the deprecation was first added.
+    # Currently just for human eyes and docs not logic.
+    version_added = None
+
+    # If the feature the deprecation is for has been removed, removed=True
+    # The default behavior is to raise a AnsibleDeprecation error on .check() if
+    # removed=True, but thats up to the DeprecationReaction()
     removed = None
+
+    # The default message to display when a deprecated feature is check()'ed
+    # Can be changed at runtime via the message arg to check().
     message = None
 
     def mitigated(self):
@@ -161,6 +175,9 @@ class Reaction(object):
 default_reaction = Reaction()
 
 
+# The goal here is to decouple deprecation tracking from Display, so that
+# different display mechanisms could be used, or none at all as is the case
+# when using the python 'ansible' API.
 class OutputHandler(object):
     future_warning = "This feature will be removed in a future release."
     version_warning = "This feature will be removed in version %s."
@@ -168,6 +185,14 @@ class OutputHandler(object):
     quiet_msg = "Deprecation warnings can be disabled by setting deprecation_warnings=False in ansible.cfg.\n\n"
 
     def __init__(self, output_callbacks=None):
+        '''Base object for output and display of info about deprecations.
+
+        output_callbacks is an optional list of output callback methods that will
+        be called when OutputHandler needs to display something. The signature of a
+        output callback is a signal msg arg that should be string like. For example,
+        the builtin 'print' method can be used. The output callback methods will be called
+        in the order of the output_callbacks iterable. The return value of the callback is
+        ignored.'''
         self._quiet_instructions_have_been_shown = False
 
         # set of all deprecation messages to prevent duplicate display
@@ -239,9 +264,10 @@ class DefaultReaction(Reaction):
 #       need to be defined in a scope that gets interpreted (ie, module scope) so they show up
 #       in list_deprecations()
 
-# NOTE: The bulk of these classes could be defined in data/config. The classes that need to extend
-#       mitigated() need a class defination though. The utility of being able to define these
-#       when/where the deprecated code is changed would be lost however.
+# NOTE: The bulk of these classes could be defined in data or config as well.
+#       The classes that need to extend mitigated() need a class defination though.
+#       The utility of being able to define these when/where the deprecated code
+#       is changed would be lost however.
 class FixupPerms(DeprecationData):
     label = FIXUP_PERMS
     version = 2.4
@@ -351,15 +377,11 @@ class ToStr(Deprecation):
 # task.py include_vars_at_top_of_File
 # task_executor using_vars_for_task_params
 # accelerated mode
-
-
-# Default, provide a different one if needed
-def display_callback(msg):
-    print(msg)
+# comma separated lists for playbook attribute values
 
 
 # Track deprecations seen, at least for the lifetime of a
-# Deprecations() obj, which isn't super useful atm since it's not
+# Deprecations() obj, which isn't super useful at the moment since it's not
 # shared across WorkerProcesses...
 class SeenDeprecation(object):
     def __init__(self, depr, result, where=None):
