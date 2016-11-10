@@ -81,6 +81,12 @@ class Deprecation(object):
         res = self.evaluate()
         return self.react(res, message=message, where=where)
 
+    def removed(self):
+        res = self.evaluate()
+        if res == Results.REMOVED:
+            return True
+        return False
+
 
 class MetaDeprecationData(type):
     def __new__(meta, name, bases, class_dict):
@@ -400,6 +406,10 @@ class Deprecations(object):
 
         return check_result
 
+    def removed(self, label):
+        depr = self._find(label)
+        return depr.removed()
+
 
 # deprecation instance don't have to be defined and created here,
 # other modules could create them and register them here.
@@ -415,6 +425,10 @@ def check(label, message=None, where=None):
     '''where is an 'ansible_pos' style tuple of ('filename', line_number, column_number)'''
     # side-effects include displaying of messages via display_callback
     return _deprecations.check(label, message=message, where=where)
+
+
+def removed(label):
+    return _deprecations.removed(label)
 
 
 # FIXME: only the list of deprecations seen in the current process so far

@@ -74,6 +74,13 @@ class TestDeprecation(unittest.TestCase):
                           deprecation.check,
                           REMOVED_NOW)
 
+    def test_removed_now_removed_method(self):
+        res = deprecation.removed(REMOVED_NOW)
+        self.assertTrue(res)
+
+        res = deprecation.removed(FUTURE)
+        self.assertFalse(res)
+
     def test_unknown(self):
         res = deprecation.check('THIS_DEPRECATION_DOESNT_EXIST')
         self.assertEquals(res, 0)
@@ -84,7 +91,7 @@ class TestDeprecation(unittest.TestCase):
 
     def test_accelerated_mode(self):
         res = deprecation.check(deprecation.ACCELERATED_MODE)
-        self.assertEquals(res, deprecation.Results.FUTURE)
+        self.assertEquals(res, deprecation.Results.VERSION)
 
     def test_list(self):
         res = deprecation.list_deprecations()
