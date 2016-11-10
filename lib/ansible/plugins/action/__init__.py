@@ -747,6 +747,9 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         res = self._low_level_execute_command(cmd, sudoable=sudoable, in_data=in_data)
 
         # parse the main result
+
+        log.debug('PARSING RETURNED DATA')
+
         data = self._parse_returned_data(res)
 
         # NOTE: INTERNAL KEYS ONLY ACCESSIBLE HERE
