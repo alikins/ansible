@@ -681,6 +681,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                                 tmp_rm_res.get('stderr', 'No error string available.'))
 
         # parse the main result
+        log.debug('PARSING RETURNED DATA')
         data = self._parse_returned_data(res)
 
         # pre-split stdout into lines, if stdout is in the data and there

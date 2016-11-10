@@ -567,6 +567,7 @@ class TaskExecutor:
                 return failed_when_result
 
             if 'ansible_facts' in result:
+                log.debug('SETTING ANSIBLE_FACTS')
                 vars_copy.update(result['ansible_facts'])
 
             # set the failed property if the result has a non-zero rc. This will be
@@ -610,6 +611,7 @@ class TaskExecutor:
             variables[self._task.register] = wrap_var(result)
 
         if 'ansible_facts' in result:
+            log.debug('SETTING ANSIBLE FACST THE OTHER PLACE')
             variables.update(result['ansible_facts'])
 
         # save the notification target in the result, if it was specified, as

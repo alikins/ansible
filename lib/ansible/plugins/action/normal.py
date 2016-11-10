@@ -33,7 +33,10 @@ class ActionModule(ActionBase):
         results = super(ActionModule, self).run(tmp, task_vars)
         # remove as modules might hide due to nolog
         del results['invocation']['module_args']
-        results = merge_hash(results, self._execute_module(tmp=tmp, task_vars=task_vars))
+        log.debug('NORMAL RUN ABOUT TO _EXECUTE_MODULE')
+        res = self._execute_module(tmp=tmp, task_vars=task_vars)
+        log.debug("NORMAL RUN POST _EXECUTE_MODULE")
+        results = merge_hash(results, res)
         # Remove special fields from the result, which can only be set
         # internally by the executor engine. We do this only here in
         # the 'normal' action, as other action plugins may set this.
