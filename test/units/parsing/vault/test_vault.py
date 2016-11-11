@@ -255,7 +255,10 @@ class TestVaultCipherAes256PyCrypto(TestVaultCipherAes256):
                     reason="Skipping cryptography tests because cryptography is not installed")
 class TestVaultLib(unittest.TestCase):
     def setUp(self):
-        self.v = VaultLib('test-vault-password')
+        self.vault_password = "test-vault-password"
+        self.vault_secrets = vault.VaultSecrets()
+        self.vault_secrets.set_secret('default', self.vault_password)
+        self.v = vault.VaultLib(self.vault_secrets)
 
     def test_encrypt(self):
         plaintext = u'Some text to encrypt in a café'

@@ -441,9 +441,10 @@ class VaultLib:
 
         b_version = b_tmpheader[1].strip()
         cipher_name = to_text(b_tmpheader[2].strip())
-        vault_id = 'version_1_1_default_key'
+        vault_id = 'default'
         # Only attempt to find key_id if the vault file is version 1.2 or newer
-        if self.b_version == b'1.2':
+        #if self.b_version == b'1.2':
+        if len(b_tmpheader) >= 4:
             print('vl._split_header %s' % b_tmpheader)
             vault_id = to_text(b_tmpheader[3].strip())
 
@@ -636,7 +637,8 @@ class VaultEditor:
 
         return plaintext
 
-    def rekey_file(self, filename, b_new_password):
+    # FIXME/TODO: make this use VaultSecret
+    def rekey_file(self, filename, new_vault_secrets, new_vault_id=None):
 
         # follow the symlink
         filename = self._real_path(filename)
@@ -650,10 +652,12 @@ class VaultEditor:
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
         # This is more or less an assert, see #18247
-        if b_new_password is None:
+        if new_vault_secrets is None:
             raise AnsibleError('The value for the new_password to rekey %s with is not valid' % filename)
 
-        new_vault = VaultLib(b_new_password)
+        # FIXME: VaultContext...?  could rekey to a different vault_id in the same VaultSecrets
+        # FIXME: this all assumes 'default' id
+        new_vault = VaultLib(new_vault_secrets)
         new_ciphertext = new_vault.encrypt(plaintext)
 
         self.write_data(new_ciphertext, filename)
@@ -763,7 +767,7 @@ class VaultAES:
 
         b_d = b_di = b''
         while len(b_d) < key_length + iv_length:
-            b_text = b''.join([b_di, secrets.get_secret(), b_salt])
+            b_text = b''.join([b_di, b_password, b_salt])
             b_di = to_bytes(md5(b_text).digest(), errors='strict')
             b_d += b_di
 
@@ -817,7 +821,7 @@ class VaultAES:
         bs = AES_pycrypto.block_size
 
         # TODO: default id?
-        #password = secrets.get_secret()
+        b_password = secrets.get_secret(name=vault_id)
 
         b_key, b_iv = cls.aes_derive_key_and_iv(secrets, b_salt, key_length, bs)
         cipher = AES.new(b_key, AES.MODE_CBC, b_iv)
