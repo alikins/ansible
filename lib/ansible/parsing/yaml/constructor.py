@@ -23,10 +23,10 @@ from yaml.constructor import Constructor, ConstructorError
 from yaml.nodes import MappingNode
 
 from ansible.module_utils._text import to_bytes
-from ansible.parsing.vault import VaultLib
 from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode
 from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
 from ansible.vars.unsafe_proxy import wrap_var
+from ansible.parsing.vault import VaultLib
 
 try:
     from __main__ import display
@@ -36,12 +36,12 @@ except ImportError:
 
 
 class AnsibleConstructor(Constructor):
-    def __init__(self, file_name=None, vault_password=None):
-        self._vault_password = vault_password
+    def __init__(self, file_name=None, vault_secrets=None):
         self._ansible_file_name = file_name
         super(AnsibleConstructor, self).__init__()
         self._vaults = {}
-        self._vaults['default'] = VaultLib(password=self._vault_password)
+        self.vault_secrets = vault_secrets
+        self._vaults['default'] = VaultLib(secrets=self.vault_secrets)
 
     def construct_yaml_map(self, node):
         data = AnsibleMapping()
@@ -98,12 +98,12 @@ class AnsibleConstructor(Constructor):
         value = self.construct_scalar(node)
         ciphertext_data = to_bytes(value)
 
-        if self._vault_password is None:
+        # could pass in a key id here to choose the vault to associate with
+        # TODO/FIXME: plugin vault selector
+        vault = self._vaults['default']
+        if vault.secrets is None:
             raise ConstructorError(None, None,
                     "found vault but no vault password provided", node.start_mark)
-
-        # could pass in a key id here to choose the vault to associate with
-        vault = self._vaults['default']
         ret = AnsibleVaultEncryptedUnicode(ciphertext_data)
         ret.vault = vault
         return ret

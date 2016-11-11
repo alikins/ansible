@@ -73,17 +73,11 @@ class DataLoader():
         # TODO: replace with a ref to something that can get the password
         #       a creds/auth provider
         #self.set_vault_password(None)
-
-    def set_vault_password(self, vault_password):
-        self._vault_password = vault_password
-        # TODO: Replace with a ref to Vaults for looking up the particular vault when needed
-        # NOTE: instead of passing in a password or cred ref, maybe pass in a callback that will
-        #       be used when needed?
-        self._vault = VaultLib(password=vault_password)
+        self._vaults = {}
 
     # TODO: since we can query vault_secrets late, we could provide this to DataLoader init
     def set_vault_secrets(self, vault_secrets):
-        self._vault = VaultLib(secrets=vault_secrets)
+        self._vault_secrets = vault_secrets
 
     def load(self, data, file_name='<string>', show_content=True):
         '''
@@ -161,7 +155,7 @@ class DataLoader():
     def _safe_load(self, stream, file_name=None):
         ''' Implements yaml.safe_load(), except using our custom loader class. '''
 
-        loader = AnsibleLoader(stream, file_name, self._vault_password)
+        loader = AnsibleLoader(stream, file_name, self._vault_secrets)
         try:
             return loader.get_single_data()
         finally:
@@ -187,7 +181,8 @@ class DataLoader():
             with open(b_file_name, 'rb') as f:
                 data = f.read()
                 if is_encrypted(data):
-                    data = self._vault.decrypt(data, filename=b_file_name)
+                    # FIXME: plugin vault selector
+                    data = self._vaults['default'].decrypt(data, filename=b_file_name)
                     show_content = False
 
             return (data, show_content)
@@ -408,8 +403,8 @@ class DataLoader():
         if not self.path_exists(b_file_path) or not self.is_file(b_file_path):
             raise AnsibleFileNotFound("the file_name '%s' does not exist, or is not readable" % to_native(file_path))
 
-        if not self._vault:
-            self._vault = VaultLib(password="")
+        if not self._vaults['default']:
+            _vault = VaultLib(secrets=self._vault_secrets)
 
         real_path = self.path_dwim(file_path)
 
@@ -428,7 +423,7 @@ class DataLoader():
                     #if not self._vault_password:
                     #    raise AnsibleParserError("A vault password must be specified to decrypt %s" % file_path)
 
-                    data = self._vault.decrypt(data, filename=real_path)
+                    data = _vault.decrypt(data, filename=real_path)
                     # Make a temp file
                     real_path = self._create_content_tempfile(data)
                     self._tempfiles.add(real_path)
