@@ -153,15 +153,17 @@ def is_encrypted_file(file_obj, start_pos=0, count=-1):
 
 
 class VaultSecrets(object):
-    def __init__(self, name=None):
-        self._name = name
+    default_name = 'default'
+
+    def __init__(self):
         self._secret = None
         self._secrets = {}
-        self._default_name = 'default'
 
-    @property
-    def name(self):
-        return self._name or self._default_name
+    @classmethod
+    def from_password(cls, password, name=None):
+        obj = cls()
+        obj._secrets[name] = password
+        return obj
 
     # TODO: Note this is not really the proposed interface/api
     #       This is more to sort out where all we pass passwords around.
@@ -175,10 +177,15 @@ class VaultSecrets(object):
         # or a filepath, or a label used for prompting users
         # interactively  (like a ssh key id arg to ssh-add...)
         #return to_bytes(self._secret)
-        name = name or self.name
-        print('name=%s' % name)
+        name = name or self.default_name
+        print('get_secret name=%s' % name)
         secret = self._secrets.get(name, None)
+        print('get_secret secret=%s' % secret)
         return to_bytes(secret, errors='strict', encoding='utf-8')
+
+    def set_secret(self, name, secret):
+        self._secrets[name] = secret
+        return secret
 
 
 # FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
@@ -269,12 +276,14 @@ class PromptVaultSecrets(VaultSecrets):
 
 
 class VaultLib:
+    default_vault_id = 'default'
 
-    def __init__(self, secrets=None):
+    def __init__(self, secrets=None, vault_id=None):
         self.secrets = secrets
         self.cipher_name = None
         # Add key_id to header
         self.b_version = b'1.2'
+        self.vault_id = vault_id or self.default_vault_id
 
     @staticmethod
     def is_encrypted(data):
@@ -296,7 +305,7 @@ class VaultLib:
         display.deprecated(u'vault.VaultLib.is_encrypted_file is deprecated.  Use vault.is_encrypted_file instead', version='2.4')
         return is_encrypted_file(file_obj)
 
-    def encrypt(self, plaintext, vault_id=None):
+    def encrypt(self, plaintext):
         """Vault encrypt a piece of data.
 
         :arg plaintext: a text or byte string to encrypt.
@@ -322,10 +331,10 @@ class VaultLib:
             raise AnsibleError(u"{0} cipher could not be found".format(self.cipher_name))
 
         # encrypt data
-        b_ciphertext = this_cipher.encrypt(b_plaintext, self.secrets, vault_id=vault_id)
+        b_ciphertext = this_cipher.encrypt(b_plaintext, self.secrets, vault_id=self.vault_id)
 
         # format the data for output to the file
-        b_vaulttext = self._format_output(b_ciphertext, vault_id=vault_id)
+        b_vaulttext = self._format_output(b_ciphertext, vault_id=self.vault_id)
         return b_vaulttext
 
     def decrypt(self, vaulttext, filename=None):
@@ -354,7 +363,7 @@ class VaultLib:
         vault_id = None
         cipher_name = None
         b_vaulttext, b_version, cipher_name, vault_id = self._split_header(b_vaulttext)
-
+        print('vaultlib.decrypt vt=%s b_version=%s cipher_name=%s vault_id=%s' % (b_vaulttext, b_version, cipher_name, vault_id))
         # FIXME: remove if we dont need the state
         self.cipher_name = cipher_name
 
@@ -371,9 +380,12 @@ class VaultLib:
         # vault_context = VaultContext(self.secrets, self.key_id, this_cipher)
         # b_data = vault_context.decrypt(b_data)
         # vault_context could be an interface to an agent of some sort
-        print(self.secrets._secrets)
-        print('vault_id=%s' % vault_id)
+        print('vl.decrypt secrets._secrets=%s' % self.secrets._secrets)
+        print('vl.decrypt vault_id=%s' % vault_id)
+        print(b'vl.decrypt b_vaulttext=%s' % b_vaulttext)
+        print('vl.decrypt this_cipher=%s' % this_cipher)
         b_plaintext = this_cipher.decrypt(b_vaulttext, self.secrets, vault_id=vault_id)
+        print(b'vl.decrypt b_plaintext=%s' % b_plaintext)
         if b_plaintext is None:
             msg = "Decryption failed"
             if filename:
@@ -382,7 +394,7 @@ class VaultLib:
 
         return b_plaintext
 
-    def _format_output(self, b_ciphertext, vault_id=None):
+    def _format_output(self, b_ciphertext, vault_id):
         """ Add header and format to 80 columns
 
             :arg b_vaulttext: the encrypted and hexlified data as a byte string
@@ -396,9 +408,11 @@ class VaultLib:
         header_parts = [b_HEADER, self.b_version,
                         to_bytes(self.cipher_name, 'utf-8', errors='strict')]
 
+        print('self.b_version=%s b_version == 1.2 %s' % (self.b_version, self.b_version == b'1.2'))
         if self.b_version == b'1.2':
             header_parts.append(to_bytes(vault_id, 'utf-8', errors='strict'))
 
+        print('header_parts=%s' % header_parts)
         header = b';'.join(header_parts)
         b_vaulttext = [header]
         b_vaulttext += [b_ciphertext[i:i + 80] for i in range(0, len(b_ciphertext), 80)]
@@ -422,6 +436,7 @@ class VaultLib:
         # used by decrypt
 
         b_tmpdata = b_vaulttext.split(b'\n')
+        print('_split_header=%s' % b_tmpdata)
         b_tmpheader = b_tmpdata[0].strip().split(b';')
 
         b_version = b_tmpheader[1].strip()
@@ -429,7 +444,7 @@ class VaultLib:
         vault_id = 'version_1_1_default_key'
         # Only attempt to find key_id if the vault file is version 1.2 or newer
         if self.b_version == b'1.2':
-            print(b_tmpheader)
+            print('vl._split_header %s' % b_tmpheader)
             vault_id = to_text(b_tmpheader[3].strip())
 
         b_ciphertext = b''.join(b_tmpdata[1:])
@@ -911,6 +926,7 @@ class VaultAES256:
 
     @classmethod
     def _gen_key_initctr(cls, b_password, b_salt):
+        print('aes gh1 b_password=%s b_salt=%s' % (b_password, b_salt))
         # 16 for AES 128, 32 for AES256
         key_length = 32
 
@@ -950,8 +966,8 @@ class VaultAES256:
     def encrypt(self, b_plaintext, secrets, vault_id=None):
         b_salt = os.urandom(32)
         b_password = secrets.get_secret(name=vault_id)
-        print('aes vault_id=%s' % vault_id)
-        print('aes b_password=%s' % b_password)
+        print('aes.encrypt vault_id=%s' % vault_id)
+        print('aes.encrypt b_password=%s' % b_password)
         b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
 
 
