@@ -35,21 +35,24 @@ from ansible.parsing import vault
 
 from units.mock.yaml_helper import YamlTestUtils
 
+
 class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
-        self.good_vault = vault.VaultLib(self.vault_password)
+        self.vault_secrets = vault.VaultSecrets()
+        self.vault_secrets.set_secret('default', self.vault_password)
+        self.good_vault = vault.VaultLib(self.vault_secrets)
         self.vault = self.good_vault
         self.stream = self._build_stream()
         self.dumper = dumper.AnsibleDumper
 
-    def _build_stream(self,yaml_text=None):
+    def _build_stream(self, yaml_text=None):
         text = yaml_text or u''
         stream = io.StringIO(text)
         return stream
 
     def _loader(self, stream):
-        return AnsibleLoader(stream, vault_password=self.vault_password)
+        return AnsibleLoader(stream, vault_secrets=self.vault.secrets)
 
     def test(self):
         plaintext = 'This is a string we are going to encrypt.'
