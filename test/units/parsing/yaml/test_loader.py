@@ -176,13 +176,18 @@ class TestAnsibleLoaderBasic(unittest.TestCase):
 class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
-        self.vault = vault.VaultLib(self.vault_password)
+        self.vault_secrets = vault.VaultSecrets()
+        self.vault_secrets._secrets['default'] = self.vault_password
+        self.vault = vault.VaultLib(self.vault_secrets)
 
     def test_wrong_password(self):
         plaintext = u"Ansible"
         bob_password = "this is a different password"
 
-        bobs_vault = vault.VaultLib(bob_password)
+        bobs_secrets = vault.VaultSecrets()
+        bobs_secrets.set_secret('default', bob_password)
+
+        bobs_vault = vault.VaultLib(bobs_secrets)
 
         ciphertext = bobs_vault.encrypt(plaintext)
 
@@ -213,7 +218,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         return stream
 
     def _loader(self, stream):
-        return AnsibleLoader(stream, vault_password=self.vault_password)
+        return AnsibleLoader(stream, vault_secrets=self.vault.secrets)
 
     def _load_yaml(self, yaml_text, password):
         stream = self._build_stream(yaml_text)
