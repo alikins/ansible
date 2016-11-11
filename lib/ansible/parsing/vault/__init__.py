@@ -463,9 +463,10 @@ class VaultLib:
 
         b_version = b_tmpheader[1].strip()
         cipher_name = to_text(b_tmpheader[2].strip())
-        vault_id = 'version_1_1_default_key'
+        vault_id = 'default'
         # Only attempt to find key_id if the vault file is version 1.2 or newer
-        if self.b_version == b'1.2':
+        #if self.b_version == b'1.2':
+        if len(b_tmpheader) >= 4:
             print('vl._split_header %s' % b_tmpheader)
             vault_id = to_text(b_tmpheader[3].strip())
 
@@ -641,7 +642,7 @@ class VaultEditor:
         return plaintext
 
     # FIXME/TODO: make this use VaultSecret
-    def rekey_file(self, filename, new_password):
+    def rekey_file(self, filename, new_vault_secrets, new_vault_id=None):
 
         check_prereqs()
 
@@ -653,10 +654,12 @@ class VaultEditor:
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
         # This is more or less an assert, see #18247
-        if new_password is None:
+        if new_vault_secrets is None:
             raise AnsibleError('The value for the new_password to rekey %s with is not valid' % filename)
 
-        new_vault = VaultLib(new_password)
+        # FIXME: VaultContext...?  could rekey to a different vault_id in the same VaultSecrets
+        # FIXME: this all assumes 'default' id
+        new_vault = VaultLib(new_vault_secrets)
         new_ciphertext = new_vault.encrypt(plaintext)
 
         self.write_data(new_ciphertext, filename)
@@ -741,13 +744,13 @@ class VaultAES:
         if not HAS_AES:
             raise AnsibleError(CRYPTO_UPGRADE)
 
-    def aes_derive_key_and_iv(self, secrets, b_salt, key_length, iv_length):
+    def aes_derive_key_and_iv(self, b_password, b_salt, key_length, iv_length):
 
         """ Create a key and an initialization vector """
 
         b_d = b_di = b''
         while len(b_d) < key_length + iv_length:
-            b_text = b''.join([b_di, secrets.get_secret(), b_salt])
+            b_text = b''.join([b_di, b_password, b_salt])
             b_di = to_bytes(md5(b_text).digest(), errors='strict')
             b_d += b_di
 
@@ -762,7 +765,7 @@ class VaultAES:
 
         raise AnsibleError("Encryption disabled for deprecated VaultAES class")
 
-    def decrypt(self, b_vaulttext, secrets, key_length=32):
+    def decrypt(self, b_vaulttext, secrets, key_length=32, vault_id=None):
 
         """ Decrypt the given data and return it
         :arg b_data: A byte string containing the encrypted data
@@ -787,9 +790,9 @@ class VaultAES:
         b_salt = b_tmpsalt[len(b'Salted__'):]
 
         # TODO: default id?
-        #password = secrets.get_secret()
+        b_password = secrets.get_secret(name=vault_id)
 
-        b_key, b_iv = self.aes_derive_key_and_iv(secrets, b_salt, key_length, bs)
+        b_key, b_iv = self.aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
         cipher = AES.new(b_key, AES.MODE_CBC, b_iv)
         b_next_chunk = b''
         finished = False

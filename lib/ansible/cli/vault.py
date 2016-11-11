@@ -107,7 +107,7 @@ class VaultCLI(CLI):
             newpass = False
             rekey = False
             if not self.options.new_vault_password_file:
-                vault_secrets = PromptVaultSecrets(name='prompt')
+                vault_secrets = PromptVaultSecrets(name='default')
 
                 # FIXME: we don't need to do this now, we could do it later though
                 #        that would change the cli UXD a bit and may be weird
@@ -120,7 +120,10 @@ class VaultCLI(CLI):
 
         if self.options.new_vault_password_file:
             # for rekey only
-            self.new_vault_pass = CLI.read_vault_password_file(self.options.new_vault_password_file, loader)
+            new_vault_secrets = FileVaultSecrets(name='default',
+                                                 filename=self.options.new_vault_password_file,
+                                                 loader=loader)
+            self.new_vault_secrets = CLI.read_vault_password_file(self.options.new_vault_password_file, loader)
 
         if not vault_secrets:
             raise AnsibleOptionsError("A password is required to use Ansible's Vault")
@@ -182,6 +185,7 @@ class VaultCLI(CLI):
                 raise AnsibleError(f + " does not exist")
 
         for f in self.args:
-            self.editor.rekey_file(f, self.new_vault_pass)
+            # FIXME: plumb in vault_id
+            self.editor.rekey_file(f, self.new_vault_secrets)
 
         display.display("Rekey successful", stderr=True)

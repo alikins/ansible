@@ -31,6 +31,7 @@ from ansible.compat.tests.mock import patch
 from ansible import errors
 from ansible.parsing.vault import VaultLib
 from ansible.parsing.vault import VaultEditor
+from ansible.parsing.vault import VaultSecrets
 from ansible.module_utils._text import to_bytes, to_text
 
 
@@ -71,10 +72,17 @@ v11_data = """$ANSIBLE_VAULT;1.1;AES256
 class TestVaultEditor(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.vault_password = "test-vault-password"
+        self.vault_secrets = VaultSecrets()
+        self.vault_secrets.set_secret('default', self.vault_password)
 
     def tearDown(self):
         pass
+
+    def _secrets(self, password):
+        vault_secrets = VaultSecrets()
+        vault_secrets.set_secret('default', password)
+        return vault_secrets
 
     def test_methods_exist(self):
         v = VaultEditor(None)
@@ -99,7 +107,7 @@ class TestVaultEditor(unittest.TestCase):
         tmp_file = tempfile.NamedTemporaryFile()
         os.unlink(tmp_file.name)
 
-        ve = VaultEditor("ansible")
+        ve = VaultEditor(self._secrets("ansible"))
         ve.create_file(tmp_file.name)
 
         self.assertTrue(os.path.exists(tmp_file.name))
@@ -113,7 +121,7 @@ class TestVaultEditor(unittest.TestCase):
         with v10_file as f:
             f.write(to_bytes(v10_data))
 
-        ve = VaultEditor("ansible")
+        ve = VaultEditor(self._secrets("ansible"))
 
         # make sure the password functions for the cipher
         error_hit = False
@@ -140,7 +148,7 @@ class TestVaultEditor(unittest.TestCase):
         with v11_file as f:
             f.write(to_bytes(v11_data))
 
-        ve = VaultEditor("ansible")
+        ve = VaultEditor(self._secrets("ansible"))
 
         # make sure the password functions for the cipher
         error_hit = False
@@ -168,12 +176,13 @@ class TestVaultEditor(unittest.TestCase):
         with v10_file as f:
             f.write(to_bytes(v10_data))
 
-        ve = VaultEditor("ansible")
+        ve = VaultEditor(self._secrets("ansible"))
 
         # make sure the password functions for the cipher
         error_hit = False
+        new_secrets = self._secrets("ansible2")
         try:
-            ve.rekey_file(v10_file.name, 'ansible2')
+            ve.rekey_file(v10_file.name, new_secrets)
         except errors.AnsibleError:
             error_hit = True
 
@@ -185,7 +194,7 @@ class TestVaultEditor(unittest.TestCase):
         assert error_hit is False, "error rekeying 1.0 file to 1.1"
 
         # ensure filedata can be decrypted, is 1.1 and is AES256
-        vl = VaultLib("ansible2")
+        vl = VaultLib(new_secrets)
         dec_data = None
         error_hit = False
         try:
