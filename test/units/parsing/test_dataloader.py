@@ -23,6 +23,8 @@ from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import patch, mock_open
 from ansible.errors import AnsibleParserError, yaml_strings
 from ansible.module_utils.six import PY3
+from ansible.parsing import vault
+
 from ansible.parsing.dataloader import DataLoader
 
 
@@ -74,7 +76,8 @@ class TestDataLoaderWithVault(unittest.TestCase):
 
     def setUp(self):
         self._loader = DataLoader()
-        self._loader.set_vault_password('ansible')
+        vault_secrets = vault.VaultSecrets.from_password(password='ansible', name='default')
+        self._loader.set_vault_secrets(vault_secrets)
 
     def tearDown(self):
         pass
