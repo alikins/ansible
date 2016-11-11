@@ -227,7 +227,7 @@ class TestVaultLib(unittest.TestCase):
 
         self.assertIsInstance(b_vaulttext, six.binary_type)
 
-        b_header = b'$ANSIBLE_VAULT;1.1;AES256\n'
+        b_header = b'$ANSIBLE_VAULT;1.2;AES256;default\n'
         self.assertEqual(b_vaulttext[:len(b_header)], b_header)
 
     def test_encrypt_bytes(self):
@@ -237,7 +237,7 @@ class TestVaultLib(unittest.TestCase):
 
         self.assertIsInstance(b_vaulttext, six.binary_type)
 
-        b_header = b'$ANSIBLE_VAULT;1.1;AES256\n'
+        b_header = b'$ANSIBLE_VAULT;1.2;AES256;default\n'
         self.assertEqual(b_vaulttext[:len(b_header)], b_header)
 
     def test_is_encrypted(self):
@@ -273,7 +273,9 @@ class TestVaultLib(unittest.TestCase):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
             raise SkipTest
         self.v.cipher_name = u'AES'
-        self.v.b_password = b'ansible'
+        vault_secrets = vault.VaultSecrets()
+        vault_secrets.set_secret('default', 'ansible')
+        self.v.secrets = vault_secrets
         # AES encryption code has been removed, so this is old output for
         # AES-encrypted 'foobar' with password 'ansible'.
         b_vaulttext = b'''$ANSIBLE_VAULT;1.1;AES
