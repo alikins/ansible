@@ -68,16 +68,17 @@ class DataLoader():
         self._FILE_CACHE = dict()
         self._tempfiles = set()
 
-        self.set_vault_secrets(None)
         # initialize the vault stuff with an empty password
         # TODO: replace with a ref to something that can get the password
         #       a creds/auth provider
         #self.set_vault_password(None)
         self._vaults = {}
+        self._vault = VaultLib()
+        self.set_vault_secrets(None)
 
     # TODO: since we can query vault_secrets late, we could provide this to DataLoader init
     def set_vault_secrets(self, vault_secrets):
-        self._vault_secrets = vault_secrets
+        self._vault.secrets = vault_secrets
 
     def load(self, data, file_name='<string>', show_content=True):
         '''
@@ -155,7 +156,7 @@ class DataLoader():
     def _safe_load(self, stream, file_name=None):
         ''' Implements yaml.safe_load(), except using our custom loader class. '''
 
-        loader = AnsibleLoader(stream, file_name, self._vault_secrets)
+        loader = AnsibleLoader(stream, file_name, self._vault.secrets)
         try:
             return loader.get_single_data()
         finally:
@@ -182,7 +183,7 @@ class DataLoader():
                 data = f.read()
                 if is_encrypted(data):
                     # FIXME: plugin vault selector
-                    data = self._vaults['default'].decrypt(data, filename=b_file_name)
+                    data = self._vault.decrypt(data, filename=b_file_name)
                     show_content = False
 
             return (data, show_content)
