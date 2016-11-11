@@ -248,26 +248,26 @@ class TestVaultLib(unittest.TestCase):
     def test_format_output(self):
         self.v.cipher_name = "TEST"
         b_ciphertext = b"ansible"
-        b_vaulttext = self.v._format_output(b_ciphertext)
+        b_vaulttext = self.v._format_output(b_ciphertext, vault_id='default')
         b_lines = b_vaulttext.split(b'\n')
         self.assertGreater(len(b_lines), 1, msg="failed to properly add header")
 
         b_header = b_lines[0]
-        self.assertTrue(b_header.endswith(b';TEST'), msg="header does not end with cipher name")
+        #self.assertTrue(b_header.endswith(b';TEST'), msg="header does not end with cipher name")
 
         b_header_parts = b_header.split(b';')
-        self.assertEqual(len(b_header_parts), 3, msg="header has the wrong number of parts")
+        self.assertEqual(len(b_header_parts), 4, msg="header has the wrong number of parts")
         self.assertEqual(b_header_parts[0], b'$ANSIBLE_VAULT', msg="header does not start with $ANSIBLE_VAULT")
         self.assertEqual(b_header_parts[1], self.v.b_version, msg="header version is incorrect")
         self.assertEqual(b_header_parts[2], b'TEST', msg="header does not end with cipher name")
 
     def test_split_header(self):
         b_vaulttext = b"$ANSIBLE_VAULT;9.9;TEST\nansible"
-        b_ciphertext = self.v._split_header(b_vaulttext)
+        b_ciphertext, b_version, cipher_name, vault_id = self.v._split_header(b_vaulttext)
         b_lines = b_ciphertext.split(b'\n')
         self.assertEqual(b_lines[0], b"ansible", msg="Payload was not properly split from the header")
-        self.assertEqual(self.v.cipher_name, u'TEST', msg="cipher name was not properly set")
-        self.assertEqual(self.v.b_version, b"9.9", msg="version was not properly set")
+        self.assertEqual(cipher_name, u'TEST', msg="cipher name was not properly set")
+        self.assertEqual(b_version, b"9.9", msg="version was not properly set")
 
     def test_encrypt_decrypt_aes(self):
         if not HAS_AES or not HAS_COUNTER or not HAS_PBKDF2:
