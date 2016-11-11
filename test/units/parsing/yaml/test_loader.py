@@ -177,7 +177,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
         self.vault_secrets = vault.VaultSecrets()
-        self.vault_secrets._secrets['default'] = self.vault_password
+        self.vault_secrets.set_secret('default', self.vault_password)
         self.vault = vault.VaultLib(self.vault_secrets)
 
     def test_wrong_password(self):
@@ -244,7 +244,6 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
 
         self._dump_stream(blip, stream, dumper=AnsibleDumper)
 
-        print(stream.getvalue())
         stream.seek(0)
 
         stream.seek(0)

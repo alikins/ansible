@@ -197,9 +197,7 @@ class VaultSecrets(object):
         # interactively  (like a ssh key id arg to ssh-add...)
         #return to_bytes(self._secret)
         name = name or self.default_name
-        print('get_secret name=%s' % name)
         secret = self._secrets.get(name, None)
-        print('get_secret secret=%s' % secret)
         return to_bytes(secret, errors='strict', encoding='utf-8')
 
     def set_secret(self, name, secret):
@@ -382,7 +380,6 @@ class VaultLib:
         vault_id = None
         cipher_name = None
         b_vaulttext, b_version, cipher_name, vault_id = self._split_header(b_vaulttext)
-        print('vaultlib.decrypt vt=%s b_version=%s cipher_name=%s vault_id=%s' % (b_vaulttext, b_version, cipher_name, vault_id))
         # FIXME: remove if we dont need the state
         self.cipher_name = cipher_name
 
@@ -402,12 +399,7 @@ class VaultLib:
         # vault_context = VaultContext(self.secrets, self.key_id, this_cipher)
         # b_data = vault_context.decrypt(b_data)
         # vault_context could be an interface to an agent of some sort
-        print('vl.decrypt secrets._secrets=%s' % self.secrets._secrets)
-        print('vl.decrypt vault_id=%s' % vault_id)
-        print(b'vl.decrypt b_vaulttext=%s' % b_vaulttext)
-        print('vl.decrypt this_cipher=%s' % this_cipher)
         b_plaintext = this_cipher.decrypt(b_vaulttext, self.secrets, vault_id=vault_id)
-        print(b'vl.decrypt b_plaintext=%s' % b_plaintext)
         if b_plaintext is None:
             msg = "Decryption failed"
             if filename:
@@ -430,11 +422,9 @@ class VaultLib:
         header_parts = [b_HEADER, self.b_version,
                         to_bytes(self.cipher_name, 'utf-8', errors='strict')]
 
-        print('self.b_version=%s b_version == 1.2 %s' % (self.b_version, self.b_version == b'1.2'))
         if self.b_version == b'1.2':
             header_parts.append(to_bytes(vault_id, 'utf-8', errors='strict'))
 
-        print('header_parts=%s' % header_parts)
         header = b';'.join(header_parts)
         b_vaulttext = [header]
         b_vaulttext += [b_ciphertext[i:i + 80] for i in range(0, len(b_ciphertext), 80)]
@@ -458,7 +448,6 @@ class VaultLib:
         # used by decrypt
 
         b_tmpdata = b_vaulttext.split(b'\n')
-        print('_split_header=%s' % b_tmpdata)
         b_tmpheader = b_tmpdata[0].strip().split(b';')
 
         b_version = b_tmpheader[1].strip()
@@ -467,7 +456,6 @@ class VaultLib:
         # Only attempt to find key_id if the vault file is version 1.2 or newer
         #if self.b_version == b'1.2':
         if len(b_tmpheader) >= 4:
-            print('vl._split_header %s' % b_tmpheader)
             vault_id = to_text(b_tmpheader[3].strip())
 
         b_ciphertext = b''.join(b_tmpdata[1:])
@@ -845,7 +833,6 @@ class VaultAES256:
 
     @staticmethod
     def _create_key(b_password, b_salt, keylength, ivlength):
-        print('gh111 wtf create_key')
         hash_function = SHA256
 
         pbkdf2_prf = lambda p, s: HMAC.new(p, s, hash_function).digest()
@@ -856,7 +843,6 @@ class VaultAES256:
 
     @classmethod
     def _gen_key_initctr(cls, b_password, b_salt):
-        print('aes gh1 b_password=%s b_salt=%s' % (b_password, b_salt))
         # 16 for AES 128, 32 for AES256
         keylength = 32
 
@@ -884,8 +870,6 @@ class VaultAES256:
     def encrypt(self, b_plaintext, secrets, vault_id=None):
         b_salt = os.urandom(32)
         b_password = secrets.get_secret(name=vault_id)
-        print('aes.encrypt vault_id=%s' % vault_id)
-        print('aes.encrypt b_password=%s' % b_password)
         b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
 
         # PKCS#7 PAD DATA http://tools.ietf.org/html/rfc5652#section-6.3
@@ -928,17 +912,11 @@ class VaultAES256:
         b_salt = unhexlify(b_salt)
         b_ciphertext = unhexlify(b_ciphertext)
         b_password = secrets.get_secret(name=vault_id)
-        print('aes256.decrpy secrets=%s _secrets=%s' % (secrets, secrets._secrets))
-        print('aes256.decrypt b_password=%s' % b_password)
-        print('aes256.decrypt type(b_password)=%s' % type(b_password))
         b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
 
         # EXIT EARLY IF DIGEST DOESN'T MATCH
         hmacDecrypt = HMAC.new(b_key2, b_ciphertext, SHA256)
-        print(b'aes256.decrypt b_cryptedHmac=%s' % b_cryptedHmac)
-        print(b'aes256.decrypt hd=%s' % to_bytes(hmacDecrypt.hexdigest()))
         if not self._is_equal(b_cryptedHmac, to_bytes(hmacDecrypt.hexdigest())):
-            print('wtf hg10')
             return None
         # SET THE COUNTER AND THE CIPHER
         ctr = Counter.new(128, initial_value=int(b_iv, 16))
@@ -946,7 +924,6 @@ class VaultAES256:
 
         # DECRYPT PADDED DATA
         b_plaintext = cipher.decrypt(b_ciphertext)
-        print(b'cipher.decrypt b_plaintext=%s' % b_plaintext)
 
         # UNPAD DATA
         if PY3:

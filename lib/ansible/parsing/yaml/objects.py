@@ -80,7 +80,6 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
         if not vault:
             raise vault.AnsibleVaultError('Error creating AnsibleVaultEncryptedUnicode, invalid vault (%s) provided' % vault)
 
-        print('from_plaintext vault=%s vault.secrets._secrets=%s' % (vault, vault.secrets._secrets))
         ciphertext = vault.encrypt(seq)
         avu = cls(ciphertext)
         avu.vault = vault
@@ -104,10 +103,7 @@ class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleUnicode):
     def data(self):
         if not self.vault:
             # FIXME: raise exception?
-            print('no vault in objects')
             return self._ciphertext
-        print('objects.data vault=%s' % self.vault)
-        print('objects.data vault.secrets._secrets=%s' % self.vault.secrets._secrets)
         return self.vault.decrypt(self._ciphertext).decode()
 
     @data.setter
