@@ -48,7 +48,15 @@ TO_STR = 'TO_STR'
 # playbook/base.py: deprecated attributes
 # playbook/base.py: comma seperated lists, use yaml instead
 #
-
+# TODO: features
+# load deprecationData instances from file (yaml)
+#  - via dataloader?
+#  - need yaml constructors/dumpers
+# revisit tracking seen deprecations
+#   - playbook stats fields for deprecations
+#      - include in TaskResult
+#   - cli/main process global
+#      - config options
 _deprecations_registry = {}
 
 
