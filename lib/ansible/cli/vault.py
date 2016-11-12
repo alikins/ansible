@@ -98,16 +98,18 @@ class VaultCLI(CLI):
         # set default restrictive umask
         old_umask = os.umask(0o077)
 
-        if self.vault_pass:
-            vault_secrets = VaultSecrets()
-            vault_secrets.set_secret('default', self.vault_pass)
+        if self.options.vault_id:
+            vault_id = self.options.vault_id
+
+        vault_secrets = None
 
         if self.options.vault_password_file:
             vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
-                                             loader=loader)
+                                             loader=loader,
+                                             name=vault_id)
 
-        if not self.vault_pass or self.options.ask_vault_pass:
-            vault_secrets = PromptVaultSecrets()
+        if not vault_secrets or self.options.ask_vault_pass:
+            vault_secrets = PromptVaultSecrets(name=vault_id)
             vault_secrets.ask_vault_passwords()
 
         newpass = False
@@ -116,28 +118,32 @@ class VaultCLI(CLI):
         newpass = (self.action in ['create', 'rekey', 'encrypt'])
         rekey = (self.action == 'rekey')
 
+        new_vault_secrets = None
         if rekey or newpass:
-            if self.vault_pass:
-                new_vault_secrets = VaultSecrets()
-                new_vault_secrets.set_secret('default', self.vault_pass)
+            new_vault_secrets = vault_secrets
+            new_vault_id = vault_id
+            if self.options.new_vault_id:
+                new_vault_id = self.options.new_vault_id
 
             if self.options.new_vault_password_file:
                 new_vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
-                                                     loader=loader)
+                                                     loader=loader,
+                                                     name=new_vault_id)
 
-            if not self.vault_pass or self.options.ask_vault_pass:
-                new_vault_secrets = PromptVaultSecrets()
+            if not new_vault_secrets or self.options.ask_vault_pass:
+                new_vault_secrets = PromptVaultSecrets(name=new_vault_id)
                 new_vault_secrets.ask_new_vault_passwords()
 
             if not new_vault_secrets:
                 raise AnsibleOptionsError("A password is required to use Ansible's Vault")
             self.new_vault_secrets = new_vault_secrets
+            self.new_vault_id = new_vault_id
         else:
             if not vault_secrets:
                 raise AnsibleOptionsError("A password is required to use Ansible's Vault")
 
         # FIXME: revist the 'rekey' ask-vault-password bug and verify
-        self.editor = VaultEditor(vault_secrets)
+        self.editor = VaultEditor(vault_secrets, vault_id=vault_id)
 
         self.execute()
 
@@ -194,6 +200,6 @@ class VaultCLI(CLI):
 
         for f in self.args:
             # FIXME: plumb in vault_id
-            self.editor.rekey_file(f, self.new_vault_secrets)
+            self.editor.rekey_file(f, self.new_vault_secrets, self.new_vault_id)
 
         display.display("Rekey successful", stderr=True)

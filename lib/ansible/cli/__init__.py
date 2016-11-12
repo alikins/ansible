@@ -319,7 +319,11 @@ class CLI(with_metaclass(ABCMeta, object)):
                 help="new vault password file for rekey", action="callback", callback=CLI.expand_tilde, type=str)
             parser.add_option('--output', default=None, dest='output_file',
                 help='output file name for encrypt or decrypt; use - for stdout',
-                action="callback", callback=CLI.expand_tilde, type=str)
+                action="callback", callback=CLI.expand_tilde, type=str),
+            parser.add_option('--vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='vault_id', type=str,
+                help='the vault identity to use')
+            parser.add_option('--new-vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='new_vault_id', type=str,
+                help='the new vault identity to use for rekey')
 
         if subset_opts:
             parser.add_option('-t', '--tags', dest='tags', default=[], action='append',

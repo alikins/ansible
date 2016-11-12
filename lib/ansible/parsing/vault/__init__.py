@@ -171,6 +171,8 @@ def is_encrypted_file(file_obj, start_pos=0, count=-1):
     return is_encrypted(b_vaulttext)
 
 
+# TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
+# FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
 class VaultSecrets(object):
     default_name = 'default'
 
@@ -209,9 +211,10 @@ class VaultSecrets(object):
 # TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
 class FileVaultSecrets(VaultSecrets):
     def __init__(self, name=None, filename=None, loader=None):
-        super(FileVaultSecrets, self).__init__(name=name)
+        super(FileVaultSecrets, self).__init__()
         self.filename = filename
         self.loader = loader
+        self.name = name
 
         # load secrets from file
         self._secrets[self.name] = FileVaultSecrets.read_vault_password_file(self.filename, self.loader)
@@ -250,9 +253,10 @@ class FileVaultSecrets(VaultSecrets):
 
 class DirVaultSecrets(VaultSecrets):
     def __init__(self, name=None, directory=None, loader=None):
-        super(DirVaultSecrets, self).__init__(name=name)
+        super(DirVaultSecrets, self).__init__(name)
         self.directory = directory
         self.loader = loader
+        self.name = name
 
     def get_secret(self, name=None):
         name = name or self.name
@@ -262,6 +266,10 @@ class DirVaultSecrets(VaultSecrets):
 
 
 class PromptVaultSecrets(VaultSecrets):
+    def __init__(self, name=None, directory=None, loader=None):
+        super(PromptVaultSecrets, self).__init__()
+        self.name = name
+
     def ask_vault_passwords(self):
         ''' prompt for vault password and/or password change '''
 
@@ -276,7 +284,8 @@ class PromptVaultSecrets(VaultSecrets):
         if vault_pass:
             vault_pass = to_bytes(vault_pass, errors='strict', nonstring='simplerepr').strip()
 
-        self.set_secret('default', vault_pass)
+        # we could ask for vault_id as well
+        self.set_secret(self.name, vault_pass)
 
         return vault_pass
 
@@ -293,7 +302,7 @@ class PromptVaultSecrets(VaultSecrets):
         if new_vault_pass:
             new_vault_pass = to_bytes(new_vault_pass, errors='strict', nonstring='simplerepr').strip()
 
-        self.set_secret('default', new_vault_pass)
+        self.set_secret(self.name, new_vault_pass)
         return new_vault_pass
 
 
@@ -327,7 +336,7 @@ class VaultLib:
         display.deprecated(u'vault.VaultLib.is_encrypted_file is deprecated.  Use vault.is_encrypted_file instead', version='2.4')
         return is_encrypted_file(file_obj)
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, vault_id=None):
         """Vault encrypt a piece of data.
 
         :arg plaintext: a text or byte string to encrypt.
@@ -339,6 +348,7 @@ class VaultLib:
         If the string passed in is a text string, it will be encoded to UTF-8
         before encryption.
         """
+        vault_id = vault_id or self.vault_id
         b_plaintext = to_bytes(plaintext, errors='surrogate_or_strict')
 
         if is_encrypted(b_plaintext):
@@ -353,10 +363,10 @@ class VaultLib:
         this_cipher = this_cipher_class()
 
         # encrypt data
-        b_ciphertext = this_cipher.encrypt(b_plaintext, self.secrets, vault_id=self.vault_id)
+        b_ciphertext = this_cipher.encrypt(b_plaintext, self.secrets, vault_id=vault_id)
 
         # format the data for output to the file
-        b_vaulttext = self._format_output(b_ciphertext, vault_id=self.vault_id)
+        b_vaulttext = self._format_output(b_ciphertext, vault_id=vault_id)
         return b_vaulttext
 
     def decrypt(self, vaulttext, filename=None):
@@ -470,8 +480,9 @@ class VaultLib:
 
 class VaultEditor:
 
-    def __init__(self, secrets):
-        self.vault = VaultLib(secrets)
+    def __init__(self, secrets, vault_id=None):
+        # TODO: it may be more useful to just make VaultSecrets and index of VaultLib objects...
+        self.vault = VaultLib(secrets, vault_id=vault_id)
 
     # TODO: mv shred file stuff to it's own class
     def _shred_file_custom(self, tmp_path):
@@ -652,7 +663,7 @@ class VaultEditor:
 
         # FIXME: VaultContext...?  could rekey to a different vault_id in the same VaultSecrets
         # FIXME: this all assumes 'default' id
-        new_vault = VaultLib(new_vault_secrets)
+        new_vault = VaultLib(new_vault_secrets, vault_id=new_vault_id)
         new_ciphertext = new_vault.encrypt(plaintext)
 
         self.write_data(new_ciphertext, filename)

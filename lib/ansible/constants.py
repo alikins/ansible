@@ -190,6 +190,9 @@ DEFAULT_PRIVATE_KEY_FILE  = get_config(p, DEFAULTS, 'private_key_file', 'ANSIBLE
 DEFAULT_REMOTE_PORT       = get_config(p, DEFAULTS, 'remote_port',      'ANSIBLE_REMOTE_PORT',      None, value_type='integer')
 DEFAULT_ASK_VAULT_PASS    = get_config(p, DEFAULTS, 'ask_vault_pass',    'ANSIBLE_ASK_VAULT_PASS',    False, value_type='boolean')
 DEFAULT_VAULT_PASSWORD_FILE = get_config(p, DEFAULTS, 'vault_password_file', 'ANSIBLE_VAULT_PASSWORD_FILE', None, value_type='path')
+DEFAULT_VAULT_IDENTITY = get_config(p, DEFAULTS, 'vault_identity', 'ANSIBLE_VAULT_IDENTITY', 'default')
+
+
 DEFAULT_TRANSPORT         = get_config(p, DEFAULTS, 'transport',        'ANSIBLE_TRANSPORT',        'smart')
 DEFAULT_SCP_IF_SSH        = get_config(p, 'ssh_connection', 'scp_if_ssh',       'ANSIBLE_SCP_IF_SSH',       'smart')
 DEFAULT_SFTP_BATCH_MODE   = get_config(p, 'ssh_connection', 'sftp_batch_mode', 'ANSIBLE_SFTP_BATCH_MODE', True, value_type='boolean')
