@@ -98,37 +98,45 @@ class VaultCLI(CLI):
         # set default restrictive umask
         old_umask = os.umask(0o077)
 
-        vault_secrets = VaultSecrets()
+        if self.vault_pass:
+            vault_secrets = VaultSecrets()
+            vault_secrets.set_secret('default', self.vault_pass)
+
         if self.options.vault_password_file:
-            vault_secrets = FileVaultSecrets(name='password_file',
-                                             filename=self.options.vault_password_file,
+            vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
                                              loader=loader)
+
+        if not self.vault_pass or self.options.ask_vault_pass:
+            vault_secrets = PromptVaultSecrets()
+            vault_secrets.ask_vault_passwords()
+
+        newpass = False
+        rekey = False
+        # TODO: fix rekey later
+        newpass = (self.action in ['create', 'rekey', 'encrypt'])
+        rekey = (self.action == 'rekey')
+
+        if rekey or newpass:
+            if self.vault_pass:
+                new_vault_secrets = VaultSecrets()
+                new_vault_secrets.set_secret('default', self.vault_pass)
+
+            if self.options.new_vault_password_file:
+                new_vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
+                                                     loader=loader)
+
+            if not self.vault_pass or self.options.ask_vault_pass:
+                new_vault_secrets = PromptVaultSecrets()
+                new_vault_secrets.ask_new_vault_passwords()
+
+            if not new_vault_secrets:
+                raise AnsibleOptionsError("A password is required to use Ansible's Vault")
+            self.new_vault_secrets = new_vault_secrets
         else:
-            newpass = False
-            rekey = False
-            if not self.options.new_vault_password_file:
-                vault_secrets = PromptVaultSecrets(name='default')
+            if not vault_secrets:
+                raise AnsibleOptionsError("A password is required to use Ansible's Vault")
 
-                # FIXME: we don't need to do this now, we could do it later though
-                #        that would change the cli UXD a bit and may be weird
-                vault_secrets.ask_vault_passwords()
-
-                # TODO: fix rekey later
-                #newpass = (self.action in ['create', 'rekey', 'encrypt'])
-                #rekey = (self.action == 'rekey')
-                #self.vault_pass, self.new_vault_pass = self.ask_vault_passwords(ask_new_vault_pass=newpass, rekey=rekey)
-
-        if self.options.new_vault_password_file:
-            # for rekey only
-            new_vault_secrets = FileVaultSecrets(name='default',
-                                                 filename=self.options.new_vault_password_file,
-                                                 loader=loader)
-            self.new_vault_secrets = CLI.read_vault_password_file(self.options.new_vault_password_file, loader)
-
-        if not vault_secrets:
-            raise AnsibleOptionsError("A password is required to use Ansible's Vault")
-
-# FIXME: revist the 'rekey' ask-vault-password bug and verify
+        # FIXME: revist the 'rekey' ask-vault-password bug and verify
         self.editor = VaultEditor(vault_secrets)
 
         self.execute()

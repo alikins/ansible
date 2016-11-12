@@ -117,11 +117,10 @@ class PlaybookCLI(CLI):
 
         if self.options.vault_password_file:
             # read vault_pass from a file
-            vault_secrets = FileVaultSecrets(name='password_file',
-                                             filename=self.options.vault_password_file,
+            vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
                                              loader=loader)
         elif self.options.ask_vault_pass:
-            vault_secrets = PromptVaultSecrets(name='prompt')
+            vault_secrets = PromptVaultSecrets()
 
             # FIXME: we don't need to do this now, we could do it later though
             #        that would change the cli UXD a bit and may be weird
