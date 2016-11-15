@@ -29,7 +29,11 @@ from yaml.resolver import Resolver
 
 from ansible.parsing.yaml.constructor import AnsibleConstructor
 
+import logging
+log = logging.getLogger(__name__)
+
 if HAVE_PYYAML_C:
+    log.debug('Using PYYAML C extensions')
 
     class AnsibleLoader(CParser, AnsibleConstructor, Resolver):
         def __init__(self, stream, file_name=None, vault_password=None):

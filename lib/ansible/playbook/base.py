@@ -104,7 +104,7 @@ class Summary(object):
 
             # check if both are None, since None != None, which isnt useful
             if not isinstance(value, type(attribute.default)):
-                log.debug('The type of the current and default values of %s different: %s is not %s', name, type(value), type(attribute.default))
+                #log.debug('The type of the current and default values of %s different: %s is not %s', name, type(value), type(attribute.default))
                 continue
 
             if attribute.default is None:
@@ -114,8 +114,8 @@ class Summary(object):
             #if value is None and attribute.default is None:
             #    continue
 
-            log.debug('name=%s, value=%s, default=%s, attribute=%s', name, value, attribute.default, attribute)
-            log.debug('value != default: %s, %s %s', value != attribute.default, type(value), type(attribute.default))
+            #log.debug('name=%s, value=%s, default=%s, attribute=%s', name, value, attribute.default, attribute)
+            #log.debug('value != default: %s, %s %s', value != attribute.default, type(value), type(attribute.default))
             if value != attribute.default:
                 self.changed.append((name, value, attribute))
             else:

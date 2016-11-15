@@ -81,7 +81,9 @@ class Inventory(object):
 
         # Contains set of filenames under group_vars directories
         self._group_vars_files = self._find_group_vars_files(self._basedir)
+        log.debug('Found group_vars files: %s', self._group_vars_files)
         self._host_vars_files = self._find_host_vars_files(self._basedir)
+        log.debug('Found host_vars files: %s', self._host_vars_files)
 
         # to be set by calling set_playbook_basedir by playbook code
         self._playbook_basedir = None
@@ -108,6 +110,7 @@ class Inventory(object):
         pass
 
     def parse_inventory(self, host_list):
+        log.debug('host_list=%s', host_list)
 
         if isinstance(host_list, string_types):
             if "," in host_list:
@@ -124,6 +127,7 @@ class Inventory(object):
         all.add_child_group(ungrouped)
 
         self.groups = dict(all=all, ungrouped=ungrouped)
+        log.debug('self.groups=%s', self.groups)
 
         if host_list is None:
             pass
@@ -149,13 +153,17 @@ class Inventory(object):
                     self.localhost = new_host
                 all.add_host(new_host)
         elif self._loader.path_exists(host_list):
+            log.debug('the host_list=%s path exists', host_list)
             # TODO: switch this to a plugin loader and a 'condition' per plugin on which it should be tried, restoring 'inventory pllugins'
             if self.is_directory(host_list):
+                log.debug('the host_list=%s is a directory', host_list)
                 # Ensure basedir is inside the directory
                 host_list = os.path.join(self.host_list, "")
                 self.parser = InventoryDirectory(loader=self._loader, groups=self.groups, filename=host_list)
             else:
+                log.debug('the host_list=%s is a file', host_list)
                 self.parser = get_file_parser(host_list, self.groups, self._loader)
+                log.debug('adding basedir=%s to vars_loader', self._basedir)
                 vars_loader.add_directory(self._basedir, with_subdir=True)
 
             if not self.parser:
@@ -168,6 +176,7 @@ class Inventory(object):
         self._vars_plugins = [ x for x in vars_loader.all(self) ]
 
         # set group vars from group_vars/ files and vars plugins
+        log.debug('self.groups=%s', self.groups)
         for g in self.groups:
             group = self.groups[g]
             group.vars = combine_vars(group.vars, self.get_group_variables(group.name))
@@ -563,12 +572,13 @@ class Inventory(object):
         return self.groups.get(groupname)
 
     def get_group_variables(self, groupname, update_cached=False, vault_password=None):
+        log.debug('groupname=%s, update_cached=%s', groupname, update_cached)
         if groupname not in self._vars_per_group or update_cached:
             self._vars_per_group[groupname] = self._get_group_variables(groupname, vault_password=vault_password)
         return self._vars_per_group[groupname]
 
     def _get_group_variables(self, groupname, vault_password=None):
-
+        log.debug('_get_group_variables groupname=%s', groupname)
         group = self.get_group(groupname)
         if group is None:
             raise Exception("group not found: %s" % groupname)
@@ -582,6 +592,7 @@ class Inventory(object):
                 vars = combine_vars(vars, updated)
 
         # Read group_vars/ files
+        log.debug('reading group_vars')
         vars = combine_vars(vars, self.get_group_vars(group))
 
         return vars
@@ -812,7 +823,7 @@ class Inventory(object):
         to the inventory base directory or in the same directory as the playbook.  Variables in the playbook
         dir will win over the inventory dir if files are in both.
         """
-
+        log.debug('host=%s, group=%s, new_pb_basedir=%s, return_results=%s', host, group, new_pb_basedir, return_results)
         results = {}
         scan_pass = 0
         _basedir = self._basedir
@@ -825,6 +836,7 @@ class Inventory(object):
         else:
             basedirs = [_basedir]
 
+        log.debug('basedirs=%s', basedirs)
         for basedir in basedirs:
             # this can happen from particular API usages, particularly if not run
             # from /usr/bin/ansible-playbook
@@ -845,6 +857,7 @@ class Inventory(object):
             if host is None and any(map(lambda ext: group.name + ext in self._group_vars_files, C.YAML_FILENAME_EXTENSIONS)):
                 # load vars in dir/group_vars/name_of_group
                 base_path = to_text(os.path.abspath(os.path.join(to_bytes(basedir), b"group_vars/" + to_bytes(group.name))), errors='surrogate_or_strict')
+                log.debug('about to load group vars from base_path=%s self._group_vars_files=%s', base_path, self._group_vars_files)
                 host_results = self._variable_manager.add_group_vars_file(base_path, self._loader)
                 if return_results:
                     results = combine_vars(results, host_results)

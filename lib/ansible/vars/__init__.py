@@ -559,7 +559,9 @@ class VariableManager:
         basename of the file without the extension
         '''
 
+        log.debug('about to load inventory_file path=%s', path)
         if loader.is_directory(path):
+            log.debug('inventory_file path=%s is a directory', path)
             data = dict()
 
             try:
@@ -579,6 +581,7 @@ class VariableManager:
                     data = combine_vars(data, results)
 
         else:
+            log.debug('inventory_file path=%s is a file', path)
             file_name, ext = os.path.splitext(path)
             data = None
             if not ext or ext not in C.YAML_FILENAME_EXTENSIONS:
@@ -632,6 +635,7 @@ class VariableManager:
         the extension, for matching against a given inventory host name
         '''
 
+        log.debug('adding group_vars file path=%s', path)
         name = self._get_inventory_basename(path)
         if name not in self._group_vars_files:
             self._group_vars_files[name] = []

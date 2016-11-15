@@ -84,6 +84,7 @@ class DataLoader():
         Creates a python datastructure from the given data, which can be either
         a JSON or YAML string.
         '''
+        log.debug('loading json/yaml datastructure from data, file_name=%s', file_name)
         new_data = None
         try:
             # we first try to load this data as JSON
@@ -98,6 +99,8 @@ class DataLoader():
                 in_data = text_type(data)
             else:
                 in_data = data
+
+            log.debug('attempting to load yaml from file_name=%s', file_name)
             try:
                 new_data = self._safe_load(in_data, file_name=file_name)
             except YAMLError as yaml_exc:
@@ -111,12 +114,13 @@ class DataLoader():
 
     def load_from_file(self, file_name):
         ''' Loads data from a file, which can contain either JSON or YAML.  '''
-
+        log.debug('about to load file_name=%s', file_name)
         file_name = self.path_dwim(file_name)
 
         # if the file has already been read in and cached, we'll
         # return those results to avoid more file/vault operations
         if file_name in self._FILE_CACHE:
+            log.debug('Using cached contents of file_name=%s', file_name)
             parsed_data = self._FILE_CACHE[file_name]
         else:
             # read the file contents and load the data structure from them
@@ -203,6 +207,7 @@ class DataLoader():
             err_obj = AnsibleBaseYAMLObject()
             err_obj.ansible_pos = (file_name, yaml_exc.problem_mark.line + 1, yaml_exc.problem_mark.column + 1)
 
+        log.error('Error loading yaml from file_name=%s: %s', file_name, yaml_exc)
         raise AnsibleParserError(YAML_SYNTAX_ERROR, obj=err_obj, show_content=show_content)
 
     def get_basedir(self):
