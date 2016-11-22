@@ -12,65 +12,66 @@ from ansible.plugins.filter import ipaddr
 
 
 class TestIpaddr(unittest.TestCase):
-
-
-    def test_ipaddr(self):
-        a = ipaddr.ipaddr('addr', query='192.168.0.0/24')
-        print(a)
-        a = ipaddr.ipaddr('host', query='192.168.0.0')
-        print(a)
-
     def test_ipv4(self):
         ipv4 = ipaddr.ipv4('127.0.0.1')
-        print(ipv4)
+        self.assertEquals(ipv4, '127.0.0.1')
 
     def test_ipv6(self):
         ipv6 = ipaddr.ipv6('::1/128')
-        print(ipv6)
+        self.assertTrue(ipv6)
 
     def test_ipsubnet(self):
         ipsubnet = ipaddr.ipsubnet('192.168.0.0/24')
-        print(ipsubnet)
+        self.assertTrue(ipsubnet)
 
         # FIXME: whatever a ipsubnet index is
         ipsubnet2 = ipaddr.ipsubnet('192.168.0.0/24', 4)
-        print(ipsubnet2)
+        self.assertTrue(ipsubnet2)
 
     def test_nthhost(self):
         a = ipaddr.ipaddr('addr', query='192.168.0.0/24')
-        b = ipaddr.nthhost(a, 11)
-        print(a)
-        print(b)
+        ipaddr.nthhost(a, 11)
 
-    def test_filter(self):
-        fake_loader = DictDataLoader({
+
+class TestIpaddrTemplate(unittest.TestCase):
+    def setUp(self):
+        self.fake_loader = DictDataLoader({
             "/path/to/my_file.txt": "foo\n",
         })
-        variables = {'addr': '192.168.1.37',
-                     'notaddr': 'chicane',
-                     'some_subnet': '192.168.0.0/24'}
-        templar = template.Templar(loader=fake_loader, variables=variables)
-        tmpl = templar.template("{{ addr | ipaddr('net')}}")
-        self.assertNotEqual(tmpl, False)
+        self.variables = {'addr': '192.168.1.37',
+                          'notaddr': 'chicane',
+                          'some_subnet': '192.168.0.0/24'}
+        self.templar = template.Templar(loader=self.fake_loader, variables=self.variables)
 
-        tmpl = templar.template("{{ addr | ipaddr('ipv4')}}")
-        self.assertNotEqual(tmpl, False)
+    def template(self, *args, **kwargs):
+        tmpl = self.templar.template(args, kwargs)
+        print('args=%s kwargs=%s tmpl=%s' % (repr(args), repr(kwargs), tmpl))
+        return tmpl
 
-        tmpl = templar.template("{{ addr | ipaddr('ipv6')}}")
-        print(tmpl)
+    def test_net(self):
+        tmpl = self.template("{{ addr | ipaddr('net')}}")
+        self.assertNotEqual(tmpl[0], False)
 
-        tmpl = templar.template("{{ notaddr | ipaddr('ipv6')}}")
-        print(tmpl)
-        self.assertFalse(tmpl)
+    def test_ipaddr_ipv4(self):
+        tmpl = self.template("{{ addr | ipaddr('ipv4')}}")
+        self.assertNotEqual(tmpl[0], False)
 
-        tmpl = templar.template("{{ notaddr | ipaddr }}")
-        self.assertFalse(tmpl)
+    def test_ipaddr_ipv6(self):
+        tmpl = self.template("{{ addr | ipaddr('ipv6')}}")
+        self.assertTrue(tmpl[0])
 
-        tmpl = templar.template("{{ notaddr | ipaddr('ipv4')}}")
-        self.assertFalse(tmpl)
+    def test_ipaddr_ipv6_notaddr(self):
+        tmpl = self.template("{{ notaddr | ipaddr('ipv6')}}")
+        self.assertFalse(tmpl[0])
 
-        tmpl = templar.template("{{ addr | ipaddr('address')}}")
-        print(tmpl)
-        self.assertNotEqual(tmpl, False)
+    def test_ipaddr_notaddr(self):
+        tmpl = self.template("{{ notaddr | ipaddr }}")
+        self.assertFalse(tmpl[0])
 
+    def test_ipaddr_ipv4_notaddr(self):
+        tmpl = self.template("{{ notaddr | ipaddr('ipv4')}}")
+        self.assertFalse(tmpl[0])
 
+    def test_ipaddr_address(self):
+        tmpl = self.template("{{ addr | ipaddr('address')}}")
+        self.assertNotEqual(tmpl[0], False)
