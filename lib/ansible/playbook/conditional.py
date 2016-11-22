@@ -145,13 +145,17 @@ class Conditional:
             else:
                 raise AnsibleError("unable to evaluate conditional: %s" % original)
         except (AnsibleUndefinedVariable, UndefinedError) as e:
+            print('exception1=%s' % e)
             # the templating failed, meaning most likely a variable was undefined. If we happened to be
             # looking for an undefined variable, return True, otherwise fail
             try:
                 # first we extract the variable name from the error message
                 var_name = re.compile(r"'(hostvars\[.+\]|[\w_]+)' is undefined").search(str(e)).groups()[0]
+                print('var_name=%s' % var_name)
+                print('conditional=%s' % conditional)
                 # next we extract all defined/undefined tests from the conditional string
                 def_undef = self.extract_defined_undefined(conditional)
+                print('def_undef=%s' % def_undef)
                 # then we loop through these, comparing the error variable name against
                 # each def/undef test we found above. If there is a match, we determine
                 # whether the logic/state mean the variable should exist or not and return
@@ -169,7 +173,8 @@ class Conditional:
                             return True
                 # as nothing above matched the failed var name, re-raise here to
                 # trigger the AnsibleUndefinedVariable exception again below
-                raise
+                #raise
             except Exception as new_e:
+                print('new_e: %' % new_e)
                 raise AnsibleUndefinedVariable("error while evaluating conditional (%s): %s" % (original, e))
 
