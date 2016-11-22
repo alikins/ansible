@@ -16,61 +16,54 @@ class TestConditional(unittest.TestCase):
         self.shared_loader = SharedPluginLoaderObj()
         self.templar = Templar(loader=self.loader, variables={})
 
-    def test(self):
-        print(self.cond)
+    def tearDown(self):
+        print('\n\n')
+
+    def _eval_con(self, when=None, variables=None):
+        when = when or []
+        variables = variables or {}
+        self.cond.when = when
+        ret = self.cond.evaluate_conditional(self.templar, variables)
+        print('ret=%s' % ret)
+        return ret
 
     def test_false(self):
-        exp = u"False"
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, {})
+        when = [u"False"]
+        ret = self._eval_con(when, {})
         self.assertFalse(ret)
 
     def test_true(self):
-        exp = u"True"
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, {})
+        when = [u"True"]
+        ret = self._eval_con(when, {})
         self.assertTrue(ret)
 
     def test_undefined(self):
-        exp = u"{{ some_undefined_thing }}"
-        self.cond.when = [exp]
-        try:
-            ret = self.cond.evaluate_conditional(self.templar, {})
-        except Exception as e:
-            print(e.__class__.__name__)
-            print(dir(e))
-            raise
-        print(ret)
+        when = [u"{{ some_undefined_thing }}"]
+        ret = self._eval_con(when, {})
         self.assertFalse(ret)
 
     def test_defined(self):
-        exp = u"{{ some_defined_thing }}"
         variables = {'some_defined_thing': True}
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('defined ret=%s' % ret)
+        when = [u"{{ some_defined_thing }}"]
+        ret = self._eval_con(when, variables)
         self.assertTrue(ret)
 
     def test_dict_defined_values(self):
-        exp = u"{{ some_defined_dict }}"
         variables = {'dict_value': 1,
                      'some_defined_dict': {'key1': 'value1',
                                            'key2': '{{ dict_value }}'}}
 
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('dict_defined ret=%s' % ret)
+        when = [u"some_defined_dict"]
+        ret = self._eval_con(when, variables)
         self.assertTrue(ret)
 
     def test_dict_defined_values_is_defined(self):
-        exp = u"{{ some_defined_dict['key1'] is defined }}"
         variables = {'dict_value': 1,
                      'some_defined_dict': {'key1': 'value1',
                                            'key2': '{{ dict_value }}'}}
 
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('dict_defined ret=%s' % ret)
+        when = [u"some_defined_dict.key1 is defined"]
+        ret = self._eval_con(when, variables)
         self.assertTrue(ret)
 
     def test_dict_defined_multiple_values_is_defined(self):
@@ -78,67 +71,150 @@ class TestConditional(unittest.TestCase):
                      'some_defined_dict': {'key1': 'value1',
                                            'key2': '{{ dict_value }}'}}
 
-        self.cond.when = [u"{{ some_defined_dict['key1'] is defined }}",
-                          u"{{ some_defined_dict['key2'] is defined }}"]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('dict_defined ret=%s' % ret)
+        when = [u"some_defined_dict.key1 is defined",
+                u"some_defined_dict.key2 is not undefined"]
+        ret = self._eval_con(when, variables)
         self.assertTrue(ret)
 
     def test_dict_undefined_values(self):
-        exp = u"{{ some_defined_dict_with_undefined_values }}"
         variables = {'dict_value': 1,
                      'some_defined_dict_with_undefined_values': {'key1': 'value1',
                                                                  'key2': '{{ dict_value }}',
                                                                  'key3': '{{ undefined_dict_value }}'
                                                                  }}
 
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('dict_define_with_undefined_values ret=%s' % ret)
+        when = [u"some_defined_dict_with_undefined_values is defined"]
+        ret = self._eval_con(when, variables)
+        # FIXME/TODO: Is this correct? should this be false
+        self.assertFalse(ret)
+
+#    def test_nested_hostvars_undefined_values(self):
+#        variables = {'dict_value': 1,
+#                     'hostvars': {'host1': {'key1': 'value1',
+#                                            'key2': '{{ dict_value }}'},
+#                                  'host2': '{{ dict_value }}',
+#                                  'host3': '{{ undefined_dict_value }}',
+#                                  # no host4
+#                                  },
+#                     'some_dict': {'some_dict_key1': '{{ hostvars["host3"] }}'}
+#                     }
+
+#        #when = [u"hostvars['host1'] is defined",
+#        #        u'hostvars["host1"] is defined',
+#        when = [u"some_dict.some_dict_key1 == hostvars['host3']"]
+#        ret = self._eval_con(when, variables)
+#        # FIXME/TODO: Is this correct? should this be false
+#        self.assertFalse(ret)
+
+    def test_dict_undefined_values_bare(self):
+        variables = {'dict_value': 1,
+                     'some_defined_dict_with_undefined_values': {'key1': 'value1',
+                                                                 'key2': '{{ dict_value }}',
+                                                                 'key3': '{{ undefined_dict_value }}'
+                                                                 }}
+
+        # raises an exception when a non-string conditional is passed to extract_defined_undefined()
+        when = [u"some_defined_dict_with_undefined_values"]
+        ret = self._eval_con(when, variables)
+        self.assertFalse(ret)
+
+    def test_dict_undefined_values_is_defined(self):
+        variables = {'dict_value': 1,
+                     'some_defined_dict_with_undefined_values': {'key1': 'value1',
+                                                                 'key2': '{{ dict_value }}',
+                                                                 'key3': '{{ undefined_dict_value }}'
+                                                                 }}
+
+        when = [u"some_defined_dict_with_undefined_values is defined"]
+        ret = self._eval_con(when, variables)
         # FIXME/TODO: Is this correct? should this be false
         self.assertFalse(ret)
 
     def test_is_defined(self):
-        exp = u"{{ some_defined_thing is defined}}"
         variables = {'some_defined_thing': True}
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('defined ret=%s' % ret)
+        when = [u"some_defined_thing is defined"]
+        ret = self._eval_con(when, variables)
         self.assertTrue(ret)
 
     def test_is_undefined(self):
-        exp = u"{{ some_defined_thing is undefined}}"
         variables = {'some_defined_thing': True}
-        self.cond.when = [exp]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('defined ret=%s' % ret)
+        when = [u"some_defined_thing is undefined"]
+        ret = self._eval_con(when, variables)
         self.assertFalse(ret)
 
     def test_is_undefined_and_defined(self):
         variables = {'some_defined_thing': True}
-        self.cond.when = [u"{{ some_defined_thing is undefined}}", u"{{ some_defined_thing is defined }}"]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('defined ret=%s' % ret)
+        when = [u"some_defined_thing is undefined", u"some_defined_thing is defined"]
+        ret = self._eval_con(when, variables)
         self.assertFalse(ret)
 
     def test_is_undefined_and_defined_reversed(self):
         variables = {'some_defined_thing': True}
-        self.cond.when = [u"{{ some_defined_thing is defined}}", u"{{ some_defined_thing is undefined }}"]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('defined ret=%s' % ret)
+        when = [u"some_defined_thing is defined", u"some_defined_thing is undefined"]
+        ret = self._eval_con(when, variables)
         self.assertFalse(ret)
 
     def test_is_not_undefined(self):
         variables = {'some_defined_thing': True}
-        self.cond.when = [u"{{ some_defined_thing is not undefined}}"]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('defined ret=%s' % ret)
-        self.assertFalse(ret)
+        when = [u"some_defined_thing is not undefined"]
+        ret = self._eval_con(when, variables)
+        self.assertTrue(ret)
 
     def test_is_not_defined(self):
         variables = {'some_defined_thing': True}
-        self.cond.when = [u"{{ some_undefined_thing is not defined}}"]
-        ret = self.cond.evaluate_conditional(self.templar, variables)
-        print('defined ret=%s' % ret)
+        when = [u"some_undefined_thing is not defined"]
+        ret = self._eval_con(when, variables)
         self.assertTrue(ret)
 
+
+    def test_is_hostvars_quotes_is_defined(self):
+        variables = {'hostvars': {'some_host': {}},
+                     'compare_targets_single': "hostvars['some_host']",
+                     'compare_targets_double': 'hostvars["some_host"]',
+                     'compare_targets': {'double': '{{ compare_targets_double }}',
+                                         'single': "{{ compare_targets_single }}"},
+                     }
+        when = [u"hostvars['some_host'] is defined",
+                u'hostvars["some_host"] is defined',
+                u"{{ compare_targets.double }} is defined",
+                u"{{ compare_targets.single }} is defined"]
+        ret = self._eval_con(when, variables)
+        self.assertTrue(ret)
+
+    def test_is_hostvars_quotes_is_defined_but_is_not_defined(self):
+        variables = {'hostvars': {'some_host': {}},
+                     'compare_targets_single': "hostvars['some_host']",
+                     'compare_targets_double': 'hostvars["some_host"]',
+                     'compare_targets': {'double': '{{ compare_targets_double }}',
+                                         'single': "{{ compare_targets_single }}"},
+                     }
+        when = [u"hostvars['some_host'] is defined",
+                u'hostvars["some_host"] is defined',
+                u"{{ compare_targets.triple }} is defined",
+                u"{{ compare_targets.quadruple }} is defined"]
+        ret = self._eval_con(when, variables)
+        self.assertFalse(ret)
+
+    def test_is_hostvars_host_is_defined(self):
+        variables = {'hostvars': {'some_host': {}, }}
+        when = [u"hostvars['some_host'] is defined"]
+        ret = self._eval_con(when, variables)
+        self.assertTrue(ret)
+
+    def test_is_hostvars_host_undefined_is_defined(self):
+        variables = {'hostvars': {'some_host': {}, }}
+        when = [u"hostvars['some_undefined_host'] is defined"]
+        ret = self._eval_con(when, variables)
+        self.assertFalse(ret)
+
+    def test_is_hostvars_host_undefined_is_undefined(self):
+        variables = {'hostvars': {'some_host': {}, }}
+        when = [u"hostvars['some_undefined_host'] is undefined"]
+        ret = self._eval_con(when, variables)
+        self.assertTrue(ret)
+
+    def test_is_hostvars_host_undefined_is_not_defined(self):
+        variables = {'hostvars': {'some_host': {}, }}
+        when = [u"hostvars['some_undefined_host'] is not defined"]
+        ret = self._eval_con(when, variables)
+        self.assertTrue(ret)

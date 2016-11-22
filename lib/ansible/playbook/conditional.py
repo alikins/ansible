@@ -70,7 +70,9 @@ class Conditional:
         results = []
 
         cond = conditional
+        print('COND=%s' % cond)
         m = DEFINED_REGEX.search(cond)
+        print('m=%s' % m)
         while m:
             results.append(m.groups())
             cond = cond[m.end():]
@@ -124,14 +126,15 @@ class Conditional:
         templar.set_available_variables(variables=all_vars)
 
         try:
-            print('conditional2=%s' % conditional)
+#            print('conditional2=%s' % conditional)
             conditional = templar.template(conditional)
-            print('conditional3=%s type=%s' % (conditional, type(conditional)))
-            print('isinstance=%s' % isinstance(conditional, text_type))
+#            print('conditional3=%s type=%s' % (conditional, type(conditional)))
+#            print('isinstance=%s' % isinstance(conditional, text_type))
             print('original=%s' % original)
             if not isinstance(conditional, text_type) or conditional == "":
                 return conditional
 
+#            expanded = template.template(
             # a Jinja2 evaluation that results in something Python can eval!
             presented = "{%% if %s %%} True {%% else %%} False {%% endif %%}" % conditional
             print('presented=%s' % presented)
@@ -145,6 +148,7 @@ class Conditional:
             else:
                 raise AnsibleError("unable to evaluate conditional: %s" % original)
         except (AnsibleUndefinedVariable, UndefinedError) as e:
+
             print('exception1=%s' % e)
             # the templating failed, meaning most likely a variable was undefined. If we happened to be
             # looking for an undefined variable, return True, otherwise fail
@@ -163,6 +167,7 @@ class Conditional:
                 for (du_var, logic, state) in def_undef:
                     # when we compare the var names, normalize quotes because something
                     # like hostvars['foo'] may be tested against hostvars["foo"]
+                    print('du_var=%s' % du_var)
                     if var_name.replace("'", '"') == du_var.replace("'", '"'):
                         # the should exist is a xor test between a negation in the logic portion
                         # against the state (defined or undefined)
@@ -175,6 +180,7 @@ class Conditional:
                 # trigger the AnsibleUndefinedVariable exception again below
                 #raise
             except Exception as new_e:
-                print('new_e: %' % new_e)
+                print('new_e: %s' % new_e)
+                raise
                 raise AnsibleUndefinedVariable("error while evaluating conditional (%s): %s" % (original, e))
 
