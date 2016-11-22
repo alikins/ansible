@@ -100,6 +100,8 @@ class Conditional:
                 if not self._check_conditional(conditional, templar, all_vars):
                     return False
         except Exception as e:
+            #print(e)
+            raise
             raise AnsibleError("The conditional check '%s' failed. The error was: %s" % (to_native(conditional), to_native(e)), obj=ds)
 
         return True
@@ -110,7 +112,7 @@ class Conditional:
         set on this object, using jinja2 to wrap the conditionals for
         evaluation.
         '''
-
+        print('_check_c cond=%s templat=%s all_vars=%s' % (conditional, templar, all_vars))
         original = conditional
         if conditional is None or conditional == '':
             return True
@@ -122,14 +124,20 @@ class Conditional:
         templar.set_available_variables(variables=all_vars)
 
         try:
+            print('conditional2=%s' % conditional)
             conditional = templar.template(conditional)
+            print('conditional3=%s type=%s' % (conditional, type(conditional)))
+            print('isinstance=%s' % isinstance(conditional, text_type))
+            print('original=%s' % original)
             if not isinstance(conditional, text_type) or conditional == "":
                 return conditional
 
             # a Jinja2 evaluation that results in something Python can eval!
             presented = "{%% if %s %%} True {%% else %%} False {%% endif %%}" % conditional
+            print('presented=%s' % presented)
             conditional = templar.template(presented)
             val = conditional.strip()
+            print('val=%s' % val)
             if val == "True":
                 return True
             elif val == "False":

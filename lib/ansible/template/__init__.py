@@ -532,8 +532,10 @@ class Templar:
                     res += '\n' * (data_newlines - res_newlines)
             return res
         except (UndefinedError, AnsibleUndefinedVariable) as e:
+            #raise
             if fail_on_undefined:
-                raise AnsibleUndefinedVariable(e)
+                raise
+                #raise AnsibleUndefinedVariable(e)
             else:
                 #TODO: return warning about undefined var
                 return data
