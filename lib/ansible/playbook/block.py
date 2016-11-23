@@ -119,6 +119,7 @@ class Block(Base, Become, Conditional, Taggable):
                 use_handlers=self._use_handlers,
             )
         except AssertionError:
+            raise
             raise AnsibleParserError("A malformed block was encountered.", obj=self._ds)
 
     def _load_rescue(self, attr, ds):

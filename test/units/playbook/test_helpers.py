@@ -34,89 +34,155 @@ from ansible.executor import task_result
 from ansible.playbook import helpers
 
 
-class TestLoadListOfTasks(unittest.TestCase):
+class MixinForMocks(object):
+    def _setup(self):
+        # This is not a very good mixin, lots of side effects
+        self.fake_loader = DictDataLoader({'include_test.yml': "",
+                                           'other_include_test.yml': ""})
+        self.mock_tqm = MagicMock(name='MockTaskQueueManager')
+
+        self.mock_play = MagicMock(name='MockPlay')
+
+        self.mock_iterator = MagicMock(name='MockIterator')
+        self.mock_iterator._play = self.mock_play
+
+        self.mock_inventory = MagicMock(name='MockInventory')
+        self.mock_inventory._hosts_cache = dict()
+
+        def _get_host(host_name):
+            print('_get_host hostname=%s' % host_name)
+            return None
+
+        self.mock_inventory.get_host.side_effect = _get_host
+        # TODO: can we use a real VariableManager?
+        self.mock_variable_manager = MagicMock(name='MockVariableManager')
+        self.mock_variable_manager.get_vars.return_value = dict()
+
+        self.mock_block = MagicMock(name='MockBlock')
+
+        self.fake_role_loader = DictDataLoader({"/etc/ansible/roles/bogus_role/tasks/main.yml": """
+                                                - shell: echo 'hello world'
+                                                """})
+
+
+class TestLoadListOfTasks(unittest.TestCase, MixinForMocks):
+    def setUp(self):
+        self._setup()
+
     def test_ds_not_list(self):
         ds = {}
-        mock_play = MagicMock(name='MockPlay')
         self.assertRaises(AssertionError, helpers.load_list_of_tasks,
-                          ds, mock_play, block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None)
+                          ds, self.mock_play, block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None)
 
     def test_empty_task(self):
         ds = [{}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
 
     def test_empty_task_use_handlers(self):
         ds = [{}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=True, variable_manager=None, loader=None)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play, use_handlers=True,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
 
     def test_one_bogus_block(self):
-        ds = [{'block': True}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None)
+        ds = [{'block': None}]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
+        print(res)
+
+    def test_unknown_action(self):
+        ds = [{'action': 'foo_test_unknown_action'}]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
 
     def test_block_unknown_action(self):
-        ds = [{'action': 'foo'}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None)
+        ds = [{
+            'block': [{'action': 'foo_test_block_unknown_action'}]
+        }]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
+        print(res)
+
+    def test_block_unknown_action_use_handlers(self):
+        ds = [{
+            'block': [{'action': 'foo_test_block_unknown_action'}]
+        }]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play, use_handlers=True,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
 
     def test_one_bogus_block_use_handlers(self):
         ds = [{'block': True}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=True, variable_manager=None, loader=None)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play, use_handlers=True,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
 
     def test_one_bogus_include(self):
         ds = [{'include': 'somefile.yml'}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
 
     def test_one_bogus_include_use_handlers(self):
         ds = [{'include': 'somefile.yml'}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=True, variable_manager=None, loader=None)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play, use_handlers=True,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
 
     def test_one_bogus_include_role(self):
+
         ds = [{'include_role': {'name': 'bogus_role'}}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         block=self.mock_block,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_role_loader)
         print(res)
 
     def test_one_bogus_include_role_use_handlers(self):
         ds = [{'include_role': {'name': 'bogus_role'}}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_tasks(ds, mock_play, block=None, role=None, task_include=None, use_handlers=True, variable_manager=None, loader=None)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play, use_handlers=True,
+                                         block=self.mock_block,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_role_loader)
         print(res)
 
 
-class TestLoadListOfRoles(unittest.TestCase):
+class TestLoadListOfRoles(unittest.TestCase, MixinForMocks):
+    def setUp(self):
+        self._setup()
+
     def test_ds_not_list(self):
         ds = {}
-        mock_play = MagicMock(name='MockPlay')
         self.assertRaises(AssertionError, helpers.load_list_of_roles,
-                          ds, mock_play)
+                          ds, self.mock_play)
 
     def test_empty_role(self):
         ds = [{}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_roles(ds, mock_play)
+        res = helpers.load_list_of_roles(ds, self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_role_loader)
         print(res)
 
     def test_empty_role_just_name(self):
-        ds = [{'name': 'testrole'}]
-        mock_play = MagicMock(name='MockPlay')
-        res = helpers.load_list_of_roles(ds, mock_play)
+        ds = [{'name': 'bogus_role'}]
+        res = helpers.load_list_of_roles(ds, self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_role_loader)
+        print(res)
+
+    def test_block_unknown_action(self):
+        ds = [{
+            'block': [{'action': 'foo_test_block_unknown_action'}]
+        }]
+        ds = [{'name': 'bogus_role'}]
+        res = helpers.load_list_of_roles(ds, self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_role_loader)
         print(res)
 
 
-class TestLoadListOfBlocks(unittest.TestCase):
+class TestLoadListOfBlocks(unittest.TestCase, MixinForMocks):
+    def setUp(self):
+        self._setup()
+
     def test_ds_not_list(self):
         ds = {}
         mock_play = MagicMock(name='MockPlay')
