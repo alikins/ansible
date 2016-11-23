@@ -41,18 +41,29 @@ class TestIncludedFile(unittest.TestCase):
         inc_file = included_file.IncludedFile(filename='somefile.yml', args=[], task=None)
         print(inc_file)
 
-    def test_process_include_results_empty_results(self):
+    def test_process_include_results(self):
 
         hostname = "testhost1"
-        task_ds = {'action': 'include',
-                   'include_file': 'include_test.yml'}
-        task = TaskInclude()
-        loaded_task = task.load(task_ds)
-        print('loaded_task=%s' % loaded_task)
+        hostname2 = "testhost2"
+        parent_task_ds = {'debug': 'msg=foo'}
+        parent_task = Task()
+        parent_task.load(parent_task_ds)
+
+        task_ds = {'include': 'include_test.yml'}
+        task_include = TaskInclude()
+        loaded_task = task_include.load(task_ds, task_include=parent_task)
+        child_task_ds = task_ds
+        child_task_include = TaskInclude()
+        loaded_child_task = child_task_include.load(child_task_ds, task_include=loaded_task)
+
         return_data = {'include': 'include_test.yml'}
-        result = task_result.TaskResult(host=hostname, task=loaded_task, return_data=return_data)
-        results = [result]
+        # The task in the TaskResult has to be a TaskInclude so it has a .static attr
+        result1 = task_result.TaskResult(host=hostname, task=loaded_task, return_data=return_data)
+        result2 = task_result.TaskResult(host=hostname2, task=loaded_child_task, return_data=return_data)
+        results = [result1, result2]
+
         fake_loader = DictDataLoader({'include_test.yml': ""})
+
         mock_tqm = MagicMock(name='MockTaskQueueManager')
 
         mock_play = MagicMock(name='MockPlay')
@@ -83,5 +94,13 @@ class TestIncludedFile(unittest.TestCase):
         res = included_file.IncludedFile.process_include_results(results, mock_tqm, mock_iterator,
                                                                  mock_inventory, fake_loader,
                                                                  mock_variable_manager)
-
         print(res)
+        for inc_file in res:
+            print('included_file=%s' % inc_file)
+            print(type(inc_file))
+            print(dir(inc_file))
+            print('_filename=%s' % inc_file._filename)
+            print('_args=%s' % inc_file._args)
+            print('_tasks=%s' % inc_file._task)
+            self.assertIn(hostname, inc_file._hosts)
+
