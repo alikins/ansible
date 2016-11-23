@@ -28,6 +28,7 @@ from units.mock.loader import DictDataLoader
 from ansible.compat.six import string_types
 from ansible.errors import AnsibleParserError
 from ansible.playbook.attribute import FieldAttribute
+from ansible.playbook.block import Block
 from ansible.playbook.task import Task
 from ansible.playbook.task_include import TaskInclude
 from ansible.template import Templar
@@ -68,9 +69,13 @@ class MixinForMocks(object):
 
         self._test_data_path = os.path.dirname(__file__)
         self.fake_include_loader = DictDataLoader({"/dev/null/includes/test_include.yml": """
-                                                - include: other_test_include.yml
-                                                - shell: echo 'hello world'
-                                                """,
+                                                   - include: other_test_include.yml
+                                                   - shell: echo 'hello world'
+                                                   """,
+                                                   "/dev/null/includes/static_test_include.yml": """
+                                                   - include: other_test_include.yml
+                                                   - shell: echo 'hello static world'
+                                                   """,
                                                    "/dev/null/includes/other_test_include.yml": """
                                                    - debug:
                                                        msg: other_test_include_debug
@@ -213,6 +218,22 @@ class TestLoadListOfTasks(unittest.TestCase, MixinForMocks):
         ds = [{'include': '/dev/null/includes/test_include.yml'}]
         res = helpers.load_list_of_tasks(ds, play=self.mock_play,
                                          use_handlers=True,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    # TODO/FIXME: this doesn't seen right
+    #  figure out how to get the non-static errors to be raised, this seems to just ignore everything
+    def test_one_include_not_static(self):
+        ds = [{
+            'include': '/dev/null/includes/static_test_include.yml',
+            'static': False
+        }]
+        #a_block = Block()
+        ti_ds = {'include': '/dev/null/includes/ssdftatic_test_include.yml'}
+        a_task_include = TaskInclude()
+        ti = a_task_include.load(ti_ds)
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         block=ti,
                                          variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
         print(res)
 
