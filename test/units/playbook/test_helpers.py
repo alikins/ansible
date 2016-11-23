@@ -19,6 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import os
+
 from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import MagicMock
 from units.mock.loader import DictDataLoader
@@ -63,6 +65,16 @@ class MixinForMocks(object):
         self.fake_role_loader = DictDataLoader({"/etc/ansible/roles/bogus_role/tasks/main.yml": """
                                                 - shell: echo 'hello world'
                                                 """})
+
+        self._test_data_path = os.path.dirname(__file__)
+        self.fake_include_loader = DictDataLoader({"/dev/null/includes/test_include.yml": """
+                                                - include: other_test_include.yml
+                                                - shell: echo 'hello world'
+                                                """,
+                                                   "/dev/null/includes/other_test_include.yml": """
+                                                   - debug:
+                                                       msg: other_test_include_debug
+                                                   """})
 
 
 class TestLoadListOfTasks(unittest.TestCase, MixinForMocks):
@@ -131,6 +143,93 @@ class TestLoadListOfTasks(unittest.TestCase, MixinForMocks):
         res = helpers.load_list_of_tasks(ds, play=self.mock_play, use_handlers=True,
                                          variable_manager=self.mock_variable_manager, loader=self.fake_loader)
         print(res)
+
+    def test_one_bogus_include_static(self):
+        ds = [{'include': 'somefile.yml',
+               'static': 'true'}]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_loader)
+        print(res)
+
+    def test_one_include(self):
+        ds = [{'include': '/dev/null/includes/other_test_include.yml'}]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    def test_one_parent_include(self):
+        ds = [{'include': '/dev/null/includes/test_include.yml'}]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    # TODO/FIXME: do this non deprecated way
+    def test_one_include_tags(self):
+        ds = [{'include': '/dev/null/includes/other_test_include.yml',
+               'tags': ['test_one_include_tags_tag1', 'and_another_tagB']
+               }]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    # TODO/FIXME: do this non deprecated way
+    def test_one_parent_include_tags(self):
+        ds = [{'include': '/dev/null/includes/test_include.yml',
+               #'vars': {'tags': ['test_one_parent_include_tags_tag1', 'and_another_tag2']}
+               'tags': ['test_one_parent_include_tags_tag1', 'and_another_tag2']
+               }
+              ]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    # It would be useful to be able to tell what kind of deprecation we encountered and where we encountered it.
+    def test_one_include_tags_deprecated_mixed(self):
+        ds = [{'include': "/dev/null/includes/other_test_include.yml",
+               'vars': {'tags': "['tag_on_include1', 'tag_on_include2']"},
+               'tags': 'mixed_tag1, mixed_tag2'
+               }]
+        self.assertRaisesRegexp(AnsibleParserError, 'Mixing styles',
+                                helpers.load_list_of_tasks,
+                                ds, play=self.mock_play,
+                                variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+
+    def test_one_include_tags_deprecated_include(self):
+        ds = [{'include': '/dev/null/includes/other_test_include.yml',
+               'vars': {'tags': ['include_tag1_deprecated', 'and_another_tagB_deprecated']}
+               }]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    def test_one_include_use_handlers(self):
+        ds = [{'include': '/dev/null/includes/other_test_include.yml'}]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         use_handlers=True,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    def test_one_parent_include_use_handlers(self):
+        ds = [{'include': '/dev/null/includes/test_include.yml'}]
+        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+                                         use_handlers=True,
+                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+        print(res)
+
+    # TODO/FIXME: This two get stuck trying to make a mock_block into a TaskInclude
+#    def test_one_include(self):
+#        ds = [{'include': 'other_test_include.yml'}]
+#        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+#                                         block=self.mock_block,
+#                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+#        print(res)
+
+#    def test_one_parent_include(self):
+#        ds = [{'include': 'test_include.yml'}]
+#        res = helpers.load_list_of_tasks(ds, play=self.mock_play,
+#                                         block=self.mock_block,
+#                                         variable_manager=self.mock_variable_manager, loader=self.fake_include_loader)
+#        print(res)
 
     def test_one_bogus_include_role(self):
 
