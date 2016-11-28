@@ -214,7 +214,7 @@ class TestModuleUtilsBasic(ModuleTestCase):
 
         class Foo(LinuxTest):
             platform = "Linux"
-            distribution = "DistributionNotApplicable"
+            distribution = "Generic"
 
         class Bar(LinuxTest):
             platform = "Linux"
@@ -256,7 +256,7 @@ class TestModuleUtilsBasic(ModuleTestCase):
 
         class OtherPlatform(Platform):
             platform = "Other"
-            distribution = "DistributionNotApplicable"
+            distribution = "Generic"
 
         class Foo(OtherPlatform):
             platform = "Other"
@@ -302,7 +302,7 @@ class TestModuleUtilsBasic(ModuleTestCase):
                 self.assertIs(type(load_platform_subclass(OtherPlatform)), Bar)
 
         with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
-            with patch('ansible.module_utils.basic.get_distribution', return_value='DistributionNotApplicable'):
+            with patch('ansible.module_utils.basic.get_distribution', return_value='Generic'):
                 self.assertIs(type(load_platform_subclass(OtherPlatform)), OtherPlatform)
 
         # match just the platform class, sc.distribution is not recognized

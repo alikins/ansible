@@ -301,7 +301,7 @@ def load_platform_subclass(cls, *args, **kwargs):
     '''
 
     this_platform = get_platform()
-    distribution = get_distribution() or 'DistributionNotApplicable'
+    distribution = get_distribution() or 'Generic'
     subclass = cls
 
     # get the most specific superclass for this platform
@@ -309,7 +309,7 @@ def load_platform_subclass(cls, *args, **kwargs):
         if sc.platform != this_platform:
             continue
 
-        if sc.distribution == distribution or sc.distribution == 'DistributionNotApplicable':
+        if sc.distribution == distribution or sc.distribution == 'Generic':
             subclass = sc
 
     return super(cls, subclass).__new__(subclass)
