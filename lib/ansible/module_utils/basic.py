@@ -313,7 +313,7 @@ def load_platform_subclass(cls, *args, **kwargs):
             subclass = sc
     if subclass is None:
         for sc in get_all_subclasses(cls):
-            if sc.platform == this_platform and sc.distribution is None:
+            if sc.platform == this_platform and sc.distribution == 'DistributionNotApplicable':
                 subclass = sc
     if subclass is None:
         subclass = cls

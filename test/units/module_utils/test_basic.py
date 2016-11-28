@@ -250,6 +250,71 @@ class TestModuleUtilsBasic(ModuleTestCase):
             with patch('ansible.module_utils.basic.get_distribution', return_value=None):
                 self.assertIs(type(load_platform_subclass(LinuxTest)), LinuxTest)
 
+    def test_module_utils_basic_load_platform_subclass_wrong_platform(self):
+        class Platform:
+            pass
+
+        class OtherPlatform(Platform):
+            platform = "Other"
+            distribution = "DistributionNotApplicable"
+
+        class Foo(OtherPlatform):
+            platform = "Other"
+            distribution = "Foo"
+
+        class Bar(OtherPlatform):
+            platform = "Other"
+            distribution = "Bar"
+
+        class Baz(OtherPlatform):
+            platform = "Other"
+            distribution = None
+
+        from ansible.module_utils.basic import load_platform_subclass
+
+        with patch('ansible.module_utils.basic.get_platform', return_value="Linux"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value=None):
+                ret = load_platform_subclass(OtherPlatform)
+                print(ret)
+
+        # match just the platform class, not a specific distribution
+        with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value=None):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), OtherPlatform)
+
+        # match just the platform class, sc.distribution is not recognized
+        with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value='dont_know'):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), OtherPlatform)
+
+        # match both the distribution and platform class
+        with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value="Foo"):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), Foo)
+
+        # if neither match, the fallback should be the top-level class
+        with patch('ansible.module_utils.basic.get_platform', return_value="Foo"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value=None):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), OtherPlatform)
+
+        with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value='Bar'):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), Bar)
+
+        with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value='DistributionNotApplicable'):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), OtherPlatform)
+
+        # match just the platform class, sc.distribution is not recognized
+        with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value='dont_know'):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), OtherPlatform)
+
+        # match both the distribution and platform class
+        with patch('ansible.module_utils.basic.get_platform', return_value="Other"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value="Foo"):
+                self.assertIs(type(load_platform_subclass(OtherPlatform)), Foo)
+
     def test_module_utils_basic_json_dict_converters(self):
         from ansible.module_utils.basic import json_dict_unicode_to_bytes, json_dict_bytes_to_unicode
 
