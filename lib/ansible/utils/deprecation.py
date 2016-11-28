@@ -1,7 +1,7 @@
 
 from ansible import constants as C
 from ansible.errors import AnsibleError
-from ansible.compat.six import with_metaclass, add_metaclass
+from ansible.compat.six import add_metaclass
 
 try:
     from __main__ import display
@@ -178,6 +178,7 @@ class Reaction(object):
         if result == Results.REMOVED:
             raise AnsibleDeprecation("[DEPRECATED]: %s.\nPlease update your playbooks." % depr.message)
         return result
+
 
 # For more useful output, set deprecation.reaction to something like DefaultReaction
 default_reaction = Reaction()
@@ -447,6 +448,14 @@ class Deprecations(object):
 
         return check_result
 
+    def evaluate(self, label):
+        depr = self._find(label)
+
+        if not depr:
+            return Results.NOT_FOUND
+
+        return depr.evaluate()
+
     def removed(self, label):
         depr = self._find(label)
         return depr.removed()
@@ -466,6 +475,10 @@ def check(label, message=None, where=None):
     '''where is an 'ansible_pos' style tuple of ('filename', line_number, column_number)'''
     # side-effects include displaying of messages via display_callback
     return _deprecations.check(label, message=message, where=where)
+
+
+def evaluate(label):
+    return _deprecations.evaluate(label)
 
 
 def removed(label):

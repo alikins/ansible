@@ -98,6 +98,14 @@ class TestDeprecation(unittest.TestCase):
         res = deprecation.list_deprecations()
         print(res)
 
+    def test_evaluate_future(self):
+        res = deprecation.evaluate(FUTURE)
+        self.assertEquals(res, deprecation.Results.FUTURE)
+
+    def test_evaluate_removed_now(self):
+        res = deprecation.evaluate(REMOVED_NOW)
+        self.assertEquals(res, deprecation.Results.REMOVED)
+
     # FIXME: mock.patch instead
     def test_mitigation(self):
         deprecation.C.DEFAULT_DEPRECATIONS_TO_IGNORE = ['Foo']
