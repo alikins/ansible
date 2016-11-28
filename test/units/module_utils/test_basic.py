@@ -214,17 +214,30 @@ class TestModuleUtilsBasic(ModuleTestCase):
 
         class Foo(LinuxTest):
             platform = "Linux"
-            distribution = None
+            distribution = "DistributionNotApplicable"
 
         class Bar(LinuxTest):
             platform = "Linux"
             distribution = "Bar"
+
+    #    class DistroNotApplicable(LinuxTest):
+    #        platform = "Linux"
+    #        distribution = "DistributionNotApplicable"
+
+        class OtherPlatform:
+            platform = "ADifferentPlatform"
+            distribution = None
 
         from ansible.module_utils.basic import load_platform_subclass
 
         # match just the platform class, not a specific distribution
         with patch('ansible.module_utils.basic.get_platform', return_value="Linux"):
             with patch('ansible.module_utils.basic.get_distribution', return_value=None):
+                self.assertIs(type(load_platform_subclass(LinuxTest)), Foo)
+
+        # match just the platform class, sc.distribution is not recognized
+        with patch('ansible.module_utils.basic.get_platform', return_value="Linux"):
+            with patch('ansible.module_utils.basic.get_distribution', return_value='dont_know'):
                 self.assertIs(type(load_platform_subclass(LinuxTest)), Foo)
 
         # match both the distribution and platform class
