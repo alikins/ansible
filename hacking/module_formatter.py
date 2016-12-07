@@ -143,11 +143,8 @@ def list_modules(module_dir, depth=0):
         if module_path.endswith('__init__.py'):
             continue
         category = categories
-        mod_path_only = module_path
+        mod_path_only = os.path.dirname(module_path[len(module_dir) + 1:])
         # Start at the second directory because we don't want the "vendor"
-
-        mod_path_only = os.path.dirname(module_path[len(module_dir):])
-
         # directories (core, extras)
         for new_cat in mod_path_only.split('/')[1:]:
             if new_cat not in category:
@@ -376,6 +373,7 @@ def process_category(category, categories, options, env, template, outputname):
     deprecated = []
     core = []
     for module in module_map.keys():
+
         if isinstance(module_map[module], dict):
             for mod in (m for m in module_map[module].keys() if m in module_info):
                 if mod.startswith("_"):
