@@ -1018,6 +1018,7 @@ control_path_dir
 This is the base directory of the ControlPath sockets.
 It is the ``%(directory)s`` part of the ``control_path`` option.
 This defaults to::
+
     control_path_dir=$HOME/.ansible/cp
 
 .. _scp_if_ssh:
