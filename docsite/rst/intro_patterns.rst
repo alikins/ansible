@@ -100,13 +100,3 @@ Easy enough.  See :doc:`intro_adhoc` and then :doc:`playbooks` for how to apply 
 .. note:: With the exception of version 1.9, you can use ',' instead of ':' as a host list separator. The ',' is prefered specially when dealing with ranges and ipv6.
 .. note:: As of 2.0 the ';' is deprecated as a host list separator.
 
-.. seealso::
-
-   :doc:`intro_adhoc`
-       Examples of basic commands
-   :doc:`playbooks`
-       Learning ansible's configuration management language
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel

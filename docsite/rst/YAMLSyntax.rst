@@ -151,18 +151,3 @@ value::
   version: "1.0"
 
 
-.. seealso::
-
-   :doc:`playbooks`
-       Learn what playbooks can do and how to write/run them.
-   `YAMLLint <http://yamllint.com/>`_
-       YAML Lint (online) helps you debug YAML syntax if you are having problems
-   `Github examples directory <https://github.com/ansible/ansible-examples>`_
-       Complete playbook files from the github project source
-   `Wikipedia YAML syntax reference <https://en.wikipedia.org/wiki/YAML>`_
-       A good guide to YAML syntax
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-

@@ -490,28 +490,3 @@ You can sign up with social auth, and the download client 'ansible-galaxy' is in
 
 Read the "About" page on the Galaxy site for more information.
 
-.. seealso::
-
-   :doc:`galaxy`
-       How to share roles on galaxy, role management
-   :doc:`YAMLSyntax`
-       Learn about YAML syntax
-   :doc:`playbooks`
-       Review the basic Playbook language features
-   :doc:`playbooks_best_practices`
-       Various tips about managing playbooks in the real world
-   :doc:`playbooks_variables`
-       All about variables in playbooks
-   :doc:`playbooks_conditionals`
-       Conditionals in playbooks
-   :doc:`playbooks_loops`
-       Loops in playbooks
-   :doc:`modules`
-       Learn about available modules
-   :doc:`developing_modules`
-       Learn how to extend Ansible by writing your own modules
-   `GitHub Ansible examples <https://github.com/ansible/ansible-examples>`_
-       Complete playbook files from the GitHub project source
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-

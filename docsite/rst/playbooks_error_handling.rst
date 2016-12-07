@@ -131,19 +131,3 @@ The ``any_errors_fatal`` play option will mark all hosts as failed if any fails,
 for finer-grained control ``max_fail_percentage`` can be used to abort the run after a given percentage of hosts has failed.
 
 
-.. seealso::
-
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_best_practices`
-       Best practices in playbooks
-   :doc:`playbooks_conditionals`
-       Conditional statements in playbooks
-   :doc:`playbooks_variables`
-       All about variables
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-
-

@@ -79,12 +79,3 @@ following::
    "check on it later" task to fail because the temporary status file that
    the ``async_status:`` is looking for will not have been written or no longer exist 
 
-.. seealso::
-
-   :doc:`playbooks`
-       An introduction to playbooks
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-

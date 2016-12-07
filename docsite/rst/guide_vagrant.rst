@@ -139,16 +139,3 @@ The "Tips and Tricks" chapter of the `Ansible Provisioner documentation
   - how to parallely execute a playbook in a multi-machine environment
   - how to integrate a local ``ansible.cfg`` configuration file
 
-.. seealso::
-
-    `Vagrant Home <http://www.vagrantup.com/>`_
-        The Vagrant homepage with downloads
-    `Vagrant Documentation <http://docs.vagrantup.com/v2/>`_
-        Vagrant Documentation
-    `Ansible Provisioner <http://docs.vagrantup.com/v2/provisioning/ansible.html>`_
-        The Vagrant documentation for the Ansible provisioner
-    `Vagrant Issue Tracker <https://github.com/mitchellh/vagrant/issues?q=is%3Aopen+is%3Aissue+label%3Aprovisioners%2Fansible>`_
-        The open issues for the Ansible provisioner in the Vagrant project
-    :doc:`playbooks`
-        An introduction to playbooks
-

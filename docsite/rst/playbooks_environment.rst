@@ -114,13 +114,3 @@ You might also want to simply specify the environment for a single task::
 .. note::
    ``environment:`` is not currently supported for Windows targets
 
-.. seealso::
-
-   :doc:`playbooks`
-       An introduction to playbooks
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-
-

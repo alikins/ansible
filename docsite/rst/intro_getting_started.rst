@@ -135,15 +135,3 @@ Ansible will log some information about module arguments on the remote system in
 
 To enable basic logging on the control machine see :doc:`intro_configuration` document and set the 'log_path' configuration file setting.  Enterprise users may also be interested in :doc:`tower`.  Tower provides a very robust database logging feature where it is possible to drill down and see history based on hosts, projects, and particular inventories over time -- explorable both graphically and through a REST API.
 
-.. seealso::
-
-   :doc:`intro_inventory`
-       More information about inventory
-   :doc:`intro_adhoc`
-       Examples of basic commands
-   :doc:`playbooks`
-       Learning Ansible's configuration management language
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel

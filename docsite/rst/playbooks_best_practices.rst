@@ -474,20 +474,3 @@ A best practice approach for this is to start with a ``group_vars/`` subdirector
 This best practice has no limit on the amount of variable and vault files or their names.
 
 
-.. seealso::
-
-   :doc:`YAMLSyntax`
-       Learn about YAML syntax
-   :doc:`playbooks`
-       Review the basic playbook features
-   :doc:`modules`
-       Learn about available modules
-   :doc:`developing_modules`
-       Learn how to extend Ansible by writing your own modules
-   :doc:`intro_patterns`
-       Learn about how to select hosts
-   `GitHub examples directory <https://github.com/ansible/ansible/tree/devel/examples/playbooks>`_
-       Complete playbook files from the github project source
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-

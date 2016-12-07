@@ -484,16 +484,3 @@ when a term comes up on the mailing list.
         community and the format has libraries available for serialization in
         many languages (Python, Perl, Ruby, etc.).
 
-.. seealso::
-
-   :doc:`faq`
-       Frequently asked questions
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_best_practices`
-       Best practices advice
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-

@@ -364,15 +364,3 @@ Now let's test things with a ping command:
 
 You can also use "sudo make install".
 
-.. seealso::
-
-   :doc:`intro_adhoc`
-       Examples of basic commands
-   :doc:`playbooks`
-       Learning ansible's configuration management language
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-
-.. [1] If you have issues with the "pycrypto" package install on Mac OSX, which is included as a dependency for paramiko, then you may need to try "CC=clang sudo -E pip install pycrypto".

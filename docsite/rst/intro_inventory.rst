@@ -326,15 +326,3 @@ Here is an example of how to instantly deploy to created containers::
       path: "/var/jenkins_home/.ssh/jupiter"
       state: directory
 
-.. seealso::
-
-   :doc:`intro_dynamic_inventory`
-       Pulling inventory from dynamic sources, such as cloud providers
-   :doc:`intro_adhoc`
-       Examples of basic commands
-   :doc:`playbooks`
-       Learning Ansible’s configuration, deployment, and orchestration language.
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel

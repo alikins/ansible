@@ -478,25 +478,3 @@ convert it between various formats. Examples::
     # {{ macaddress | hwaddr('cisco') }}
     1a2b.3c4d.5e6f
 
-.. seealso::
-
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_filters`
-       Introduction to Jinja2 filters and their uses
-   :doc:`playbooks_conditionals`
-       Conditional statements in playbooks
-   :doc:`playbooks_variables`
-       All about variables
-   :doc:`playbooks_loops`
-       Looping in playbooks
-   :doc:`playbooks_roles`
-       Playbook organization by roles
-   :doc:`playbooks_best_practices`
-       Best practices in playbooks
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-
-

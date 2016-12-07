@@ -78,15 +78,3 @@ warnings
 ````````
 This key contains a list of strings that will be presented to the user.
 
-.. seealso::
-
-   :doc:`modules`
-       Learn about available modules
-   `GitHub Core modules directory <https://github.com/ansible/ansible-modules-core/tree/devel>`_
-       Browse source of core modules
-   `Github Extras modules directory <https://github.com/ansible/ansible-modules-extras/tree/devel>`_
-       Browse source of extras modules.
-   `Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Development mailing list
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel

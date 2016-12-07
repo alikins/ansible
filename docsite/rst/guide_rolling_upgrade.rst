@@ -266,17 +266,3 @@ For integration with Continuous Integration systems, you can easily trigger play
 
 This should give you a good idea of how to structure a multi-tier application with Ansible, and orchestrate operations upon that app, with the eventual goal of continuous delivery to your customers. You could extend the idea of the rolling upgrade to lots of different parts of the app; maybe add front-end web servers along with application servers, for instance, or replace the SQL database with something like MongoDB or Riak. Ansible gives you the capability to easily manage complicated environments and automate common operations.
 
-.. seealso::
-
-   `lamp_haproxy example <https://github.com/ansible/ansible-examples/tree/master/lamp_haproxy>`_
-       The lamp_haproxy example discussed here.
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_roles`
-       An introduction to playbook roles
-   :doc:`playbooks_variables`
-       An introduction to Ansible variables
-   `Ansible.com: Continuous Delivery <http://www.ansible.com/ansible-continuous-delivery>`_
-       An introduction to Continuous Delivery with Ansible
-
-

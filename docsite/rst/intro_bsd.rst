@@ -76,16 +76,3 @@ BSD Efforts and Contributions
 BSD support is important to us at Ansible. Even though the majority of our contributors use and target Linux we have an active BSD community and strive to be as BSD friendly as possible.
 Please feel free to report any issues or incompatibilities you discover with BSD; pull requests with an included fix are also welcome!
 
-.. seealso::
-
-   :doc:`intro_adhoc`
-       Examples of basic commands
-   :doc:`playbooks`
-       Learning ansible's configuration management language
-   :doc:`developing_modules`
-       How to write modules
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-

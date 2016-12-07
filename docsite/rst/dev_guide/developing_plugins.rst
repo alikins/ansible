@@ -255,17 +255,3 @@ Plugins are automatically loaded when you have one of the following subfolders a
 
 When shipped as part of a role, the plugin will be available as soon as the role is called in the play.
 
-.. seealso::
-
-   :doc:`modules`
-       List of built-in modules
-   :doc:`developing_api`
-       Learn about the Python API for task execution
-   :doc:`developing_inventory`
-       Learn about how to develop dynamic inventory sources
-   :doc:`developing_modules`
-       Learn about how to write Ansible modules
-   `Mailing List <http://groups.google.com/group/ansible-devel>`_
-       The development mailing list
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel

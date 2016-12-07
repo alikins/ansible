@@ -79,17 +79,3 @@ Another example is how to run handlers after an error occurred :
     - name: run me even after an error
       debug: msg='this handler runs even on error'
 
-.. seealso::
-
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_roles`
-       Playbook organization by roles
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-
-
-
-

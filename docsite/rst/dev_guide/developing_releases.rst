@@ -32,17 +32,3 @@ Release feature freeze
 
 During the release candidate process, the focus will be on bugfixes that affect the RC, new features will be delayed while we try to produce a final version. Some bugfixes that are minor or don't affect the RC will also be postponed until after the release is finalized.
 
-.. seealso::
-
-   :doc:`developing_api`
-       Python API to Playbooks and Ad Hoc Task Execution
-   :doc:`developing_modules`
-       How to develop modules
-   :doc:`developing_plugins`
-       How to develop plugins
-   `Ansible Tower <http://ansible.com/ansible-tower>`_
-       REST API endpoint and GUI for Ansible, syncs with dynamic inventory
-   `Development Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Mailing list for development topics
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel

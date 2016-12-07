@@ -266,15 +266,3 @@ It's also possible to filter this output to just export certain facts, see the "
 
 Read more about facts at :doc:`playbooks_variables` once you're ready to read up on :doc:`Playbooks <playbooks>`. 
 
-.. seealso::
-
-   :doc:`intro_configuration`
-       All about the Ansible config file
-   :doc:`modules`
-       A list of available modules
-   :doc:`playbooks`
-       Using Ansible for configuration management & deployment
-   `Mailing List <http://groups.google.com/group/ansible-project>`_
-       Questions? Help? Ideas?  Stop by the list on Google Groups
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel

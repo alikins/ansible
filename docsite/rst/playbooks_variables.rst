@@ -979,23 +979,3 @@ Advanced Syntax
 
 For information about advanced YAML syntax used to declare variables and have more control over the data placed in YAML files used by Ansible, see :doc:`playbooks_advanced_syntax`.
 
-.. seealso::
-
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_conditionals`
-       Conditional statements in playbooks
-   :doc:`playbooks_filters`
-       Jinja2 filters and their uses
-   :doc:`playbooks_loops`
-       Looping in playbooks
-   :doc:`playbooks_roles`
-       Playbook organization by roles
-   :doc:`playbooks_best_practices`
-       Best practices in playbooks
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-
-

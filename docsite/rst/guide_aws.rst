@@ -232,16 +232,3 @@ Next Steps: Explore Modules
 Ansible ships with lots of modules for configuring a wide array of EC2 services.  Browse the "Cloud" category of the module
 documentation for a full list with examples.
 
-.. seealso::
-
-   :doc:`modules`
-       All the documentation for Ansible modules
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_delegation`
-       Delegation, useful for working with loud balancers, clouds, and locally executed steps.
-   `User Mailing List <http://groups.google.com/group/ansible-devel>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-

@@ -251,16 +251,3 @@ In all, testing is a very organizational and site-specific thing.  Everybody sho
 environment will vary with what you are deploying and who is using it -- but everyone benefits from a more robust and reliable deployment
 system.
 
-.. seealso::
-
-   :doc:`modules`
-       All the documentation for Ansible modules
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_delegation`
-       Delegation, useful for working with load balancers, clouds, and locally executed steps.
-   `User Mailing List <http://groups.google.com/group/ansible-project>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-

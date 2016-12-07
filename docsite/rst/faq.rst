@@ -359,18 +359,3 @@ I don't see my question here
 
 Please see the section below for a link to IRC and the Google Group, where you can ask your question there.
 
-.. seealso::
-
-   :doc:`index`
-       The documentation index
-   :doc:`playbooks`
-       An introduction to playbooks
-   :doc:`playbooks_best_practices`
-       Best practices advice
-   `User Mailing List <http://groups.google.com/group/ansible-project>`_
-       Have a question?  Stop by the google group!
-   `irc.freenode.net <http://irc.freenode.net>`_
-       #ansible IRC chat channel
-
-
-
