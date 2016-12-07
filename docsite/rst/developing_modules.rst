@@ -20,12 +20,6 @@ additional paths can be added.
 The directory :file:`./library`, alongside your top level :term:`playbooks`, is also automatically
 added as a search directory.
 
-Should you develop an interesting Ansible module, consider sending a pull request to the
-`modules-extras project <https://github.com/ansible/ansible-modules-extras>`_.  There's also a core
-repo for more established and widely used modules.  "Extras" modules may be promoted to core periodically,
-but there's no fundamental difference in the end - both ship with Ansible, all in one package, regardless
-of how you acquire Ansible.
-
 .. _module_dev_tutorial:
 
 Tutorial
@@ -256,7 +250,7 @@ As mentioned, if you are writing a module in Python, there are some very powerfu
 Modules are still transferred as one file, but an arguments file is no longer needed, so these are not
 only shorter in terms of code, they are actually FASTER in terms of execution time.
 
-Rather than mention these here, the best way to learn is to read some of the `source of the modules <https://github.com/ansible/ansible-modules-core>`_ that come with Ansible.
+Rather than mention these here, the best way to learn is to read some of the source of the modules that come with Ansible.
 
 The 'group' and 'user' modules are reasonably non-trivial and showcase what this looks like.
 
@@ -607,13 +601,6 @@ Module Paths
 If you are having trouble getting your module "found" by ansible, be
 sure it is in the :envvar:`ANSIBLE_LIBRARY` environment variable.
 
-If you have a fork of one of the ansible module projects, do something like this::
-
-    ANSIBLE_LIBRARY=~/ansible-modules-core:~/ansible-modules-extras
-
-And this will make the items in your fork be loaded ahead of what ships with Ansible.  Just be sure
-to make sure you're not reporting bugs on versions from your fork!
-
 To be safe, if you're working on a variant on something in Ansible's normal distribution, it's not
 a bad idea to give it a new name while you are working on it, to be sure you know you're pulling
 your version.
@@ -628,7 +615,7 @@ can be included in Ansible, but modules (just due to the programming
 preferences of the developers) will need to be implemented in Python and use
 the AnsibleModule common code, and should generally use consistent arguments with the rest of
 the program.   Stop by the mailing list to inquire about requirements if you like, and submit
-a github pull request to the `extras <https://github.com/ansible/ansible-modules-extras>`_ project.
+a github pull request to the `ansible <https://github.com/ansible/ansible>`_ project.
 Included modules will ship with ansible, and also have a chance to be promoted to 'core' status, which
 gives them slightly higher development priority (though they'll work in exactly the same way).
 
@@ -681,8 +668,6 @@ The following  checklist items are important guidelines for people who want to c
     * Give out useful messages on what you were doing and you can add the exception message to that.
     * Avoid catchall exceptions, they are not very useful unless the underlying API gives very good error messages pertaining the attempted action.
 * Module-dependent guidelines: Additional module guidelines may exist for certain families of modules.
-    * Be sure to check out the modules themselves for additional information.
-        * Amazon: https://github.com/ansible/ansible-modules-extras/blob/devel/cloud/amazon/GUIDELINES.md
     * Modules should make use of the "extends_documentation_fragment" to ensure documentation available. For example, the AWS module should include::
 
         extends_documentation_fragment:
@@ -820,10 +805,6 @@ This example allows the stat module to be called with fileinfo, making the follo
        Learn about developing plugins
    :doc:`developing_api`
        Learn about the Python API for playbook and task execution
-   `GitHub Core modules directory <https://github.com/ansible/ansible-modules-core/tree/devel>`_
-       Browse source of core modules
-   `Github Extras modules directory <https://github.com/ansible/ansible-modules-extras/tree/devel>`_
-       Browse source of extras modules.
    `Mailing List <http://groups.google.com/group/ansible-devel>`_
        Development mailing list
    `irc.freenode.net <http://irc.freenode.net>`_

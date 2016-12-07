@@ -4,7 +4,7 @@ DUMPER=../hacking/dump_playbook_attributes.py
 
 all: clean docs
 
-docs: clean directives modules staticmin
+docs: clean modules directives staticmin
 	./build-site.py
 	-(cp *.ico htmlout/)
 	-(cp *.jpg htmlout/)
@@ -41,7 +41,7 @@ clean:
 
 .PHONEY: docs clean
 
-directives: $(FORMATTER) ../hacking/templates/rst.j2
+directives:
 	PYTHONPATH=../lib $(DUMPER) --template-dir=../hacking/templates --output-dir=rst/
 
 modules: $(FORMATTER) ../hacking/templates/rst.j2
