@@ -2220,7 +2220,8 @@ class AnsibleModule(object):
             try:
                 prompt_re = re.compile(prompt_regex, re.MULTILINE)
             except re.error:
-                self.fail_json(msg="invalid prompt regular expression given to run_command")
+                e = get_exception()
+                self.fail_json(msg="The prompt_regex (%s) given to run_command is not a valid regular expression: %s" % (prompt_regex, e))
 
         # expand things like $HOME and ~
         if not shell:
