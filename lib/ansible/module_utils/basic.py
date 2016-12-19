@@ -51,9 +51,10 @@ PASS_VARS = {
     'verbosity': '_verbosity',
     'version': 'ansible_version',
     'introspect': '_module_introspect',
+    'introspect_only': '_module_introspect_only',
 }
 
-PASS_BOOLS = ('no_log', 'debug', 'diff', 'introspect')
+PASS_BOOLS = ('no_log', 'debug', 'diff', 'introspect', 'introspect_only')
 
 # Ansible modules can be written in any language.
 # The functions available here can be used to do many common tasks,
@@ -819,6 +820,8 @@ class AnsibleModule(object):
         self.check_mode = False
         self.bypass_checks = bypass_checks
         self.introspect = False
+        # If true, only return the introspection info and dont change any state
+        self.introspect_only = False
         self.no_log = no_log
 
         # Check whether code set this explicitly for deprecation purposes
