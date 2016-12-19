@@ -148,6 +148,11 @@ class TestSafeEval(unittest.TestCase):
         _locals = {'some_obj': set(['foo'])}
         self._eval(code, code, str, _locals, TypeError)
 
+    def test_call_some_obj(self):
+        code = '''some_obj()'''
+        _locals = {'some_obj': set(['foo'])}
+        self._eval(code, code, str, _locals, TypeError)
+
     def test_list_comprehension(self):
         code = '''[x for x in some_list]'''
         _locals = {'some_list': [1, 2, 'c', 'Dee', 2.1718]}
