@@ -247,6 +247,10 @@ def adjust_recursive_directory_permissions(pre_existing_dir, new_directory_list,
     return changed
 
 
+class DirectoryDoesNotExistException(OSError):
+    pass
+
+
 def main():
 
     module = AnsibleModule(
@@ -339,7 +343,9 @@ def main():
                 e = get_exception()
                 if "permission denied" in to_native(e).lower():
                     module.fail_json(msg="Destination directory %s is not accessible" % (os.path.dirname(dest)))
-            module.fail_json(msg="Destination directory %s does not exist" % (os.path.dirname(dest)))
+#            37/0
+            raise DirectoryDoesNotExistException("Destination directory %s is not accessible" % (os.path.dirname(dest)))
+            #module.fail_json(msg="Destination directory %s does not exist" % (os.path.dirname(dest)))
     if not os.access(os.path.dirname(b_dest), os.W_OK):
         module.fail_json(msg="Destination %s not writable" % (os.path.dirname(dest)))
 
