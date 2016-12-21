@@ -2106,7 +2106,7 @@ class AnsibleModule(object):
         return kwargs
 
     def exit_json(self, **kwargs):
-        kwargs = self._format_exit_json(kwargs)
+        kwargs = self._format_exit_json(**kwargs)
         raise AnsibleModuleExit(return_code=0,
                                 exception_data=kwargs)
 
@@ -2122,7 +2122,7 @@ class AnsibleModule(object):
         return kwargs
 
     def fail_json(self, **kwargs):
-        kwargs = self._format_fail_json(kwargs)
+        kwargs = self._format_fail_json(**kwargs)
         raise AnsibleModuleFatalError(return_code=1,
                                       exception_data=kwargs)
 
