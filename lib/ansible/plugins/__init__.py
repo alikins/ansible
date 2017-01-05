@@ -154,7 +154,11 @@ class PluginLoader:
         if not self.package:
             return []
         if not hasattr(self, 'package_path'):
-            m = __import__(self.package)
+            try:
+                m = __import__(self.package)
+            except ImportError:
+                # FIXME: would be a useful place to log an exception
+                return []
             parts = self.package.split('.')[1:]
             for parent_mod in parts:
                 m = getattr(m, parent_mod)

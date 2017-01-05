@@ -293,13 +293,12 @@ class ModuleArgsParser:
                 thing = value
                 action, args = self._normalize_parameters(thing, action=action, additional_args=additional_args)
 
-
         # if we didn't see any module in the task at all, it's not a task really
         if action is None:
             if 'ping' not in module_loader:
-                raise AnsibleParserError("The requested action was not found in configured module paths. "
-                        "Additionally, core modules are missing. If this is a checkout, "
-                        "run 'git submodule update --init --recursive' to correct this problem.",
+                raise AnsibleParserError("The requested action (%s) was not found in the configured module paths. "
+                        "Additionally, core modules are missing. Verify module path configuration ('library' in ansible.cfg). "
+                        "The currently configured module paths are: %s" % ('ping', module_loader.print_paths()),
                         obj=self._task_ds)
 
             else:
