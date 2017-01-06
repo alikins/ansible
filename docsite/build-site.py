@@ -66,8 +66,8 @@ class SphinxBuilder(object):
                               {},
                               sys.stdout,
                               sys.stderr,
-                              freshenv=False,
-                              verbosity=4,
+#                              freshenv=False,
+#                              verbosity=4,
                               parallel=3)
 
             app.builder.build_all()
