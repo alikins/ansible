@@ -39,7 +39,7 @@ from ansible.module_utils.json_utils import _filter_non_json_lines
 from ansible.parsing.utils.jsonify import jsonify
 from ansible.playbook.play_context import MAGIC_VARIABLE_MAPPING
 from ansible.release import __version__
-from ansible.vars.unsafe_proxy import wrap_var
+from ansible.unsafe_proxy import wrap_var
 
 
 try:

@@ -39,10 +39,10 @@ from ansible.errors import AnsibleError, AnsibleParserError, AnsibleUndefinedVar
 from ansible.inventory.host import Host
 from ansible.plugins import lookup_loader
 from ansible.plugins.cache import FactCache
-from ansible.template import Templar
+from ansible import template
 from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.vars import combine_vars
-from ansible.vars.unsafe_proxy import wrap_var
+from ansible.unsafe_proxy import wrap_var
 from ansible.module_utils._text import to_native
 
 try:
@@ -294,7 +294,7 @@ class VariableManager:
                 # and magic vars so we can properly template the vars_files entries
                 temp_vars = combine_vars(all_vars, self._extra_vars)
                 temp_vars = combine_vars(temp_vars, magic_variables)
-                templar = Templar(loader=loader, variables=temp_vars)
+                templar = template.Templar(loader=loader, variables=temp_vars)
 
                 # we assume each item in the list is itself a list, as we
                 # support "conditional includes" for vars_files, which mimics
@@ -448,7 +448,7 @@ class VariableManager:
         # as we're fetching vars before post_validate has been called on
         # the task that has been passed in
         vars_copy = existing_variables.copy()
-        templar = Templar(loader=loader, variables=vars_copy)
+        templar = template.Templar(loader=loader, variables=vars_copy)
 
         items = []
         if task.loop is not None:

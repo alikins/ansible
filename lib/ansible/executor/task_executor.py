@@ -37,7 +37,7 @@ from ansible.template import Templar
 from ansible.utils.encrypt import key_for_hostname
 from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.ssh_functions import check_for_controlpersist
-from ansible.vars.unsafe_proxy import UnsafeProxy, wrap_var
+from ansible.unsafe_proxy import UnsafeProxy, wrap_var
 
 try:
     from __main__ import display
@@ -216,7 +216,8 @@ class TaskExecutor:
                 del self._job_vars[k]
 
         if items:
-            from ansible.vars.unsafe_proxy import UnsafeProxy
+            # FIXME: redundant?
+            from ansible.unsafe_proxy import UnsafeProxy
             for idx, item in enumerate(items):
                 if item is not None and not isinstance(item, UnsafeProxy):
                     items[idx] = UnsafeProxy(item)
