@@ -216,8 +216,6 @@ class TaskExecutor:
                 del self._job_vars[k]
 
         if items:
-            # FIXME: redundant?
-            from ansible.unsafe_proxy import UnsafeProxy
             for idx, item in enumerate(items):
                 if item is not None and not isinstance(item, UnsafeProxy):
                     items[idx] = UnsafeProxy(item)
