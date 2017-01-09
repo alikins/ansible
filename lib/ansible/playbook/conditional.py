@@ -26,12 +26,11 @@ from jinja2.exceptions import UndefinedError
 from ansible.compat.six import text_type
 from ansible.errors import AnsibleError, AnsibleUndefinedVariable
 from ansible.playbook.attribute import FieldAttribute
-from ansible.template import Templar
 from ansible.module_utils._text import to_native
-from ansible.unsafe_proxy import wrap_var
 
 DEFINED_REGEX = re.compile(r'(hostvars\[.+\]|[\w_]+)\s+(not\s+is|is|is\s+not)\s+(defined|undefined)')
 LOOKUP_REGEX = re.compile(r'lookup\s*\(')
+
 
 class Conditional:
 
