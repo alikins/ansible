@@ -42,7 +42,8 @@ from ansible.template.safe_eval import safe_eval
 from ansible.template.template import AnsibleJ2Template
 from ansible.template.vars import AnsibleJ2Vars
 from ansible.module_utils._text import to_native, to_text
-from ansible.vars.unsafe_proxy import UnsafeProxy, wrap_var
+from ansible.unsafe_proxy import UnsafeProxy, wrap_var
+
 
 try:
     from hashlib import sha1
