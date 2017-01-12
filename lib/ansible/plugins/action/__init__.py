@@ -720,14 +720,28 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 display.warning("Removed restricted key from module data: %s = %s" % (r_key, data[r_key]))
                 del data[r_key]
 
-        self._remove_internal_keys(data)
+	self._remove_internal_keys(data)
+		
+    def _find_error_strings(self, data):
+            found_errors = []
+
+        if data is None:
+            return found_errors
+
+        # Looks like a python traceback, just include all of stderr
+        if data.startswith(u'Traceback'):
+            found_errors.append(data)
+
+        # TODO: Error handling for anything aside from python modules that
+        #       print Tracebacks to stderr
+
+        return found_errors
 
     def _parse_returned_data(self, res):
+        warnings = []
+
         try:
             filtered_output, warnings = _filter_non_json_lines(res.get('stdout', u''))
-            for w in warnings:
-                display.warning(w)
-
             data = json.loads(filtered_output)
             self._remove_internal_keys(data)
             data['_ansible_parsed'] = True
@@ -739,13 +753,30 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             # not valid json, lets try to capture error
             data = dict(failed=True, _ansible_parsed=False)
             data['msg'] = "MODULE FAILURE"
-            data['module_stdout'] = res.get('stdout', u'')
-            if 'stderr' in res:
-                data['module_stderr'] = res['stderr']
-                if res['stderr'].startswith(u'Traceback'):
-                    data['exception'] = res['stderr']
-            if 'rc' in res:
-                data['rc'] = res['rc']
+
+        for w in warnings:
+            display.warning(w)
+
+        # Always include the module_stdout if it exists
+        #data['module_stdout'] = res.get('stdout', u'')
+        if warnings:
+            data['unexpected_module_stdout'] = '\n'.join(warnings)
+
+        if 'stderr' in res:
+            data['module_stderr'] = res['stderr']
+
+            # don't parse stderr for exceptions if task explicitly returned a non empty exception field
+            if not data.get('exception', None):
+                found_errors = self._find_error_strings(data['module_stderr'])
+
+                # TODO: support showing multiple errors
+                # for now, just combine any errors into one string for the
+                # 'exception' field so a display callback will show it
+                if found_errors:
+                    data['exception'] = '\n'.join(found_errors)
+
+        if 'rc' in res:
+            data['rc'] = res['rc']
         return data
 
     def _low_level_execute_command(self, cmd, sudoable=True, in_data=None, executable=None, encoding_errors='surrogate_or_replace'):
