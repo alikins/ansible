@@ -748,33 +748,37 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             self._remove_internal_keys(data)
             data['_ansible_parsed'] = True
 
-            if 'ansible_facts' in data and isinstance(data['ansible_facts'], dict):
-                self._clean_returned_data(data['ansible_facts'])
-                data['ansible_facts'] = wrap_var(data['ansible_facts'])
-            if 'add_host' in data and isinstance(data['add_host'].get('host_vars', None), dict):
-                self._clean_returned_data(data['add_host']['host_vars'])
-                data['add_host'] = wrap_var(data['add_host'])
         except ValueError as e:
             # not valid json, lets try to capture error
             data = dict(failed=True, _ansible_parsed=False)
             data['msg'] = "MODULE FAILURE"
-            data['json_error'] = str(e)
+            data['json_error'] = wrap_var(str(e))
 
             # if there is no valid json, use the return code from the module exec itself instead
             # of the 'rc' in the json returned by the module.
             if 'rc' in res:
                 data['rc'] = res['rc']
 
+        if 'ansible_facts' in data and isinstance(data['ansible_facts'], dict):
+            self._clean_returned_data(data['ansible_facts'])
+            data['ansible_facts'] = wrap_var(data['ansible_facts'])
+        if 'add_host' in data and isinstance(data['add_host'].get('host_vars', None), dict):
+            self._clean_returned_data(data['add_host']['host_vars'])
+            data['add_host'] = wrap_var(data['add_host'])
+
         for w in warnings:
             display.warning(w)
 
-        # Always include the module_stdout if it exists
-        #data['module_stdout'] = res.get('stdout', u'')
+        # If we fail to parse the module stdout, include it in module_stdout so we can
+        # debug it.
+        if not data.get('_ansible_parsed', False):
+            data['module_stdout'] = wrap_var(res.get('stdout', u''))
+
         if warnings:
-            data['unexpected_module_stdout'] = '\n'.join(warnings)
+            data['unexpected_stdout'] = wrap_var('\n'.join(warnings))
 
         if 'stderr' in res:
-            data['module_stderr'] = res['stderr']
+            data['module_stderr'] = wrap_var(res['stderr'])
 
             # don't parse stderr for exceptions if task explicitly returned a non empty exception field
             if not data.get('exception', None):
@@ -784,7 +788,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 # for now, just combine any errors into one string for the
                 # 'exception' field so a display callback will show it
                 if found_errors:
-                    data['exception'] = '\n'.join(found_errors)
+                    data['exception'] = wrap_var('\n'.join(found_errors))
 
         return data
 
