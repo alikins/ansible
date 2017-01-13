@@ -754,6 +754,11 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             data = dict(failed=True, _ansible_parsed=False)
             data['msg'] = "MODULE FAILURE"
 
+            # if there is no valid json, use the return code from the module exec itself instead
+            # of the 'rc' in the json returned by the module.
+            if 'rc' in res:
+                data['rc'] = res['rc']
+
         for w in warnings:
             display.warning(w)
 
@@ -775,8 +780,6 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 if found_errors:
                     data['exception'] = '\n'.join(found_errors)
 
-        if 'rc' in res:
-            data['rc'] = res['rc']
         return data
 
     def _low_level_execute_command(self, cmd, sudoable=True, in_data=None, executable=None, encoding_errors='surrogate_or_replace'):
