@@ -739,6 +739,8 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
     def _parse_returned_data(self, res):
         warnings = []
+        filtered_output = None
+        data = {}
 
         try:
             filtered_output, warnings = _filter_non_json_lines(res.get('stdout', u''))
@@ -749,10 +751,14 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             if 'ansible_facts' in data and isinstance(data['ansible_facts'], dict):
                 self._clean_returned_data(data['ansible_facts'])
                 data['ansible_facts'] = wrap_var(data['ansible_facts'])
-        except ValueError:
+            if 'add_host' in data and isinstance(data['add_host'].get('host_vars', None), dict):
+                self._clean_returned_data(data['add_host']['host_vars'])
+                data['add_host'] = wrap_var(data['add_host'])
+        except ValueError as e:
             # not valid json, lets try to capture error
             data = dict(failed=True, _ansible_parsed=False)
             data['msg'] = "MODULE FAILURE"
+            data['json_error'] = str(e)
 
             # if there is no valid json, use the return code from the module exec itself instead
             # of the 'rc' in the json returned by the module.
