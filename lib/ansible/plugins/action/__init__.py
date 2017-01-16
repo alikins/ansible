@@ -720,10 +720,10 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 display.warning("Removed restricted key from module data: %s = %s" % (r_key, data[r_key]))
                 del data[r_key]
 
-	self._remove_internal_keys(data)
-		
+        self._remove_internal_keys(data)
+
     def _find_error_strings(self, data):
-            found_errors = []
+        found_errors = []
 
         if data is None:
             return found_errors
