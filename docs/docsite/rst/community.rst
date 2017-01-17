@@ -1,3 +1,5 @@
+.. _community-label:
+
 Community Information & Contributing
 ````````````````````````````````````
 

@@ -2,6 +2,7 @@ OS := $(shell uname -s)
 SITELIB = $(shell python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"):
 FORMATTER=../../hacking/module_formatter.py
 DUMPER=../../hacking/dump_playbook_attributes.py
+MODULES_RST_DIR=modules_rst/
 ifeq ($(shell echo $(OS) | egrep -ic 'Darwin|FreeBSD|OpenBSD|DragonFly'),1)
 CPUS ?= $(shell sysctl hw.ncpu|awk '{print $$2}')
 else
@@ -12,8 +13,11 @@ all: docs
 
 docs: clean htmldocs
 
-htmldocs: directives modules staticmin
+htmldocs: directives staticmin
 	CPUS=$(CPUS) $(MAKE) -f Makefile.sphinx html
+
+moduledocs: modules
+	CPUS=$(CPUS) $(MAKE) -f Makefile_modules.sphinx html
 
 webdocs: docs
 
@@ -43,7 +47,7 @@ directives: $(FORMATTER) ../../hacking/templates/rst.j2
 	PYTHONPATH=../../lib $(DUMPER) --template-dir=../../hacking/templates --output-dir=rst/
 
 modules: $(FORMATTER) ../../hacking/templates/rst.j2
-	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../../hacking/templates --module-dir=../../lib/ansible/modules -o rst/
+	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../../hacking/templates --module-dir=../../lib/ansible/modules -o $(MODULES_RST_DIR)
 
 staticmin:
 	cat _themes/srtd/static/css/theme.css | sed -e 's/^[ 	]*//g; s/[ 	]*$$//g; s/\([:{;,]\) /\1/g; s/ {/{/g; s/\/\*.*\*\///g; /^$$/d' | sed -e :a -e '$$!N; s/\n\(.\)/\1/; ta' > _themes/srtd/static/css/theme.min.css
