@@ -38,13 +38,16 @@ AUTHOR='Ansible, Inc'
 # Add any Sphinx extension module names here, as strings.
 # They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc',
+extensions = [
+              # 'sphinx.ext.autodoc',
 #              'sphinx.ext.autosectionlabel',
+              'sphinx.ext.autosummary',
               'sphinx.ext.intersphinx']
 
+#autosummary_generate = False
 # Later on, add 'sphinx.ext.viewcode' to the list if you want to have
 # colorized code generated too for references.
-
+intersphinx_mapping = {'ansible_docs': ('/home/adrian/src/ansible/docs/docsite/_build/html', None)}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['.templates']
@@ -82,6 +85,7 @@ today_fmt = '%B %d, %Y'
 
 # A list of glob-style patterns that should be excluded when looking
 # for source files.
+#exclude_patterns = ['modules', '[a-x]*_module.rst']
 exclude_patterns = ['modules']
 
 # The reST default role (used for this markup: `text`) to use for all
@@ -151,7 +155,7 @@ html_title = 'Ansible Documentation'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['.static']
+html_static_path = ['../_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

@@ -148,6 +148,10 @@ def list_modules(module_dir, depth=0):
 
         # directories (core, extras)
         for new_cat in mod_path_only.split('/')[1:]:
+            #if new_cat not in ['all'] and new_cat not in category:
+            #    continue
+            #if new_cat in ['extras', 'core']:
+             #   continue
             if new_cat not in category:
                 category[new_cat] = dict()
             category = category[new_cat]
@@ -166,8 +170,18 @@ def list_modules(module_dir, depth=0):
         module_info[module] = module_path
 
     # keep module tests out of becoming module docs
-    if 'test' in categories:
-        del categories['test']
+    excludes = ['test', 'core', 'extra', 'cloud', 'network', 'system',
+                'packaging', 'windows', 'monitoring', 'storage', 'database',
+                'notification', 'files', 'crypto', 'a10', 'a10_server',
+                'clustering', 'commands', 'web_infrastructure', 'identity',
+                'inventory', 'messaging', 'remote_management', 'source_control', 'utilities']
+    import pprint
+    pprint.pprint(categories)
+    for exclude in excludes:
+        if exclude in categories:
+            del categories[exclude]
+    #if 'test' in categories:
+    #    del categories['test']
 
     return module_info, categories, aliases
 
@@ -334,6 +348,7 @@ def print_modules(module, category_file, deprecated, options, env, template, out
         modstring = modstring + DEPRECATED
 
     category_file.write("  %s - %s <%s_module>\n" % (to_bytes(modstring), to_bytes(rst_ify(module_map[module][1])), to_bytes(modname)))
+    #category_file.write("  %s_module\n" % to_bytes(modname))
 
 def process_category(category, categories, options, env, template, outputname):
 
@@ -355,6 +370,12 @@ def process_category(category, categories, options, env, template, outputname):
     aliases = {}
     if '_aliases' in categories:
         aliases = categories['_aliases']
+
+    excluded = False
+    excludes = ['test', 'core', 'extra', 'cloud', 'network', 'all', 'system', 'packaging', 'windows', 'monitoring', 'storage', 'database', 'notification', 'files', 'crypto', 'a10', 'a10_server',]
+    for exclude in excludes:
+        if exclude in categories:
+            excluded = True
 
     category_file_path = os.path.join(options.output_dir, "list_of_%s_modules.rst" % category)
     category_file = open(category_file_path, "w")
@@ -384,13 +405,23 @@ def process_category(category, categories, options, env, template, outputname):
     category_header = "%s Modules" % (category.title())
     underscores = "`" * len(category_header)
 
-    category_file.write("""\
+    cat_file_content_old = """\
 %s
 %s
 
 .. toctree:: :maxdepth: 1
 
-""" % (category_header, underscores))
+""" % (category_header, underscores)
+    cat_file_contents = """\
+%s
+%s
+
+.. autosummary::
+    :nosignatures:
+    :toctree:
+
+""" % (category_header, underscores)
+    category_file.write(cat_file_content_old)
     sections = []
     for module in modules:
         if module in module_map and isinstance(module_map[module], dict):
@@ -403,6 +434,7 @@ def process_category(category, categories, options, env, template, outputname):
     for section in sections:
         category_file.write("\n%s\n%s\n\n" % (section.replace("_"," ").title(),'-' * len(section)))
         category_file.write(".. toctree:: :maxdepth: 1\n\n")
+        #category_file.write(".. autosummary:: :nosignatures: :toctree: \n\n")
 
         section_modules = module_map[section].keys()
         section_modules.sort(key=lambda k: k[1:] if k.startswith('_') else k)
@@ -410,10 +442,11 @@ def process_category(category, categories, options, env, template, outputname):
         for module in (m for m in section_modules if m in module_info):
             print_modules(module, category_file, deprecated, options, env, template, outputname, module_info, aliases)
 
-    category_file.write("""\n\n
+    cat_notes = """\n\n
 .. note::
     - %s: This marks a module as deprecated, which means a module is kept for backwards compatibility but usage is discouraged.  The module documentation details page may explain more about this rationale.
-""" % DEPRECATED)
+""" % DEPRECATED
+    # category_file.write(cat_notes)
     category_file.close()
 
     # TODO: end a new category file

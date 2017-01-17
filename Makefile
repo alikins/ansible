@@ -51,7 +51,7 @@ DATE := $(shell date -j -r $(shell git log -n 1 --format="%at") +%Y%m%d%H%M)
 CPUS ?= $(shell sysctl hw.ncpu|awk '{print $$2}')
 else
 DATE := $(shell date --utc --date="$(GIT_DATE)" +%Y%m%d%H%M)
-CPUS ?= $(shell nproc)
+CPUS := $(shell nproc)
 endif
 
 # DEB build parameters

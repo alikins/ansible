@@ -1,4 +1,3 @@
-OS := $(shell uname -s)
 SITELIB = $(shell python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"):
 FORMATTER=../../hacking/module_formatter.py
 DUMPER=../../hacking/dump_playbook_attributes.py
@@ -39,7 +38,6 @@ clean:
 	-rm rst/list_of_*.rst
 	-rm rst/*_by_category.rst
 	-rm rst/*_module.rst
-	-rm rst/playbooks_directives.rst
 
 .PHONEY: docs clean
 

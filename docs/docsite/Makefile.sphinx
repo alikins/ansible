@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -j $(CPUS)
+SPHINXOPTS    ?= -j $(CPUS)
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = sdfsdf
 SOURCEDIR     = rst
