@@ -230,12 +230,15 @@ class QueueListener(object):
         This method runs on a separate, internal thread.
         The thread will terminate if it sees a sentinel object in the queue.
         """
+        # FIXME: 'multiprocessing' and 'logging' both setup atexit hooks that end up trying to acquire logging locks
         q = self.queue
         has_task_done = hasattr(q, 'task_done')
         while not self._stop.isSet():
             try:
-                record = self.dequeue(True)
+                record = self.dequeue(False)
                 if record is self._sentinel:
+                    if has_task_done:
+                        q.task_done()
                     break
                 #self.handle(record)
                 self.buffer_record(record)
@@ -278,5 +281,5 @@ class QueueListener(object):
         """
         self._stop.set()
         self.enqueue_sentinel()
-        self._thread.join()
+        #self._thread.join()
         self._thread = None
