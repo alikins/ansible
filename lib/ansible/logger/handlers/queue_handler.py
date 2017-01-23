@@ -153,6 +153,7 @@ class QueueListener(object):
         self.logger.propagate = False
 
         self._sorting_list = []
+        self.has_task_done = hasattr(self.queue, 'task_done')
 
         self.start()
 
@@ -231,19 +232,15 @@ class QueueListener(object):
         The thread will terminate if it sees a sentinel object in the queue.
         """
         # FIXME: 'multiprocessing' and 'logging' both setup atexit hooks that end up trying to acquire logging locks
-        q = self.queue
-        has_task_done = hasattr(q, 'task_done')
         while not self._stop.isSet():
             try:
                 record = self.dequeue(False)
                 if record is self._sentinel:
-                    if has_task_done:
-                        q.task_done()
+                    self._task_done()
                     break
                 #self.handle(record)
                 self.buffer_record(record)
-                if has_task_done:
-                    q.task_done()
+                self._task_done()
             except queue.Empty:
                 self.queue_is_empty()
                 pass
@@ -255,11 +252,14 @@ class QueueListener(object):
                     break
                 # let these get directly handled
                 self.handle(record)
-                if has_task_done:
-                    q.task_done()
+                self._task_done()
             except queue.Empty:
                 break
         self.flush()
+
+    def _task_done(self):
+        if self.has_task_done:
+            self.queue.task_done()
 
     def enqueue_sentinel(self):
         """
