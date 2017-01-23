@@ -26,6 +26,12 @@ from ansible.compat.six.moves import builtins
 from ansible import constants as C
 from ansible.plugins import filter_loader, test_loader
 
+from ansible.template import simpleBool
+from ansible.template import parsePythonValue
+from ansible.template import jsonParser
+from ansible.template import pythonGrammarParser
+
+
 def safe_eval(expr, locals={}, include_exceptions=False):
     '''
     This is intended for allowing things like:
@@ -37,6 +43,15 @@ def safe_eval(expr, locals={}, include_exceptions=False):
     Based on:
     http://stackoverflow.com/questions/12523516/using-ast-and-whitelists-to-make-pythons-eval-safe
     '''
+
+    #gram_parse = pythonGrammarParser.bnf.parseString(expr)
+   # print('gram_parse: %s' % gram_parse)
+    parse_results = parsePythonValue.listItem.parseString(expr)
+    print()
+    print('expr: %s' % expr)
+    print('parse_results: %s' % parse_results)
+    print('type: %s' % type(parse_results[0]))
+    return parse_results[0]
 
     # define certain JSON types
     # eg. JSON booleans are unknown to python eval()
