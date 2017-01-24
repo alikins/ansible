@@ -224,6 +224,14 @@ class QueueListener(object):
         self.flush()
 
     def _monitor(self):
+        try:
+            self._monitor_queue()
+        except Exception as e:
+            print(e)
+            print(type(e))
+            raise
+
+    def _monitor_queue(self):
         """
         Monitor the queue for records, and ask the handler
         to deal with them.
@@ -249,6 +257,7 @@ class QueueListener(object):
             try:
                 record = self.dequeue(False)
                 if record is self._sentinel:
+                    #self._task_done()
                     break
                 # let these get directly handled
                 self.handle(record)
