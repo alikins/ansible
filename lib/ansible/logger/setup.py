@@ -144,6 +144,8 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     #logging.getLogger('ansible.executor.task_executor').setLevel(logging.INFO)
     #logging.getLogger('ansible.executor.play_iterator').setLevel(logging.INFO)
 
+    print('ql.start')
+    ql.start()
     #logging.getLogger('ansible_handler').setFormatter(logging.Formatter('%(asctime)s -%(name)s - %(process)d - %(message)s'))
     import logging_tree
     logging_tree.printout()
