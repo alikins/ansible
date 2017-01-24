@@ -40,10 +40,13 @@ class QueueHandler(logging.Handler):
     :param queue: The queue to send `LogRecords` to.
     """
 
+    _sentinel = None
+
     def __init__(self, queue):
         """
         Initialise an instance, using the passed queue.
         """
+        # uses logging._acquireLock (via logging._addHandlerRef)
         logging.Handler.__init__(self)
         self.queue = queue
 
@@ -121,6 +124,20 @@ class QueueHandler(logging.Handler):
         except:
             self.handleError(record)
 
+    def close(self):
+        print('CLOSING QUEUE HANDLER')
+        self.queue.put(self._sentinel, block=True, timeout=1)
+        # FIXME: close acquires logging global lock (logging._acquireLock())
+        super(QueueHandler, self).close()
+
+    # may want to disable and/proxy these since they requick the logging global lock
+    #def set_name(self, name):
+    #    pass
+
+    #def setFormatter(self, formatter):
+    #    pass
+
+
 
 class QueueListener(object):
     """
@@ -149,6 +166,7 @@ class QueueListener(object):
         self._stop = threading.Event()
         self._thread = None
         self.logger_name = 'ansible_handler'
+        # getLogger uses logging._acquireLock
         self.logger = logging.getLogger(self.logger_name)
         self.logger.propagate = False
 
@@ -214,6 +232,7 @@ class QueueListener(object):
         # race condition?
         self._sorting_list = []
 
+    # Should be
     def buffer_record(self, record):
         self._sorting_list.append(record)
 
@@ -243,10 +262,12 @@ class QueueListener(object):
         while not self._stop.isSet():
             try:
                 record = self.dequeue(False)
+                #record = self.dequeue(block=True)
                 if record is self._sentinel:
                     self._task_done()
                     break
                 #self.handle(record)
+                # FIXME: make this a event/task/callback so it happens in main thread
                 self.buffer_record(record)
                 self._task_done()
             except queue.Empty:
@@ -260,10 +281,12 @@ class QueueListener(object):
                     #self._task_done()
                     break
                 # let these get directly handled
+                # FIXME: also needs to be event/callback so it happens in main thread
                 self.handle(record)
                 self._task_done()
             except queue.Empty:
                 break
+        # FIXME: make sure this happens in main thread
         self.flush()
 
     def _task_done(self):

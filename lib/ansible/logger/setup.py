@@ -59,6 +59,7 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
 
     root_logger = logging.getLogger()
     root_logger.setLevel(root_log_level)
+    # uses logging._acquireLock
     root_logger.addHandler(null_handler)
 
     log_level = level or env_log_level('%s_log_level' % name) or logging.DEBUG
@@ -106,12 +107,14 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     listener_handlers = [x for x in [stream_handler, file_handler] if x]
 
     for lh in listener_handlers:
+        # uses logging._acquireLock
         logging.getLogger('ansible_handler').addHandler(lh)
 
     ql = queue_handler.QueueListener()
     qh = queue_handler.QueueHandler(ql.queue)
     qh.setLevel(log_level)
 
+    # uses logging._acquireLock
     root_logger.addHandler(qh)
 
     mp_log_level = env_log_level('MP_LOG_LEVEL') or logging.INFO
@@ -121,6 +124,7 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
         mplog = multiprocessing.get_logger()
         mplog.setLevel(mp_log_level)
         #mplog.propagate = True
+        # uses logging._acquireLock
         mplog.addHandler(null_handler)
         #mplog.addHandler(qh)
         #mp_stream_handler = logging.StreamHandler(sys.stderr)
