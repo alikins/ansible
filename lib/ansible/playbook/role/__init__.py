@@ -61,6 +61,7 @@ def hash_params(params):
     new_params = None
     if isinstance(params, collections.Container) and not isinstance(params, (text_type, binary_type)):
         if isinstance(params, collections.Mapping):
+            # TODO: we ever support OrderedDicts for params, may need to enumerate items as well. Or maybe just sort them.
             try:
                 # Optimistically hope the contents are all hashable
                 new_params = frozenset(params.items())
@@ -69,23 +70,28 @@ def hash_params(params):
                 for k, v in params.items():
                     # Hash each entry individually
                     new_params.add((k, hash_params(v)))
-                    #new_params.update((k, hash_params(v)))
                 new_params = frozenset(new_params)
 
-        elif isinstance(params, (collections.Set, collections.Sequence)):
+        elif isinstance(params, collections.Set):
+            try:
+                # Optimistically hope the contents are all hashable
+                new_params = frozenset(params)
+            except TypeError as e:
+                print(e)
+                new_params = set()
+                for value in params:
+                    new_params.add(hash_params(value))
+                new_params = frozenset(new_params)
+        elif isinstance(params, collections.Sequence):
             try:
                 # Optimistically hope the contents are all hashable
                 new_params = frozenset(enumerate(params))
             except TypeError as e:
                 print(e)
                 new_params = set()
-                if isinstance(params, collections.Sequence):
-                    for index, value in enumerate(params):
-                        # Hash each entry individually
-                        new_params.add((index, hash_params(value)))
-                if isinstance(params, collections.Set):
-                    for value in params:
-                        new_params.add(hash_params(value))
+                for index, value in enumerate(params):
+                    # Hash each entry individually
+                    new_params.add((index, hash_params(value)))
                 new_params = frozenset(new_params)
         else:
             # This is just a guess.
