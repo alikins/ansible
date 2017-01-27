@@ -58,6 +58,16 @@ class TestHashParams(unittest.TestCase):
         res = hash_params(params)
         self._assert_set(res)
 
+    def test_dict_tuple_dupes(self):
+        params1 = {'foo': (1, 'bar',)}
+        params2 = {'bar': (1, 'bar',)}
+        res1 = hash_params(params1)
+        res2 = hash_params(params2)
+        self._assert_set(res1)
+        self._assert_set(res2)
+        self.assertNotEqual(res1, res2)
+        self.assertNotEqual(hash(res1), hash(res2))
+
     def test_param_dict_dupe_values(self):
         params1 = {'foo': False}
         params2 = {'bar': False}
@@ -69,6 +79,18 @@ class TestHashParams(unittest.TestCase):
         hash2 = hash(res2)
         self.assertNotEqual(res1, res2)
         self.assertNotEqual(hash1, hash2)
+
+    def test_param_dict_dupes(self):
+        params1 = {'foo': False, 'a': 1, 'b': 2, 'blip': []}
+        params2 = {'b': 2, 'foo': False, 'a': 1, 'blip': []}
+
+        res1 = hash_params(params1)
+        res2 = hash_params(params2)
+
+        hash1 = hash(res1)
+        hash2 = hash(res2)
+        self.assertEqual(res1, res2)
+        self.assertEqual(hash1, hash2)
 
     def test_param_dupe(self):
         params1 = {
@@ -119,6 +141,31 @@ class TestHashParams(unittest.TestCase):
         res = hash_params(params)
         self._assert_set(res)
         self._assert_hashable(res)
+
+    # Not sure why roles can be id'ed with a list, but it seems like order should matter
+    def test_list_dupe_bools(self):
+        params1 = [True, False, []]
+        params2 = [False, True, []]
+        res1 = hash_params(params1)
+        res2 = hash_params(params2)
+        self._assert_set(res1)
+        self._assert_set(res2)
+        self._assert_hashable(res1)
+        self._assert_hashable(res2)
+        self.assertNotEqual(hash(res1), hash(res2))
+
+    def test_list_dupe_ints(self):
+        params1 = [1, 2, 3]
+        params2 = [3, 2, 1]
+        res1 = hash_params(params1)
+        res2 = hash_params(params2)
+        self._assert_set(res1)
+        self._assert_set(res2)
+        self._assert_hashable(res1)
+        self._assert_hashable(res2)
+        print('res1: %s' % res1)
+        print('res2: %s' % res2)
+        self.assertNotEqual(hash(res1), hash(res2))
 
     def test_dict_with_list_value(self):
         params = {'foo': [1, 4, 'bar']}

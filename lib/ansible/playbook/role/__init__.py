@@ -69,17 +69,23 @@ def hash_params(params):
                 for k, v in params.items():
                     # Hash each entry individually
                     new_params.add((k, hash_params(v)))
+                    #new_params.update((k, hash_params(v)))
                 new_params = frozenset(new_params)
 
         elif isinstance(params, (collections.Set, collections.Sequence)):
             try:
                 # Optimistically hope the contents are all hashable
-                new_params = frozenset(params)
-            except TypeError:
+                new_params = frozenset(enumerate(params))
+            except TypeError as e:
+                print(e)
                 new_params = set()
-                for v in params:
-                    # Hash each entry individually
-                    new_params.add(hash_params(v))
+                if isinstance(params, collections.Sequence):
+                    for index, value in enumerate(params):
+                        # Hash each entry individually
+                        new_params.add((index, hash_params(value)))
+                if isinstance(params, collections.Set):
+                    for value in params:
+                        new_params.add(hash_params(value))
                 new_params = frozenset(new_params)
         else:
             # This is just a guess.
