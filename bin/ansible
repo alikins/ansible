@@ -40,10 +40,17 @@ import traceback
 # for debug
 from multiprocessing import Lock
 
+from ansible.utils import ga_loader
+ga_loader.init_ga()
 import ansible.constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
+
+
 from ansible.module_utils._text import to_text
+print(to_text)
+import pprint
+pprint.pprint(sys.path)
 
 
 ########################################

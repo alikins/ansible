@@ -34,6 +34,9 @@ try:
 except ImportError:
     HAS_ATFORK=False
 
+from ansible.utils import ga_loader
+ga_loader.init_ga()
+
 from ansible.errors import AnsibleConnectionFailure
 from ansible.executor.task_executor import TaskExecutor
 from ansible.executor.task_result import TaskResult
