@@ -53,6 +53,23 @@
         - result.changed
         - '"OK" in result.msg'
 
+- name: test headers with embedded commas as a dict
+  get_url:
+    url: https://{{ httpbin_host }}
+    dest: "{{ output_dir }}"
+    headers:
+      X-Some-Header: foo
+      X-Some-Header-Has-Commas: foo, this_is_not_a_header_key
+      X-Some-Other-Header: bar
+  register: comma_header_result
+
+- name: test headers with embedded commas
+  get_url:
+    url: https://{{ httpbin_host }}
+    dest: "{{ output_dir }}"
+    headers: "X-Some-Header: foo, X-Some-Header-Has-Commas: foo, this_is_not_a_header_key, X-Some-Other-Header: bar"
+  register: comma_header_result
+
 - name: test nonexisting file fetch
   get_url:
     url: "{{ 'file://' + geturl_srcfile + 'NOFILE' }}"
@@ -208,6 +225,6 @@
 
 #https://github.com/ansible/ansible/issues/16191
 - name: Test url split with no filename
-  get_url: 
+  get_url:
     url: https://{{ httpbin_host }}
     dest: "{{ output_dir }}"
