@@ -947,8 +947,6 @@ class AnsibleModule(object):
         else:
             raise TypeError("deprecate requires a string not a %s" % type(msg))
 
-        if self.introspect and self.introspect_only:
-            self.exit_json(msg="Introspect only mode.")
 
     def _introspect(self):
         data = {}
@@ -1008,7 +1006,6 @@ class AnsibleModule(object):
         data['metadata'] = module_meta_info
 
         return data
-
 
     def load_file_common_arguments(self, params):
         '''
@@ -2379,10 +2376,11 @@ class AnsibleModule(object):
         kwargs = remove_values(kwargs, self.no_log_values)
         print('\n%s' % self.jsonify(kwargs))
 
-
     def exit_json(self, **kwargs):
         ''' return from the module, without error '''
 
+        if self.introspect:
+            kwargs['introspect'] = self._introspect()
         self.do_cleanup_files()
         self._return_formatted(kwargs)
         sys.exit(0)
