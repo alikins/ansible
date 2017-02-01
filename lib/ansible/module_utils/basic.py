@@ -59,6 +59,7 @@ PASS_BOOLS = ('no_log', 'debug', 'diff')
 # to simplify development of Python modules.
 
 import locale
+import logging
 import os
 import re
 import shlex
@@ -260,6 +261,8 @@ if not _PY_MIN:
         '"msg": "Ansible requires a minimum of Python2 version 2.6 or Python3 version 3.5. Current version: %s"}' % ''.join(sys.version.splitlines())
     )
     sys.exit(1)
+
+log = logging.getLogger(__name__)
 
 
 def get_platform():
