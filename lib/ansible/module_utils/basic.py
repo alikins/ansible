@@ -2048,17 +2048,13 @@ class AnsibleModule(object):
 
         return kwargs
 
-    def exit_json(self, **kwargs):
-        ''' return from the module, without error '''
-
-        if not 'changed' in kwargs:
-            kwargs['changed'] = False
-	kwargs = self._return_formatted(kwargs)
-	self.do_cleanup_files()
-
+    def _format_exit_json(self, **kwargs):
+        kwargs = self._return_formatted(kwargs)
+        self.do_cleanup_files()
         return kwargs
 
     def exit_json(self, **kwargs):
+        ''' return from the module, without error '''
         kwargs = self._format_exit_json(**kwargs)
         raise AnsibleModuleExit(return_code=0,
                                 exception_data=kwargs)
@@ -2070,7 +2066,7 @@ class AnsibleModule(object):
         kwargs['failed'] = True
 
         self.do_cleanup_files()
-	kwargs = self._return_formatted(kwargs)
+        kwargs = self._return_formatted(kwargs)
 
         return kwargs
 
@@ -2078,7 +2074,6 @@ class AnsibleModule(object):
         kwargs = self._format_fail_json(**kwargs)
         raise AnsibleModuleFatalError(return_code=1,
                                       exception_data=kwargs)
-
 
     def fail_on_missing_params(self, required_params=None):
         ''' This is for checking for required params when we can not check via argspec because we
