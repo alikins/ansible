@@ -896,8 +896,13 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         path_stack = self._task.get_search_path()
 
         result = self._loader.path_dwim_relative_stack(path_stack, dirname, needle)
+        import pprint
+        print('dirname: %s' % dirname)
+        print('needle: %s' % needle)
 
+        pprint.pprint(path_stack)
+        paths_string = "FIXME"
         if result is None:
-            raise AnsibleError("Unable to find '%s' in expected paths." % to_native(needle))
+            raise AnsibleError("Unable to find '%s' in expected paths: %s" % (to_native(needle), paths_string))
 
         return result
