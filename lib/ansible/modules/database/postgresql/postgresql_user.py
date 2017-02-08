@@ -168,14 +168,20 @@ except ImportError:
     postgresqldb_found = False
 else:
     postgresqldb_found = True
+
 from ansible.module_utils.six import iteritems
+
+from ansible.module_utils.basic import AnsibleModule, get_exception
+from ansible.module_utils.database import pg_quote_identifier, SQLParseError
+from ansible.module_utils import postgres as pgutils
+
 
 _flags = ('SUPERUSER', 'CREATEROLE', 'CREATEUSER', 'CREATEDB', 'INHERIT', 'LOGIN', 'REPLICATION')
 VALID_FLAGS = frozenset(itertools.chain(_flags, ('NO%s' % f for f in _flags)))
 
 VALID_PRIVS = dict(table=frozenset(('SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'ALL')),
-        database=frozenset(('CREATE', 'CONNECT', 'TEMPORARY', 'TEMP', 'ALL')),
-        )
+                   database=frozenset(('CREATE', 'CONNECT', 'TEMPORARY', 'TEMP', 'ALL')),
+                   )
 
 # map to cope with idiosyncracies of SUPERUSER and LOGIN
 PRIV_TO_AUTHID_COLUMN = dict(SUPERUSER='rolsuper', CREATEROLE='rolcreaterole',
@@ -183,8 +189,10 @@ PRIV_TO_AUTHID_COLUMN = dict(SUPERUSER='rolsuper', CREATEROLE='rolcreaterole',
                              INHERIT='rolinherit', LOGIN='rolcanlogin',
                              REPLICATION='rolreplication')
 
+
 class InvalidFlagsError(Exception):
     pass
+
 
 class InvalidPrivsError(Exception):
     pass
@@ -207,9 +215,9 @@ def user_add(cursor, user, password, role_attr_flags, encrypted, expires):
     """Create a new database user (role)."""
     # Note: role_attr_flags escaped by parse_role_attrs and encrypted is a literal
     query_password_data = dict(password=password, expires=expires)
-    query = ['CREATE USER %(user)s' % { "user": pg_quote_identifier(user, 'role')}]
+    query = ['CREATE USER %(user)s' % {"user": pg_quote_identifier(user, 'role')}]
     if password is not None:
-        query.append("WITH %(crypt)s" % { "crypt": encrypted })
+        query.append("WITH %(crypt)s" % {"crypt": encrypted})
         query.append("PASSWORD %(password)s")
     if expires is not None:
         query.append("VALID UNTIL %(expires)s")
@@ -217,6 +225,7 @@ def user_add(cursor, user, password, role_attr_flags, encrypted, expires):
     query = ' '.join(query)
     cursor.execute(query, query_password_data)
     return True
+
 
 def user_alter(cursor, module, user, password, role_attr_flags, encrypted, expires, no_password_changes):
     """Change user password and/or attributes. Return True if changed, False otherwise."""
@@ -311,6 +320,7 @@ def user_alter(cursor, module, user, password, role_attr_flags, encrypted, expir
 
     return changed
 
+
 def user_delete(cursor, user):
     """Try to remove a user. Returns True if successful otherwise False"""
     cursor.execute("SAVEPOINT ansible_pgsql_user_delete")
@@ -323,6 +333,7 @@ def user_delete(cursor, user):
 
     cursor.execute("RELEASE SAVEPOINT ansible_pgsql_user_delete")
     return True
+
 
 def has_table_privileges(cursor, user, table, privs):
     """
@@ -340,6 +351,7 @@ def has_table_privileges(cursor, user, table, privs):
     desired = privs.difference(cur_privs)
     return (have_currently, other_current, desired)
 
+
 def get_table_privileges(cursor, user, table):
     if '.' in table:
         schema, table = table.split('.', 1)
@@ -350,25 +362,28 @@ def get_table_privileges(cursor, user, table):
     cursor.execute(query, (user, table, schema))
     return frozenset([x[0] for x in cursor.fetchall()])
 
+
 def grant_table_privileges(cursor, user, table, privs):
     # Note: priv escaped by parse_privs
     privs = ', '.join(privs)
     query = 'GRANT %s ON TABLE %s TO %s' % (
-        privs, pg_quote_identifier(table, 'table'), pg_quote_identifier(user, 'role') )
+        privs, pg_quote_identifier(table, 'table'), pg_quote_identifier(user, 'role'))
     cursor.execute(query)
+
 
 def revoke_table_privileges(cursor, user, table, privs):
     # Note: priv escaped by parse_privs
     privs = ', '.join(privs)
     query = 'REVOKE %s ON TABLE %s FROM %s' % (
-        privs, pg_quote_identifier(table, 'table'), pg_quote_identifier(user, 'role') )
+        privs, pg_quote_identifier(table, 'table'), pg_quote_identifier(user, 'role'))
     cursor.execute(query)
+
 
 def get_database_privileges(cursor, user, db):
     priv_map = {
-        'C':'CREATE',
-        'T':'TEMPORARY',
-        'c':'CONNECT',
+        'C': 'CREATE',
+        'T': 'TEMPORARY',
+        'c': 'CONNECT',
     }
     query = 'SELECT datacl FROM pg_database WHERE datname = %s'
     cursor.execute(query, (db,))
@@ -382,6 +397,7 @@ def get_database_privileges(cursor, user, db):
     for v in r.group(1):
         o.add(priv_map[v])
     return normalize_privileges(o, 'database')
+
 
 def has_database_privileges(cursor, user, db, privs):
     """
@@ -399,9 +415,10 @@ def has_database_privileges(cursor, user, db, privs):
     desired = privs.difference(cur_privs)
     return (have_currently, other_current, desired)
 
+
 def grant_database_privileges(cursor, user, db, privs):
     # Note: priv escaped by parse_privs
-    privs =', '.join(privs)
+    privs = ', '.join(privs)
     if user == "PUBLIC":
         query = 'GRANT %s ON DATABASE %s TO PUBLIC' % (
                 privs, pg_quote_identifier(db, 'database'))
@@ -410,6 +427,7 @@ def grant_database_privileges(cursor, user, db, privs):
                 privs, pg_quote_identifier(db, 'database'),
                 pg_quote_identifier(user, 'role'))
     cursor.execute(query)
+
 
 def revoke_database_privileges(cursor, user, db, privs):
     # Note: priv escaped by parse_privs
@@ -422,6 +440,7 @@ def revoke_database_privileges(cursor, user, db, privs):
                 privs, pg_quote_identifier(db, 'database'),
                 pg_quote_identifier(user, 'role'))
     cursor.execute(query)
+
 
 def revoke_privileges(cursor, user, privs):
     if privs is None:
@@ -441,6 +460,7 @@ def revoke_privileges(cursor, user, privs):
                 changed = True
     return changed
 
+
 def grant_privileges(cursor, user, privs):
     if privs is None:
         return False
@@ -458,6 +478,7 @@ def grant_privileges(cursor, user, privs):
                 grant_funcs[type_](cursor, user, name, privileges)
                 changed = True
     return changed
+
 
 def parse_role_attrs(role_attr_flags):
     """
@@ -485,6 +506,7 @@ def parse_role_attrs(role_attr_flags):
     o_flags = ' '.join(flag_set)
     return o_flags
 
+
 def normalize_privileges(privs, type_):
     new_privs = set(privs)
     if 'ALL' in new_privs:
@@ -495,6 +517,7 @@ def normalize_privileges(privs, type_):
         new_privs.remove('TEMP')
 
     return new_privs
+
 
 def parse_privs(privs, db):
     """
@@ -512,8 +535,8 @@ def parse_privs(privs, db):
         return privs
 
     o_privs = {
-        'database':{},
-        'table':{}
+        'database': {},
+        'table': {}
     }
     for token in privs.split('/'):
         if ':' not in token:
@@ -538,6 +561,7 @@ def parse_privs(privs, db):
 # Module execution.
 #
 
+
 def main():
     argument_spec = pgutils.postgres_common_argument_spec(password_alias=False)
     argument_spec.update(dict(
@@ -555,7 +579,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec=argument_spec,
-        supports_check_mode = True
+        supports_check_mode=True
     )
 
     user = module.params["user"]
@@ -566,7 +590,6 @@ def main():
     if db == '' and module.params["priv"] is not None:
         module.fail_json(msg="privileges require a database to be specified")
     privs = parse_privs(module.params["priv"], db)
-    port = module.params["port"]
     no_password_changes = module.params["no_password_changes"]
     try:
         role_attr_flags = parse_role_attrs(module.params["role_attr_flags"])
@@ -636,10 +659,6 @@ def main():
     kw['changed'] = changed
     module.exit_json(**kw)
 
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule, get_exception
-import ansible.module_utils.postgres as pgutils
-from ansible.module_utils.database import pg_quote_identifier, SQLParseError
 
 if __name__ == '__main__':
     main()
