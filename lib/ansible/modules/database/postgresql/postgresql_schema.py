@@ -84,9 +84,14 @@ except ImportError:
 else:
     postgresqldb_found = True
 
+from ansible.module_utils.basic import AnsibleModule, get_exception
+from ansible.module_utils.database import pg_quote_identifier, SQLParseError
+from ansible.module_utils import postgres as pgutils
+
 # ===========================================
 # PostgreSQL module specific support methods.
 #
+
 
 def set_owner(cursor, schema, owner):
     query = "ALTER SCHEMA %s OWNER TO %s" % (
@@ -94,6 +99,7 @@ def set_owner(cursor, schema, owner):
             pg_quote_identifier(owner, 'role'))
     cursor.execute(query)
     return True
+
 
 def get_schema_info(cursor, schema):
     query = """
@@ -104,10 +110,12 @@ def get_schema_info(cursor, schema):
     cursor.execute(query, {'schema': schema})
     return cursor.fetchone()
 
+
 def schema_exists(cursor, schema):
     query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = %(schema)s"
     cursor.execute(query, {'schema': schema})
     return cursor.rowcount == 1
+
 
 def schema_delete(cursor, schema):
     if schema_exists(cursor, schema):
@@ -116,6 +124,7 @@ def schema_delete(cursor, schema):
         return True
     else:
         return False
+
 
 def schema_create(cursor, schema, owner):
     if not schema_exists(cursor, schema):
@@ -132,6 +141,7 @@ def schema_create(cursor, schema, owner):
         else:
             return False
 
+
 def schema_matches(cursor, schema, owner):
     if not schema_exists(cursor, schema):
         return False
@@ -146,6 +156,7 @@ def schema_matches(cursor, schema, owner):
 # Module execution.
 #
 
+
 def main():
     argument_spec = pgutils.postgres_common_argument_spec()
     argument_spec.update(dict(
@@ -157,7 +168,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec=argument_spec,
-        supports_check_mode = True
+        supports_check_mode=True
     )
 
     if not postgresqldb_found:
@@ -203,14 +214,10 @@ def main():
         raise
     except Exception:
         e = get_exception()
-        module.fail_json(msg="Database query failed: %s" %(text, str(e)))
+        module.fail_json(msg="Database query failed: %s" % str(e))
 
     module.exit_json(changed=changed, schema=schema)
 
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule,get_exception
-import ansible.module_utils.postgres as pgutils
-from ansible.module_utils.database import pg_quote_identifier
 
 if __name__ == '__main__':
     main()

@@ -96,10 +96,15 @@ except ImportError:
 else:
     postgresqldb_found = True
 
+# import module snippets
+from ansible.module_utils.basic import AnsibleModule, get_exception
+from ansible.module_utils.database import pg_quote_identifier, SQLParseError
+import ansible.module_utils.postgres as pgutils
 
 # ===========================================
 # PostgreSQL module specific support methods.
 #
+
 
 def set_owner(cursor, db, owner):
     query = "ALTER DATABASE %s OWNER TO %s" % (
@@ -108,10 +113,12 @@ def set_owner(cursor, db, owner):
     cursor.execute(query)
     return True
 
+
 def get_encoding_id(cursor, encoding):
     query = "SELECT pg_char_to_encoding(%(encoding)s) AS encoding_id;"
     cursor.execute(query, {'encoding': encoding})
     return cursor.fetchone()['encoding_id']
+
 
 def get_db_info(cursor, db):
     query = """
@@ -124,10 +131,12 @@ def get_db_info(cursor, db):
     cursor.execute(query, {'db': db})
     return cursor.fetchone()
 
+
 def db_exists(cursor, db):
     query = "SELECT * FROM pg_database WHERE datname=%(db)s"
     cursor.execute(query, {'db': db})
     return cursor.rowcount == 1
+
 
 def db_delete(cursor, db):
     if db_exists(cursor, db):
@@ -136,6 +145,7 @@ def db_delete(cursor, db):
         return True
     else:
         return False
+
 
 def db_create(cursor, db, owner, template, encoding, lc_collate, lc_ctype):
     params = dict(enc=encoding, collate=lc_collate, ctype=lc_ctype)
@@ -157,17 +167,17 @@ def db_create(cursor, db, owner, template, encoding, lc_collate, lc_ctype):
     else:
         db_info = get_db_info(cursor, db)
         if (encoding and get_encoding_id(cursor, encoding) != db_info['encoding_id']):
-            raise NotSupportedError(
+            raise pgutils.NotSupportedError(
                 'Changing database encoding is not supported. '
                 'Current encoding: %s' % db_info['encoding']
             )
         elif lc_collate and lc_collate != db_info['lc_collate']:
-            raise NotSupportedError(
+            raise pgutils.NotSupportedError(
                 'Changing LC_COLLATE is not supported. '
                 'Current LC_COLLATE: %s' % db_info['lc_collate']
             )
         elif lc_ctype and lc_ctype != db_info['lc_ctype']:
-            raise NotSupportedError(
+            raise pgutils.NotSupportedError(
                 'Changing LC_CTYPE is not supported.'
                 'Current LC_CTYPE: %s' % db_info['lc_ctype']
             )
@@ -175,6 +185,7 @@ def db_create(cursor, db, owner, template, encoding, lc_collate, lc_ctype):
             return set_owner(cursor, db, owner)
         else:
             return False
+
 
 def db_matches(cursor, db, owner, template, encoding, lc_collate, lc_ctype):
     if not db_exists(cursor, db):
@@ -196,6 +207,7 @@ def db_matches(cursor, db, owner, template, encoding, lc_collate, lc_ctype):
 # Module execution.
 #
 
+
 def main():
     argument_spec = pgutils.postgres_common_argument_spec()
     argument_spec.update(dict(
@@ -209,15 +221,14 @@ def main():
     ))
 
     module = AnsibleModule(
-        argument_spec = argument_spec,
-        supports_check_mode = True
+        argument_spec=argument_spec,
+        supports_check_mode=True
     )
 
     if not postgresqldb_found:
         module.fail_json(msg="the python psycopg2 module is required")
 
     db = module.params["db"]
-    port = module.params["port"]
     owner = module.params["owner"]
     template = module.params["template"]
     encoding = module.params["encoding"]
@@ -264,9 +275,6 @@ def main():
 
     module.exit_json(changed=changed, db=db)
 
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule,get_exception
-from ansible.module_utils.database import pg_quote_identifier,SQLParseError
-import ansible.module_utils.postgres as pgutils
+
 if __name__ == '__main__':
     main()
