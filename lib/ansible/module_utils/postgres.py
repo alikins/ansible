@@ -40,24 +40,27 @@ else:
     postgresqldb_found = True
 from ansible.module_utils.six import iteritems
 
+
 class NotSupportedError(Exception):
     pass
 
 # common methods
+
 
 def params_to_kwmap(module):
     # To use defaults values, keyword arguments must be absent, so
     # check which values are empty and don't include in the **kw
     # dictionary
     params_map = {
-        "login_host":"host",
-        "login_user":"user",
-        "login_password":"password",
-        "port":"port",
-        "ssl_mode":"sslmode",
-        "ssl_rootcert":"sslrootcert"
+        "login_host": "host",
+        "login_user": "user",
+        "login_password": "password",
+        "port": "port",
+        "ssl_mode": "sslmode",
+        "ssl_rootcert": "sslrootcert"
     }
-    kw = dict( (params_map[k], v) for (k, v) in iteritems(module.params)
+
+    kw = dict((params_map[k], v) for (k, v) in iteritems(module.params)
               if k in params_map and v != '' and v is not None)
 
     # If a login_unix_socket is specified, incorporate it here.
@@ -69,6 +72,7 @@ def params_to_kwmap(module):
         raise Exception('psycopg2 must be at least 2.4.3 in order to user the ssl_rootcert parameter')
 
     return kw
+
 
 def postgres_conn(module, database=None, kw=None, enable_autocommit=False):
     # make sure kw is mutable and isn't None
@@ -102,17 +106,15 @@ def postgres_conn(module, database=None, kw=None, enable_autocommit=False):
 
 def postgres_common_argument_spec(password_alias=True):
     password_aliases = []
-    if password_alias: # sometimes 'password' means something totally different.
+    if password_alias:  # sometimes 'password' means something totally different.
         password_aliases = ['password']
 
     return dict(
-        login_user        = dict(default='postgres', aliases=['login']),
-        login_password    = dict(default='', no_log=True, aliases=password_aliases),
-        login_host        = dict(default='', aliases=['host']),
-        login_unix_socket = dict(default='', aliases=['unix_socket']),
-        port              = dict(type='int', default=5432),
-        ssl_mode          = dict(default='prefer', choices=['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full']),
-        ssl_rootcert      = dict(default=None),
+        login_user=dict(default='postgres', aliases=['login']),
+        login_password=dict(default='', no_log=True, aliases=password_aliases),
+        login_host=dict(default='', aliases=['host']),
+        login_unix_socket=dict(default='', aliases=['unix_socket']),
+        port=dict(type='int', default=5432),
+        ssl_mode=dict(default='prefer', choices=['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full']),
+        ssl_rootcert=dict(default=None),
     )
-
-

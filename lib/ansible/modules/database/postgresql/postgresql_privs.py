@@ -209,10 +209,16 @@ except ImportError:
 else:
     postgresqldb_found = True
 
+from ansible.module_utils.basic import AnsibleModule, get_exception
+from ansible.module_utils.database import pg_quote_identifier
+from ansible.module_utils import postgres as pgutils
+
 
 VALID_PRIVS = frozenset(('SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE',
                          'REFERENCES', 'TRIGGER', 'CREATE', 'CONNECT',
                          'TEMPORARY', 'TEMP', 'EXECUTE', 'USAGE', 'ALL', 'USAGE'))
+
+
 class Error(Exception):
     pass
 
@@ -240,10 +246,8 @@ class Connection(object):
         self.connection = pgutils.postgres_conn(module, database=params.database, kw=kw, enable_autocommit=True)
         self.cursor = self.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-
     def commit(self):
         self.connection.commit()
-
 
     def rollback(self):
         self.connection.rollback()
@@ -253,8 +257,7 @@ class Connection(object):
         """Connection encoding in Python-compatible form"""
         return psycopg2.extensions.encodings[self.connection.encoding]
 
-
-    ### Methods for querying database objects
+    # Methods for querying database objects
 
     # PostgreSQL < 9.0 doesn't support "ALL TABLES IN SCHEMA schema"-like
     # phrases in GRANT or REVOKE statements, therefore alternative methods are
@@ -266,7 +269,6 @@ class Connection(object):
         self.cursor.execute(query, (schema,))
         return self.cursor.fetchone()[0] > 0
 
-
     def get_all_tables_in_schema(self, schema):
         if not self.schema_exists(schema):
             raise Error('Schema "%s" does not exist.' % schema)
@@ -276,7 +278,6 @@ class Connection(object):
                    WHERE nspname = %s AND relkind in ('r', 'v')"""
         self.cursor.execute(query, (schema,))
         return [t[0] for t in self.cursor.fetchall()]
-
 
     def get_all_sequences_in_schema(self, schema):
         if not self.schema_exists(schema):
@@ -288,9 +289,7 @@ class Connection(object):
         self.cursor.execute(query, (schema,))
         return [t[0] for t in self.cursor.fetchall()]
 
-
-
-    ### Methods for getting access control lists and group membership info
+    # Methods for getting access control lists and group membership info
 
     # To determine whether anything has changed after granting/revoking
     # privileges, we compare the access control lists of the specified database
@@ -307,7 +306,6 @@ class Connection(object):
         self.cursor.execute(query, (schema, tables))
         return [t[0] for t in self.cursor.fetchall()]
 
-
     def get_sequence_acls(self, schema, sequences):
         query = """SELECT relacl
                    FROM pg_catalog.pg_class c
@@ -316,7 +314,6 @@ class Connection(object):
                    ORDER BY relname"""
         self.cursor.execute(query, (schema, sequences))
         return [t[0] for t in self.cursor.fetchall()]
-
 
     def get_function_acls(self, schema, function_signatures):
         funcnames = [f.split('(', 1)[0] for f in function_signatures]
@@ -328,13 +325,11 @@ class Connection(object):
         self.cursor.execute(query, (schema, funcnames))
         return [t[0] for t in self.cursor.fetchall()]
 
-
     def get_schema_acls(self, schemas):
         query = """SELECT nspacl FROM pg_catalog.pg_namespace
                    WHERE nspname = ANY (%s) ORDER BY nspname"""
         self.cursor.execute(query, (schemas,))
         return [t[0] for t in self.cursor.fetchall()]
-
 
     def get_language_acls(self, languages):
         query = """SELECT lanacl FROM pg_catalog.pg_language
@@ -342,20 +337,17 @@ class Connection(object):
         self.cursor.execute(query, (languages,))
         return [t[0] for t in self.cursor.fetchall()]
 
-
     def get_tablespace_acls(self, tablespaces):
         query = """SELECT spcacl FROM pg_catalog.pg_tablespace
                    WHERE spcname = ANY (%s) ORDER BY spcname"""
         self.cursor.execute(query, (tablespaces,))
         return [t[0] for t in self.cursor.fetchall()]
 
-
     def get_database_acls(self, databases):
         query = """SELECT datacl FROM pg_catalog.pg_database
                    WHERE datname = ANY (%s) ORDER BY datname"""
         self.cursor.execute(query, (databases,))
         return [t[0] for t in self.cursor.fetchall()]
-
 
     def get_group_memberships(self, groups):
         query = """SELECT roleid, grantor, member, admin_option
@@ -366,8 +358,7 @@ class Connection(object):
         self.cursor.execute(query, (groups,))
         return self.cursor.fetchall()
 
-
-    ### Manipulating privileges
+    # Manipulating privileges
 
     def manipulate_privs(self, obj_type, privs, objs, roles,
                          state, grant_option, schema_qualifier=None):
@@ -486,7 +477,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec=argument_spec,
-        supports_check_mode = True
+        supports_check_mode=True
     )
 
     # Create type object as namespace for module params
@@ -553,12 +544,12 @@ def main():
             roles = p.roles.split(',')
 
         changed = conn.manipulate_privs(
-            obj_type = p.type,
-            privs = privs,
-            objs = objs,
-            roles = roles,
-            state = p.state,
-            grant_option = p.grant_option,
+            obj_type=p.type,
+            privs=privs,
+            objs=objs,
+            roles=roles,
+            state=p.state,
+            grant_option=p.grant_option,
             schema_qualifier=p.schema
         )
 
@@ -580,11 +571,6 @@ def main():
         conn.commit()
     module.exit_json(changed=changed)
 
-
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule,get_exception
-import ansible.module_utils.postgres as pgutils
-from ansible.module_utils.database import pg_quote_identifier
 
 if __name__ == '__main__':
     main()

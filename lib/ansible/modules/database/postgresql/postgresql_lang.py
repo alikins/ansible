@@ -201,7 +201,6 @@ def main():
     )
 
     db = module.params["db"]
-    port = module.params["port"]
     lang = module.params["lang"]
     state = module.params["state"]
     trust = module.params["trust"]
@@ -218,7 +217,6 @@ def main():
     cursor = db_connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     changed = False
-    lang_dropped = False
     kw = dict(db=db, lang=lang, trust=trust)
 
     if state == "present":

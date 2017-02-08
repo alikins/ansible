@@ -65,6 +65,10 @@ except ImportError:
 else:
     postgresqldb_found = True
 
+# import module snippets
+from ansible.module_utils.basic import AnsibleModule, get_exception
+import ansible.module_utils.postgres as pgutils
+
 
 # ===========================================
 # PostgreSQL module specific support methods.
@@ -75,6 +79,7 @@ def ext_exists(cursor, ext):
     cursor.execute(query, {'ext': ext})
     return cursor.rowcount == 1
 
+
 def ext_delete(cursor, ext):
     if ext_exists(cursor, ext):
         query = "DROP EXTENSION \"%s\"" % ext
@@ -82,6 +87,7 @@ def ext_delete(cursor, ext):
         return True
     else:
         return False
+
 
 def ext_create(cursor, ext):
     if not ext_exists(cursor, ext):
@@ -95,6 +101,7 @@ def ext_create(cursor, ext):
 # Module execution.
 #
 
+
 def main():
     argument_spec = pgutils.postgres_common_argument_spec()
     argument_spec.update(dict(
@@ -105,7 +112,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec=argument_spec,
-        supports_check_mode = True
+        supports_check_mode=True
     )
 
     if not postgresqldb_found:
@@ -113,7 +120,6 @@ def main():
 
     db = module.params["db"]
     ext = module.params["ext"]
-    port = module.params["port"]
     state = module.params["state"]
     changed = False
 
@@ -143,9 +149,6 @@ def main():
 
     module.exit_json(changed=changed, db=db, ext=ext)
 
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule,get_exception
-import ansible.module_utils.postgres as pgutils
 
 if __name__ == '__main__':
     main()
