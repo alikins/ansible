@@ -132,11 +132,16 @@ except ImportError:
 else:
     postgresqldb_found = True
 
+from ansible.module_utils.basic import AnsibleModule
+import ansible.module_utils.postgres as pgutils
+
+
 def lang_exists(cursor, lang):
     """Checks if language exists for db"""
     query = "SELECT lanname FROM pg_language WHERE lanname='%s'" % lang
     cursor.execute(query)
     return cursor.rowcount > 0
+
 
 def lang_istrusted(cursor, lang):
     """Checks if language is trusted for db"""
@@ -144,11 +149,13 @@ def lang_istrusted(cursor, lang):
     cursor.execute(query)
     return cursor.fetchone()[0]
 
+
 def lang_altertrust(cursor, lang, trust):
     """Changes if language is trusted for db"""
     query = "UPDATE pg_language SET lanpltrusted = %s WHERE lanname=%s"
     cursor.execute(query, (trust, lang))
     return True
+
 
 def lang_add(cursor, lang, trust):
     """Adds language for db"""
@@ -158,6 +165,7 @@ def lang_add(cursor, lang, trust):
         query = 'CREATE LANGUAGE "%s"' % lang
     cursor.execute(query)
     return True
+
 
 def lang_drop(cursor, lang, cascade):
     """Drops language for db"""
@@ -174,6 +182,7 @@ def lang_drop(cursor, lang, cascade):
     cursor.execute("RELEASE SAVEPOINT ansible_pgsql_lang_drop")
     return True
 
+
 def main():
     argument_spec = pgutils.postgres_common_argument_spec()
     argument_spec.update(dict(
@@ -188,7 +197,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec=argument_spec,
-        supports_check_mode = True
+        supports_check_mode=True
     )
 
     db = module.params["db"]
@@ -210,7 +219,7 @@ def main():
 
     changed = False
     lang_dropped = False
-    kw = dict(db=db,lang=lang,trust=trust)
+    kw = dict(db=db, lang=lang, trust=trust)
 
     if state == "present":
         if lang_exists(cursor, lang):
@@ -249,9 +258,6 @@ def main():
     kw['changed'] = changed
     module.exit_json(**kw)
 
-# import module snippets
-from ansible.module_utils.basic import AnsibleModule,get_exception
-import ansible.module_utils.postgres as pgutils
 
 if __name__ == '__main__':
     main()
