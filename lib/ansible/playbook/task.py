@@ -346,6 +346,8 @@ class Task(Base, Conditional, Taggable, Become):
             if self._role:
                 data['role'] = self._role.serialize()
 
+        # uuid.UUID objects are not json serializable
+        data['uuid'] = '%s' % self._uuid
         return data
 
     def deserialize(self, data):
