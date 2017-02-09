@@ -115,8 +115,8 @@ class TestPlaybook(unittest.TestCase):
         #print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
 
     def test_playbook_yaml_dump_2(self):
-        fake_loader = DictDataLoader({
-            "test_file.yml":"""
+        fake_loader_data = {
+            "test_file.yml": """
             - hosts: localhost
               gather_facts: no
               become: yes
@@ -135,18 +135,30 @@ class TestPlaybook(unittest.TestCase):
               handlers:
                 - name: it
                   command: whoami
-                  
+
             """,
-        })
+        }
+        fake_loader = DictDataLoader(fake_loader_data)
+
         p = Playbook.load("test_file.yml", loader=fake_loader)
-        print(p)
+        #print(p)
 #        for play in plays:
 #            print(yaml.safe_dump(play))
         dumper = AnsibleUnsafeDumper
-        print('\n\nyaml repr of playbook follows\n\n')
+        print()
+        for name, content in fake_loader_data.items():
+            print("Filename: %s" % name)
+            print("Content:")
+            print(content)
+            print()
+
+        print('\n\nyaml repr of playbook followsi canonical\n\n')
         print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
                         indent=4, default_flow_style=False, canonical=True))
         #print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
+        print('\n\nyaml repr of playbook followsi default_flow_style=False\n\n')
+        print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
+                        indent=4, default_flow_style=False))
 
     def test_bad_playbook_files(self):
         fake_loader = DictDataLoader({

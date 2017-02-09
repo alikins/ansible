@@ -46,7 +46,7 @@ class AnsibleDumper(yaml.SafeDumper):
 class AnsibleUnsafeDumper(yaml.Dumper):
     # for debugging
     def represent_undefined(self, data):
-        print('undefined data=%s' % data)
+        print('undefined data=%s, type=%s' % (data, type(data)))
         return yaml.Dumper.represent_undefined(self, data)
 
 
