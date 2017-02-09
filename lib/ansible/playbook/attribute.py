@@ -70,6 +70,18 @@ class Attribute:
         else:
             self.default = default
 
+    def serialize(self):
+        data = {'isa': self.isa,
+                'private': self.private,
+                'default': self.default,
+                'required': self.required,
+                'listof': self.listof,
+                'priority': self.priority,
+                'class_type': self.class_type,
+                'always_post_validate': self.always_post_validate,
+                'inherit': self.inherit}
+        return data
+
     def __eq__(self, other):
         return other.priority == self.priority
 

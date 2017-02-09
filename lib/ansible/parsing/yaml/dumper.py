@@ -67,8 +67,9 @@ def represent_play(self, data):
 
 
 def represent_attribute(self, data):
-    print('repr_attribute %s', data)
-    return self.represent_dict(data)
+    print('repr_attribute %s' % data)
+    print('repr_attrubte.serialize: %s' % data.serialize())
+    return self.represent_dict(data.serialize())
 
 
 def represent_block(self, data):
