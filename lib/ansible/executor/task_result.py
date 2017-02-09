@@ -36,6 +36,10 @@ class TaskResult:
         else:
             self._result = DataLoader().load(return_data)
 
+    # TODO: property
+    def get_task_name(self):
+        return self._result.get('task_name', None) or self._task.get_name()
+
     def is_changed(self):
         return self._check_key('changed')
 

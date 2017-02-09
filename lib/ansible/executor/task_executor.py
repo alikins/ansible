@@ -564,6 +564,9 @@ class TaskExecutor:
                     if attempt < retries:
                         result['_ansible_retry'] = True
                         result['retries'] = retries
+                        # Add the original task name into the result, so TaskResult can consult it for its name
+                        result['task_name'] = wrap_var(self._task.get_name())
+
                         display.debug('Retrying task, attempt %d of %d' % (attempt, retries))
                         self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result), block=False)
                         time.sleep(delay)
