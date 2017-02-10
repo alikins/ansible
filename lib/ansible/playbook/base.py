@@ -336,6 +336,13 @@ class Base(with_metaclass(BaseMeta, object)):
 
         return new_me
 
+    def _attrs_need_post_validate(self):
+        for (name, attribute) in iteritems(self._valid_attrs):
+            if not attribute.always_post_validate and self.__class__.__name__ not in ('Task', 'Handler', 'PlayContext'):
+                print('name: %s attr: %s' % (name, attribute))
+                continue
+            yield name, attribute
+
     def post_validate(self, templar):
         '''
         we can't tell that everything is of the right type until we have
@@ -515,7 +522,8 @@ class Base(with_metaclass(BaseMeta, object)):
             repr[name] = getattr(self, name)
 
         # serialize the uuid field
-        repr['uuid'] = self._uuid
+        # uuid.UUID objects are not json serializable
+        repr['uuid'] = '%s' % self._uuid
         repr['finalized'] = self._finalized
         repr['squashed'] = self._squashed
 

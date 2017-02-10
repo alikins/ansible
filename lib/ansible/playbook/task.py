@@ -322,6 +322,15 @@ class Task(Base, Conditional, Taggable, Become):
             all_vars.update(self.vars)
         return all_vars
 
+    def serialize_just_post_validate_field(self, exclude_parent=False, exclude_tasks=False):
+        data = {}
+        new_me = self.copy(exclude_parent=exclude_parent)
+
+        for name, attribute in new_me._attrs_need_post_validate():
+            data[name] = getattr(new_me, name)
+
+        return data
+
     def copy(self, exclude_parent=False, exclude_tasks=False):
         new_me = super(Task, self).copy()
 
@@ -346,8 +355,6 @@ class Task(Base, Conditional, Taggable, Become):
             if self._role:
                 data['role'] = self._role.serialize()
 
-        # uuid.UUID objects are not json serializable
-        data['uuid'] = '%s' % self._uuid
         return data
 
     def deserialize(self, data):
