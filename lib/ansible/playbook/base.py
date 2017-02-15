@@ -338,9 +338,11 @@ class Base(with_metaclass(BaseMeta, object)):
 
     def _attrs_need_post_validate(self):
         for (name, attribute) in iteritems(self._valid_attrs):
-            if not attribute.always_post_validate and self.__class__.__name__ not in ('Task', 'Handler', 'PlayContext'):
+            #if not attribute.always_post_validate and self.__class__.__name__ not in ('Task', 'Handler', 'PlayContext'):
+            if not attribute.always_post_validate and self.__class__.__name__ not in ('Handler', 'PlayContext'):
                 print('name: %s attr: %s' % (name, attribute))
                 continue
+            print('NEED: name=%s, attribute=%s' % (name, attribute))
             yield name, attribute
 
     def post_validate(self, templar):

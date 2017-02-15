@@ -21,6 +21,8 @@ __metaclass__ = type
 
 import os
 
+from copy import copy as shallowcopy
+
 from ansible.compat.six import iteritems, string_types
 from ansible.errors import AnsibleError, AnsibleParserError
 from ansible.module_utils._text import to_native
@@ -322,16 +324,31 @@ class Task(Base, Conditional, Taggable, Become):
             all_vars.update(self.vars)
         return all_vars
 
+    def _attrs_need_post_validate(self):
+        for (name, attribute) in iteritems(self._valid_attrs):
+            if not attribute.always_post_validate:
+                print('name: %s attr: %s' % (name, attribute))
+                continue
+            print('NEED: name=%s, attribute=%s' % (name, attribute))
+            yield name, attribute
+
     def serialize_just_post_validate_field(self, exclude_parent=False, exclude_tasks=False):
         data = {}
-        new_me = self.copy(exclude_parent=exclude_parent)
+        print('sjpvf')
+        #new_me = self.copy(exclude_parent=exclude_parent)
+        new_me = self.__class__()
+        new_me._attributes['loop_control'] = getattr(self, 'loop_control')
 
         for name, attribute in new_me._attrs_need_post_validate():
-            data[name] = getattr(new_me, name)
+            #data[name] = getattr(new_me, name)
+            #new_me._attributes[name] = shallowcopy(attribute)
+            new_me._attributes[name] = getattr(self, name)
 
-        return data
+        import pprint
+        pprint.pprint(new_me.serialize())
+        return new_me.serialize()
 
-    def copy(self, exclude_parent=False, exclude_tasks=False):
+    def copy(self, exclude_parent=False, exclude_tasks=False, only_post_validate_attrs=False):
         new_me = super(Task, self).copy()
 
         new_me._parent = None
