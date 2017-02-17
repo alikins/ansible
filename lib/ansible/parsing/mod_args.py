@@ -280,6 +280,8 @@ class ModuleArgsParser:
             action, args = self._normalize_parameters(thing, action=action, additional_args=additional_args)
 
         # module: <stuff> is the more new-style invocation
+        print('action: %s' % action)
+        print('args: %s' % args)
 
         # walk the input dictionary to see we recognize a module name
         for (item, value) in iteritems(self._task_ds):
@@ -291,14 +293,19 @@ class ModuleArgsParser:
                 thing = value
                 action, args = self._normalize_parameters(thing, action=action, additional_args=additional_args)
 
-
+        print('action: %s' % action)
+        print('args: %s' % args)
+        module_paths = module_loader._get_paths()
+        print('module_paths: %s' % module_paths)
         # if we didn't see any module in the task at all, it's not a task really
         if action is None:
             if 'ping' not in module_loader:
-                raise AnsibleParserError("The requested action was not found in configured module paths. "
-                        "Additionally, core modules are missing. If this is a checkout, "
-                        "run 'git pull --rebase' to correct this problem.",
-                        obj=self._task_ds)
+                print('a module named %s was not found in module paths: %s, ignoring for now.' % (action, module_paths))
+
+                #raise AnsibleParserError("The requested action was not found in configured module paths. "
+                #        "Additionally, core modules are missing. If this is a checkout, "
+                #        "run 'git pull --rebase' to correct this problem.",
+                #        obj=self._task_ds)
 
             else:
                 raise AnsibleParserError("no action detected in task. This often indicates a misspelled module name, or incorrect module path.", obj=self._task_ds)

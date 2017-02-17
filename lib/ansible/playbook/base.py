@@ -238,7 +238,7 @@ class Base(with_metaclass(BaseMeta, object)):
         # something we can more easily parse, and then call the validation
         # function on it to ensure there are no incorrect key values
         ds = self.preprocess_data(ds)
-        self._validate_attributes(ds)
+        #self._validate_attributes(ds)
 
         # Walk all attributes in the class. We sort them based on their priority
         # so that certain fields can be loaded before others, if they are dependent.
@@ -278,7 +278,8 @@ class Base(with_metaclass(BaseMeta, object)):
         valid_attrs = frozenset(self._valid_attrs.keys())
         for key in ds:
             if key not in valid_attrs:
-                raise AnsibleParserError("'%s' is not a valid attribute for a %s" % (key, self.__class__.__name__), obj=ds)
+                raise Exception("'%s' is not a valid attribute for a %s" % (key, self.__class__.__name__))
+                #raise AnsibleParserError("'%s' is not a valid attribute for a %s" % (key, self.__class__.__name__), obj=ds)
 
     def validate(self, all_vars=dict()):
         ''' validation that is done at parse time, not load time '''

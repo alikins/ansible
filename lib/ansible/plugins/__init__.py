@@ -150,20 +150,41 @@ class PluginLoader:
                     results.append(os.path.join(root,x))
         return results
 
+    def _import_plugin_package_path(self, package_path):
+        try:
+            m = __import__(package_path)
+        except ImportError as e:
+            print('import error: %s' % e)
+            return []
+
+        parts = package_path.split('.')[1:]
+        for parent_mod in parts:
+            m = getattr(m, parent_mod)
+        return [os.path.dirname(m.__file__)]
+
     def _get_package_paths(self, subdirs=True):
         ''' Gets the path of a Python package '''
+        # oh, and actually load the module for the first time as a side effect
+
+        package_paths = []
 
         if not self.package:
             return []
+
         if not hasattr(self, 'package_path'):
-            m = __import__(self.package)
-            parts = self.package.split('.')[1:]
-            for parent_mod in parts:
-                m = getattr(m, parent_mod)
-            self.package_path = os.path.dirname(m.__file__)
+            package_paths = self._import_plugin_package_path(package_path=self.package)
+            # FIXME: side effect
+            # FIXME: we should track a container here
+            #self.package_path = package_paths[0]
+
+        package_paths_subdirs = []
         if subdirs:
-            return self._all_directories(self.package_path)
-        return [self.package_path]
+            for package_path in package_paths:
+                package_paths_subdirs.extend(self._all_directories(package_path))
+            return package_paths_subdirs
+
+        # FIXME: we return a list, but as set a single value as side effect
+        return package_paths
 
     def _get_paths(self, subdirs=True):
         ''' Return a list of paths to search for plugins in '''
