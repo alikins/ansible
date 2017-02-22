@@ -288,6 +288,10 @@ def parse_args():
     sanity.add_argument('--base-branch',
                         help=argparse.SUPPRESS)
 
+    sanity.add_argument('--lint',
+                        action='store_true',
+                        help='output problems in a lint like format for use with tools like syntastic')
+
     add_extra_docker_options(sanity, integration=False)
 
     shell = subparsers.add_parser('shell',

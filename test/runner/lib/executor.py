@@ -910,7 +910,8 @@ def command_sanity_pep8(args, targets):
         code = result['code']
         message = result['message']
 
-        msg = 'PEP 8: %s:%s:%s: %s %s' % (path, line, column, code, message)
+        detail_blurb = '%s:%s:%s: %s: %s' % (path, line, column, code, message)
+        msg = 'PEP 8: %s' % detail_blurb
 
         if path in legacy_paths:
             msg += ' (legacy)'
@@ -921,6 +922,11 @@ def command_sanity_pep8(args, targets):
             # Files on the legacy list are permitted to have errors on the legacy ignore list.
             # However, we want to report on their existence to track progress towards eliminating these exceptions.
             display.info(msg, verbosity=3)
+            if args.lint:
+                # path:line:column: error_code info  (PEP 8)
+                # format like 'lib/ansible/executor/foo.py:37:1
+                lint_msg = '%s (%s)' % (detail_blurb, 'PEP 8')
+                display.info(lint_msg, verbosity=0)
 
             key = '%s %s' % (code, re.sub('[0-9]+', 'NNN', message))
 
@@ -1383,6 +1389,7 @@ class SanityConfig(TestConfig):
         self.skip_test = args.skip_test  # type: list [str]
         self.list_tests = args.list_tests  # type: bool
 
+        self.lint = args.lint
         if args.base_branch:
             self.base_branch = args.base_branch  # str
         elif is_shippable():
