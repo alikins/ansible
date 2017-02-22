@@ -152,6 +152,47 @@ def is_encrypted_file(file_obj, start_pos=0, count=-1):
 
 
 
+class VaultSecret(object):
+    '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
+    def __init__(self):
+        pass
+
+    def bytes(self):
+        '''return a byte array of the secret'''
+        raise NotImplemented
+
+
+class TextVaultSecret(VaultSecret):
+    '''A secret piece of text. ie, a password. Tracks text encoding.'''
+    def __init__(self, text=None, encoding=None, _bytes=None):
+        self.text = text
+        self.encoding = encoding
+        self._bytes = _bytes
+
+    def bytes(self):
+        '''The text encoded with encoding, unless we specifically set _bytes.'''
+        return self._bytes or self.text.encode(self.encoding)
+
+    @classmethod
+    def from_bytes(cls, b_bytes, encoding='utf8'):
+        '''when used with result of getpass.getpass, encoding should be set to sys.stdin.encoding'''
+        secret = cls(_bytes=b_bytes, encoding=encoding)
+        # since we set _bytes explicitly, we wont be using the encoding, but it is still useful to know.
+        secret.text = to_text(b_bytes, encoding)
+        return secret
+
+    @classmethod
+    def from_text(cls, text, encoding='utf8'):
+        '''create from a unicode string. encoding should be left 'utf8' unless you are doing something weird'''
+        secret = cls(text=text, encoding=encoding)
+        secret._bytes = None
+        return secret
+
+
+class EnvVaultSecret(VaultSecret):
+    '''A vault secret from an environment variable.'''
+
+
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
 # FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
 class VaultSecrets(object):
@@ -256,6 +297,9 @@ class PromptVaultSecrets(VaultSecrets):
 
         # TODO: ask for vault id
         vault_pass = None
+
+        encoding = sys.stdin.encoding
+
         try:
             vault_pass = getpass.getpass(prompt="Vault password: ")
         except EOFError:
