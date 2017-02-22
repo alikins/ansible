@@ -910,7 +910,7 @@ def command_sanity_pep8(args, targets):
         code = result['code']
         message = result['message']
 
-        detail_blurb = '%s:%s:%s: %s: %s' % (path, line, column, code, message)
+        detail_blurb = '%s:%s:%s :%s: %s' % (path, line, column, code, message)
         msg = 'PEP 8: %s' % detail_blurb
 
         if path in legacy_paths:
@@ -925,7 +925,7 @@ def command_sanity_pep8(args, targets):
             if args.lint:
                 # path:line:column: error_code info  (PEP 8)
                 # format like 'lib/ansible/executor/foo.py:37:1
-                lint_msg = '%s (%s)' % (detail_blurb, 'PEP 8')
+                lint_msg = '%s  [%s]' % (detail_blurb, 'ansible-test sanity pep8')
                 display.info(lint_msg, verbosity=0)
 
             key = '%s %s' % (code, re.sub('[0-9]+', 'NNN', message))
