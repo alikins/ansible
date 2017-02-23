@@ -50,6 +50,8 @@ def get_all_plugin_loaders():
     return [(name, obj) for (name, obj) in globals().items() if isinstance(obj, PluginLoader)]
 
 
+# TODO: this is becoming less of a namespace and more of a name resolver, but I
+#       guess there isnt a ton of difference
 class ModuleNamespace:
     _name = None
 
@@ -75,6 +77,12 @@ class ModuleNamespace:
         return name.startswith(self.name)
 
     def full_name(self, name):
+        '''Augment the show base module name (copy, ec2_vip_facts, etc) with namespace.
+
+        ie, "copy" -> "_copy", or "mynames_copy".
+
+        Note this isnt limited to prepending a namespace. For example, a alias namespace
+        can completly replace the name.'''
         if self.match(name):
             full_name = name
         else:
@@ -86,7 +94,6 @@ class ModuleNamespace:
         return self.find_plugin(name) is not None
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
-#        print('name=%s mod_type=%s ignore_deprecated=%s' % (name, mod_type, ignore_deprecated))
         find_result = self.path_cache[mod_type].get(self.full_name(name), None)
         if find_result:
             print('Looking for name=%s, mod_type=%s: found %s' % (name, mod_type, find_result))
@@ -220,7 +227,7 @@ class PluginLoader:
         self._searched_paths = set()
 
         # alias -> real name
-        # TODO:
+        # FIXME: just for testing
         alias_map = {'stvincent': 'anneclark',
                      'bansky': 'bobross',
                      'oldthing': 'newthing',
