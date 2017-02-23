@@ -306,18 +306,20 @@ class PluginLoader:
                 # the next one
                 pass
 
-        # if nothing is found, try finding alias/deprecated
-        if not name.startswith('_'):
-            alias_name = '_' + name
-            # We've already cached all the paths at this point
-            if alias_name in pull_cache:
-                if not ignore_deprecated and not os.path.islink(pull_cache[alias_name]):
-                    display.deprecated('%s is kept for backwards compatibility '
-                              'but usage is discouraged. The module '
-                              'documentation details page may explain '
-                              'more about this rationale.' %
-                              name.lstrip('_'))
-                return pull_cache[alias_name]
+        # if nothing is found, try finding plugin in the alias/deprecated namespace
+        namespaces = ['_']
+        for namespace in namespaces:
+            if not name.startswith(namespace):
+                alias_name = namespace + name
+                # We've already cached all the paths at this point
+                if alias_name in pull_cache:
+                    if not ignore_deprecated and not os.path.islink(pull_cache[alias_name]):
+                        display.deprecated('%s is kept for backwards compatibility '
+                                'but usage is discouraged. The module '
+                                'documentation details page may explain '
+                                'more about this rationale.' %
+                                name.lstrip('_'))
+                    return pull_cache[alias_name]
 
         return None
 
