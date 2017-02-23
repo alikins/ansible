@@ -50,6 +50,88 @@ def get_all_plugin_loaders():
     return [(name, obj) for (name, obj) in globals().items() if isinstance(obj, PluginLoader)]
 
 
+class ModuleNamespace:
+    _name = None
+
+    # FIXME: pull_cache is not a very good name, but it is used elsewhere
+    def __init__(self, name=None, path_cache=None):
+        self.name = name or self._name
+
+        self.path_cache = {}
+        # pull_cache could be an empty dict
+        if path_cache is not None:
+            self.path_cache = path_cache
+
+    def match(self, name):
+        '''if name is a full name that indicates a module is in this namespace, return True.
+
+        ie, if self.name='old_modules' and name is 'old_modules.ping', return True.'''
+        return name.startswith(self.name)
+
+    def full_name(self, name):
+        if self.match(name):
+            full_name = name
+        else:
+            full_name = self.name + name
+        return full_name
+
+    def __contains__(self, name):
+        #return self.full_name(name) in self.pull_cache
+        return self.find_plugin(name) is not None
+
+    def find_plugin(self, name, mod_type=None):
+
+        return self.pull_cache.get(self.full_name(name), None)
+
+
+class DeprecatedModuleNamespace(ModuleNamespace):
+    _name = '_'
+
+    def _check_deprecated(self, name, ignore_deprecated, module_path):
+        print('ignore_deprecated: %s' % ignore_deprecated)
+        if ignore_deprecated:
+            return
+
+        if module_path and os.path.islink(module_path):
+            print('module is a symlink %s -> %s' % (module_path, name))
+            return
+
+        deprecated_namespace = '_'
+        display.deprecated('%s is kept for backwards compatibility '
+                           'but usage is discouraged. The module '
+                           'documentation details page may explain '
+                           'more about this rationale.' %
+                           name.lstrip(deprecated_namespace))
+
+
+class ModuleNamespaces:
+
+    def __init__(self, namespaces=None, pull_cache=None):
+        self.pull_cache = {}
+        if pull_cache is not None:
+            self.pull_cache = pull_cache
+
+        self.namespaces = []
+        if namespaces is not None:
+            self.namespaces = namespaces
+
+    @classmethod
+    def from_namespace_names(cls, namespace_names, pull_cache=None):
+        namespaces_obj = cls(pull_cache=pull_cache)
+        for namespace_name in namespace_names:
+                namespaces_obj.append(ModuleNamespace(namespace_name))
+        return namespaces_obj
+
+    def find_plugin(self, name, m):
+        for namespace in self.namespaces:
+            plugin = namespace.find_plugin(name)
+
+            if plugin:
+                return plugin
+
+        return None
+
+
 class PluginLoader:
 
     '''
@@ -235,6 +317,7 @@ class PluginLoader:
                 self._paths = None
 
     # TODO: ignore_deprecated could be an aspect of the Namespace() object
+    # TODO: rename find_ansible_module
     def find_plugin(self, name, mod_type='', ignore_deprecated=False):
         ''' Find a plugin named name '''
 
@@ -251,11 +334,26 @@ class PluginLoader:
         # The particular cache to look for modules within.  This matches the
         # requested mod_type
         pull_cache = self._plugin_path_cache[suffix]
-        try:
-            return pull_cache[name]
-        except KeyError:
-            # Cache miss.  Now let's find the plugin
-            pass
+
+        # Now check other namespaces as well, include the default '' namespace
+        namespaces = ModuleNamespaces.from_namespace_names(['', '_', 'blip_'],
+                                                           pull_cache=pull_cache)
+
+        find_result = namespaces.find_plugin(name)
+
+        # TODO: track which namespace had the name
+        if find_result:
+            return find_result
+
+        #try:
+        #    return pull_cache[name]
+        #except KeyError:
+        #   # Cache miss.  Now let's find the plugin
+        #    pass
+
+        # We didn't find the module name in any namespaces cache, so now
+        # lets search plugin paths populating path caches.
+        # search all the module paths populate lots of cache entries
 
         # TODO: Instead of using the self._paths cache (PATH_CACHE) and
         #       self._searched_paths we could use an iterator.  Before enabling that
@@ -289,6 +387,7 @@ class PluginLoader:
 
                 # Module found, now enter it into the caches that match
                 # this file
+                # Add all the names we want to match
                 if base_name not in self._plugin_path_cache['']:
                     self._plugin_path_cache[''][base_name] = full_path
 
@@ -302,18 +401,33 @@ class PluginLoader:
                     self._plugin_path_cache[extension][full_name] = full_path
 
             self._searched_paths.add(path)
-            try:
-                return pull_cache[name]
-            except KeyError:
-                # Didn't find the plugin in this directory.  Load modules from
-                # the next one
-                pass
+
+            find_result = namespaces.find_plugin(name)
+            if find_result:
+                return find_result
+
+        # FIXME: not sure why/when the last namespace check in the loop above wouldnt
+        #        find anything but this check would
+        find_result = namespaces.find_plugin(name)
+
+        # TODO: track which namespace had the name
+        if find_result:
+            return find_result
 
         # if nothing is found, try finding plugin in the alias/deprecated namespace
-        namespaces = ['_']
+        namespaces = ['_', 'blip']
+        namespaces = []
+
         for namespace in namespaces:
             # just a check to see if we've already added the namespace.
             # TODO: mv the checking to full_name = add_namespace(name)
+            # Namespace.__contains__ ? Namespace as a container of name1,name2, etc
+            # match() ?
+            #if namespace.match(name):
+            # TODO: could __contains__ match  'namespace.name' and/or 'name'?  'deprecated_docker' or 'docker'
+            if name in namespace:
+                return namespace.find_plugin(name, mod_type=mod_type)
+
             if not name.startswith(namespace):
                 full_name = namespace + name
                 # We've already cached all the paths at this point
@@ -321,6 +435,9 @@ class PluginLoader:
                     # TODO: this is really a check just for the 'deprecated' namespace
                     # TODO: Namespace() object? with name and 'checker'?
                     #       maybe Namespace.find_plugin(name) that would do this?
+                    # TODO: and a Namespace() object is really just a concrete plugin finder, so
+                    #       a plugin finder could have a list of sub plugin finders that are searched until match or end
+                    #       (chain of responsibilty)
                     self._check_deprecated(name, ignore_deprecated, pull_cache[full_name])
                     return pull_cache[full_name]
 
