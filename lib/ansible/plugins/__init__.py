@@ -89,6 +89,8 @@ class PluginLoader:
         self._extra_dirs = []
         self._searched_paths = set()
 
+        self.namespaces = []
+
     def __setstate__(self, data):
         '''
         Deserializer.
@@ -232,6 +234,7 @@ class PluginLoader:
                 self._extra_dirs.append(directory)
                 self._paths = None
 
+    # TODO: ignore_deprecated could be an aspect of the Namespace() object
     def find_plugin(self, name, mod_type='', ignore_deprecated=False):
         ''' Find a plugin named name '''
 
@@ -309,19 +312,35 @@ class PluginLoader:
         # if nothing is found, try finding plugin in the alias/deprecated namespace
         namespaces = ['_']
         for namespace in namespaces:
+            # just a check to see if we've already added the namespace.
+            # TODO: mv the checking to full_name = add_namespace(name)
             if not name.startswith(namespace):
-                alias_name = namespace + name
+                full_name = namespace + name
                 # We've already cached all the paths at this point
-                if alias_name in pull_cache:
-                    if not ignore_deprecated and not os.path.islink(pull_cache[alias_name]):
-                        display.deprecated('%s is kept for backwards compatibility '
-                                'but usage is discouraged. The module '
-                                'documentation details page may explain '
-                                'more about this rationale.' %
-                                name.lstrip('_'))
-                    return pull_cache[alias_name]
+                if full_name in pull_cache:
+                    # TODO: this is really a check just for the 'deprecated' namespace
+                    # TODO: Namespace() object? with name and 'checker'?
+                    #       maybe Namespace.find_plugin(name) that would do this?
+                    self._check_deprecated(name, ignore_deprecated, pull_cache[full_name])
+                    return pull_cache[full_name]
 
         return None
+
+    def _check_deprecated(self, name, ignore_deprecated, module_path):
+        print('ignore_deprecated: %s' % ignore_deprecated)
+        if ignore_deprecated:
+            return
+
+        if module_path and os.path.islink(module_path):
+            print('module is a symlink %s -> %s' % (module_path, name))
+            return
+
+        deprecated_namespace = '_'
+        display.deprecated('%s is kept for backwards compatibility '
+                           'but usage is discouraged. The module '
+                           'documentation details page may explain '
+                           'more about this rationale.' %
+                           name.lstrip(deprecated_namespace))
 
     def has_plugin(self, name):
         ''' Checks if a plugin named name exists '''
