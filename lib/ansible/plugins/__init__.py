@@ -87,7 +87,7 @@ class ModuleNamespace:
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
         print('name=%s mod_type=%s ignore_deprecated=%s' % (name, mod_type, ignore_deprecated))
-        return self.path_cache.get(self.full_name(name), None)
+        return self.path_cache[mod_type].get(self.full_name(name), None)
 
 
 class DeprecatedModuleNamespace(ModuleNamespace):
@@ -343,9 +343,11 @@ class PluginLoader:
         pull_cache = self._plugin_path_cache[suffix]
 
         # Now check other namespaces as well, include the default '' namespace
-        module_namespaces = [ModuleNamespace(name='', path_cache=pull_cache),
-                             DeprecatedModuleNamespace(path_cache=pull_cache),
-                             ModuleNamespace(name='blippy_', path_cache=pull_cache)]
+        module_namespaces = [ModuleNamespace(name='',
+                                             path_cache=self._plugin_path_cache),
+                             DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
+                             ModuleNamespace(name='blippy_',
+                                             path_cache=self._plugin_path_cache)]
 
         namespaces = ModuleNamespaces(namespaces=module_namespaces)
 
