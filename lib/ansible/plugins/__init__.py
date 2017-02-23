@@ -126,6 +126,7 @@ class ModuleNamespaces:
         self.namespaces = []
         if namespaces is not None:
             self.namespaces = namespaces
+        print('%s __init__ namespaces=%s' % (self.__class__.__name__, self.namespaces))
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
         for namespace in self.namespaces:
@@ -178,7 +179,14 @@ class PluginLoader:
         self._extra_dirs = []
         self._searched_paths = set()
 
-        self.namespaces = []
+        # Now check other namespaces as well, include the default '' namespace
+        module_namespaces = [ModuleNamespace(name='',
+                                             path_cache=self._plugin_path_cache),
+                             DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
+                             ModuleNamespace(name='blippy_',
+                                             path_cache=self._plugin_path_cache)]
+
+        self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
 
     def __setstate__(self, data):
         '''
@@ -343,13 +351,14 @@ class PluginLoader:
         pull_cache = self._plugin_path_cache[suffix]
 
         # Now check other namespaces as well, include the default '' namespace
-        module_namespaces = [ModuleNamespace(name='',
-                                             path_cache=self._plugin_path_cache),
-                             DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
-                             ModuleNamespace(name='blippy_',
-                                             path_cache=self._plugin_path_cache)]
+        #module_namespaces = [ModuleNamespace(name='',
+        #                                     path_cache=self._plugin_path_cache),
+        #                     DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
+        #                     ModuleNamespace(name='blippy_',
+        #                                     path_cache=self._plugin_path_cache)]
 
-        namespaces = ModuleNamespaces(namespaces=module_namespaces)
+        #namespaces = ModuleNamespaces(namespaces=module_namespaces)
+        namespaces = self.namespaces
 
         find_result = namespaces.find_plugin(name, mod_type=suffix)
 
