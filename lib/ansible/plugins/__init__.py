@@ -55,7 +55,13 @@ class ModuleNamespace:
 
     # FIXME: pull_cache is not a very good name, but it is used elsewhere
     def __init__(self, name=None, path_cache=None):
-        self.name = name or self._name
+
+        # name can be ''
+        self.name = self._name
+        if name is not None:
+            self.name = name
+
+        print('ModuleNamespace __init__ name=%s' % self.name)
 
         self.path_cache = {}
         # pull_cache could be an empty dict
@@ -79,9 +85,9 @@ class ModuleNamespace:
         #return self.full_name(name) in self.pull_cache
         return self.find_plugin(name) is not None
 
-    def find_plugin(self, name, mod_type=None):
-
-        return self.pull_cache.get(self.full_name(name), None)
+    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
+        print('name=%s mod_type=%s ignore_deprecated=%s' % (name, mod_type, ignore_deprecated))
+        return self.path_cache.get(self.full_name(name), None)
 
 
 class DeprecatedModuleNamespace(ModuleNamespace):
@@ -103,28 +109,29 @@ class DeprecatedModuleNamespace(ModuleNamespace):
                            'more about this rationale.' %
                            name.lstrip(deprecated_namespace))
 
+    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
+        find_result = super(DeprecatedModuleNamespace, self).find_plugin(name, mod_type,
+                                                                         ignore_deprecated)
+
+        if find_result:
+            self._check_deprecated(name, ignore_deprecated=ignore_deprecated,
+                                   module_path=find_result)
+
+        return find_result
+
 
 class ModuleNamespaces:
 
-    def __init__(self, namespaces=None, pull_cache=None):
-        self.pull_cache = {}
-        if pull_cache is not None:
-            self.pull_cache = pull_cache
-
+    def __init__(self, namespaces=None):
         self.namespaces = []
         if namespaces is not None:
             self.namespaces = namespaces
 
-    @classmethod
-    def from_namespace_names(cls, namespace_names, pull_cache=None):
-        namespaces_obj = cls(pull_cache=pull_cache)
-        for namespace_name in namespace_names:
-                namespaces_obj.append(ModuleNamespace(namespace_name))
-        return namespaces_obj
-
-    def find_plugin(self, name, m):
+    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
         for namespace in self.namespaces:
-            plugin = namespace.find_plugin(name)
+            plugin = namespace.find_plugin(name,
+                                           mod_type=mod_type,
+                                           ignore_deprecated=ignore_deprecated)
 
             if plugin:
                 return plugin
@@ -336,8 +343,11 @@ class PluginLoader:
         pull_cache = self._plugin_path_cache[suffix]
 
         # Now check other namespaces as well, include the default '' namespace
-        namespaces = ModuleNamespaces.from_namespace_names(['', '_', 'blip_'],
-                                                           pull_cache=pull_cache)
+        module_namespaces = [ModuleNamespace(name='', path_cache=pull_cache),
+                             DeprecatedModuleNamespace(path_cache=pull_cache),
+                             ModuleNamespace(name='blippy_', path_cache=pull_cache)]
+
+        namespaces = ModuleNamespaces(namespaces=module_namespaces)
 
         find_result = namespaces.find_plugin(name)
 
@@ -414,50 +424,7 @@ class PluginLoader:
         if find_result:
             return find_result
 
-        # if nothing is found, try finding plugin in the alias/deprecated namespace
-        namespaces = ['_', 'blip']
-        namespaces = []
-
-        for namespace in namespaces:
-            # just a check to see if we've already added the namespace.
-            # TODO: mv the checking to full_name = add_namespace(name)
-            # Namespace.__contains__ ? Namespace as a container of name1,name2, etc
-            # match() ?
-            #if namespace.match(name):
-            # TODO: could __contains__ match  'namespace.name' and/or 'name'?  'deprecated_docker' or 'docker'
-            if name in namespace:
-                return namespace.find_plugin(name, mod_type=mod_type)
-
-            if not name.startswith(namespace):
-                full_name = namespace + name
-                # We've already cached all the paths at this point
-                if full_name in pull_cache:
-                    # TODO: this is really a check just for the 'deprecated' namespace
-                    # TODO: Namespace() object? with name and 'checker'?
-                    #       maybe Namespace.find_plugin(name) that would do this?
-                    # TODO: and a Namespace() object is really just a concrete plugin finder, so
-                    #       a plugin finder could have a list of sub plugin finders that are searched until match or end
-                    #       (chain of responsibilty)
-                    self._check_deprecated(name, ignore_deprecated, pull_cache[full_name])
-                    return pull_cache[full_name]
-
         return None
-
-    def _check_deprecated(self, name, ignore_deprecated, module_path):
-        print('ignore_deprecated: %s' % ignore_deprecated)
-        if ignore_deprecated:
-            return
-
-        if module_path and os.path.islink(module_path):
-            print('module is a symlink %s -> %s' % (module_path, name))
-            return
-
-        deprecated_namespace = '_'
-        display.deprecated('%s is kept for backwards compatibility '
-                           'but usage is discouraged. The module '
-                           'documentation details page may explain '
-                           'more about this rationale.' %
-                           name.lstrip(deprecated_namespace))
 
     def has_plugin(self, name):
         ''' Checks if a plugin named name exists '''
@@ -685,4 +652,3 @@ terminal_loader = PluginLoader(
     'terminal_plugins',
     'terminal_plugins'
 )
-
