@@ -349,7 +349,7 @@ class PluginLoader:
 
         namespaces = ModuleNamespaces(namespaces=module_namespaces)
 
-        find_result = namespaces.find_plugin(name)
+        find_result = namespaces.find_plugin(name, mod_type=suffix)
 
         # TODO: track which namespace had the name
         if find_result:
@@ -412,13 +412,13 @@ class PluginLoader:
 
             self._searched_paths.add(path)
 
-            find_result = namespaces.find_plugin(name)
+            find_result = namespaces.find_plugin(name, mod_type=suffix)
             if find_result:
                 return find_result
 
         # FIXME: not sure why/when the last namespace check in the loop above wouldnt
         #        find anything but this check would
-        find_result = namespaces.find_plugin(name)
+        find_result = namespaces.find_plugin(name, mod_type=suffix)
 
         # TODO: track which namespace had the name
         if find_result:
