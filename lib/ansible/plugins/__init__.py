@@ -140,6 +140,23 @@ class VersionedModuleNamespace(ModuleNamespace):
         return super(VersionedModuleNamespace, self).find_plugin(ver_name, mod_type, ignore_deprecated)
 
 
+class AliasModuleNamespace(ModuleNamespace):
+    '''map one module name to another'''
+
+    name = '_alias_'
+
+    def __init__(self, name=None, path_cache=None, alias_map=None):
+        super(AliasModuleNamespace, self).__init__(name=name, path_cache=path_cache)
+
+        # when asked for 'foo', return 'bar' found via map
+        self.alias_map = {}
+        if alias_map is not None:
+            self.alias_map = alias_map
+
+    def full_name(self, name):
+        return self.alias_map.get(name, name)
+
+
 class ModuleNamespaces:
 
     def __init__(self, namespaces=None):
@@ -170,13 +187,16 @@ class PluginLoader:
     The first match is used.
     '''
 
-    def __init__(self, class_name, package, config, subdir, aliases={}, required_base_class=None):
+    def __init__(self, class_name, package, config, subdir, aliases=None, required_base_class=None):
 
         self.class_name         = class_name
         self.base_class         = required_base_class
         self.package            = package
         self.subdir             = subdir
-        self.aliases            = aliases
+
+        self.aliases = {}
+        if aliases is not None:
+            self.aliases = aliases
 
         if config and not isinstance(config, list):
             config = [config]
@@ -199,12 +219,31 @@ class PluginLoader:
         self._extra_dirs = []
         self._searched_paths = set()
 
+        # alias -> real name
+        # TODO:
+        alias_map = {'stvincent': 'anneclark',
+                     'bansky': 'bobross',
+                     'oldthing': 'newthing',
+                     'showmethejson': 'debug',
+                     'the_artist_formerly_known_as_file': 'file'}
+        alias_map.update(self.aliases)
+
         # Now check other namespaces as well, include the default '' namespace
         module_namespaces = [VersionedModuleNamespace(version='2_2',
                                                       path_cache=self._plugin_path_cache),
+                             # The normal modules, with no namespace
                              ModuleNamespace(name='',
                                              path_cache=self._plugin_path_cache),
+                             # potentially runtime mapping of module names
+                             AliasModuleNamespace(alias_map=alias_map,
+                                                  path_cache=self._plugin_path_cache),
+                             # deprecated modules with _modulename
                              DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
+                             # just an example of an arbitrary namespaces. pbs can
+                             # reference 'blippy_foo' directly, or if a pb references module
+                             # 'foo', and nothing else provides 'foo', we also check
+                             # look for blippy_foo. Will be more interesting with suffix name
+                             # spaces.
                              ModuleNamespace(name='blippy_',
                                              path_cache=self._plugin_path_cache)]
 
@@ -370,7 +409,7 @@ class PluginLoader:
 
         # The particular cache to look for modules within.  This matches the
         # requested mod_type
-        pull_cache = self._plugin_path_cache[suffix]
+        #pull_cache = self._plugin_path_cache[suffix]
 
         # Now check other namespaces as well, include the default '' namespace
         #module_namespaces = [ModuleNamespace(name='',
@@ -481,8 +520,8 @@ class PluginLoader:
 
         found_in_cache = True
         class_only = kwargs.pop('class_only', False)
-        if name in self.aliases:
-            name = self.aliases[name]
+        #if name in self.aliases:
+        #    name = self.aliases[name]
         path = self.find_plugin(name)
         if path is None:
             return None
@@ -626,6 +665,8 @@ module_loader = PluginLoader(
     'ansible.modules',
     C.DEFAULT_MODULE_PATH,
     'library',
+    # for testing atm
+    aliases={'bedug': 'debug'},
 )
 
 module_utils_loader = PluginLoader(
@@ -640,6 +681,8 @@ lookup_loader = PluginLoader(
     'ansible.plugins.lookup',
     C.DEFAULT_LOOKUP_PLUGIN_PATH,
     'lookup_plugins',
+    # FIXME: just for testing, remove
+    aliases={'xfilex': 'file'},
     required_base_class='LookupBase',
 )
 
