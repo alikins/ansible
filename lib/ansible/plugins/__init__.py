@@ -61,7 +61,7 @@ class ModuleNamespace:
         if name is not None:
             self.name = name
 
-        print('ModuleNamespace __init__ name=%s' % self.name)
+        print('%s __init__ name=%s' % (self.__class__.__name__, self.name))
 
         self.path_cache = {}
         # pull_cache could be an empty dict
@@ -86,8 +86,11 @@ class ModuleNamespace:
         return self.find_plugin(name) is not None
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
-        print('name=%s mod_type=%s ignore_deprecated=%s' % (name, mod_type, ignore_deprecated))
-        return self.path_cache[mod_type].get(self.full_name(name), None)
+#        print('name=%s mod_type=%s ignore_deprecated=%s' % (name, mod_type, ignore_deprecated))
+        find_result = self.path_cache[mod_type].get(self.full_name(name), None)
+        if find_result:
+            print('Looking for name=%s, mod_type=%s: found %s' % (name, mod_type, find_result))
+        return find_result
 
 
 class DeprecatedModuleNamespace(ModuleNamespace):
@@ -118,6 +121,23 @@ class DeprecatedModuleNamespace(ModuleNamespace):
                                    module_path=find_result)
 
         return find_result
+
+
+class VersionedModuleNamespace(ModuleNamespace):
+    _name = 'ver_'
+
+    def __init__(self, name=None, path_cache=None, version=None):
+        super(VersionedModuleNamespace, self).__init__(name=name, path_cache=path_cache)
+
+        self.version = version
+
+    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
+        if self.version is None:
+            return None
+
+        ver_name = '%s%s_%s' % (self.name, self.version, name)
+
+        return super(VersionedModuleNamespace, self).find_plugin(ver_name, mod_type, ignore_deprecated)
 
 
 class ModuleNamespaces:
@@ -180,7 +200,9 @@ class PluginLoader:
         self._searched_paths = set()
 
         # Now check other namespaces as well, include the default '' namespace
-        module_namespaces = [ModuleNamespace(name='',
+        module_namespaces = [VersionedModuleNamespace(version='2_2',
+                                                      path_cache=self._plugin_path_cache),
+                             ModuleNamespace(name='',
                                              path_cache=self._plugin_path_cache),
                              DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
                              ModuleNamespace(name='blippy_',
