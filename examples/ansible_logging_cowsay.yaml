@@ -1,0 +1,27 @@
+---
+version: 1
+disable_existing_loggers: True
+formatters:
+    cowsay:
+        (): ansible.logger.formatters.cowsay.CowsayFormatter
+        format: "%(message)s"
+
+
+handlers:
+    cowsay:
+        class: logging.StreamHandler
+        level: INFO
+        formatter: cowsay
+
+loggers:
+    ansible:
+        level: DEBUG
+        #handlers: [console, console_compat, debug_file_handler]
+        handlers: [cowsay]
+
+#root:
+    #level: INFO
+    #handlers: [cowsay, console, info_file_handler, error_file_handler]
+    #handlers: [cowsay]
+...
+
