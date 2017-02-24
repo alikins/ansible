@@ -766,7 +766,11 @@ def _find_module_utils(module_name, b_module_data, module_path, module_args, tas
 
     return (b_module_data, module_style, shebang)
 
-
+# This basically packages a module, for use in an ansiball. More or less python module
+# specific. powershell and binary modules are not changed. jsonargs style is handle.
+# Some shebang handling, but most defers to _find_module_utils() which does most of ansiball
+# creation.
+# module_name, module_path -> module identifying info
 def modify_module(module_name, module_path, module_args, task_vars=dict(), module_compression='ZIP_STORED'):
     """
     Used to insert chunks of code into modules before transfer rather than
@@ -788,6 +792,8 @@ def modify_module(module_name, module_path, module_args, task_vars=dict(), modul
     properties not available here.
 
     """
+
+    # Get the module file, for python, a module_file.py. Could be a bin exe or shell script.
     with open(module_path, 'rb') as f:
 
         # read in the module source
