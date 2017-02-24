@@ -194,7 +194,7 @@ class PluginLoader:
     The first match is used.
     '''
 
-    def __init__(self, class_name, package, config, subdir, aliases=None, required_base_class=None):
+    def __init__(self, class_name, package, config, subdir, aliases=None, required_base_class=None, namespaces=None):
 
         self.class_name         = class_name
         self.base_class         = required_base_class
@@ -235,7 +235,14 @@ class PluginLoader:
                      'the_artist_formerly_known_as_file': 'file'}
         alias_map.update(self.aliases)
 
-        # Now check other namespaces as well, include the default '' namespace
+        # TODO: Construct this outside of PluginLoader init, and pass it in
+        #       as namespaces option. Most instances with use the same setup, but
+        #       it would be useful to use different impls at times (for example,
+        #       a windows/winrm specific pluginload would want a window specific module
+        #       namespace object). The tricky part there is the many many caches and
+        #       getting their scopes and lifetimes sorted out.
+
+        # Now check other namespaces as well, include the default '' namespacei
         module_namespaces = [VersionedModuleNamespace(version='2_2',
                                                       path_cache=self._plugin_path_cache),
                              # The normal modules, with no namespace
