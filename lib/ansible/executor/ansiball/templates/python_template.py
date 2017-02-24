@@ -1,3 +1,6 @@
+from ansible import constants as C
+
+# TODO: just load this from a file somewhere so it is easier to edit.
 ANSIBALLZ_TEMPLATE = u'''%(shebang)s
 %(coding)s
 ANSIBALLZ_WRAPPER = True # For test-module script to tell this is a ANSIBALLZ_WRAPPER
@@ -283,3 +286,22 @@ if __name__ == '__main__':
     sys.exit(exitcode)
 '''
 
+
+def _strip_comments(source):
+    # Strip comments and blank lines from the wrapper
+    buf = []
+    for line in source.splitlines():
+        l = line.strip()
+        if not l or l.startswith(u'#'):
+            continue
+        buf.append(line)
+    return u'\n'.join(buf)
+
+
+if C.DEFAULT_KEEP_REMOTE_FILES:
+    # Keep comments when KEEP_REMOTE_FILES is set.  That way users will see
+    # the comments with some nice usage instructions
+    ACTIVE_ANSIBALLZ_TEMPLATE = ANSIBALLZ_TEMPLATE
+else:
+    # ANSIBALLZ_TEMPLATE stripped of comments for smaller over the wire size
+    ACTIVE_ANSIBALLZ_TEMPLATE = _strip_comments(ANSIBALLZ_TEMPLATE)

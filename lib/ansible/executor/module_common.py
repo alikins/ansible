@@ -58,6 +58,7 @@ REPLACER_WINDOWS  = b"# POWERSHELL_COMMON"
 REPLACER_JSONARGS = b"<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>"
 REPLACER_SELINUX  = b"<<SELINUX_SPECIAL_FILESYSTEMS>>"
 
+
 # We could end up writing out parameters with unicode characters so we need to
 # specify an encoding for the python source file
 ENCODING_STRING = u'# -*- coding: utf-8 -*-'
@@ -66,26 +67,6 @@ ENCODING_STRING = u'# -*- coding: utf-8 -*-'
 _MODULE_UTILS_PATH = os.path.join(os.path.dirname(__file__), '..', 'module_utils')
 
 # ******************************************************************************
-
-
-def _strip_comments(source):
-    # Strip comments and blank lines from the wrapper
-    buf = []
-    for line in source.splitlines():
-        l = line.strip()
-        if not l or l.startswith(u'#'):
-            continue
-        buf.append(line)
-    return u'\n'.join(buf)
-
-
-if C.DEFAULT_KEEP_REMOTE_FILES:
-    # Keep comments when KEEP_REMOTE_FILES is set.  That way users will see
-    # the comments with some nice usage instructions
-    ACTIVE_ANSIBALLZ_TEMPLATE = ANSIBALLZ_TEMPLATE
-else:
-    # ANSIBALLZ_TEMPLATE stripped of comments for smaller over the wire size
-    ACTIVE_ANSIBALLZ_TEMPLATE = _strip_comments(ANSIBALLZ_TEMPLATE)
 
 
 class ModuleDepFinder(ast.NodeVisitor):
@@ -343,6 +324,15 @@ def _find_module_utils(module_name, b_module_data, module_path, module_args, tas
     if module_substyle == 'python':
         params = dict(ANSIBLE_MODULE_ARGS=module_args,)
         python_repred_params = repr(json.dumps(params))
+
+        shebang, interpreter = _get_shebang(u'/usr/bin/python', task_vars)
+        if shebang is None:
+            shebang = u'#!/usr/bin/python'
+
+        # Enclose the parts of the interpreter in quotes because we're
+        # substituting it into the template as a Python string
+        interpreter_parts = interpreter.split(u' ')
+        interpreter = u"'{0}'".format(u"', '".join(interpreter_parts))
 
         try:
             compression_method = getattr(zipfile, module_compression)
