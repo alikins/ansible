@@ -46,7 +46,20 @@ except ImportError:
 __all__ = ["CallbackBase"]
 
 
-class CallbackBase(AnsiblePlugin):
+class AnsibleJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        # Handle ConditionalResult and ConditionalResults
+        if hasattr(obj, '_conditional_result'):
+            return obj.__getstate__()
+        if hasattr(obj, '_conditional_results'):
+            return obj.__getstate__()
+
+        return super(AnsibleJSONEncoder, self).default(obj)
+
+
+class CallbackBase:
+        return super(AnsibleJSONEncoder, self).default(obj)
+
 
     '''
     This is a base ansible callback class that does nothing. New callbacks should
@@ -78,6 +91,8 @@ class CallbackBase(AnsiblePlugin):
             self.set_options(options)
 
         self._hide_in_debug = ('changed', 'failed', 'skipped', 'invocation')
+
+        self.json_encoder = AnsibleJSONEncoder()
 
     ''' helper for callbacks, so they don't all have to include deepcopy '''
     _copy_result = deepcopy
@@ -122,7 +137,8 @@ class CallbackBase(AnsiblePlugin):
         if 'exception' in abridged_result:
             del abridged_result['exception']
 
-        return json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
+        return json.dumps(abridged_result, indent=indent, ensure_ascii=False,
+                          sort_keys=sort_keys, cls=AnsibleJSONEncoder)
 
     def _handle_warnings(self, res):
         ''' display warnings, if enabled and any exist in the result '''
