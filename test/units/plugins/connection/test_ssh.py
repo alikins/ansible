@@ -159,7 +159,7 @@ class TestRetryFauxSshRunMethod(unittest.TestCase):
                 yield i
 
         res = self.nothing(cmd_generator(), in_data=None, sudoable=False, checkrc=False,
-                           retries=5, pause_amount=0.1, max_pause=0.2)
+                           retries=1, pause_amount=0.1, max_pause=0.2)
         self._results(res)
 
     def test_cmd_list_none(self):

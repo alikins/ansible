@@ -152,17 +152,21 @@ def _ssh_retry(func):
         pprint.pprint(kwargs)
         remaining_tries = int(C.ANSIBLE_SSH_RETRIES) + 1
         cmd_summary = "%s..." % args[0]
+
+        # FIXME: remunge the state of the obj the retried method lives on
         print('self.host: %s' % self.host)
-        max_tries = kwargs.get('retries', int(C.ANSIBLE_SSH_RETRIES) + 1)
+
+        max_attempts = kwargs.get('retries', int(C.ANSIBLE_SSH_RETRIES) + 1)
         pause_amount = kwargs.get('pause_amount', 2.0)
         max_pause = kwargs.get('max_pause', 30.0)
 
-        attempts = attempt_generator(max_tries=max_tries,
+        attempts = attempt_generator(max_attempts=max_attempts,
                                      pause_amount=pause_amount,
                                      max_pause=max_pause)
+
         for attempt, pause, remaining_tries in attempts:
-        #for attempt in range(remaining_tries):
             print('attempt: %s retries: %s' % (attempt, remaining_tries))
+
             try:
                 try:
                     return_tuple = func(self, *args, **kwargs)
@@ -179,38 +183,46 @@ def _ssh_retry(func):
                     return return_tuple
                 else:
                     raise AnsibleConnectionFailure("Failed to connect to the host via ssh: %s" % to_native(return_tuple[2]))
+                return return_tuple
             except (AnsibleConnectionFailure, Exception) as e:
-                print('exception...')
-                #if attempt == remaining_tries - 1:
-                #    raise
                 if remaining_tries == 0:
                     raise
+
+                if isinstance(e, AnsibleConnectionFailure):
+                    msg = "ssh_retry: attempt: %d, ssh return code is 255. cmd (%s), pausing for %d seconds" % (attempt, cmd_summary, pause)
                 else:
-                    #pause = calc_pause(attempt, pause_amount, max_pause)
+                    msg = "ssh_retry: attempt: %d, caught exception(%s) from cmd (%s), pausing for %d seconds" % (attempt, e, cmd_summary, pause)
 
-                    if isinstance(e, AnsibleConnectionFailure):
-                        msg = "ssh_retry: attempt: %d, ssh return code is 255. cmd (%s), pausing for %d seconds" % (attempt, cmd_summary, pause)
-                    else:
-                        msg = "ssh_retry: attempt: %d, caught exception(%s) from cmd (%s), pausing for %d seconds" % (attempt, e, cmd_summary, pause)
+                display.vv(msg, host=self.host)
 
-                    display.vv(msg, host=self.host)
+                # FIXME/TODO: we could make the attempt_generator do the pausing. Would
+                #             be easier to test.
+                print('pausing for %s seconds' % pause)
+                time.sleep(pause)
 
-                    print('pausing for %s seconds' % pause)
-                    time.sleep(pause)
-                    continue
+                continue
 
-        # Shoudln't get here
-        raise AnsibleConnectionFailure("Exhausted all retries and failed to connect to the host via ssh: %s" % to_native(return_tuple[2]))
+        # Shoudln't get here unless there are < 1 attempts
+        raise AnsibleConnectionFailure("Attempted connection %s times and failed to connect to the host %s via ssh" % (max(0, max_attempts), self.host))
         # exhausted the attempts, raise an exception
     return wrapped
 
 
-def attempt_generator(max_tries, pause_amount, max_pause):
+def attempt_generator(max_attempts, pause_amount, max_pause):
+    max_attempts = max(0, max_attempts)
     attempt = 0
-    while attempt < max_tries:
+    # want 0 attempts? ok, sure, we'll do nothing.
+    while attempt < max_attempts:
+        remaining_attempts = max_attempts - attempt
+
+        # dont pause on the first attempt
+        if attempt == 0:
+            yield attempt, 0.0, remaining_attempts
+
         attempt = attempt + 1
+
         pause = calc_pause(attempt, pause_amount, max_pause)
-        yield attempt, pause, max_tries - attempt
+        yield attempt, pause, max_attempts - attempt
 
 
 def calc_pause(attempt, pause_amount, max_pause):
