@@ -147,9 +147,22 @@ def _ssh_retry(func):
     """
     @wraps(func)
     def wrapped(self, *args, **kwargs):
+        import pprint
+        pprint.pprint(args)
+        pprint.pprint(kwargs)
         remaining_tries = int(C.ANSIBLE_SSH_RETRIES) + 1
         cmd_summary = "%s..." % args[0]
-        for attempt in range(remaining_tries):
+        print('self.host: %s' % self.host)
+        max_tries = kwargs.get('retries', int(C.ANSIBLE_SSH_RETRIES) + 1)
+        pause_amount = kwargs.get('pause_amount', 2.0)
+        max_pause = kwargs.get('max_pause', 30.0)
+
+        attempts = attempt_generator(max_tries=max_tries,
+                                     pause_amount=pause_amount,
+                                     max_pause=max_pause)
+        for attempt, pause, remaining_tries in attempts:
+        #for attempt in range(remaining_tries):
+            print('attempt: %s retries: %s' % (attempt, remaining_tries))
             try:
                 try:
                     return_tuple = func(self, *args, **kwargs)
@@ -163,16 +176,17 @@ def _ssh_retry(func):
                     return_tuple = func(self, *args, **kwargs)
 
                 if return_tuple[0] != 255:
-                    break
+                    return return_tuple
                 else:
                     raise AnsibleConnectionFailure("Failed to connect to the host via ssh: %s" % to_native(return_tuple[2]))
             except (AnsibleConnectionFailure, Exception) as e:
-                if attempt == remaining_tries - 1:
+                print('exception...')
+                #if attempt == remaining_tries - 1:
+                #    raise
+                if remaining_tries == 0:
                     raise
                 else:
-                    pause = 2 ** attempt - 1
-                    if pause > 30:
-                        pause = 30
+                    #pause = calc_pause(attempt, pause_amount, max_pause)
 
                     if isinstance(e, AnsibleConnectionFailure):
                         msg = "ssh_retry: attempt: %d, ssh return code is 255. cmd (%s), pausing for %d seconds" % (attempt, cmd_summary, pause)
@@ -181,11 +195,31 @@ def _ssh_retry(func):
 
                     display.vv(msg, host=self.host)
 
+                    print('pausing for %s seconds' % pause)
                     time.sleep(pause)
                     continue
 
-        return return_tuple
+        # Shoudln't get here
+        raise AnsibleConnectionFailure("Exhausted all retries and failed to connect to the host via ssh: %s" % to_native(return_tuple[2]))
+        # exhausted the attempts, raise an exception
     return wrapped
+
+
+def attempt_generator(max_tries, pause_amount, max_pause):
+    attempt = 0
+    while attempt < max_tries:
+        attempt = attempt + 1
+        pause = calc_pause(attempt, pause_amount, max_pause)
+        yield attempt, pause, max_tries - attempt
+
+
+def calc_pause(attempt, pause_amount, max_pause):
+    pause = pause_amount ** attempt
+    print('pause_ammount %s ** %s -1 = %s' % (pause_amount, attempt, pause))
+    if pause > max_pause:
+        pause = max_pause
+    print('pause: %s' % pause)
+    return pause
 
 
 class Connection(ConnectionBase):

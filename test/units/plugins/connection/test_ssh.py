@@ -21,6 +21,8 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from io import StringIO
+import pprint
+
 import pytest
 
 
@@ -33,6 +35,186 @@ from ansible.module_utils.six.moves import shlex_quote
 from ansible.module_utils._text import to_bytes
 from ansible.playbook.play_context import PlayContext
 from ansible.plugins.connection import ssh
+
+
+class TestRetry(unittest.TestCase):
+    @staticmethod
+    @ssh._ssh_retry
+    def nothing():
+        pass
+
+    def test_no_args(self):
+        try:
+            self.nothing()
+        except TypeError as e:
+            print(e)
+
+    def test_none(self):
+        self.nothing(None)
+        #self.assertRaises(TypeError, nothing())
+
+    def test_empty(self):
+        self.nothing([], {})
+
+
+class TestRetryWrapsOneArgMethod(unittest.TestCase):
+    @staticmethod
+    @ssh._ssh_retry
+    def nothing(dummy):
+        print(dummy)
+
+    def test_empty(self):
+        self.nothing([], {})
+
+    def test_none(self):
+        self.nothing(None)
+
+    def test_one_arg_empty_list(self):
+        self.nothing([])
+
+
+class TestRetryWrapsArgsKwargsMethod(unittest.TestCase):
+    @staticmethod
+    @ssh._ssh_retry
+    def nothing(*args, **kwargs):
+        pprint.pprint(args)
+        pprint.pprint(kwargs)
+
+    def test_empty(self):
+        self.nothing([], {})
+
+    def test_none(self):
+        self.nothing(None)
+
+    def test_one_arg_empty_list(self):
+        self.nothing([])
+
+
+class TestRetryFauxSshRunMethodWithBadArgs(unittest.TestCase):
+
+    @ssh._ssh_retry
+    def nothing(self, cmd, in_data, sudoable=True, checkrc=True):
+        pprint.pprint(cmd)
+        pprint.pprint(in_data)
+        print('sudoable: %s' % sudoable)
+        print('checkrc: %s' % checkrc)
+        return None
+
+    def _results(self, result):
+        print('result: %s' % repr(result))
+
+    def test_none(self):
+        res = self.nothing(None)
+        self._results(res)
+
+    def test_one_arg_empty_list(self):
+        res = self.nothing([])
+        self._results(res)
+
+    def test_empty(self):
+        res = self.nothing([], {})
+        self._results(res)
+
+    # right number of args, but unexpected values
+    def test_all_none(self):
+        res = self.nothing(None, None, sudoable=None, checkrc=None)
+        self._results(res)
+
+    def test_all_none_just_kwargs(self):
+        res = self.nothing(cmd=None, in_data=None, sudoable=None, checkrc=None)
+        self._results(res)
+
+
+class TestRetryFauxSshRunMethod(unittest.TestCase):
+    _host = 'localhost'
+
+    @ssh._ssh_retry
+    def nothing(self, cmd, in_data, sudoable=True, checkrc=True, **kwargs):
+        pprint.pprint(cmd)
+        pprint.pprint(in_data)
+        print('sudoable: %s' % sudoable)
+        print('checkrc: %s' % checkrc)
+        return_results = self._return(cmd, in_data, sudoable, checkrc)
+        print('return_tuple: %s' % pprint.pformat(return_results))
+        return return_results
+
+    def _return(self, *args, **kwargs):
+        return None
+
+    @property
+    def host(self):
+        return self._host or None
+
+    def _results(self, result):
+        print('result: %s' % repr(result))
+
+    def test_cmd_empty_list(self):
+        res = self.nothing([], in_data=None, sudoable=False, checkrc=False,
+                           retries=1, pause_amount=0.1, max_pause=1.0)
+        self._results(res)
+
+    def test_cmd_empty_generator(self):
+        def cmd_generator():
+            for i in []:
+                yield i
+
+        res = self.nothing(cmd_generator(), in_data=None, sudoable=False, checkrc=False,
+                           retries=5, pause_amount=0.1, max_pause=0.2)
+        self._results(res)
+
+    def test_cmd_list_none(self):
+        res = self.nothing(None, in_data=None, sudoable=False, checkrc=False,
+                           retries=5, pause_amount=0.1, max_pause=0.2)
+        self._results(res)
+
+    # results in negative pause time and exception from time.sleep
+#    def test_sub_one_sec_pause(self):
+#        res = self.nothing(None, in_data=None, sudoable=False, checkrc=False,
+#                           retries=4, pause_amount=0.1, max_pause=1.0)
+#        self._results(res)
+
+
+class TestRetryFauxSshRunMethodReturnsEmptyTuple(TestRetryFauxSshRunMethod):
+
+    def _return(self, *args, **kwargs):
+        return tuple()
+
+
+class TestRetryFauxSshRunMethodReturnsTupleOfNone(TestRetryFauxSshRunMethod):
+    def _return(self, *args, **kwargs):
+        return tuple([None, None, None])
+
+
+class TestRetryFauxSshRunMethodReturnsTupleReturnCodeZero(TestRetryFauxSshRunMethod):
+    def _return(self, *args, **kwargs):
+        return tuple([0, None, None])
+
+
+class TestRetryFauxSshRunMethodReturnsTupleReturnCodeOne(TestRetryFauxSshRunMethod):
+    def _return(self, *args, **kwargs):
+        return tuple([1, None, None])
+
+
+class TestRetryFauxSshRunMethodReturnsTupleReturnCode255(TestRetryFauxSshRunMethod):
+    def _return(self, *args, **kwargs):
+        return tuple([255, None, None])
+
+
+class TestRetryFauxSshRunMethodReturnsRaisesException(TestRetryFauxSshRunMethod):
+    def _return(self, *args, **kwargs):
+        raise Exception('this was raised from %s _return' % self.__class__.__name__)
+
+
+class TestRetryFauxSshRunMethodReturnsRaisesAnsibleConnectionFailure(TestRetryFauxSshRunMethod):
+    def _return(self, *args, **kwargs):
+        raise AnsibleConnectionFailure('connection failure: this was raised from %s _return' % self.__class__.__name__)
+
+    def setUp(self):
+        self.patcher = patch('ansible.plugins.connection.ssh.C.ANSIBLE_SSH_RETRIES', return_value=10)
+        self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
 
 
 class TestConnectionBaseClass(unittest.TestCase):
