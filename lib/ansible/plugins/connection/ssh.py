@@ -197,8 +197,8 @@ def _ssh_retry(func):
 
                 # FIXME/TODO: we could make the attempt_generator do the pausing. Would
                 #             be easier to test.
-                print('pausing for %s seconds' % pause)
-                time.sleep(pause)
+#                print('pausing for %s seconds' % pause)
+#                time.sleep(pause)
 
                 continue
 
@@ -211,7 +211,8 @@ def _ssh_retry(func):
 def attempt_generator(max_attempts, pause_amount, max_pause):
     max_attempts = max(0, max_attempts)
     attempt = 0
-    # want 0 attempts? ok, sure, we'll do nothing.
+    current_pause_amount = pause_amount
+    # want 0 attempts? ok, sure, we'll do nothinig.
     while attempt < max_attempts:
         remaining_attempts = max_attempts - attempt
 
@@ -221,13 +222,17 @@ def attempt_generator(max_attempts, pause_amount, max_pause):
 
         attempt = attempt + 1
 
-        pause = calc_pause(attempt, pause_amount, max_pause)
-        yield attempt, pause, max_attempts - attempt
+        current_pause_amount = calc_pause(attempt, current_pause_amount, max_pause)
+
+        print('pausing for %s seconds' % current_pause_amount)
+        time.sleep(current_pause_amount)
+
+        yield attempt, current_pause_amount, remaining_attempts
 
 
-def calc_pause(attempt, pause_amount, max_pause):
-    pause = pause_amount ** attempt
-    print('pause_ammount %s ** %s -1 = %s' % (pause_amount, attempt, pause))
+def calc_pause(attempt, current_pause_amount, max_pause):
+    pause = current_pause_amount * 2
+    print('pause_ammount %s * 2 = %s' % (current_pause_amount, pause))
     if pause > max_pause:
         pause = max_pause
     print('pause: %s' % pause)

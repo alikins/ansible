@@ -159,12 +159,12 @@ class TestRetryFauxSshRunMethod(unittest.TestCase):
                 yield i
 
         res = self.nothing(cmd_generator(), in_data=None, sudoable=False, checkrc=False,
-                           retries=1, pause_amount=0.1, max_pause=0.2)
+                           retries=1, pause_amount=0.1, max_pause=1.0)
         self._results(res)
 
     def test_cmd_list_none(self):
         res = self.nothing(None, in_data=None, sudoable=False, checkrc=False,
-                           retries=5, pause_amount=0.1, max_pause=0.2)
+                           retries=5, pause_amount=0.1, max_pause=1.2)
         self._results(res)
 
     # results in negative pause time and exception from time.sleep
