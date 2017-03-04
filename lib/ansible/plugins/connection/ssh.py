@@ -167,6 +167,8 @@ def _ssh_retry(func):
         for attempt, pause, remaining_tries in attempts:
             print('attempt: %s retries: %s' % (attempt, remaining_tries))
 
+            # return_tuple = ssh_attempt(self, func,  remaining_tries, args, kwargs)
+
             try:
                 try:
                     return_tuple = func(self, *args, **kwargs)
@@ -183,7 +185,9 @@ def _ssh_retry(func):
                     return return_tuple
                 else:
                     raise AnsibleConnectionFailure("Failed to connect to the host via ssh: %s" % to_native(return_tuple[2]))
+
                 return return_tuple
+
             except (AnsibleConnectionFailure, Exception) as e:
                 if remaining_tries == 0:
                     raise
@@ -195,24 +199,47 @@ def _ssh_retry(func):
 
                 display.vv(msg, host=self.host)
 
-                # FIXME/TODO: we could make the attempt_generator do the pausing. Would
-                #             be easier to test.
-#                print('pausing for %s seconds' % pause)
-#                time.sleep(pause)
-
-                continue
 
         # Shoudln't get here unless there are < 1 attempts
         raise AnsibleConnectionFailure("Attempted connection %s times and failed to connect to the host %s via ssh" % (max(0, max_attempts), self.host))
         # exhausted the attempts, raise an exception
     return wrapped
 
+def ssh_attempt(instance, method, remaining_tries, *args, **kwargs):
+    try:
+        return_tuple = method(instance, *args, **kwargs)
+        display.vvv(return_tuple, host=instance.host)
+    except AnsibleConnectionFailure as e:
+        msg = "ssh_retry: attempt: %d, ssh return code is 255. cmd (%s), pausing for %d seconds" % (attempt, cmd_summary, pause)
+
+        display.vv(msg, host=instance.host)
+
+        if remaining_tries == 0:
+            raise
+
+    except Exception as e:
+        msg = "ssh_retry: attempt: %d, caught exception(%s) from cmd (%s), pausing for %d seconds" % (attempt, e, cmd_summary, pause)
+
+        display.vv(msg, host=instance.host)
+
+        if remaining_tries == 0:
+            raise
+
+    # 0 = success
+    # 1-254 = remote command return code
+    # 255 = failure from the ssh command itself
+    if return_tuple[0] == 255:
+        raise AnsibleConnectionFailure("Failed to connect to the host via ssh: %s" % to_native(return_tuple[2]))
+
+    return return_tuple
+
+
 
 def attempt_generator(max_attempts, pause_amount, max_pause):
     max_attempts = max(0, max_attempts)
     attempt = 0
     current_pause_amount = pause_amount
-    # want 0 attempts? ok, sure, we'll do nothinig.
+
     while attempt < max_attempts:
         remaining_attempts = max_attempts - attempt
 
@@ -225,11 +252,14 @@ def attempt_generator(max_attempts, pause_amount, max_pause):
         current_pause_amount = calc_pause(attempt, current_pause_amount, max_pause)
 
         print('pausing for %s seconds' % current_pause_amount)
+
         # TODO: mixed feelings on this. It is very handy, but it is also a little
         #       odd to intentionally block in a generator.
         time.sleep(current_pause_amount)
 
         yield attempt, current_pause_amount, remaining_attempts
+
+    # want 0 attempts? ok, sure, we'll do nothing.
 
 
 # double the timeout, should be able to replace with other mechanism (constant, exp, etc)
