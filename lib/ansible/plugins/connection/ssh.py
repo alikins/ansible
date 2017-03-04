@@ -225,12 +225,16 @@ def attempt_generator(max_attempts, pause_amount, max_pause):
         current_pause_amount = calc_pause(attempt, current_pause_amount, max_pause)
 
         print('pausing for %s seconds' % current_pause_amount)
+        # TODO: mixed feelings on this. It is very handy, but it is also a little
+        #       odd to intentionally block in a generator.
         time.sleep(current_pause_amount)
 
         yield attempt, current_pause_amount, remaining_attempts
 
 
+# double the timeout, should be able to replace with other mechanism (constant, exp, etc)
 def calc_pause(attempt, current_pause_amount, max_pause):
+    '''This calculates the next pause ammount as 2x the current_pause_amount.'''
     pause = current_pause_amount * 2
     print('pause_ammount %s * 2 = %s' % (current_pause_amount, pause))
     if pause > max_pause:
