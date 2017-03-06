@@ -49,6 +49,11 @@ def get_unique_id():
         ("%012x" % cur_id)[:12],
     ])
 
+
+class AnsibleMutableMappingValidationError(AnsibleError):
+    pass
+
+
 def _validate_mutable_mappings(a, b):
     """
     Internal convenience function to ensure arguments are MutableMappings
@@ -68,9 +73,11 @@ def _validate_mutable_mappings(a, b):
                 myvars.append(dumps(x))
             except:
                 myvars.append(to_native(x))
-        raise AnsibleError("failed to combine variables, expected dicts but got a '{0}' and a '{1}': \n{2}\n{3}".format(
-            a.__class__.__name__, b.__class__.__name__, myvars[0], myvars[1])
-        )
+
+        msg_tmp = "failed to combine variables, expected dicts but got a '{0}' and a '{1}': \n{2}\n{3}"
+        msg = msg_tmp.format(a.__class__.__name__, b.__class__.__name__,
+                             myvars[0], myvars[1])
+        raise AnsibleMutableMappingValidationError(msg)
 
 
 def combine_vars(a, b):
@@ -131,9 +138,9 @@ def load_extra_vars(loader, options):
             # Arguments as Key-value
             data = parse_kv(extra_vars_opt)
 
-        if isinstance(data, MutableMapping):
+        try:
             extra_vars = combine_vars(extra_vars, data)
-        else:
+        except AnsibleMutableMappingValidationError:
             raise AnsibleOptionsError("Invalid extra vars data supplied. The extra var '%s' could not be made into a dictionary" % extra_vars_opt)
 
     return extra_vars
