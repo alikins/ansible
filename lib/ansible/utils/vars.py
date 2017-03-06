@@ -50,7 +50,8 @@ def get_unique_id():
     ])
 
 
-class AnsibleMutableMappingValidationError(AnsibleError):
+class AnsibleMutableMappingError(AnsibleError):
+    '''An arg passed to _validate_mutable_mappings was not a MutableMapping.'''
     pass
 
 
@@ -66,18 +67,18 @@ def _validate_mutable_mappings(a, b):
     # If this becomes generally needed, change the signature to operate on
     # a variable number of arguments instead.
 
-    if not (isinstance(a, MutableMapping) and isinstance(b, MutableMapping)):
-        myvars = []
-        for x in [a, b]:
-            try:
-                myvars.append(dumps(x))
-            except:
-                myvars.append(to_native(x))
+    #invalid_vars = []
+    errors = []
+    for mapping in [a, b]:
+        if not isinstance(mapping, MutableMapping):
+            error_blurb = "expected a dict but got a '%s' (%s)" % (mapping.__class__.__name__, mapping)
+            errors.append(error_blurb)
 
-        msg_tmp = "failed to combine variables, expected dicts but got a '{0}' and a '{1}': \n{2}\n{3}"
-        msg = msg_tmp.format(a.__class__.__name__, b.__class__.__name__,
-                             myvars[0], myvars[1])
-        raise AnsibleMutableMappingValidationError(msg)
+    if errors:
+        msg = "failed to combine variables:\n"
+        msg += '\n'.join(errors)
+
+        raise AnsibleMutableMappingError(msg)
 
 
 def combine_vars(a, b):
@@ -140,7 +141,7 @@ def load_extra_vars(loader, options):
 
         try:
             extra_vars = combine_vars(extra_vars, data)
-        except AnsibleMutableMappingValidationError:
+        except AnsibleMutableMappingError:
             raise AnsibleOptionsError("Invalid extra vars data supplied. The extra var '%s' could not be made into a dictionary" % extra_vars_opt)
 
     return extra_vars
