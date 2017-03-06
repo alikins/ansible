@@ -75,7 +75,7 @@ def _validate_mutable_mappings(a, b):
             errors.append(error_blurb)
 
     if errors:
-        msg = "failed to combine variables:\n"
+        msg = "Validation of MutableMappings failed:\n"
         msg += '\n'.join(errors)
 
         raise AnsibleMutableMappingError(msg)
