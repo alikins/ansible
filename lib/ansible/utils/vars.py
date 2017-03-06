@@ -67,7 +67,6 @@ def _validate_mutable_mappings(a, b):
     # If this becomes generally needed, change the signature to operate on
     # a variable number of arguments instead.
 
-    #invalid_vars = []
     errors = []
     for mapping in [a, b]:
         if not isinstance(mapping, MutableMapping):
