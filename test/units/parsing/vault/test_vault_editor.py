@@ -557,3 +557,40 @@ class TestVaultEditorPyCrypto(unittest.TestCase):
     def tearDown(self):
         vault.HAS_CRYPTOGRAPHY = self.has_cryptography
         super(TestVaultEditorPyCrypto, self).tearDown()
+
+
+class TestMkstempFromFilename(unittest.TestCase):
+    def setUp(self):
+        self.ve = vault.VaultEditor('password')
+
+    def test_mkstemp_from_filename_empty(self):
+        empty = ''
+        _, fn = self.ve._mkstemp_from_filename(empty)
+        self.assertFalse(fn.startswith('-'))
+
+    def test_mkstemp_from_filename(self):
+        filename = 'playbook.yml'
+        _, fn = self.ve._mkstemp_from_filename(filename)
+        basename = os.path.basename(fn)
+        self.assertTrue(basename.startswith('playbook'))
+        self.assertTrue(basename.endswith('.yml'))
+
+    def test_mkstemp_from_filename_full_path(self):
+        filename = '/some/path/to/playbook.yml'
+        _, fn = self.ve._mkstemp_from_filename(filename)
+        basename = os.path.basename(fn)
+        self.assertTrue(basename.startswith('playbook'))
+        self.assertTrue(basename.endswith('.yml'))
+
+    def test_mkstemp_from_filename_multi_dot(self):
+        filename = 'multiple.dots.playbook.yml'
+        _, fn = self.ve._mkstemp_from_filename(filename)
+        basename = os.path.basename(fn)
+        self.assertTrue(basename.startswith('multiple.dots.playbook'))
+        self.assertTrue(basename.endswith('.yml'))
+
+    def test_mkstemp_from_filename_no_ext(self):
+        filename = 'no_extension'
+        _, fn = self.ve._mkstemp_from_filename(filename)
+        basename = os.path.basename(fn)
+        self.assertTrue(basename.startswith('no_extension'))

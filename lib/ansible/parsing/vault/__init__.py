@@ -658,12 +658,27 @@ class VaultEditor:
 
         os.remove(tmp_path)
 
+    def _mkstemp_from_filename(self, filename):
+        '''Create a tempfile based on the basename and extension of 'filename'
+
+        So that editors that rely on file extension do the right thing.'''
+
+        # split up orig filename so we can use its parts for a tempfile with the
+        # same leading name and same file extension
+        base, ext = os.path.splitext(os.path.basename(filename))
+
+        # Create a tempfile
+        _, tmp_path = tempfile.mkstemp(prefix='%s-tmp-' % base, suffix=ext)
+
+        return _, tmp_path
+
     def _edit_file_helper(self, filename, secret,
                           existing_data=None, force_save=False, vault_id=None):
 
-        # Create a tempfile
-        fd, tmp_path = tempfile.mkstemp()
-        os.close(fd)
+        _, tmp_path = self._mkstemp_from_filename(filename)
+
+        if existing_data:
+            self.write_data(existing_data, tmp_path, shred=False)
 
         try:
             if existing_data:
