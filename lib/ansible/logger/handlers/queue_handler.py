@@ -250,6 +250,7 @@ class QueueListener(object):
             try:
                 #record = self.dequeue(False)
                 record = self.dequeue(block=True)
+                #record = self.dequeue(block=False)
                 if record is self._sentinel:
                     #self._task_done()
                     break
@@ -284,5 +285,5 @@ class QueueListener(object):
         may be some records still left on the queue, which won't be processed.
         """
         self.enqueue_sentinel()
-        self._thread.join()
-        self._thread = None
+        #self._thread.join()
+        #self._thread = None
