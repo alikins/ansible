@@ -630,8 +630,9 @@ class TaskExecutor:
                         result['retries'] = retries
 
                         msg = 'Retrying task, attempt %d of %d' % (attempt, retries)
-			display.debug(msg % (attempt, retries)
-			log.debug(msg, attempt, retries)
+                        display.debug(msg % (attempt, retries))
+                        log.debug(msg, attempt, retries)
+
                         self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result, task_fields=self._task.dump_attrs()), block=False)
                         time.sleep(delay)
         else:
