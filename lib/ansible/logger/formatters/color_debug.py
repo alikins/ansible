@@ -47,7 +47,7 @@ def context_color_format_string(format_string):
     # via a logger, a log adapter, a logging Filter attached to the logger, a filter attached
     # to a logging.Handler, or by a logging handler itself. Since our attributes are purely for
     # formatting, we just do it in the ColorFormatter.format()
-    ## https://docs.python.org/2/library/logging.html#logrecord-attributes
+    # https://docs.python.org/2/library/logging.html#logrecord-attributes
     #
     # THe captured groups 'full_attr' is the entire record attribute from the string, including
     # string formatting/precsion, and padding info. ie '%(process)-10d' is a process pid right justified with
@@ -72,6 +72,7 @@ def context_color_format_string(format_string):
     format_string = "%(_cdl_default)s" + format_string + "%(_cdl_reset)s"
 
     return format_string
+
 
 class ColorFormatter(logging.Formatter):
     FORMAT = ("[$BOLD%(name)-20s$RESET][%(levelname)-18s]  "
@@ -127,7 +128,7 @@ class ColorFormatter(logging.Formatter):
         #('process', ['default', 'message']),
         ('process', ['default', 'message', 'unset', 'processName', 'exc_text']),
         #('thread', ['default', 'threadName', 'message', 'unset', 'processName', 'exc_text']),
-        ('thread', ['threadName', 'thread',]),
+        ('thread', ['threadName', 'thread']),
 
         # color logger name, filename and lineno same as the funcName
         #('funcName', ['name', 'filename', 'lineno']),
@@ -178,6 +179,7 @@ class ColorFormatter(logging.Formatter):
                     'ERROR': BASE_COLORS[RED],
                     # bold red?
                     'CRITICAL': BASE_COLORS[RED]}
+
     # A little weird...
     @property
     def _fmt(self):
@@ -363,7 +365,7 @@ class ColorFormatter(logging.Formatter):
             #self.default_color = record._cdl_default
 
         s = self._format(record)
-        s = s +  record.exc_text
+        s = s + record.exc_text
         return s
 
     # format is based on from stdlib python logging.LogFormatter.format()
@@ -386,10 +388,11 @@ class ColorFormatter(logging.Formatter):
         #s = s + record.exc_text_sep + record.exc_text
         return s
 
+
 def _get_handler():
     #%(asctime)s tid:%(thread)d
     #fmt = u'\033[33m**: tname:%(threadName)s @%(filename)s:%(lineno)d - %(message)s\033[0m'
-#    fmt = u': tname:%(threadName)s @%(filename)s:%(lineno)d - %(message)s'
+    #fmt = u': tname:%(threadName)s @%(filename)s:%(lineno)d - %(message)s'
     handler = logging.StreamHandler()
     handler.setFormatter(ColorFormatter(use_color=True))
     #handler.setFormatter(logging.Formatter(fmt))
