@@ -126,10 +126,14 @@ class PlaybookCLI(CLI):
         # flush fact cache if requested
         if self.options.flush_cache:
             self._flush_cache(inventory, variable_manager)
+            log.info('fact cache flushed')
 
         # create the playbook executor, which manages running the plays via a task queue manager
+        log.debug('Creating PlaybookExecutor()')
         pbex = PlaybookExecutor(playbooks=self.args, inventory=inventory, variable_manager=variable_manager, loader=loader, options=self.options,
                                 passwords=passwords)
+        log.debug('created pbex (playbook executor)')
+
 
         results = pbex.run()
 

@@ -229,6 +229,7 @@ class StrategyBase:
             while True:
                 (worker_prc, rslt_q) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
+                    log.info("starting a worker process for task='%s' on host=%s", task, host)
                     worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
@@ -362,6 +363,7 @@ class StrategyBase:
             else:
                 loop_var = 'item'
 
+            log.info("got task results for task='%s' on host='%s'", task_result._task, task_result._host)
             # send callbacks for 'non final' results
             if '_ansible_retry' in task_result._result:
                 self._tqm.send_callback('v2_runner_retry', task_result)
@@ -386,6 +388,7 @@ class StrategyBase:
                     del clean_copy['invocation']
 
                 for target_host in host_list:
+                    log.info("registering results for task='%s' host='%s'", target_host, task_result._task)
                     self._variable_manager.set_nonpersistent_facts(target_host, {original_task.register: clean_copy})
 
             # all host status messages contain 2 entries: (msg, task_result)
@@ -395,9 +398,12 @@ class StrategyBase:
                 ignore_errors = original_task.ignore_errors
                 if not ignore_errors:
                     display.debug("marking %s as failed" % original_host.name)
+                    log.info("marking %s as failed", original_host.name)
+
                     if original_task.run_once:
                         # if we're using run_once, we have to fail every host here
                         for h in self._inventory.get_hosts(iterator._play.hosts):
+                            log.info('marking all hosts as failed')
                             if h.name not in self._tqm._unreachable_hosts:
                                 state, _ = iterator.get_next_task_for_host(h, peek=True)
                                 iterator.mark_host_failed(h)
@@ -449,6 +455,7 @@ class StrategyBase:
 
                 for result_item in result_items:
                     if '_ansible_notify' in result_item:
+                        log.debug('_ansible_notify in result_item')
                         if task_result.is_changed():
                             # The shared dictionary for notified handlers is a proxy, which
                             # does not detect when sub-objects within the proxy are modified.
@@ -500,6 +507,8 @@ class StrategyBase:
                                     else:
                                         display.warning(msg)
 
+                                # ??? where do we actually call the handlers?
+
                     if 'add_host' in result_item:
                         # this task added a new host (add_host module)
                         new_host_info = result_item.get('add_host', dict())
@@ -527,7 +536,7 @@ class StrategyBase:
                             cacheable = result_item.pop('ansible_facts_cacheable', True)
                             for target_host in host_list:
                                 if cacheable:
-                                    self._variable_manager.set_host_facts(target_host, result_item['ansible_facts'].copy())
+                                log.info('setting host facts on host=%s', target_host)                                    self._variable_manager.set_host_facts(target_host, result_item['ansible_facts'].copy())
 
                                 # If we are setting a fact, it should populate non_persistent_facts as well
                                 self._variable_manager.set_nonpersistent_facts(target_host, result_item['ansible_facts'].copy())
@@ -617,6 +626,8 @@ class StrategyBase:
 
             # Check if host in inventory, add if not
             if host_name not in self._inventory.hosts:
+                log.info('adding host=%s to inventory', host_name)
+
                 self._inventory.add_host(host_name, 'all')
             new_host = self._inventory.hosts.get(host_name)
 
@@ -653,6 +664,8 @@ class StrategyBase:
 
         for name in [group_name] + parent_group_names:
             if name not in self._inventory.groups:
+                log.info('adding group=%s to inventory and host=%s', name, real_host)
+
                 # create the new group and add it to inventory
                 self._inventory.add_group(name)
                 changed = True

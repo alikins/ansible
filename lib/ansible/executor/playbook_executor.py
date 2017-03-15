@@ -157,7 +157,7 @@ class PlaybookExecutor:
                             # restrict the inventory to the hosts in the serialized batch
                             self._inventory.restrict_to_hosts(batch)
                             # and run it...
-                            log.info('Running play=%s for batch=%s', play, batch)
+                            log.info("Running play='%s' for batch=%s (of %s batches)", play, batch, len(batches))
                             result = self._tqm.run(play=play)
 
                             # break the play if the result equals the special return code

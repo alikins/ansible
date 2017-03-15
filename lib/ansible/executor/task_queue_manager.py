@@ -108,11 +108,15 @@ class TaskQueueManager:
         # plugins for inter-process locking.
         self._connection_lockfile = tempfile.TemporaryFile()
 
+        log.debug('created TaskQueueManager()')
+
     def _initialize_processes(self, num):
         self._workers = []
 
+        log.info('creating %s worker processes', num)
         for i in range(num):
             rslt_q = multiprocessing.Queue()
+            log.debug('created mp queue worker rslt_q=%s', rslt_q)
             self._workers.append([None, rslt_q])
 
     def _initialize_notified_handlers(self, play):
@@ -155,6 +159,7 @@ class TaskQueueManager:
                     if listener not in self._listening_handlers:
                         self._listening_handlers[listener] = []
                     display.debug("Adding handler %s to listening list" % handler.name)
+                    log.debug("Adding handler %s to listening list", handler.name)
                     self._listening_handlers[listener].append(handler._uuid)
 
     def load_callbacks(self):
