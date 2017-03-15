@@ -273,6 +273,8 @@ class MetadataModuleFilter:
         return self.check_plugin(name_and_path[0], name_and_path[1]) is not None
 
 
+# other potential subclass
+# a finder that adds filter rules from a config or playbook (sort of task firewall ish)
 class BaseModuleFinder:
     def __init__(self, path_cache=None, module_namespaces=None, filter_rules=None):
 
@@ -306,7 +308,7 @@ class ModuleFinder(BaseModuleFinder):
     def __init__(self, path_cache=None, module_namespaces=None, aliases=None):
         # alias -> real name
 
-        # TODO: Construct this outside of PluginLoader init, and pass it in
+        # TODO: Construct this outside of ModuleFinder init, and pass it in
         #       as namespaces option. Most instances with use the same setup, but
         #       it would be useful to use different impls at times (for example,
         #       a windows/winrm specific pluginload would want a window specific module
