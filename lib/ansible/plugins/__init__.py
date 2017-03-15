@@ -204,6 +204,8 @@ class MetadataModuleFilter:
     def check_metadata(self, name, path, metadata):
         # default to allow
         allowed = True
+        status_allowed = True
+        supported_by_allowed = True
         deniers = set([])
 
         mod_metadata = metadata.get(name, None)
@@ -227,23 +229,37 @@ class MetadataModuleFilter:
         # FIXME: filter_rules need an operator (ie, 'is', '==') or a callable to apply  or compare by type
         #        so we dont special each type
         # FIXME/TODO: 'blacklists']['status_blacklists'] is redundant
+        # FIXME/TODO: precedence (is 'status' more important than 'supported_by')
         for disallowed_status in self.filter_rules['blacklists']['status_blacklist']:
-            if disallowed_status in status:
-                allowed = False
-                deniers.add(('status_blacklist', disallowed_status))
+            for module_status in status:
+                if module_status == disallowed_status:
+                    allowed = False
+                    status_allowed = False
+                    deniers.add(('status_blacklist', disallowed_status, module_status))
 
         for disallowed_supported_by in self.filter_rules['blacklists']['supported_by_blacklist']:
             if disallowed_supported_by == supported_by:
                 allowed = False
-                deniers.add(('supported_by_blacklist', disallowed_supported_by))
+                supported_by_allowed = False
+                deniers.add(('supported_by_blacklist', disallowed_supported_by, supported_by))
+
+        # FIXME/TODO: mechanism for resolving conflicts of the filter rules
+        for allowed_supported_by in self.filter_rules['whitelists']['supported_by_whitelist']:
+            if allowed_supported_by == supported_by:
+                allowed = True
+                supported_by_allowed = True
 
         for allowed_status in self.filter_rules['whitelists']['status_whitelist']:
             if allowed_status in status:
                 allowed = True
+                status_allowed = True
 
-        for allowed_supported_by in self.filter_rules['whitelists']['supported_by_whitelist']:
-            if allowed_supported_by == supported_by:
-                allowed = True
+        # print('\nname: %s' % name)
+        # print('supported_by_allowed: %s' % supported_by_allowed)
+        # print('status_allowed: %s' % status_allowed)
+
+        # require both supported_by and status to be valid
+        allowed = supported_by_allowed and status_allowed
 
         return allowed, deniers
 
@@ -348,11 +364,11 @@ class ModuleFinder(BaseModuleFinder):
                                              path_cache=path_cache)]
 
         filter_rules = {'whitelists': {'supported_by_whitelist': ['core',
-                                                                #  'community',
+                                                                  'community',
                                                                   'curated'],
                                        'status_whitelist': []},
                         'blacklists': {'supported_by_blacklist': ['community'],
-                                       'status_blacklist': ['known_to_fold_and_spindle']}}
+                                       'status_blacklist': ['preview', 'removed']}}
         super(ModuleFinder, self).__init__(path_cache=path_cache,
                                            aliases=alias_map,
                                            module_namespaces=module_namespaces,
