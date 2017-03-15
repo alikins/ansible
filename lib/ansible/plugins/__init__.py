@@ -225,24 +225,25 @@ class MetadataModuleFilter:
         # print('self.filter_rules: %s' % self.filter_rules)
 
         # FIXME: filter_rules need an operator (ie, 'is', '==') or a callable to apply  or compare by type
-        for allowed_status in self.filter_rules['whitelists']['status_whitelist']:
-            if allowed_status in status:
-                allowed = True
-
+        #        so we dont special each type
         # FIXME/TODO: 'blacklists']['status_blacklists'] is redundant
         for disallowed_status in self.filter_rules['blacklists']['status_blacklist']:
             if disallowed_status in status:
                 allowed = False
                 deniers.add(('status_blacklist', disallowed_status))
 
-        for allowed_supported_by in self.filter_rules['whitelists']['supported_by_whitelist']:
-            if allowed_supported_by == supported_by:
-                allowed = True
-
         for disallowed_supported_by in self.filter_rules['blacklists']['supported_by_blacklist']:
             if disallowed_supported_by == supported_by:
                 allowed = False
                 deniers.add(('supported_by_blacklist', disallowed_supported_by))
+
+        for allowed_status in self.filter_rules['whitelists']['status_whitelist']:
+            if allowed_status in status:
+                allowed = True
+
+        for allowed_supported_by in self.filter_rules['whitelists']['supported_by_whitelist']:
+            if allowed_supported_by == supported_by:
+                allowed = True
 
         return allowed, deniers
 
@@ -326,14 +327,18 @@ class ModuleFinder(BaseModuleFinder):
         # Now check other namespaces as well, include the default '' namespacei
         module_namespaces = [VersionedModuleNamespace(version='2_2',
                                                       path_cache=path_cache),
+
                              # The normal modules, with no namespace
                              ModuleNamespace(name='',
                                              path_cache=path_cache),
+
                              # potentially runtime mapping of module names
                              AliasModuleNamespace(alias_map=alias_map,
                                                   path_cache=path_cache),
+
                              # deprecated modules with _modulename
                              DeprecatedModuleNamespace(path_cache=path_cache),
+
                              # just an example of an arbitrary namespaces. pbs can
                              # reference 'blippy_foo' directly, or if a pb references module
                              # 'foo', and nothing else provides 'foo', we also check
@@ -342,7 +347,9 @@ class ModuleFinder(BaseModuleFinder):
                              ModuleNamespace(name='blippy_',
                                              path_cache=path_cache)]
 
-        filter_rules = {'whitelists': {'supported_by_whitelist': [],
+        filter_rules = {'whitelists': {'supported_by_whitelist': ['core',
+                                                                #  'community',
+                                                                  'curated'],
                                        'status_whitelist': []},
                         'blacklists': {'supported_by_blacklist': ['community'],
                                        'status_blacklist': ['known_to_fold_and_spindle']}}
