@@ -65,7 +65,7 @@ class ModuleNamespace:
         if name is not None:
             self.name = name
 
-        print('%s __init__ name=%s' % (self.__class__.__name__, self.name))
+        # print('%s __init__ name=%s' % (self.__class__.__name__, self.name))
 
         self.path_cache = {}
         # pull_cache could be an empty dict
@@ -106,7 +106,7 @@ class DeprecatedModuleNamespace(ModuleNamespace):
     _name = '_'
 
     def _check_deprecated(self, name, ignore_deprecated, module_path):
-        print('ignore_deprecated: %s' % ignore_deprecated)
+        # print('ignore_deprecated: %s' % ignore_deprecated)
         if ignore_deprecated:
             return
 
@@ -172,7 +172,7 @@ class ModuleNamespaces:
         self.namespaces = []
         if namespaces is not None:
             self.namespaces = namespaces
-        print('%s __init__ namespaces=%s' % (self.__class__.__name__, self.namespaces))
+        # print('%s __init__ namespaces=%s' % (self.__class__.__name__, self.namespaces))
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
         for namespace in self.namespaces:
@@ -192,14 +192,14 @@ class MetadataModuleFilter:
 
     At least for python modules.
     '''
-    def __init__(self, name=None, path_cache=None,
-                 status_whitelist=None, status_blacklist=None,
-                 supported_by_whitelist=None, supported_by_blacklist=None):
+    _DEFAULT_FILTER_RULES = {'whitelists': {'supported_by_whitelist': [],
+                                            'status_whitelist': []},
+                             'blacklists': {'supported_by_blacklist': [],
+                                            'status_blacklist': []}}
+
+    def __init__(self, name=None, path_cache=None, filter_rules=None):
         self.path_cache = path_cache
-        self.status_whitelist = status_whitelist or []
-        self.status_blacklist = status_blacklist or []
-        self.supported_by_whitelist = supported_by_whitelist or []
-        self.supported_by_blacklist = supported_by_blacklist or []
+        self.filter_rules = filter_rules or self._DEFAULT_FILTER_RULES
 
     def check_metadata(self, name, path, metadata):
         # default to allow
@@ -208,7 +208,7 @@ class MetadataModuleFilter:
 
         mod_metadata = metadata.get(name, None)
 
-        #print('mod_metadata: %s' % mod_metadata)
+        # print('mod_metadata: %s' % mod_metadata)
 
         # FIXME: if a module doesnt have metadata, do we always exclude it? vice versa
         #  if no mod_metadata, assume it 'passes' for now so non-module plugins work
@@ -222,21 +222,24 @@ class MetadataModuleFilter:
         # print('supported_by: %s type: %s' % (supported_by, type(supported_by)))
 
         # TODO: generalize  set()s?
+        # print('self.filter_rules: %s' % self.filter_rules)
 
-        for allowed_status in self.status_whitelist:
+        # FIXME: filter_rules need an operator (ie, 'is', '==') or a callable to apply  or compare by type
+        for allowed_status in self.filter_rules['whitelists']['status_whitelist']:
             if allowed_status in status:
                 allowed = True
 
-        for disallowed_status in self.status_blacklist:
+        # FIXME/TODO: 'blacklists']['status_blacklists'] is redundant
+        for disallowed_status in self.filter_rules['blacklists']['status_blacklist']:
             if disallowed_status in status:
                 allowed = False
                 deniers.add(('status_blacklist', disallowed_status))
 
-        for allowed_supported_by in self.supported_by_whitelist:
+        for allowed_supported_by in self.filter_rules['whitelists']['supported_by_whitelist']:
             if allowed_supported_by == supported_by:
                 allowed = True
 
-        for disallowed_supported_by in self.supported_by_blacklist:
+        for disallowed_supported_by in self.filter_rules['blacklists']['supported_by_blacklist']:
             if disallowed_supported_by == supported_by:
                 allowed = False
                 deniers.add(('supported_by_blacklist', disallowed_supported_by))
@@ -270,12 +273,40 @@ class MetadataModuleFilter:
         return self.check_plugin(name_and_path[0], name_and_path[1]) is not None
 
 
-class ModuleFinder:
-    def __init__(self, path_cache=None, aliases=None):
+class BaseModuleFinder:
+    def __init__(self, path_cache=None, aliases=None, module_namespaces=None, filter_rules=None):
         aliases = aliases or {}
 
-        print('%s __init__' % (self.__class__.__name__))
+        #print('%s __init__' % (self.__class__.__name__))
 
+        self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
+
+        self.metadata_filter = MetadataModuleFilter(filter_rules=filter_rules)
+
+    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
+        namespace_find_result = self.namespaces.find_plugin(name, mod_type, ignore_deprecated)
+
+        if namespace_find_result is None:
+            return None
+
+        # filter_result with be either a return of the passed in data, or None
+        filter_result = self.metadata_filter.check_plugin(name, namespace_find_result)
+
+        # print('filter_result: %s' % repr(filter_result))
+        if filter_result[0]:
+            # just the module path
+            return filter_result[3]
+
+        # TODO: track which filter denied a module
+        display.warning("The module '%s' was found, but was disabled by the metadata filter rules: %s" % (to_text(name), filter_result[1]))
+        # this module was disabled by the filter finder
+        return None
+
+
+# The module finder with our defaults
+class ModuleFinder(BaseModuleFinder):
+    # TODO: could be passed to an alt constructor, or just called directly
+    def __init__(self, path_cache=None, aliases=None, module_namespaces=None):
         # alias -> real name
         # FIXME: just for testing
         alias_map = {'stvincent': 'anneclark',
@@ -311,28 +342,14 @@ class ModuleFinder:
                              ModuleNamespace(name='blippy_',
                                              path_cache=path_cache)]
 
-        self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
-
-        self.metadata_filter = MetadataModuleFilter(supported_by_blacklist=['community'])
-
-    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
-        namespace_find_result = self.namespaces.find_plugin(name, mod_type, ignore_deprecated)
-
-        if namespace_find_result is None:
-            return None
-
-        # filter_result with be either a return of the passed in data, or None
-        filter_result = self.metadata_filter.check_plugin(name, namespace_find_result)
-
-        # print('filter_result: %s' % repr(filter_result))
-        if filter_result[0]:
-            # just the module path
-            return filter_result[3]
-
-        # TODO: track which filter denied a module
-        display.warning("The module '%s' was found, but was disabled by the metadata filter rules: %s" % (to_text(name), filter_result[1]))
-        # this module was disabled by the filter finder
-        return None
+        filter_rules = {'whitelists': {'supported_by_whitelist': [],
+                                       'status_whitelist': []},
+                        'blacklists': {'supported_by_blacklist': ['community'],
+                                       'status_blacklist': ['known_to_fold_and_spindle']}}
+        super(ModuleFinder, self).__init__(path_cache=path_cache,
+                                           aliases=alias_map,
+                                           module_namespaces=module_namespaces,
+                                           filter_rules=filter_rules)
 
 
 class PluginLoader:
@@ -627,7 +644,6 @@ class PluginLoader:
     __contains__ = has_plugin
 
     def _load_module_source(self, name, path):
-        print('load_module_source name=%s path=%s' % (name, path))
         if name in sys.modules:
             # See https://github.com/ansible/ansible/issues/13110
             return sys.modules[name]
@@ -640,7 +656,7 @@ class PluginLoader:
     def get(self, name, *args, **kwargs):
         ''' instantiates a plugin of the given name using arguments '''
 
-        print('get name=%s args=%s kwargs=%s' % (name, args, repr(kwargs)))
+        # print('get name=%s args=%s kwargs=%s' % (name, args, repr(kwargs)))
         found_in_cache = True
         class_only = kwargs.pop('class_only', False)
         #if name in self.aliases:
