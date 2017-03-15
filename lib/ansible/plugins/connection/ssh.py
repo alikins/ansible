@@ -150,7 +150,7 @@ class Connection(ConnectionBase):
 
         if SSHPASS_AVAILABLE is None:
             try:
-                p = subprocess.Popen(["sshpass"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p = subprocess.Popen(["sshpass"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1)
                 p.communicate()
                 SSHPASS_AVAILABLE = True
             except OSError:
@@ -427,9 +427,9 @@ class Connection(ConnectionBase):
                 # Make sure stdin is a proper pty to avoid tcgetattr errors
                 master, slave = pty.openpty()
                 if PY3 and self._play_context.password:
-                    p = subprocess.Popen(cmd, stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE, pass_fds=self.sshpass_pipe)
+                    p = subprocess.Popen(cmd, stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE, pass_fds=self.sshpass_pipe, bufsize=-1)
                 else:
-                    p = subprocess.Popen(cmd, stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    p = subprocess.Popen(cmd, stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1)
                 stdin = os.fdopen(master, 'wb', 0)
                 os.close(slave)
             except (OSError, IOError):
@@ -437,9 +437,9 @@ class Connection(ConnectionBase):
 
         if not p:
             if PY3 and self._play_context.password:
-                p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, pass_fds=self.sshpass_pipe)
+                p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, pass_fds=self.sshpass_pipe, bufsize=-1)
             else:
-                p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1)
             stdin = p.stdin
 
         # If we are using SSH password authentication, write the password into
@@ -797,7 +797,7 @@ class Connection(ConnectionBase):
         cmd = map(to_bytes, self._build_command(self._play_context.ssh_executable, '-O', 'stop', self.host))
         controlpersist, controlpath = self._persistence_controls(cmd)
         if controlpersist:
-            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1)
             stdout, stderr = p.communicate()
             display.vvv(u'sending stop: %s' % cmd)
 

@@ -2384,6 +2384,7 @@ class AnsibleModule(object):
             stdin=st_in,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            bufsize=-1,
         )
 
         # store the pwd

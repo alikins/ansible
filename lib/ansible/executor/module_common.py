@@ -158,7 +158,7 @@ def invoke_module(module, modlib_path, json_params):
     else:
         os.environ['PYTHONPATH'] = modlib_path
 
-    p = subprocess.Popen([%(interpreter)s, module], env=os.environ, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    p = subprocess.Popen([%(interpreter)s, module], env=os.environ, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, bufsize=-1)
     (stdout, stderr) = p.communicate(json_params)
 
     if not isinstance(stderr, (bytes, unicode)):
@@ -257,7 +257,7 @@ def debug(command, zipped_mod, json_params):
 
         p = subprocess.Popen([%(interpreter)s, script_path, args_path],
                 env=os.environ, shell=False, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                stderr=subprocess.PIPE, stdin=subprocess.PIPE, bufsize=-1)
         (stdout, stderr) = p.communicate()
 
         if not isinstance(stderr, (bytes, unicode)):

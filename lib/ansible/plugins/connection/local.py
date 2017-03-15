@@ -77,6 +77,7 @@ class Connection(ConnectionBase):
 
         p = subprocess.Popen(
             cmd,
+            bufsize=-1,
             shell=isinstance(cmd, (text_type, binary_type)),
             executable=executable, #cwd=...
             stdin=subprocess.PIPE,
