@@ -33,6 +33,8 @@ from collections import defaultdict
 from ansible import constants as C
 from ansible.module_utils._text import to_text
 
+# a lib/module version of hacking/metadata-tool.py
+from ansible.utils import module_metadata
 
 try:
     from __main__ import display
@@ -94,6 +96,7 @@ class ModuleNamespace:
         return self.find_plugin(name) is not None
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
+        print('name: %s' % name)
         find_result = self.path_cache[mod_type].get(self.full_name(name), None)
         if find_result:
             print('Looking for name=%s, mod_type=%s: found %s' % (name, mod_type, find_result))
@@ -184,6 +187,122 @@ class ModuleNamespaces:
         return None
 
 
+# filter out modules by their metadata. ie, 'only supported' or 'ignore community' etc
+class MetadataModuleFilter:
+    '''Can filter modules based on the modules ANSIBLE_METADATA.
+
+    At least for python modules.
+    '''
+    def __init__(self, name=None, path_cache=None):
+        self.path_cache = path_cache
+
+    def check_metadata(self, name, path, metadata):
+        # check the version?
+        # check the status?
+        mod_metadata = metadata.get(name, None)
+        print(metadata)
+        print('mod_metadata: %s' % mod_metadata)
+
+        # FIXME: if a module doesnt have metadata, do we always exclude it? vice versa
+        #  if no mod_metadata, assume it 'passes' for now so non-module plugins work
+        if not mod_metadata:
+            return True
+        status = mod_metadata.get('status', [])
+        print('status: %si type():%s ' % (status, type(status)))
+        for x in status:
+            print('x: %s type(x): %s' % (x, type(x)))
+        print('stableinterface in status: %s' % 'stableinterface' in status)
+        for i in status:
+            if i == 'stableinterface':
+                return True
+        if 'stableinterface' in status:
+            print('wtf true')
+            return True
+        return False
+
+    # FIXME: rename to something more filtery
+    def check_plugin(self, name, path):
+
+        metadata = None
+        metadata = module_metadata.return_metadata([(name, path)])
+        print('checkout_plugin metadata for name=%s path=%s' % (name, path))
+        import pprint
+        pprint.pprint(metadata)
+
+        metadata_result = self.check_metadata(name, path, metadata)
+        print('mr: %s' % metadata_result)
+        if not metadata_result:
+            return None
+
+        return name, path
+
+    def __contains__(self, name_and_path):
+        #return self.full_name(name) in self.pull_cache
+        return self.check_plugin(name_and_path[0], name_and_path[1]) is not None
+
+
+class ModuleFinder:
+    def __init__(self, path_cache=None, aliases=None):
+        aliases = aliases or {}
+
+        print('%s __init__' % (self.__class__.__name__))
+
+        # alias -> real name
+        # FIXME: just for testing
+        alias_map = {'stvincent': 'anneclark',
+                     'bansky': 'bobross',
+                     'oldthing': 'newthing',
+                     'showmethejson': 'debug',
+                     'the_artist_formerly_known_as_file': 'file'}
+        alias_map.update(aliases)
+
+        # TODO: Construct this outside of PluginLoader init, and pass it in
+        #       as namespaces option. Most instances with use the same setup, but
+        #       it would be useful to use different impls at times (for example,
+        #       a windows/winrm specific pluginload would want a window specific module
+        #       namespace object). The tricky part there is the many many caches and
+        #       getting their scopes and lifetimes sorted out.
+
+        # Now check other namespaces as well, include the default '' namespacei
+        module_namespaces = [VersionedModuleNamespace(version='2_2',
+                                                      path_cache=path_cache),
+                             # The normal modules, with no namespace
+                             ModuleNamespace(name='',
+                                             path_cache=path_cache),
+                             # potentially runtime mapping of module names
+                             AliasModuleNamespace(alias_map=alias_map,
+                                                  path_cache=path_cache),
+                             # deprecated modules with _modulename
+                             DeprecatedModuleNamespace(path_cache=path_cache),
+                             # just an example of an arbitrary namespaces. pbs can
+                             # reference 'blippy_foo' directly, or if a pb references module
+                             # 'foo', and nothing else provides 'foo', we also check
+                             # look for blippy_foo. Will be more interesting with suffix name
+                             # spaces.
+                             ModuleNamespace(name='blippy_',
+                                             path_cache=path_cache)]
+
+        self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
+
+        self.metadata_filter = MetadataModuleFilter()
+
+    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
+        namespace_find_result = self.namespaces.find_plugin(name, mod_type, ignore_deprecated)
+
+        if namespace_find_result is None:
+            return None
+
+        # filter_result with be either a return of the passed in data, or None
+        filter_result = self.metadata_filter.check_plugin(name, namespace_find_result)
+
+        print('filter_result: %s' % repr(filter_result))
+        if filter_result:
+            # just the module path
+            return filter_result[1]
+
+        return filter_result
+
+
 class PluginLoader:
 
     '''
@@ -226,42 +345,8 @@ class PluginLoader:
         self._extra_dirs = []
         self._searched_paths = set()
 
-        # alias -> real name
-        # FIXME: just for testing
-        alias_map = {'stvincent': 'anneclark',
-                     'bansky': 'bobross',
-                     'oldthing': 'newthing',
-                     'showmethejson': 'debug',
-                     'the_artist_formerly_known_as_file': 'file'}
-        alias_map.update(self.aliases)
-
-        # TODO: Construct this outside of PluginLoader init, and pass it in
-        #       as namespaces option. Most instances with use the same setup, but
-        #       it would be useful to use different impls at times (for example,
-        #       a windows/winrm specific pluginload would want a window specific module
-        #       namespace object). The tricky part there is the many many caches and
-        #       getting their scopes and lifetimes sorted out.
-
-        # Now check other namespaces as well, include the default '' namespacei
-        module_namespaces = [VersionedModuleNamespace(version='2_2',
-                                                      path_cache=self._plugin_path_cache),
-                             # The normal modules, with no namespace
-                             ModuleNamespace(name='',
-                                             path_cache=self._plugin_path_cache),
-                             # potentially runtime mapping of module names
-                             AliasModuleNamespace(alias_map=alias_map,
-                                                  path_cache=self._plugin_path_cache),
-                             # deprecated modules with _modulename
-                             DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
-                             # just an example of an arbitrary namespaces. pbs can
-                             # reference 'blippy_foo' directly, or if a pb references module
-                             # 'foo', and nothing else provides 'foo', we also check
-                             # look for blippy_foo. Will be more interesting with suffix name
-                             # spaces.
-                             ModuleNamespace(name='blippy_',
-                                             path_cache=self._plugin_path_cache)]
-
-        self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
+        self.module_finder = ModuleFinder(path_cache=self._plugin_path_cache,
+                                          aliases=self.aliases)
 
     def __setstate__(self, data):
         '''
@@ -425,17 +510,8 @@ class PluginLoader:
         # requested mod_type
         #pull_cache = self._plugin_path_cache[suffix]
 
-        # Now check other namespaces as well, include the default '' namespace
-        #module_namespaces = [ModuleNamespace(name='',
-        #                                     path_cache=self._plugin_path_cache),
-        #                     DeprecatedModuleNamespace(path_cache=self._plugin_path_cache),
-        #                     ModuleNamespace(name='blippy_',
-        #                                     path_cache=self._plugin_path_cache)]
-
-        #namespaces = ModuleNamespaces(namespaces=module_namespaces)
-        namespaces = self.namespaces
-
-        find_result = namespaces.find_plugin(name, mod_type=suffix)
+        find_result = self.module_finder.find_plugin(name, mod_type=suffix)
+        print('find_result2: %s' % find_result)
 
         # TODO: track which namespace had the name
         if find_result:
@@ -498,13 +574,13 @@ class PluginLoader:
 
             self._searched_paths.add(path)
 
-            find_result = namespaces.find_plugin(name, mod_type=suffix)
+            find_result = self.module_finder.find_plugin(name, mod_type=suffix)
             if find_result:
                 return find_result
 
         # FIXME: not sure why/when the last namespace check in the loop above wouldnt
         #        find anything but this check would
-        find_result = namespaces.find_plugin(name, mod_type=suffix)
+        find_result = self.module_finder.find_plugin(name, mod_type=suffix)
 
         # TODO: track which namespace had the name
         if find_result:
@@ -532,6 +608,7 @@ class PluginLoader:
     def get(self, name, *args, **kwargs):
         ''' instantiates a plugin of the given name using arguments '''
 
+        print('get name=%s args=%s kwargs=%s' % (name, args, repr(kwargs)))
         found_in_cache = True
         class_only = kwargs.pop('class_only', False)
         #if name in self.aliases:
