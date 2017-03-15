@@ -768,7 +768,7 @@ class StrategyBase:
             for handler in handler_block.block:
                 if handler._uuid in self._notified_handlers and len(self._notified_handlers[handler._uuid]):
                     log.info('Running handler=%s handler uuid=%s', handler, handler._uuid)
-		    result = self._do_handler_run(handler, handler.get_name(), iterator=iterator, play_context=play_context)
+                    result = self._do_handler_run(handler, handler.get_name(), iterator=iterator, play_context=play_context)
                     if not result:
                         break
         return result
