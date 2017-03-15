@@ -554,6 +554,9 @@ class TaskExecutor:
             log.debug("running the handler")
             log.debug('attempt=%s', attempt)
 
+            if self._task.async > 0 and self._task.poll == 0:
+                log.info('running the handler async fire and forget task=%s async=%s poll=%s', self._task, self._task.async, self._task.poll)
+
             try:
                 result = self._handler.run(task_vars=variables)
             except AnsibleActionSkip as e:
@@ -714,7 +717,7 @@ class TaskExecutor:
 
         time_left = self._task.async
         while time_left > 0:
-            log.info('sleeping for %s seconds', self._task.poll)
+            log.info('sleeping for %s seconds time_left=%s', self._task.poll, time_left)
             time.sleep(self._task.poll)
 
             try:
