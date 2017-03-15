@@ -173,8 +173,8 @@ class QueueListener(object):
                       the queue is empty, an :class:`~queue.Empty` exception
                       will be thrown.
         """
-        return self.queue.get(block=block)
-        #return self.queue.get(block=block, timeout=1)
+        #return self.queue.get(block=block)
+        return self.queue.get(block=block, timeout=1)
 
     def start(self):
         """
@@ -249,8 +249,8 @@ class QueueListener(object):
         while True:
             try:
                 #record = self.dequeue(False)
-                record = self.dequeue(block=True)
-                #record = self.dequeue(block=False)
+                #record = self.dequeue(block=True)
+                record = self.dequeue(block=False)
                 if record is self._sentinel:
                     #self._task_done()
                     break
@@ -260,7 +260,7 @@ class QueueListener(object):
                 self._task_done()
             except queue.Empty:
                 self.queue_is_empty()
-                break
+                #break
 
     def _task_done(self):
         if self.has_task_done:
