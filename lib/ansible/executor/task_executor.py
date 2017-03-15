@@ -681,7 +681,10 @@ class TaskExecutor:
         Polls for the specified JID to be complete
         '''
 
-        log.info('polling for async results for job_id=%s', result.get('ansible_job_id'))
+        log.info('polling for async results for job_id=%s async=%s poll=%s',
+                 result.get('ansible_job_id'),
+                 self._task.async,
+                 self._task.poll)
         if task_vars is None:
             task_vars = self._job_vars
 
