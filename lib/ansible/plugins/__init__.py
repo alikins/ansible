@@ -212,10 +212,7 @@ class MetadataModuleFilter:
         for x in status:
             print('x: %s type(x): %s' % (x, type(x)))
         print('stableinterface in status: %s' % 'stableinterface' in status)
-        for i in status:
-            if i == 'stableinterface':
-                return True
-        if 'stableinterface' in status:
+        if 'stableinterface' in status or 'preview' in status:
             print('wtf true')
             return True
         return False
@@ -596,6 +593,7 @@ class PluginLoader:
     __contains__ = has_plugin
 
     def _load_module_source(self, name, path):
+        print('load_module_source name=%s path=%s' % (name, path))
         if name in sys.modules:
             # See https://github.com/ansible/ansible/issues/13110
             return sys.modules[name]
