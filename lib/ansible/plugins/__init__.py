@@ -96,10 +96,9 @@ class ModuleNamespace:
         return self.find_plugin(name) is not None
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
-        print('name: %s' % name)
         find_result = self.path_cache[mod_type].get(self.full_name(name), None)
-        if find_result:
-            print('Looking for name=%s, mod_type=%s: found %s' % (name, mod_type, find_result))
+        #if find_result:
+        #    print('Looking for name=%s, mod_type=%s: found %s' % (name, mod_type, find_result))
         return find_result
 
 
@@ -193,45 +192,78 @@ class MetadataModuleFilter:
 
     At least for python modules.
     '''
-    def __init__(self, name=None, path_cache=None):
+    def __init__(self, name=None, path_cache=None,
+                 status_whitelist=None, status_blacklist=None,
+                 supported_by_whitelist=None, supported_by_blacklist=None):
         self.path_cache = path_cache
+        self.status_whitelist = status_whitelist or []
+        self.status_blacklist = status_blacklist or []
+        self.supported_by_whitelist = supported_by_whitelist or []
+        self.supported_by_blacklist = supported_by_blacklist or []
 
     def check_metadata(self, name, path, metadata):
-        # check the version?
-        # check the status?
+        # default to allow
+        allowed = True
+        deniers = set([])
+
         mod_metadata = metadata.get(name, None)
-        print(metadata)
-        print('mod_metadata: %s' % mod_metadata)
+
+        #print('mod_metadata: %s' % mod_metadata)
 
         # FIXME: if a module doesnt have metadata, do we always exclude it? vice versa
         #  if no mod_metadata, assume it 'passes' for now so non-module plugins work
         if not mod_metadata:
-            return True
+            return True, deniers
+
         status = mod_metadata.get('status', [])
-        print('status: %si type():%s ' % (status, type(status)))
-        for x in status:
-            print('x: %s type(x): %s' % (x, type(x)))
-        print('stableinterface in status: %s' % 'stableinterface' in status)
-        if 'stableinterface' in status or 'preview' in status:
-            print('wtf true')
-            return True
-        return False
+        # print('status: %si type():%s ' % (status, type(status)))
+
+        supported_by = mod_metadata.get('supported_by', [])
+        # print('supported_by: %s type: %s' % (supported_by, type(supported_by)))
+
+        # TODO: generalize  set()s?
+
+        for allowed_status in self.status_whitelist:
+            if allowed_status in status:
+                allowed = True
+
+        for disallowed_status in self.status_blacklist:
+            if disallowed_status in status:
+                allowed = False
+                deniers.add(('status_blacklist', disallowed_status))
+
+        for allowed_supported_by in self.supported_by_whitelist:
+            if allowed_supported_by == supported_by:
+                allowed = True
+
+        for disallowed_supported_by in self.supported_by_blacklist:
+            if disallowed_supported_by == supported_by:
+                allowed = False
+                deniers.add(('supported_by_blacklist', disallowed_supported_by))
+
+        return allowed, deniers
 
     # FIXME: rename to something more filtery
     def check_plugin(self, name, path):
 
         metadata = None
+        # FIXME: this doesnt 'cache' module metadata
         metadata = module_metadata.return_metadata([(name, path)])
-        print('checkout_plugin metadata for name=%s path=%s' % (name, path))
-        import pprint
-        pprint.pprint(metadata)
+
+        # pprint.pprint(metadata)
 
         metadata_result = self.check_metadata(name, path, metadata)
-        print('mr: %s' % metadata_result)
-        if not metadata_result:
-            return None
+        # print('mr: %s' % repr(metadata_result))
 
-        return name, path
+        # FIXME FIXME FIXME: add a Result obj instead of this tuple nonsense
+        # (is_allowed_bool, deniers, name, path)
+        if metadata_result is None:
+            return (False, [], None, None)
+
+        if metadata_result[0]:
+            return (True, metadata_result[1], name, path)
+
+        return (False, metadata_result[1], name, path)
 
     def __contains__(self, name_and_path):
         #return self.full_name(name) in self.pull_cache
@@ -281,7 +313,7 @@ class ModuleFinder:
 
         self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
 
-        self.metadata_filter = MetadataModuleFilter()
+        self.metadata_filter = MetadataModuleFilter(supported_by_blacklist=['community'])
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
         namespace_find_result = self.namespaces.find_plugin(name, mod_type, ignore_deprecated)
@@ -292,12 +324,15 @@ class ModuleFinder:
         # filter_result with be either a return of the passed in data, or None
         filter_result = self.metadata_filter.check_plugin(name, namespace_find_result)
 
-        print('filter_result: %s' % repr(filter_result))
-        if filter_result:
+        # print('filter_result: %s' % repr(filter_result))
+        if filter_result[0]:
             # just the module path
-            return filter_result[1]
+            return filter_result[3]
 
-        return filter_result
+        # TODO: track which filter denied a module
+        display.warning("The module '%s' was found, but was disabled by the metadata filter rules: %s" % (to_text(name), filter_result[1]))
+        # this module was disabled by the filter finder
+        return None
 
 
 class PluginLoader:
@@ -508,7 +543,6 @@ class PluginLoader:
         #pull_cache = self._plugin_path_cache[suffix]
 
         find_result = self.module_finder.find_plugin(name, mod_type=suffix)
-        print('find_result2: %s' % find_result)
 
         # TODO: track which namespace had the name
         if find_result:
