@@ -259,7 +259,7 @@ class QueueListener(object):
                 self.buffer_record(record)
                 self._task_done()
             except queue.Empty:
-                #self.queue_is_empty()
+                self.queue_is_empty()
                 break
 
     def _task_done(self):

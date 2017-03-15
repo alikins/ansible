@@ -229,6 +229,7 @@ class TaskExecutor:
                 setattr(mylookup, '_subdir', subdir + 's')
 
                 # run lookup
+                log.info('running lookup loop=%s terms=%s', self._task.loop, loop_terms)
                 items = mylookup.run(terms=loop_terms, variables=self._job_vars, wantlist=True)
             else:
                 raise AnsibleError("Unexpected failure in finding the lookup named '%s' in the available lookup plugins" % self._task.loop)
@@ -260,6 +261,7 @@ class TaskExecutor:
         along with the item for which the loop ran.
         '''
 
+        log.debug('running loop for items=%s', items)
         results = []
 
         # make copies of the job vars and task so we can add the item to
@@ -306,6 +308,7 @@ class TaskExecutor:
             # execute, and swap them back so we can do the next iteration cleanly
             (self._task, tmp_task) = (tmp_task, self._task)
             (self._play_context, tmp_play_context) = (tmp_play_context, self._play_context)
+            log.info('running loop task=%s for item=%s', self._task, item)
             res = self._execute(variables=task_vars)
             (self._task, tmp_task) = (tmp_task, self._task)
             (self._play_context, tmp_play_context) = (tmp_play_context, self._play_context)
@@ -338,6 +341,7 @@ class TaskExecutor:
         Squash items down to a comma-separated list for certain modules which support it
         (typically package management modules).
         '''
+        log.debug('squashing items=%s loop_var=%s', items, loop_var)
         name = None
         try:
             # _task.action could contain templatable strings (via action: and
@@ -382,6 +386,7 @@ class TaskExecutor:
                             self._task.args['name'] = final_items
                             # Wrap this in a list so that the calling function loop
                             # executes exactly once
+                            log.info('squash items to final_items=%s', final_items)
                             return [final_items]
                         else:
                             # Restore the name parameter
@@ -445,7 +450,7 @@ class TaskExecutor:
         try:
             if not self._task.evaluate_conditional(templar, variables):
                 display.debug("when evaluation is False, skipping this task")
-		log.debug("when evaluation is False, skipping this task")
+                log.debug("when evaluation is False, skipping this task")
 
                 return dict(changed=False, skipped=True, skip_reason='Conditional result was False', _ansible_no_log=self._play_context.no_log)
         except AnsibleError:
@@ -676,6 +681,7 @@ class TaskExecutor:
         Polls for the specified JID to be complete
         '''
 
+        log.info('polling for async results for job_id=%s', result.get('ansible_job_id'))
         if task_vars is None:
             task_vars = self._job_vars
 
@@ -705,6 +711,7 @@ class TaskExecutor:
 
         time_left = self._task.async
         while time_left > 0:
+            log.info('sleeping for %s seconds', self._task.poll)
             time.sleep(self._task.poll)
 
             try:

@@ -117,7 +117,7 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     # uses logging._acquireLock
     root_logger.addHandler(qh)
 
-    mp_log_level = env_log_level('MP_LOG_LEVEL') or logging.INFO
+    mp_log_level = env_log_level('MP_LOG_LEVEL') or logging.ERROR
     #mp_log_level = logging.DEBUG
     #mp_log_level = multiprocessing.SUBDEBUG
     if mp_log_level:
