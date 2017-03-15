@@ -132,23 +132,6 @@ class DeprecatedModuleNamespace(ModuleNamespace):
         return find_result
 
 
-class VersionedModuleNamespace(ModuleNamespace):
-    _name = 'ver_'
-
-    def __init__(self, name=None, path_cache=None, version=None):
-        super(VersionedModuleNamespace, self).__init__(name=name, path_cache=path_cache)
-
-        self.version = version
-
-    def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
-        if self.version is None:
-            return None
-
-        ver_name = '%s%s_%s' % (self.name, self.version, name)
-
-        return super(VersionedModuleNamespace, self).find_plugin(ver_name, mod_type, ignore_deprecated)
-
-
 class AliasModuleNamespace(ModuleNamespace):
     '''map one module name to another'''
 
@@ -291,10 +274,7 @@ class MetadataModuleFilter:
 
 
 class BaseModuleFinder:
-    def __init__(self, path_cache=None, aliases=None, module_namespaces=None, filter_rules=None):
-        aliases = aliases or {}
-
-        #print('%s __init__' % (self.__class__.__name__))
+    def __init__(self, path_cache=None, module_namespaces=None, filter_rules=None):
 
         self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
 
@@ -323,15 +303,8 @@ class BaseModuleFinder:
 # The module finder with our defaults
 class ModuleFinder(BaseModuleFinder):
     # TODO: could be passed to an alt constructor, or just called directly
-    def __init__(self, path_cache=None, aliases=None, module_namespaces=None):
+    def __init__(self, path_cache=None, module_namespaces=None, aliases=None):
         # alias -> real name
-        # FIXME: just for testing
-        alias_map = {'stvincent': 'anneclark',
-                     'bansky': 'bobross',
-                     'oldthing': 'newthing',
-                     'showmethejson': 'debug',
-                     'the_artist_formerly_known_as_file': 'file'}
-        alias_map.update(aliases)
 
         # TODO: Construct this outside of PluginLoader init, and pass it in
         #       as namespaces option. Most instances with use the same setup, but
@@ -341,27 +314,15 @@ class ModuleFinder(BaseModuleFinder):
         #       getting their scopes and lifetimes sorted out.
 
         # Now check other namespaces as well, include the default '' namespacei
-        module_namespaces = [VersionedModuleNamespace(version='2_2',
-                                                      path_cache=path_cache),
-
-                             # The normal modules, with no namespace
-                             ModuleNamespace(name='',
+        module_namespaces = [ModuleNamespace(name='',                 # the normal namespace
                                              path_cache=path_cache),
 
                              # potentially runtime mapping of module names
-                             AliasModuleNamespace(alias_map=alias_map,
+                             AliasModuleNamespace(alias_map=aliases,
                                                   path_cache=path_cache),
 
                              # deprecated modules with _modulename
-                             DeprecatedModuleNamespace(path_cache=path_cache),
-
-                             # just an example of an arbitrary namespaces. pbs can
-                             # reference 'blippy_foo' directly, or if a pb references module
-                             # 'foo', and nothing else provides 'foo', we also check
-                             # look for blippy_foo. Will be more interesting with suffix name
-                             # spaces.
-                             ModuleNamespace(name='blippy_',
-                                             path_cache=path_cache)]
+                             DeprecatedModuleNamespace(path_cache=path_cache)]
 
         filter_rules = {'whitelists': {'supported_by_whitelist': ['core',
                                                                   'community',
@@ -370,7 +331,6 @@ class ModuleFinder(BaseModuleFinder):
                         'blacklists': {'supported_by_blacklist': ['community'],
                                        'status_blacklist': ['preview', 'removed']}}
         super(ModuleFinder, self).__init__(path_cache=path_cache,
-                                           aliases=alias_map,
                                            module_namespaces=module_namespaces,
                                            filter_rules=filter_rules)
 
