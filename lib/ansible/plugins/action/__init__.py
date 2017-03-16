@@ -119,7 +119,8 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         if task_vars is None:
             task_vars = dict()
 
-        python_intr_to_module_sdk_map = {'python2.4': 'py2.4'}
+        python_intr_to_module_sdk_map = {'python2.4': 'py2.4',
+                                         'default': ''}
 
         # Search module path(s) for named module.
         for mod_type in self._connection.module_implementation_preferences:
@@ -140,7 +141,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                             module_args[key] = self._connection._shell._unquote(module_args[key])
 
             if mod_type == ".py" or mod_type == "":
-                python_intr = task_vars.get('ansible_python_interpreter', None)
+                python_intr = task_vars.get('ansible_python_interpreter', 'default')
                 module_sdk_id = python_intr_to_module_sdk_map.get(os.path.basename(python_intr), None)
                 print('pi=%s msi=%s' % (python_intr, module_sdk_id))
                 if module_sdk_id:
