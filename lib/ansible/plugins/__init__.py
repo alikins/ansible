@@ -235,6 +235,7 @@ class PluginLoader:
     def find_plugin(self, name, mod_type='', ignore_deprecated=False):
         ''' Find a plugin named name '''
 
+        print('find_plugin: name=%s mod_type=%s' % (name, mod_type))
         if mod_type:
             suffix = mod_type
         elif self.class_name:
@@ -284,6 +285,16 @@ class PluginLoader:
                 except IndexError:
                     extension = ''
 
+                found_mod_type = extension
+
+                print('full_path: %s' % full_path)
+                # kluge, look for 'ansible-python-2.4' in the path, if found, the
+                # mod_type is 'py2.4' instead of 'py'. This lets ActionModule._config_module chose
+                # to use py2.4 compat modules if the host/connection needs it.
+                if 'ansible-python-2.4' in full_path:
+                    found_mod_type = 'py2.4'
+                    print('found2.4 compat full_path=%s mod_type=%s found_mod_type=%s' % (full_path, mod_type, found_mod_type))
+
                 # Module found, now enter it into the caches that match
                 # this file
                 if base_name not in self._plugin_path_cache['']:
@@ -293,10 +304,10 @@ class PluginLoader:
                     self._plugin_path_cache[''][full_name] = full_path
 
                 if base_name not in self._plugin_path_cache[extension]:
-                    self._plugin_path_cache[extension][base_name] = full_path
+                    self._plugin_path_cache[found_mod_type][base_name] = full_path
 
                 if full_name not in self._plugin_path_cache[extension]:
-                    self._plugin_path_cache[extension][full_name] = full_path
+                    self._plugin_path_cache[found_mod_type][full_name] = full_path
 
             self._searched_paths.add(path)
             try:

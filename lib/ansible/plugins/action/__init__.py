@@ -119,10 +119,13 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         if task_vars is None:
             task_vars = dict()
 
+        python_intr_to_module_sdk_map = {'python2.4': 'py2.4'}
+
         # Search module path(s) for named module.
         for mod_type in self._connection.module_implementation_preferences:
             # Check to determine if PowerShell modules are supported, and apply
             # some fixes (hacks) to module name + args.
+            print('mod_type1: %s' % mod_type)
             if mod_type == '.ps1':
                 # win_stat, win_file, and win_copy are not just like their
                 # python counterparts but they are compatible enough for our
@@ -136,6 +139,14 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                         if key in module_args:
                             module_args[key] = self._connection._shell._unquote(module_args[key])
 
+            if mod_type == ".py" or mod_type == "":
+                python_intr = task_vars.get('ansible_python_interpreter', None)
+                module_sdk_id = python_intr_to_module_sdk_map.get(os.path.basename(python_intr), None)
+                print('pi=%s msi=%s' % (python_intr, module_sdk_id))
+                if module_sdk_id:
+                    mod_type = module_sdk_id
+
+            print('mod_type2: %s' % mod_type)
             module_path = self._shared_loader_obj.module_loader.find_plugin(module_name, mod_type)
             if module_path:
                 break
@@ -622,6 +633,8 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         if module_args is None:
             module_args = self._task.args
 
+        #import pprint
+        #pprint.pprint(task_vars)
         self._update_module_args(module_name, module_args, task_vars)
 
         # FUTURE: refactor this along with module build process to better encapsulate "smart wrapper" functionality
