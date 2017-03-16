@@ -111,6 +111,13 @@ except ImportError:
     Sequence = (list, tuple)
     Mapping = (dict,)
 
+
+try:
+    len([])
+except Exception as e:
+    print(e)
+    raise
+
 # Note: When getting Sequence from collections, it matches with strings.  If
 # this matters, make sure to check for strings before checking for sequencetype
 try:

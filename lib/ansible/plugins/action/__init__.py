@@ -120,7 +120,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             task_vars = dict()
 
         python_intr_to_module_sdk_map = {'python2.4': 'py2.4',
-                                         'default': ''}
+                                         'default': '.py'}
 
         # Search module path(s) for named module.
         for mod_type in self._connection.module_implementation_preferences:
@@ -170,7 +170,8 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                                    "run 'git pull --rebase' to correct this problem." % (module_name))
 
         # insert shared code and arguments into the module
-        (module_data, module_style, module_shebang) = modify_module(module_name, module_path, module_args,
+        print('mod_type: %s' % mod_type)
+        (module_data, module_style, module_shebang) = modify_module(module_name, mod_type, module_path, module_args,
                 task_vars=task_vars, module_compression=self._play_context.module_compression)
 
         # FUTURE: we'll have to get fancier about this to support powershell over SSH on Windows...

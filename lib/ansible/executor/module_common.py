@@ -23,6 +23,7 @@ __metaclass__ = type
 import ast
 import base64
 import datetime
+import fnmatch
 import imp
 import json
 import os
@@ -453,7 +454,7 @@ def _get_shebang(interpreter, task_vars, args=tuple()):
     return (shebang, interpreter)
 
 
-def recursive_finder(name, data, py_module_names, py_module_cache, zf):
+def recursive_finder(name, module_type, data, py_module_names, py_module_cache, zf):
     """
     Using ModuleDepFinder, make sure we have all of the module_utils files that
     the module its module_utils files needs.
@@ -473,8 +474,18 @@ def recursive_finder(name, data, py_module_names, py_module_cache, zf):
     # Exclude paths that match with paths we've already processed
     # (Have to exclude them a second time once the paths are processed)
 
+    module_type_to_path_match = {'py2.4': '*ansible-python-2.4*'}
+    match_pattern = module_type_to_path_match.get(module_type, '*')
+
     module_utils_paths = [p for p in module_utils_loader._get_paths(subdirs=False) if os.path.isdir(p)]
     module_utils_paths.append(_MODULE_UTILS_PATH)
+    #print('module_utils_paths1: %s' % module_utils_paths)
+    # filter to just module_utils that match with module_type
+    module_utils_paths = fnmatch.filter(module_utils_paths, match_pattern)
+
+    #print('module_type: %s' % module_type)
+    #print('module_utils_paths2: %s' % module_utils_paths)
+
     for py_module_name in finder.submodules.difference(py_module_names):
         module_info = None
 
@@ -497,6 +508,7 @@ def recursive_finder(name, data, py_module_names, py_module_cache, zf):
                 except ImportError:
                     continue
 
+        print('module_info: %s' % repr(module_info))
         # Could not find the module.  Construct a helpful error message.
         if module_info is None:
             msg = ['Could not find imported module support code for %s.  Looked for' % name]
@@ -571,7 +583,7 @@ def recursive_finder(name, data, py_module_names, py_module_cache, zf):
     py_module_names.update(unprocessed_py_module_names)
 
     for py_module_file in unprocessed_py_module_names:
-        recursive_finder(py_module_file, py_module_cache[py_module_file], py_module_names, py_module_cache, zf)
+        recursive_finder(py_module_file, module_type, py_module_cache[py_module_file], py_module_names, py_module_cache, zf)
         # Save memory; the file won't have to be read again for this ansible module.
         del py_module_cache[py_module_file]
 
@@ -582,7 +594,8 @@ def _is_binary(b_module_data):
     return bool(start.translate(None, textchars))
 
 
-def _find_module_utils(module_name, b_module_data, module_path, module_args, task_vars, module_compression):
+def _find_module_utils(module_name, module_type, b_module_data, module_path, module_args, task_vars, module_compression):
+#def _find_module_utils(module_name, b_module_data, module_path, module_args, task_vars, module_compression):
     """
     Given the source of the module, convert it to a Jinja2 template to insert
     module code and return whether it's a new or old style module.
@@ -675,7 +688,7 @@ def _find_module_utils(module_name, b_module_data, module_path, module_args, tas
                     zf.writestr('ansible_module_%s.py' % module_name, b_module_data)
 
                     py_module_cache = { ('__init__',): b'' }
-                    recursive_finder(module_name, b_module_data, py_module_names, py_module_cache, zf)
+                    recursive_finder(module_name, module_type, b_module_data, py_module_names, py_module_cache, zf)
                     zf.close()
                     zipdata = base64.b64encode(zipoutput.getvalue())
 
@@ -767,7 +780,7 @@ def _find_module_utils(module_name, b_module_data, module_path, module_args, tas
     return (b_module_data, module_style, shebang)
 
 
-def modify_module(module_name, module_path, module_args, task_vars=dict(), module_compression='ZIP_STORED'):
+def modify_module(module_name, module_type, module_path, module_args, task_vars=dict(), module_compression='ZIP_STORED'):
     """
     Used to insert chunks of code into modules before transfer rather than
     doing regular python imports.  This allows for more efficient transfer in
@@ -793,7 +806,8 @@ def modify_module(module_name, module_path, module_args, task_vars=dict(), modul
         # read in the module source
         b_module_data = f.read()
 
-    (b_module_data, module_style, shebang) = _find_module_utils(module_name, b_module_data, module_path, module_args, task_vars, module_compression)
+    (b_module_data, module_style, shebang) = _find_module_utils(module_name, module_type, b_module_data, module_path, module_args, task_vars, module_compression)
+    #(b_module_data, module_style, shebang) = _find_module_utils(module_name, b_module_data, module_path, module_args, task_vars, module_compression)
 
     if module_style == 'binary':
         return (b_module_data, module_style, to_text(shebang, nonstring='passthru'))
