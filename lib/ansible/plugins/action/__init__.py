@@ -156,8 +156,10 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             # for win_ping here, otherwise the code would look for ping.ps1
             if '.ps1' in self._connection.module_implementation_preferences:
                 ping_module = 'win_ping'
+                mod_type = 'ps1'
             else:
                 ping_module = 'ping'
+                mod_type = ''
             module_path2 = self._shared_loader_obj.module_loader.find_plugin(ping_module, self._connection.module_implementation_preferences)
             if module_path2 is not None:
                 raise AnsibleError("The module %s was not found in configured module paths" % (module_name))
