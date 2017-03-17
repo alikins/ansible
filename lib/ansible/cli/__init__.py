@@ -41,8 +41,7 @@ from ansible.module_utils._text import to_bytes, to_text
 from ansible.parsing.dataloader import DataLoader
 from ansible.release import __version__
 from ansible.utils.path import unfrackpath
-from ansible.utils.vars import load_extra_vars, load_options_vars
-from ansible.vars.manager import VariableManager
+from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets
 
 try:
     from __main__ import display
@@ -166,6 +165,33 @@ class CLI(with_metaclass(ABCMeta, object)):
             display.v(u"Using %s as config file" % to_text(C.CONFIG_FILE))
         else:
             display.v(u"No config file found; using defaults")
+
+    @staticmethod
+    def setup_vault_secrets(loader, vault_id, vault_password_file=None,
+                            ask_vault_pass=None, create_new_password=False):
+        print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
+              (vault_id, vault_password_file, ask_vault_pass, create_new_password))
+        vault_secrets = None
+
+        if vault_password_file:
+            # read vault_pass from a file
+            vault_secrets = FileVaultSecrets(filename=vault_password_file,
+                                             loader=loader,
+                                             name=vault_id)
+        if not vault_secrets or ask_vault_pass:
+            vault_secrets = PromptVaultSecrets(name=vault_id)
+            # if create_new_password:
+            #   confirm()
+
+            # FIXME: we don't need to do this now, we could do it later though
+            #        that would change the cli UXD a bit and may be weird
+            vault_secrets.ask_vault_passwords()
+
+        if not vault_secrets:
+            # Just a placeholder we can extend later
+            vault_secrets = VaultSecrets(name=vault_id)
+
+        return vault_secrets
 
     @staticmethod
     def ask_vault_passwords():
@@ -691,17 +717,9 @@ class CLI(with_metaclass(ABCMeta, object)):
         # all needs loader
         loader = DataLoader()
 
-        # vault
-        b_vault_pass = None
-        if options.vault_password_file:
-            # read vault_pass from a file
-            b_vault_pass = CLI.read_vault_password_file(options.vault_password_file, loader=loader)
-        elif options.ask_vault_pass:
-            b_vault_pass = CLI.ask_vault_passwords()
 
-        if b_vault_pass is not None:
-            loader.set_vault_password(b_vault_pass)
-
+        # FIXME
+        vault_secrets = self._setup_vault_secrets()
         # create the inventory, and filter it based on the subset specified (if any)
         inventory = InventoryManager(loader=loader, sources=options.inventory)
 
