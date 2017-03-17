@@ -174,8 +174,9 @@ class TextVaultSecret(VaultSecret):
 
     @classmethod
     def from_bytes(cls, b_bytes, encoding='utf8'):
-        '''when used with result of getpass.getpass, encoding should be set to sys.stdin.encoding'''
+        '''when used with result of getpass.getpass, encoding should be set to sys.stdin.encoding.'''
         secret = cls(_bytes=b_bytes, encoding=encoding)
+
         # since we set _bytes explicitly, we wont be using the encoding, but it is still useful to know.
         secret.text = to_text(b_bytes, encoding)
         return secret
@@ -215,7 +216,7 @@ class VaultSecrets:
     #       and VaultSecrets could potentially do the key stretching and
     #       HMAC checks itself. Or for that matter, the Cipher objects could
     #       be provided by VaultSecrets.
-    def get_secret(self, name=None):
+    def b_get_secret(self, name=None):
         # given some id, provide the right secret
         # secret_name could be None for the default,
         # or a filepath, or a label used for prompting users
@@ -876,7 +877,7 @@ class VaultAES:
         bs = AES_pycrypto.block_size
 
         # TODO: default id?
-        b_password = secrets.get_secret(name=vault_id)
+        b_password = secrets.b_get_secret(name=vault_id)
 
         b_key, b_iv = cls.aes_derive_key_and_iv(secrets, b_salt, key_length, bs)
         cipher = AES.new(b_key, AES.MODE_CBC, b_iv)
@@ -1024,7 +1025,7 @@ class VaultAES256:
         
     def encrypt(self, b_plaintext, secrets, vault_id=None):
         b_salt = os.urandom(32)
-        b_password = secrets.get_secret(name=vault_id)
+        b_password = secrets.b_get_secret(name=vault_id)
         b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
 
 
