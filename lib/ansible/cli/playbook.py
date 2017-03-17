@@ -81,6 +81,24 @@ class PlaybookCLI(CLI):
         display.verbosity = self.options.verbosity
         self.validate_conflicts(runas_opts=True, vault_opts=True, fork_opts=True)
 
+    def setup_vault_secrets(self, loader, vault_id, vault_password_file=None, ask_vault_pass=None):
+        # Just a placeholder we can extend later
+        vault_secrets = VaultSecrets(name=vault_id)
+
+        if vault_password_file:
+            # read vault_pass from a file
+            vault_secrets = FileVaultSecrets(filename=vault_password_file,
+                                             loader=loader,
+                                             name=vault_id)
+        elif ask_vault_pass:
+            vault_secrets = PromptVaultSecrets(name=vault_id)
+
+            # FIXME: we don't need to do this now, we could do it later though
+            #        that would change the cli UXD a bit and may be weird
+            vault_secrets.ask_vault_passwords()
+
+        return vault_secrets
+
     def run(self):
 
         super(PlaybookCLI, self).run()
@@ -108,25 +126,10 @@ class PlaybookCLI(CLI):
 
         loader = DataLoader()
 
-        # Just a placeholder we can extend later
-        vault_id = self.options.vault_id
-        vault_secrets = VaultSecrets(name=vault_id)
-
-        if self.options.vault_password_file:
-            # read vault_pass from a file
-            vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
-                                             loader=loader,
-                                             name=vault_id)
-        elif self.options.ask_vault_pass:
-            vault_secrets = PromptVaultSecrets(name=vault_id)
-
-            # FIXME: we don't need to do this now, we could do it later though
-            #        that would change the cli UXD a bit and may be weird
-            vault_secrets.ask_vault_passwords()
-
-        #print('vault_secrets playbook: %s' % vault_secrets)
-        #print('vault_secrets.get_secret(): %s' % vault_secrets.get_secret())
-        #print('vault_secrets.get_secret(name=%s): %s' % (vault_id, vault_secrets.get_secret(name=vault_id)))
+        vault_secrets = self.setup_vault_secrets(loader,
+                                                 vault_id=self.options.vault_id,
+                                                 vault_password_file=self.options.vault_password_file,
+                                                 ask_vault_pass=self.options.ask_vault_pass)
         loader.set_vault_secrets(vault_secrets)
 
         # initial error check, to make sure all specified playbooks are accessible
