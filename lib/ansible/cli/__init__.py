@@ -41,7 +41,9 @@ from ansible.module_utils._text import to_bytes, to_text
 from ansible.parsing.dataloader import DataLoader
 from ansible.release import __version__
 from ansible.utils.path import unfrackpath
-from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets
+from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets, \
+    PromptNewVaultSecrets
+
 
 try:
     from __main__ import display
@@ -169,8 +171,8 @@ class CLI(with_metaclass(ABCMeta, object)):
     @staticmethod
     def setup_vault_secrets(loader, vault_id, vault_password_file=None,
                             ask_vault_pass=None, create_new_password=False):
-        print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
-              (vault_id, vault_password_file, ask_vault_pass, create_new_password))
+        #print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
+        #      (vault_id, vault_password_file, ask_vault_pass, create_new_password))
         vault_secrets = None
 
         if vault_password_file:
@@ -179,9 +181,10 @@ class CLI(with_metaclass(ABCMeta, object)):
                                              loader=loader,
                                              name=vault_id)
         if not vault_secrets or ask_vault_pass:
-            vault_secrets = PromptVaultSecrets(name=vault_id)
-            # if create_new_password:
-            #   confirm()
+            if create_new_password:
+                vault_secrets = PromptNewVaultSecrets(name=vault_id)
+            else:
+                vault_secrets = PromptVaultSecrets(name=vault_id)
 
             # FIXME: we don't need to do this now, we could do it later though
             #        that would change the cli UXD a bit and may be weird

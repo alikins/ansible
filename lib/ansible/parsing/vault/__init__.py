@@ -289,6 +289,8 @@ class DirVaultSecrets(VaultSecrets):
 
 
 class PromptVaultSecrets(VaultSecrets):
+    default_prompt = "Vault password: "
+
     def __init__(self, name=None, directory=None, loader=None):
         super(PromptVaultSecrets, self).__init__()
         self.name = name
@@ -300,7 +302,7 @@ class PromptVaultSecrets(VaultSecrets):
         vault_pass = None
 
         try:
-            vault_pass = getpass.getpass(prompt="Vault password: ")
+            vault_pass = getpass.getpass(prompt=self.default_prompt)
         except EOFError:
             pass
 
@@ -313,21 +315,38 @@ class PromptVaultSecrets(VaultSecrets):
 
         return vault_pass
 
-    def ask_new_vault_passwords(self):
-        new_vault_pass = None
+
+class PromptNewVaultSecrets(VaultSecrets):
+    default_prompt = "New Vault password:"
+    default_confirm_prompt = "Confirm New Vault password: "
+
+    def ask_vault_passwords(self):
+        vault_pass_1 = vault_pass_2 = None
+
         try:
-            new_vault_pass = getpass.getpass(prompt="New Vault password: ")
-            new_vault_pass2 = getpass.getpass(prompt="Confirm New Vault password: ")
-            if new_vault_pass != new_vault_pass2:
-                raise AnsibleError("Passwords do not match")
+            vault_pass_1 = getpass.getpass(prompt=self.default_prompt)
+            vault_pass_2 = getpass.getpass(prompt=self.default_confirm_prompt)
         except EOFError:
             pass
 
-        if new_vault_pass:
-            new_vault_pass = to_bytes(new_vault_pass, errors='strict', nonstring='simplerepr').strip()
+        if vault_pass_1:
+            vault_pass_1 = to_bytes(vault_pass_1, errors='strict', nonstring='simplerepr').strip()
+        if vault_pass_2:
+            vault_pass_2 = to_bytes(vault_pass_2, errors='strict', nonstring='simplerepr').strip()
 
-        self.set_secret(self.name, new_vault_pass)
-        return new_vault_pass
+        self.confirm(vault_pass_1, vault_pass_2)
+
+        self.set_secret(self.name, vault_pass_1)
+        return vault_pass_1
+
+    def confirm(self, vault_pass_1, vault_pass_2):
+        # enforce no newline chars at the end of passwords
+
+        if vault_pass_1 != vault_pass_2:
+            # FIXME: more specific exception
+            raise AnsibleError("Passwords do not match")
+
+
 
 
 class VaultLib:
