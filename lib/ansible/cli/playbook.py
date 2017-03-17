@@ -110,11 +110,13 @@ class PlaybookCLI(CLI):
 
         # Just a placeholder we can extend later
         vault_secrets = VaultSecrets()
+        vault_id = self.options.vault_id
 
         if self.options.vault_password_file:
             # read vault_pass from a file
             vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
-                                             loader=loader)
+                                             loader=loader,
+                                             name=vault_id)
         elif self.options.ask_vault_pass:
             vault_secrets = PromptVaultSecrets()
 
