@@ -194,6 +194,7 @@ class EnvVaultSecret(VaultSecret):
 
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
 # FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
+# FIXME: doesnt use VaultSecret yet
 class VaultSecrets(object):
     default_name = 'default'
 
@@ -250,6 +251,7 @@ class FileVaultSecrets(VaultSecrets):
         """
 
         this_path = os.path.realpath(os.path.expanduser(vault_password_file))
+
         if not os.path.exists(this_path):
             raise AnsibleError("The vault password file %s was not found" % this_path)
 
@@ -259,9 +261,12 @@ class FileVaultSecrets(VaultSecrets):
                 p = subprocess.Popen(this_path, stdout=subprocess.PIPE)
             except OSError as e:
                 raise AnsibleError("Problem running vault password script %s (%s). If this is not a script, remove the executable bit from the file." % (' '.join(this_path), e))
+
             stdout, stderr = p.communicate()
+
             if p.returncode != 0:
                 raise AnsibleError("Vault password script %s returned non-zero (%s): %s" % (this_path, p.returncode, p.stderr))
+
             vault_pass = stdout.strip('\r\n')
         else:
             try:
@@ -272,20 +277,6 @@ class FileVaultSecrets(VaultSecrets):
                 raise AnsibleError("Could not read vault password file %s: %s" % (this_path, e))
 
         return vault_pass
-
-
-class DirVaultSecrets(VaultSecrets):
-    def __init__(self, name=None, directory=None, loader=None):
-        super(DirVaultSecrets, self).__init__(name)
-        self.directory = directory
-        self.loader = loader
-        self.name = name
-
-    def get_secret(self, name=None):
-        name = name or self.name
-        if name:
-            return self._secrets[name]
-        return None
 
 
 class PromptVaultSecrets(VaultSecrets):
@@ -345,8 +336,6 @@ class PromptNewVaultSecrets(VaultSecrets):
         if vault_pass_1 != vault_pass_2:
             # FIXME: more specific exception
             raise AnsibleError("Passwords do not match")
-
-
 
 
 class VaultLib:
