@@ -417,9 +417,9 @@ class DataLoader:
             raise AnsibleFileNotFound(file_name=file_path)
 
         # FIXME: once we have a way to determine what vault id a file is encrypted with, then plug it
-        #        in here.
-        if not self._vaults.get('default', None):
-            _vault = VaultLib(secrets=self._vault.secrets)
+        #        in here. Whatever has the multiple vault secrets
+        #if not self._vaults.get('default', None):
+        #    _vault = VaultLib(secrets=self._vault.secrets)
 
         real_path = self.path_dwim(file_path)
 
