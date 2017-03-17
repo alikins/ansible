@@ -198,9 +198,10 @@ class EnvVaultSecret(VaultSecret):
 class VaultSecrets(object):
     default_name = 'default'
 
-    def __init__(self):
+    def __init__(self, name=None):
         self._secret = None
         self._secrets = {}
+        self.name = name
 
     @classmethod
     def from_password(cls, password, name=None):
@@ -1056,9 +1057,6 @@ class VaultAES256:
         if not self.is_equal(crypted_hmac, to_bytes(hmacDecrypt.hexdigest())):
             return None
 
-    def decrypt(self, b_vaulttext, secrets, vault_id=None):
-
-    def decrypt(self, b_vaulttext, secrets):
 
     @classmethod
     def encrypt(cls, b_plaintext, b_password):
