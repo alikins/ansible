@@ -151,7 +151,7 @@ def is_encrypted_file(file_obj, start_pos=0, count=-1):
         file_obj.seek(current_position)
 
 
-class VaultSecret(object):
+class VaultSecret:
     '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
     def __init__(self):
         pass
@@ -195,7 +195,7 @@ class EnvVaultSecret(VaultSecret):
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
 # FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
 # FIXME: doesnt use VaultSecret yet
-class VaultSecrets(object):
+class VaultSecrets:
     default_name = 'default'
 
     def __init__(self, name=None):
