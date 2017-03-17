@@ -151,7 +151,6 @@ def is_encrypted_file(file_obj, start_pos=0, count=-1):
         file_obj.seek(current_position)
 
 
-
 class VaultSecret(object):
     '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
     def __init__(self):
@@ -199,14 +198,14 @@ class VaultSecrets(object):
     default_name = 'default'
 
     def __init__(self, name=None):
-        self._secret = None
+        # This maps secret 'name' to a VaultSecret object
         self._secrets = {}
         self.name = name
 
     @classmethod
-    def from_password(cls, password, name=None):
+    def from_password(cls, b_password, name=None):
         obj = cls()
-        obj._secrets[name] = password
+        obj._secrets[name] = b_password
         return obj
 
     # TODO: Note this is not really the proposed interface/api
@@ -223,6 +222,7 @@ class VaultSecrets(object):
         #return to_bytes(self._secret)
         name = name or self.default_name
         secret = self._secrets.get(name, None)
+
         return to_bytes(secret, errors='strict', encoding='utf-8')
 
     def set_secret(self, name, secret):
