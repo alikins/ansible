@@ -109,8 +109,8 @@ class PlaybookCLI(CLI):
         loader = DataLoader()
 
         # Just a placeholder we can extend later
-        vault_secrets = VaultSecrets()
         vault_id = self.options.vault_id
+        vault_secrets = VaultSecrets(name=vault_id)
 
         if self.options.vault_password_file:
             # read vault_pass from a file
@@ -118,12 +118,15 @@ class PlaybookCLI(CLI):
                                              loader=loader,
                                              name=vault_id)
         elif self.options.ask_vault_pass:
-            vault_secrets = PromptVaultSecrets()
+            vault_secrets = PromptVaultSecrets(name=vault_id)
 
             # FIXME: we don't need to do this now, we could do it later though
             #        that would change the cli UXD a bit and may be weird
             vault_secrets.ask_vault_passwords()
 
+        #print('vault_secrets playbook: %s' % vault_secrets)
+        #print('vault_secrets.get_secret(): %s' % vault_secrets.get_secret())
+        #print('vault_secrets.get_secret(name=%s): %s' % (vault_id, vault_secrets.get_secret(name=vault_id)))
         loader.set_vault_secrets(vault_secrets)
 
         # initial error check, to make sure all specified playbooks are accessible
