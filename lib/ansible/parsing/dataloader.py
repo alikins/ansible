@@ -322,7 +322,7 @@ class DataLoader:
 
         return candidate
 
-    def path_dwim_relative_stack(self, paths, dirname, source):
+    def path_dwim_relative_stack(self, paths, dirname, source, is_role=False):
         '''
         find one file in first path in stack taking roles into account and adding play basedir as fallback
 
