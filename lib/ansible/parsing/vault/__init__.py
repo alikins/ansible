@@ -205,9 +205,17 @@ class VaultSecrets:
         self.name = name
 
     @classmethod
-    def from_password(cls, b_password, name=None):
+    def from_bytes(cls, b_bytes, name=None):
+        '''Create a VaultSecrets from a bytes b_bytes.'''
         obj = cls()
-        obj._secrets[name] = b_password
+        obj._secrets[name] = b_bytes
+        return obj
+
+    @classmethod
+    def from_text(cls, text, name=None):
+        '''Create a VaultSecrets from text'''
+        obj = cls()
+        obj._secrets[name] = text
         return obj
 
     # TODO: Note this is not really the proposed interface/api
