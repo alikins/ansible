@@ -26,7 +26,7 @@ from ansible.cli import CLI
 from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.module_utils._text import to_text, to_bytes
 from ansible.parsing.dataloader import DataLoader
-from ansible.parsing.vault import VaultEditor, VaultSecrets, FileVaultSecrets, PromptVaultSecrets
+from ansible.parsing.vault import VaultEditor, FileVaultSecrets, PromptVaultSecrets
 from ansible.cli import CLI
 from ansible.module_utils._text import to_text, to_bytes
 
@@ -61,6 +61,8 @@ class VaultCLI(CLI):
         self.b_vault_pass = None
         self.b_new_vault_pass = None
         self.encrypt_string_read_stdin = False
+        self.new_vault_secrets = None
+        self.new_vault_id = None
         super(VaultCLI, self).__init__(args)
 
     def set_action(self):
@@ -155,23 +157,17 @@ class VaultCLI(CLI):
             vault_secrets = PromptVaultSecrets(name=vault_id)
             vault_secrets.ask_vault_passwords()
 
-        newpass = False
-        rekey = False
-        # TODO: fix rekey later
-        newpass = (self.action in ['create', 'rekey', 'encrypt'])
-        rekey = (self.action == 'rekey')
-
-        new_vault_secrets = None
-        if rekey or newpass:
+        if self.action == 'rekey':
             new_vault_secrets = vault_secrets
             new_vault_id = vault_id
+
             if self.options.new_vault_id:
                 new_vault_id = self.options.new_vault_id
 
             if self.options.new_vault_password_file:
-                new_vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
-                                                     loader=loader,
-                                                     name=new_vault_id)
+                new_vault_secrets = FileVaultSecrets(filename=self.options.new_vault_password_file,
+                                                    loader=loader,
+                                                    name=new_vault_id)
 
             if not new_vault_secrets or self.options.ask_vault_pass:
                 new_vault_secrets = PromptVaultSecrets(name=new_vault_id)
@@ -179,11 +175,12 @@ class VaultCLI(CLI):
 
             if not new_vault_secrets:
                 raise AnsibleOptionsError("A password is required to use Ansible's Vault")
+
             self.new_vault_secrets = new_vault_secrets
             self.new_vault_id = new_vault_id
-        else:
-            if not vault_secrets:
-                raise AnsibleOptionsError("A password is required to use Ansible's Vault")
+
+        if not vault_secrets:
+            raise AnsibleOptionsError("A password is required to use Ansible's Vault")
 
         # FIXME: revist the 'rekey' ask-vault-password bug and verify
         self.editor = VaultEditor(vault_secrets, vault_id=vault_id)
