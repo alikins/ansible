@@ -28,6 +28,7 @@ from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.module_utils._text import to_text
 from ansible.parsing.splitter import parse_kv
+from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets
 from ansible.playbook.play import Play
 from ansible.plugins import get_all_plugin_loaders
 
@@ -106,6 +107,30 @@ class AdHocCLI(CLI):
         passwords = {'conn_pass': sshpass, 'become_pass': becomepass}
 
         loader, inventory, variable_manager = self._play_prereqs(self.options)
+		# FIXME
+		
+		
+
+        # FIXME: DRY this, its dupe in cli.adhoc and cli.playbook
+        # Just a placeholder we can extend later
+        vault_id = self.options.vault_id
+        vault_secrets = VaultSecrets(name=vault_id)
+
+        if self.options.vault_password_file:
+            # read vault_pass from a file
+            vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
+                                             loader=loader,
+                                             name=vault_id)
+        elif self.options.ask_vault_pass:
+            vault_secrets = PromptVaultSecrets(name=vault_id)
+
+            # FIXME: we don't need to do this now, we could do it later though
+            #        that would change the cli UXD a bit and may be weird
+            vault_secrets.ask_vault_passwords()
+
+        loader.set_vault_secrets(vault_secrets)
+
+
 
         no_hosts = False
         if len(inventory.list_hosts()) == 0:
