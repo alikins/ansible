@@ -31,7 +31,6 @@ from ansible.playbook.play_context import PlayContext
 from ansible.utils.vars import load_extra_vars
 from ansible.utils.vars import load_options_vars
 from ansible.vars import VariableManager
-from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets
 
 try:
     from __main__ import display
@@ -80,24 +79,6 @@ class PlaybookCLI(CLI):
 
         display.verbosity = self.options.verbosity
         self.validate_conflicts(runas_opts=True, vault_opts=True, fork_opts=True)
-
-    def setup_vault_secrets(self, loader, vault_id, vault_password_file=None, ask_vault_pass=None):
-        # Just a placeholder we can extend later
-        vault_secrets = VaultSecrets(name=vault_id)
-
-        if vault_password_file:
-            # read vault_pass from a file
-            vault_secrets = FileVaultSecrets(filename=vault_password_file,
-                                             loader=loader,
-                                             name=vault_id)
-        elif ask_vault_pass:
-            vault_secrets = PromptVaultSecrets(name=vault_id)
-
-            # FIXME: we don't need to do this now, we could do it later though
-            #        that would change the cli UXD a bit and may be weird
-            vault_secrets.ask_vault_passwords()
-
-        return vault_secrets
 
     def run(self):
 

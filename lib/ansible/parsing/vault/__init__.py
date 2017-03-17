@@ -299,8 +299,6 @@ class PromptVaultSecrets(VaultSecrets):
         # TODO: ask for vault id
         vault_pass = None
 
-        encoding = sys.stdin.encoding
-
         try:
             vault_pass = getpass.getpass(prompt="Vault password: ")
         except EOFError:

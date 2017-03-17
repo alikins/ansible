@@ -143,44 +143,75 @@ class VaultCLI(CLI):
         # set default restrictive umask
         old_umask = os.umask(0o077)
 
+        # there are 3 types of actions, those that just 'read' (decrypt, view) and only
+        # need to ask for a password once, and those that 'write' (create, encrypt) that
+        # ask for a new password and confirm it, and 'read/write (rekey) that asks for the
+        # old password, then asks for a new one and confirms it.
+
         if self.options.vault_id:
             vault_id = self.options.vault_id
 
-        vault_secrets = None
+        print('self.action=%s' % self.action)
+        # TODO: instead of prompting for these before, we could let VaultEditor
+        #       call a callback when it needs it.
+        if self.action in ['decrypt', 'view', 'rekey']:
+            vault_secrets = self.setup_vault_secrets(loader,
+                                                    vault_id=self.options.vault_id,
+                                                    vault_password_file=self.options.vault_password_file,
+                                                    ask_vault_pass=self.options.ask_vault_pass)
+            print('vault_secrets1: %s' % vault_secrets)
+            print('vault_secrets1.get_secret(): %s' % vault_secrets.get_secret())
+            print('vault_secrets1.get_secret(name=%s): %s' % (vault_id, vault_secrets.get_secret(name=vault_id)))
 
-        if self.options.vault_password_file:
-            vault_secrets = FileVaultSecrets(filename=self.options.vault_password_file,
-                                             loader=loader,
-                                             name=vault_id)
+        if self.action in ['encrypt', 'encrypt_string', 'create']:
+            vault_secrets = None
+            vault_secrets = \
+                self.setup_vault_secrets(loader,
+                                         vault_id=self.options.vault_id,
+                                         vault_password_file=self.options.vault_password_file,
+                                         ask_vault_pass=self.options.ask_vault_pass,
+                                         create_new_password=True)
 
-        if not vault_secrets or self.options.ask_vault_pass:
-            vault_secrets = PromptVaultSecrets(name=vault_id)
-            vault_secrets.ask_vault_passwords()
+            if not vault_secrets:
+                raise AnsibleOptionsError("A new vault password is required to use Ansible's Vault rekey")
+            print('vault_secrets3: %s' % vault_secrets)
+            print('vault_secrets3.get_secret(): %s' % vault_secrets.get_secret())
+            print('vault_secrets3.get_secret(name=%s): %s' % (vault_id, vault_secrets.get_secret(name=vault_id)))
 
-        if self.action == 'rekey':
-            new_vault_secrets = vault_secrets
-            new_vault_id = vault_id
-
-            if self.options.new_vault_id:
-                new_vault_id = self.options.new_vault_id
-
-            if self.options.new_vault_password_file:
-                new_vault_secrets = FileVaultSecrets(filename=self.options.new_vault_password_file,
-                                                    loader=loader,
-                                                    name=new_vault_id)
-
-            if not new_vault_secrets or self.options.ask_vault_pass:
-                new_vault_secrets = PromptVaultSecrets(name=new_vault_id)
-                new_vault_secrets.ask_new_vault_passwords()
+        if self.action in ['rekey']:
+            new_vault_id = self.options.new_vault_id
+            new_vault_secrets = \
+                self.setup_vault_secrets(loader,
+                                         vault_id=new_vault_id,
+                                         vault_password_file=self.options.new_vault_password_file,
+                                         ask_vault_pass=self.options.ask_vault_pass,
+                                         create_new_password=True)
 
             if not new_vault_secrets:
-                raise AnsibleOptionsError("A password is required to use Ansible's Vault")
+                raise AnsibleOptionsError("A new vault password is required to use Ansible's Vault rekey")
 
+            # A VaultEditor instance for writing new files with the secret we confirmed.
+            #self.write_editor = VaultEditor(new_vault_secrets, vault_id=new_vault_id)
             self.new_vault_secrets = new_vault_secrets
             self.new_vault_id = new_vault_id
+            print('new_vault_secrets1: %s' % new_vault_secrets)
+            print('new_vault_secrets1.get_secret(): %s' % new_vault_secrets.get_secret())
+            print('new_vault_secrets1.get_secret(name=%s): %s' % (new_vault_id, new_vault_secrets.get_secret(name=new_vault_id)))
+
+        # use new_vault_secrets as the base vault_secrets for these cases.
+        # rekey will handle itself
+        #if self.action in ['encrypt', 'encrypt_string', 'create']:
+        #    vault_secrets = new_vault_secrets
+        #    vault_id = new_vault_id
 
         if not vault_secrets:
             raise AnsibleOptionsError("A password is required to use Ansible's Vault")
+
+        loader.set_vault_secrets(vault_secrets)
+
+        print('vault_secrets: %s' % vault_secrets)
+        print('vault_secrets.get_secret(): %s' % vault_secrets.get_secret())
+        print('vault_secrets.get_secret(name=%s): %s' % (vault_id, vault_secrets.get_secret(name=vault_id)))
 
         # FIXME: revist the 'rekey' ask-vault-password bug and verify
         self.editor = VaultEditor(vault_secrets, vault_id=vault_id)
