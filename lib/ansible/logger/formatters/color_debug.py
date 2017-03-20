@@ -92,12 +92,16 @@ class ColorFormatter(logging.Formatter):
               """ %(levelname)-0.1s"""
 #              """\033[1;35m%(name)s$RESET """
 #              """%(processName)s """
-              """ %(processName)-15s %(_cdl_process)spid=%(process)-5d%(_cdl_unset)s"""
+              # assume we only need 3 digits for worker process number, if you see this wrap, but the '-4s' below
+              # to '-5s'. This is fixed width just to make the results easier to read for the normal case
+              # (everything before 'name' should be the same width for each log item show...)
+              """ %(processName)-4s %(_cdl_process)spid=%(process)-5d%(_cdl_unset)s"""
 #              """ %(ppid)-5s"""
-              """ %(threadName)s"""
-              """ %(thread)d"""
-              #              """%(_cdl_thread)stid=%(thread)d %(_cdl_threadName)stname=%(threadName)-15s """
-              #              """[tid: \033[32m%(thread)d$RESET tname:\033[32m%(threadName)s]$RESET """
+              # truncate thread name to 2 chars, we use 2char names or the process filter does MainThread/MT elsewhere
+              """ %(threadName)-2s"""
+#              """ %(thread)d"""
+#              """%(_cdl_thread)stid=%(thread)d %(_cdl_threadName)stname=%(threadName)-15s """
+#              """[tid: \033[32m%(thread)d$RESET tname:\033[32m%(threadName)s]$RESET """
 #              """%(module)s """
 #              """ %(_cdl_funcName)s"""
 #              """ ["""

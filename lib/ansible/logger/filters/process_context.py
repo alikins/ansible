@@ -32,4 +32,12 @@ class ProcessContextLoggingFilter(object):
         record.cmd_line = self._current_process.cmd_line
         record.user = self._current_process.user
 
+        # abbreviate processName for brevity
+        if record.processName == "MainProcess":
+            record.processName = "MP"
+
+        # and for threadName
+        if record.threadName == "MainThread":
+            record.threadName = "MT"
+
         return True

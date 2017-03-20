@@ -59,9 +59,13 @@ class WorkerProcess(multiprocessing.Process):
     for reading later.
     '''
 
-    def __init__(self, rslt_q, task_vars, host, task, play_context, loader, variable_manager, shared_loader_obj):
+    def __init__(self, rslt_q, task_vars, host, task, play_context, loader, variable_manager, shared_loader_obj, name=None):
 
-        super(WorkerProcess, self).__init__()
+        super(WorkerProcess, self).__init__(name=name)
+        # tiny kluge so we can use a name template and still get the gen counter
+        name = name or self.__class__.__name__
+        self._name = name + ':'.join(str(i) for i in self._identity)
+
         # takes a task queue manager as the sole param:
         self._rslt_q = rslt_q
         self._task_vars = task_vars

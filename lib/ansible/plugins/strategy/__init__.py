@@ -137,7 +137,8 @@ class StrategyBase:
         self._results_lock = threading.Condition(threading.Lock())
 
         # create the result processing thread for reading results in the background
-        self._results_thread = threading.Thread(target=results_thread_main, args=(self,))
+        # short thread name for logging brevity...
+        self._results_thread = threading.Thread(target=results_thread_main, args=(self,), name="RT")
         self._results_thread.daemon = True
         self._results_thread.start()
 
@@ -230,7 +231,7 @@ class StrategyBase:
                 (worker_prc, rslt_q) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
                     log.info("starting a worker process for task='%s' on host=%s", task, host)
-                    worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj)
+                    worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj, name="WP")
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
                     log.debug("worker is %d (out of %d available)", self._cur_worker+1, len(self._workers))
