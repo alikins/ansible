@@ -115,7 +115,7 @@ class ColorFormatter(logging.Formatter):
               """ """
               """%(filename)s"""
               """ """
-              """%(lineno)-4d"""
+              """%(lineno)d"""
 #              """]"""
 #              """%(_cdl_unset)s"""
 #              """ pb=%(playbook)s"""
