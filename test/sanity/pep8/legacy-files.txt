@@ -1,7 +1,6 @@
 lib/ansible/cli/__init__.py
 lib/ansible/cli/galaxy.py
 lib/ansible/cli/playbook.py
-lib/ansible/compat/six/__init__.py
 lib/ansible/constants.py
 lib/ansible/errors/__init__.py
 lib/ansible/executor/play_iterator.py

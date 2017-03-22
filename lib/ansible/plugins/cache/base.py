@@ -24,8 +24,8 @@ import errno
 from abc import ABCMeta, abstractmethod
 
 from ansible import constants as C
-from ansible.compat.six import with_metaclass
 from ansible.errors import AnsibleError
+from ansible.module_utils.six import with_metaclass
 from ansible.module_utils._text import to_bytes
 
 try:
@@ -33,6 +33,7 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
 
 class BaseCacheModule(with_metaclass(ABCMeta, object)):
 

@@ -24,12 +24,11 @@ import os
 import traceback
 import textwrap
 
-from ansible.compat.six import iteritems, string_types
-
 from ansible import constants as C
-from ansible.errors import AnsibleError, AnsibleOptionsError
-from ansible.plugins import module_loader, action_loader
 from ansible.cli import CLI
+from ansible.errors import AnsibleError, AnsibleOptionsError
+from ansible.module_utils.six import iteritems, string_types
+from ansible.plugins import module_loader, action_loader
 from ansible.utils import module_docs
 
 try:

@@ -28,10 +28,10 @@ from io import BytesIO, StringIO
 import pytest
 
 import ansible.errors
-from ansible.compat.six import PY2
-from ansible.compat.six.moves import builtins
 
 from ansible.executor.module_common import recursive_finder
+from ansible.module_utils.six import PY2
+from ansible.module_utils.six.moves import builtins
 
 
 original_find_module = imp.find_module
@@ -115,7 +115,7 @@ class TestRecursiveFinder(object):
         recursive_finder(name, data, *finder_containers)
         assert finder_containers.py_module_names == set((('six',),))
         assert finder_containers.py_module_cache == {}
-        assert frozenset(finder_containers.zf.namelist()) == frozenset(('ansible/module_utils/six.py',))
+        assert frozenset(finder_containers.zf.namelist()) == frozenset(('ansible/module_utils/__init__.py', 'ansible/module_utils/_six.py'))
 
     def test_import_six(self, finder_containers):
         name = 'ping'
@@ -123,7 +123,7 @@ class TestRecursiveFinder(object):
         recursive_finder(name, data, *finder_containers)
         assert finder_containers.py_module_names == set((('six',),))
         assert finder_containers.py_module_cache == {}
-        assert frozenset(finder_containers.zf.namelist()) == frozenset(('ansible/module_utils/six.py',))
+        assert frozenset(finder_containers.zf.namelist()) == frozenset(('ansible/module_utils/__init__.py', 'ansible/module_utils/_six.py'))
 
     def test_import_six_from_many_submodules(self, finder_containers):
         name = 'ping'
@@ -131,4 +131,4 @@ class TestRecursiveFinder(object):
         recursive_finder(name, data, *finder_containers)
         assert finder_containers.py_module_names == set((('six',),))
         assert finder_containers.py_module_cache == {}
-        assert frozenset(finder_containers.zf.namelist()) == frozenset(('ansible/module_utils/six.py',))
+        assert frozenset(finder_containers.zf.namelist()) == frozenset(('ansible/module_utils/__init__.py', 'ansible/module_utils/_six.py'))
