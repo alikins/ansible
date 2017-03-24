@@ -28,13 +28,18 @@ class SunOSHardware(Hardware):
     def get_cpu_facts(self):
         physid = 0
         sockets = {}
+
         rc, out, err = self.module.run_command("/usr/bin/kstat cpu_info")
+
         self.facts['processor'] = []
+
         for line in out.splitlines():
             if len(line) < 1:
                 continue
+
             data = line.split(None, 1)
             key = data[0].strip()
+
             # "brand" works on Solaris 10 & 11. "implementation" for Solaris 9.
             if key == 'module:':
                 brand = ''
@@ -56,6 +61,7 @@ class SunOSHardware(Hardware):
                     sockets[physid] = 1
                 else:
                     sockets[physid] += 1
+
         # Counting cores on Solaris can be complicated.
         # https://blogs.oracle.com/mandalika/entry/solaris_show_me_the_cpu
         # Treat 'processor_count' as physical sockets and 'processor_cores' as
@@ -70,14 +76,18 @@ class SunOSHardware(Hardware):
 
     def get_memory_facts(self):
         rc, out, err = self.module.run_command(["/usr/sbin/prtconf"])
+
         for line in out.splitlines():
             if 'Memory size' in line:
                 self.facts['memtotal_mb'] = int(line.split()[2])
+
         rc, out, err = self.module.run_command("/usr/sbin/swap -s")
+
         allocated = int(out.split()[1][:-1])
         reserved = int(out.split()[5][:-1])
         used = int(out.split()[8][:-1])
         free = int(out.split()[10][:-1])
+
         self.facts['swapfree_mb'] = free // 1024
         self.facts['swaptotal_mb'] = (free + used) // 1024
         self.facts['swap_allocated_mb'] = allocated // 1024
@@ -86,9 +96,11 @@ class SunOSHardware(Hardware):
     @timeout()
     def get_mount_facts(self):
         self.facts['mounts'] = []
+
         # For a detailed format description see mnttab(4)
         #   special mount_point fstype options time
         fstab = get_file_content('/etc/mnttab')
+
         if fstab:
             for line in fstab.splitlines():
                 fields = line.split('\t')
@@ -112,6 +124,7 @@ class SunOSHardware(Hardware):
         if out:
             system_conf = out.split('\n')[0]
             found = re.search(r'(\w+\sEnterprise\s\w+)', system_conf)
+
             if found:
                 self.facts['product_name'] = found.group(1)
 
