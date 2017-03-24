@@ -44,14 +44,14 @@ class OpenBSDHardware(Hardware):
             for line in fstab.splitlines():
                 if line.startswith('#') or line.strip() == '':
                     continue
-                fields = re.sub(r'\s+',' ', line).split()
+                fields = re.sub(r'\s+', ' ', line).split()
                 if fields[1] == 'none' or fields[3] == 'xx':
                     continue
                 size_total, size_available = self._get_mount_size_facts(fields[1])
                 self.facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],
-                    'fstype' : fields[2],
+                    'fstype': fields[2],
                     'options': fields[3],
                     'size_total': size_total,
                     'size_available': size_available
@@ -73,7 +73,9 @@ class OpenBSDHardware(Hardware):
         # total: 69268k bytes allocated = 0k used, 69268k available
         rc, out, err = self.module.run_command("/sbin/swapctl -sk")
         if rc == 0:
-            swaptrans = { ord(u'k'): None, ord(u'm'): None, ord(u'g'): None}
+            swaptrans = {ord(u'k'): None,
+                         ord(u'm'): None,
+                         ord(u'g'): None}
             data = to_text(out, errors='surrogate_or_strict').split()
             self.facts['swapfree_mb'] = int(data[-2].translate(swaptrans)) // 1024
             self.facts['swaptotal_mb'] = int(data[1].translate(swaptrans)) // 1024
@@ -107,11 +109,11 @@ class OpenBSDHardware(Hardware):
         # best-effort basis. As a bonus we also get facts on non-amd64/i386
         # platforms this way.
         sysctl_to_dmi = {
-            'hw.product':  'product_name',
-            'hw.version':  'product_version',
-            'hw.uuid':     'product_uuid',
+            'hw.product': 'product_name',
+            'hw.version': 'product_version',
+            'hw.uuid': 'product_uuid',
             'hw.serialno': 'product_serial',
-            'hw.vendor':   'system_vendor',
+            'hw.vendor': 'system_vendor',
         }
 
         for mib in sysctl_to_dmi:
