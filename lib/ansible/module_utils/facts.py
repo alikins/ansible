@@ -27,6 +27,7 @@
 # - document model and structure of found facts
 # - try to make classes/methods have less side effects
 
+# TODO: try to increase unit test coverage
 # TODO: module_utils/facts.py -> module_utils/facts/__init__.py
 # TODO: mv platform specific stuff into facts/* modules?
 # TODO: general pep8/style clean ups
