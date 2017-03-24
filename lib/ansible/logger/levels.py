@@ -8,6 +8,7 @@ class Levels(object):
     # logging.DEBUG = 10
     VVVVV = 10
 
+
 V = Levels.V
 VV = Levels.VV
 VVV = Levels.VVV

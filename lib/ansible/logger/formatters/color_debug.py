@@ -2,6 +2,7 @@ import logging
 import re
 import sys
 
+from ansible.logger import levels
 # import this module to dump colories DEBUG level logging on stdout
 #
 # includes thread info by default, so can be useful for some
@@ -181,7 +182,12 @@ class ColorFormatter(logging.Formatter):
     LEVEL_COLORS = {'TRACE': BASE_COLORS[BLUE],
                     'SUBDEBUG': BASE_COLORS[BLUE],
                     'DEBUG': BASE_COLORS[BLUE],
+                    levels.VV: BASE_COLORS[BLUE],
+                    levels.VVV: BASE_COLORS[BLUE],
+                    levels.VVVV: BASE_COLORS[BLUE],
+                    levels.VVVVV: BASE_COLORS[BLUE],
                     'INFO': BASE_COLORS[GREEN],
+                    levels.V: BASE_COLORS[GREEN],
                     'SUBWARNING': BASE_COLORS[YELLOW],
                     'WARNING': BASE_COLORS[YELLOW],
                     'ERROR': BASE_COLORS[RED],
@@ -248,10 +254,10 @@ class ColorFormatter(logging.Formatter):
         name_mod = name_hash % self.NUMBER_OF_THREAD_COLORS
         return self.THREAD_COLORS[name_mod]
 
-    def get_level_color(self, levelname):
-        if levelname not in self.LEVEL_COLORS:
-            return
-        level_color = self.LEVEL_COLORS[levelname]
+    def get_level_color(self, levelname, levelno):
+        level_color = self.LEVEL_COLORS.get(levelname, None)
+        if not level_color:
+            level_color = self.LEVEL_COLORS.get(levelno, self.default_color)
         return level_color
 
     def get_process_colors(self, record):
@@ -311,7 +317,7 @@ class ColorFormatter(logging.Formatter):
         # NOTE: the impl here is based on info from justthe LogRecord and should be okay across threads
         #       If this wants to use more global data, beware...
         if self.use_level_color:
-            level_color = self.get_level_color(record.levelname)
+            level_color = self.get_level_color(record.levelname, record.levelno)
             record._cdl_levelname = level_color
 
         # set a different color for each logger name. And by default, make filename, funcName, and lineno match.
