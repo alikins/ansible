@@ -105,7 +105,7 @@ class TestSunOSHardware(BaseTestFactsPlatform):
 
 class TestOpenBSDHardware(BaseTestFactsPlatform):
     platform_id = 'OpenBSD'
-    fact_class = facts.OpenBSDHardware
+    fact_class = hardware.openbsd.OpenBSDHardware
 
 
 class TestFreeBSDHardware(BaseTestFactsPlatform):
