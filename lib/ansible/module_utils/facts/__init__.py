@@ -38,9 +38,6 @@
 #          - much much easier to test
 import os
 import sys
-import stat
-import time
-import shlex
 import errno
 import fnmatch
 import glob
@@ -49,34 +46,15 @@ import re
 import signal
 import socket
 import struct
-import datetime
-import getpass
-import pwd
 
 from ansible.module_utils.basic import get_all_subclasses
-from ansible.module_utils.six import PY3, iteritems
-from ansible.module_utils.six.moves import configparser, StringIO, reduce
-from ansible.module_utils._text import to_native, to_text
+from ansible.module_utils.six import PY3
+from ansible.module_utils.six.moves import reduce
+from ansible.module_utils._text import to_text
 
 # FIXME: not a fan of importing symbols into a different namespace (vs import a module)
-from ansible.module_utils.facts.utils import get_file_content
-from ansible.module_utils.facts.distribution import Distribution
-
-
-try:
-    import selinux
-    HAVE_SELINUX=True
-except ImportError:
-    HAVE_SELINUX=False
-
-try:
-    # Check if we have SSLContext support
-    from ssl import create_default_context, SSLContext
-    del create_default_context
-    del SSLContext
-    HAS_SSLCONTEXT = True
-except ImportError:
-    HAS_SSLCONTEXT = False
+from ansible.module_utils.facts.utils import get_file_content, get_file_lines
+from ansible.module_utils.facts.facts import Facts
 
 try:
     import json
@@ -90,13 +68,6 @@ try:
 except ImportError:
     import simplejson as json
 
-# The distutils module is not shipped with SUNWPython on Solaris.
-# It's in the SUNWPython-devel package which also contains development files
-# that don't belong on production boxes.  Since our Solaris code doesn't
-# depend on LooseVersion, do not import it on Solaris.
-if platform.system() != 'SunOS':
-    from distutils.version import LooseVersion
-
 
 # --------------------------------------------------------------
 # timeout function to make sure some fact gathering
@@ -107,6 +78,7 @@ DEFAULT_GATHER_TIMEOUT = 10
 
 class TimeoutError(Exception):
     pass
+
 
 def timeout(seconds=None, error_message="Timer expired"):
 
@@ -1134,7 +1106,6 @@ class Hardware(Facts):
             (key, value) = re.split('\s?=\s?|: ', line, maxsplit=1)
             sysctl[key] = value.strip()
         return sysctl
-
 
 
 class LinuxHardware(Hardware):
@@ -4031,16 +4002,7 @@ def get_partition_uuid(partname):
 
     return None
 
-def get_file_lines(path):
-    '''get list of lines from file'''
-    data = get_file_content(path)
-    if data:
-        ret = data.splitlines()
-    else:
-        ret = []
-    return ret
 
-#
 def ansible_facts(module, gather_subset):
     facts = {}
     facts['gather_subset'] = list(gather_subset)
