@@ -15,10 +15,12 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
 from ansible.module_utils.facts.hardware import aix
+from ansible.module_utils.facts.hardware import dragonfly
+from ansible.module_utils.facts.hardware import freebsd
 from ansible.module_utils.facts.hardware import hpux
 from ansible.module_utils.facts.hardware import hurd
 from ansible.module_utils.facts.hardware import linux
 from ansible.module_utils.facts.hardware import openbsd
 from ansible.module_utils.facts.hardware import sunos
 
-__all__ = [aix, hpux, hurd, linux, openbsd, sunos]
+__all__ = [aix, dragonfly, freebsd, hpux, hurd, linux, openbsd, sunos]

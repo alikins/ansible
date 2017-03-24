@@ -110,12 +110,12 @@ class TestOpenBSDHardware(BaseTestFactsPlatform):
 
 class TestFreeBSDHardware(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
-    fact_class = facts.FreeBSDHardware
+    fact_class = hardware.freebsd.FreeBSDHardware
 
 
 class TestDragonFlyHardware(BaseTestFactsPlatform):
     platform_id = 'DragonFly'
-    fact_class = facts.DragonFlyHardware
+    fact_class = hardware.dragonfly.DragonFlyHardware
 
 
 class TestNetBSDHardware(BaseTestFactsPlatform):
