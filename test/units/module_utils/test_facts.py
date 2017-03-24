@@ -28,18 +28,42 @@ from ansible.module_utils import facts
 
 # FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
 class TestInPlace(unittest.TestCase):
-    def test(self):
+    def _mock_module(self):
         mock_module = Mock()
         mock_module.params = {'gather_subset': ['all', '!facter', '!ohai'],
                               'gather_timeout': 5,
                               'filter': '*'}
         mock_module.get_bin_path = Mock(return_value=None)
+        return mock_module
+
+    def test(self):
+        mock_module = self._mock_module()
         res = facts.get_all_facts(mock_module)
         #print(res)
         self.assertIsInstance(res, dict)
         self.assertIn('ansible_facts', res)
         # just assert it's not almost empty
-        self.assertGreater(len(res['ansible_facts']), 40)
+        self.assertGreater(len(res['ansible_facts']), 30)
+
+    def test_facts_class(self):
+        mock_module = self._mock_module()
+        facts_obj = facts.Facts(mock_module)
+        print(facts_obj)
+
+    def test_facts_class_load_on_init_false(self):
+        mock_module = self._mock_module()
+        facts_obj = facts.Facts(mock_module, load_on_init=False)
+        print(facts_obj)
+
+    def test_facts_class_populate(self):
+        mock_module = self._mock_module()
+        facts_obj = facts.Facts(mock_module)
+        res = facts_obj.populate()
+        print(res)
+        self.assertIsInstance(res, dict)
+        self.assertIn('python_version', res)
+        # just assert it's not almost empty
+        self.assertGreater(len(res), 30)
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
