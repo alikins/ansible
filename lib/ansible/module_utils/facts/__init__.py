@@ -57,6 +57,7 @@ from ansible.module_utils.facts.utils import get_file_content, get_file_lines
 
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
+from ansible.module_utils.facts.facter import Facter
 
 try:
     import json
@@ -3005,33 +3006,6 @@ class SunOSVirtual(Virtual):
                     elif 'KVM' in line:
                         self.facts['virtualization_type'] = 'kvm'
                         self.facts['virtualization_role'] = 'guest'
-
-
-class Facter(Facts):
-    """
-    This is a subclass of Facts for including information gathered from Facter.
-    """
-    def populate(self):
-        self.run_facter()
-        return self.facts
-
-    def run_facter(self):
-        facter_path = self.module.get_bin_path('facter', opt_dirs=['/opt/puppetlabs/bin'])
-        cfacter_path = self.module.get_bin_path('cfacter', opt_dirs=['/opt/puppetlabs/bin'])
-        # Prefer to use cfacter if available
-        if cfacter_path is not None:
-            facter_path = cfacter_path
-
-        if facter_path is None:
-            return
-
-        # if facter is installed, and we can use --json because
-        # ruby-json is ALSO installed, include facter data in the JSON
-        rc, out, err = self.module.run_command(facter_path + " --puppet --json")
-        try:
-            self.facts = json.loads(out)
-        except:
-            pass
 
 
 def get_partition_uuid(partname):
