@@ -2,7 +2,7 @@
 from ansible.module_utils.facts import Hardware
 
 
-class Darwin(Hardware):
+class DarwinHardware(Hardware):
     """
     Darwin-specific subclass of Hardware.  Defines memory and CPU facts:
     - processor
