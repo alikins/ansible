@@ -135,7 +135,7 @@ class TestHPUXHardware(BaseTestFactsPlatform):
 
 class TestDarwinHardware(BaseTestFactsPlatform):
     platform_id = 'Darwin'
-    fact_class = facts.Darwin
+    fact_class = hardware.darwin.Darwin
 
 
 class TestGenericNetwork(BaseTestFactsPlatform):
