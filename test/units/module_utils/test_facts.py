@@ -100,7 +100,7 @@ class TestHurdFactsPlatform(BaseTestFactsPlatform):
 
 class TestSunOSHardware(BaseTestFactsPlatform):
     platform_id = 'SunOS'
-    fact_class = facts.SunOSHardware
+    fact_class = hardware.sunos.SunOSHardware
 
 
 class TestOpenBSDHardware(BaseTestFactsPlatform):
