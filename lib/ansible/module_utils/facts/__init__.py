@@ -59,6 +59,11 @@ from ansible.module_utils.six import PY3, iteritems
 from ansible.module_utils.six.moves import configparser, StringIO, reduce
 from ansible.module_utils._text import to_native, to_text
 
+# FIXME: not a fan of importing symbols into a different namespace (vs import a module)
+from ansible.module_utils.facts.utils import get_file_content
+from ansible.module_utils.facts.distribution import Distribution
+
+
 try:
     import selinux
     HAVE_SELINUX=True
@@ -4013,31 +4018,6 @@ class Facter(Facts):
         except:
             pass
 
-
-def get_file_content(path, default=None, strip=True):
-    data = default
-    if os.path.exists(path) and os.access(path, os.R_OK):
-        try:
-            try:
-                datafile = open(path)
-                data = datafile.read()
-                if strip:
-                    data = data.strip()
-                if len(data) == 0:
-                    data = default
-            finally:
-                datafile.close()
-        except:
-            # ignore errors as some jails/containers might have readable permissions but not allow reads to proc
-            # done in 2 blocks for 2.4 compat
-            pass
-    return data
-
-def get_uname_version(module):
-    rc, out, err = module.run_command(['uname', '-v'])
-    if rc == 0:
-        return out
-    return None
 
 def get_partition_uuid(partname):
     try:
