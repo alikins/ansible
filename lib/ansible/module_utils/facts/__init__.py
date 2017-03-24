@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-
 # GOALS:
 # - finer grained fact gathering
 # - better tested facts code
@@ -4058,10 +4057,9 @@ def ansible_facts(module, gather_subset):
 # FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
 #        'gather_timeout', 'filter' instead of passing those are args or oblique ds
 #        module is passed in and self.module.misc_AnsibleModule_methods are used, so hard to decouple.
-def get_all_facts(module):
-
-    setup_options = dict(module_setup=True)
-
+# FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
+#def get_all_facts(module):
+def get_gatherer_names(module):
     # Retrieve module parameters
     gather_subset = module.params['gather_subset']
 
@@ -4096,10 +4094,21 @@ def get_all_facts(module):
         additional_subsets.update(VALID_SUBSETS)
 
     additional_subsets.difference_update(exclude_subsets)
+    return additional_subsets
+
+
+def _get_all_facts(gatherer_names, module):
+    additional_subsets = gatherer_names
+
+    setup_options = dict(module_setup=True)
+
+    # FIXME: it looks like we run Facter/Ohai twice...
 
     # facter and ohai are given a different prefix than other subsets
     if 'facter' in additional_subsets:
         additional_subsets.difference_update(('facter',))
+        # FIXME: .populate(prefix='facter')
+        #   or a dict.update() that can prefix key names
         facter_ds = FACT_SUBSETS['facter'](module, load_on_init=False).populate()
         if facter_ds:
             for (k, v) in facter_ds.items():
@@ -4125,9 +4134,18 @@ def get_all_facts(module):
 
     return setup_result
 
+def get_all_facts(module):
+    gatherer_names = get_gatherer_names(module)
+
+    # FIXME: avoid having to pass in module until we populate
+    all_facts = _get_all_facts(gatherer_names, module)
+
+    return all_facts
+
 # Allowed fact subset for gather_subset options and what classes they use
 # Note: have to define this at the bottom as it references classes defined earlier in this file
 FACT_SUBSETS = dict(
+    # FIXME: add facts=Facts,
     hardware=Hardware,
     network=Network,
     virtual=Virtual,
