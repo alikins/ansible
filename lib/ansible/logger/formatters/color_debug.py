@@ -28,7 +28,8 @@ def context_color_format_string(format_string):
     color_attrs = ['name', 'process', 'processName',
                    'levelname', 'threadName', 'thread',
                    'relativeCreated', 'message', 'exc_text',
-                   'filename', 'funcName', 'lineno', 'playbook', 'play', 'task']
+                   'filename', 'funcName', 'lineno', 'playbook', 'play',
+                   'tags', 'task']
 
     color_attrs_string = '|'.join(color_attrs)
 
@@ -124,13 +125,15 @@ class ColorFormatter(logging.Formatter):
 #              """ plu=%(play_uuid)s"""
 #              """ tsk=%(task)s"""
 #              """ tsku=%(task_uuid)s"""
+#              """ - %(tags)s"""
+#              """ - %(_cdl_task)s%(task)s%(_cdl_unset)s"""
               """ - %(message)s"""
               """%(_cdl_reset)s""")
 #              """- $BOLD%(message)s$RESET""")
 
     default_color_groups = [
         #('process', ['default', 'message']),
-        ('process', ['default', 'message', 'unset', 'processName', 'exc_text']),
+        ('process', ['default', 'message', 'unset', 'processName', 'exc_text', 'tags']),
         #('thread', ['default', 'threadName', 'message', 'unset', 'processName', 'exc_text']),
         ('thread', ['threadName', 'thread']),
 
@@ -142,6 +145,7 @@ class ColorFormatter(logging.Formatter):
         # color funcName, filename, lineno same as logger name
         ('name', ['funcName', 'filename', 'lineno']),
 
+        ('task', ['task_uuid', 'task']),
         # color message and default same as funcName
         #('funcName', ['message', 'unset'])
 

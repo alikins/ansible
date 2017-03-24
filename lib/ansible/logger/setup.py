@@ -18,6 +18,10 @@ logging.setLoggerClass(default.AnsibleLogger)
 # TODO: suppose we need to make the config file location configurable
 DEFAULT_YAML_LOGGING_CONF = "/home/adrian/ansible_logging.yaml"
 
+# TODO:
+# filters for tasks/play/etc
+# filters for tags
+
 
 def log_setup(config_dict=None):
     # TODO: if we decide we need a way to configure our configuration style, figure it out here

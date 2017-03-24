@@ -21,6 +21,7 @@ class DefaultAttributesFilter(object):
                          'playbook_uuid': '',
                          'play': '',
                          'play_uuid': '',
+                         'tags': '',
                          'task': '',
                          'task_uuid': '',
                          'user': '',

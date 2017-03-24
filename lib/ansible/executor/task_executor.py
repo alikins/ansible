@@ -37,6 +37,7 @@ from ansible.template import Templar
 from ansible.utils.encrypt import key_for_hostname
 from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.unsafe_proxy import UnsafeProxy, wrap_var
+from ansible.logger.adapters import task as task_logger
 
 try:
     from __main__ import display
@@ -75,7 +76,15 @@ class TaskExecutor:
         self._rslt_q = rslt_q
         self._loop_eval_error = None
 
+
         self._task.squash()
+
+        self.task_log = task_logger.TaskLoggerAdapter(log, extra={'task': "'%s'" % self._task,
+                                                                  'task_uuid': self._task._uuid,
+                                                                  'tags': self._task.tags,
+                                                                  'remote_addr': self._host.name,
+                                                                  'remote_user': self._play_context.remote_user})
+
 
     def run(self):
         '''
@@ -86,7 +95,7 @@ class TaskExecutor:
         '''
 
         display.debug("in run() - task %s" % self._task._uuid)
-        log.debug("in run() - task %s", self._task._uuid)
+        self.log.debug("in run() - task %s", self._task._uuid)
 
         try:
             try:
@@ -127,10 +136,10 @@ class TaskExecutor:
                     res = dict(changed=False, skipped=True, skipped_reason='No items in the list', results=[])
             else:
                 display.debug("calling self._execute()")
-                log.debug("calling self._execute()")
+                self.task_log.debug("calling self._execute()")
                 res = self._execute()
                 display.debug("_execute() done")
-                log.debug("_execute() done")
+                self.task_log.debug("_execute() done")
 
             # make sure changed is set in the result, if it's not present
             if 'changed' not in res:
@@ -160,17 +169,17 @@ class TaskExecutor:
                 return res
 
             display.debug("dumping result to json")
-            log.debug("dumping result to json")
+            self.task_log.debug("dumping result to json")
 
             res = _clean_res(res)
             display.debug("done dumping result, returning")
-            log.debug("done dumping result, returning")
+            self.task_log.debug("done dumping result, returning")
 
             return res
         except AnsibleError as e:
             return dict(failed=True, msg=to_text(e, nonstring='simplerepr'))
         except Exception as e:
-            log.exception('task_executor.run()')
+            self.task_log.exception('task_executor.run()')
             return dict(failed=True, msg='Unexpected failure during module execution.', exception=to_text(traceback.format_exc()), stdout='')
         finally:
             try:
@@ -181,7 +190,7 @@ class TaskExecutor:
                 # FIXME: exceptions should have a __str__/__repr__ that handles this
                 msg = u"error closing connection: %s" % to_text(e)
                 display.debug(msg)
-                log.debug(msg)
+                self.task_log.debug(msg)
 
     def _get_loop_items(self):
         '''
@@ -194,7 +203,7 @@ class TaskExecutor:
         # and later restore them to avoid modifying things too early
         play_context_vars = dict()
         self._play_context.update_vars(play_context_vars)
-        log.debug('play_context after update_vars is %s', self._play_context)
+        self.task_log.debug('play_context after update_vars is %s', self._play_context)
 
         old_vars = dict()
         for k in play_context_vars:
@@ -229,7 +238,7 @@ class TaskExecutor:
                 setattr(mylookup, '_subdir', subdir + 's')
 
                 # run lookup
-                log.info('running lookup loop=%s terms=%s', self._task.loop, loop_terms)
+                self.task_log.info('running lookup loop=%s terms=%s', self._task.loop, loop_terms)
                 items = mylookup.run(terms=loop_terms, variables=self._job_vars, wantlist=True)
             else:
                 raise AnsibleError("Unexpected failure in finding the lookup named '%s' in the available lookup plugins" % self._task.loop)
@@ -261,7 +270,7 @@ class TaskExecutor:
         along with the item for which the loop ran.
         '''
 
-        log.debug('running loop for items=%s', items)
+        self.task_log.debug('running loop for items=%s', items)
         results = []
 
         # make copies of the job vars and task so we can add the item to
@@ -283,7 +292,7 @@ class TaskExecutor:
             u"You should set the `loop_var` value in the `loop_control` option for the task"
             u" to something else to avoid variable collisions and unexpected behavior." % loop_var
             display.warning(msg)
-            log.warning(msg)
+            self.task_log.warning(msg)
 
         ran_once = False
         items = self._squash_items(items, loop_var, task_vars)
@@ -308,7 +317,7 @@ class TaskExecutor:
             # execute, and swap them back so we can do the next iteration cleanly
             (self._task, tmp_task) = (tmp_task, self._task)
             (self._play_context, tmp_play_context) = (tmp_play_context, self._play_context)
-            log.info('running loop task=%s for item=%s', self._task, item)
+            self.task_log.info('running loop task=%s for item=%s', self._task, item)
             res = self._execute(variables=task_vars)
             (self._task, tmp_task) = (tmp_task, self._task)
             (self._play_context, tmp_play_context) = (tmp_play_context, self._play_context)
@@ -341,7 +350,7 @@ class TaskExecutor:
         Squash items down to a comma-separated list for certain modules which support it
         (typically package management modules).
         '''
-        log.debug('squashing items=%s loop_var=%s', items, loop_var)
+        self.task_log.debug('squashing items=%s loop_var=%s', items, loop_var)
         name = None
         try:
             # _task.action could contain templatable strings (via action: and
@@ -386,7 +395,7 @@ class TaskExecutor:
                             self._task.args['name'] = final_items
                             # Wrap this in a list so that the calling function loop
                             # executes exactly once
-                            log.info('squash items to final_items=%s', final_items)
+                            self.task_log.info('squash items to final_items=%s', final_items)
                             return [final_items]
                         else:
                             # Restore the name parameter
@@ -412,7 +421,7 @@ class TaskExecutor:
         on the specified host (which may be the delegated_to host) and handles
         the retry/until and block rescue/always execution
         '''
-        log.debug('_execute started')
+        self.task_log.debug('_execute started')
         if variables is None:
             variables = self._job_vars
 
@@ -424,7 +433,7 @@ class TaskExecutor:
             # which may override some fields already set by the play or
             # the options specified on the command line
             self._play_context = self._play_context.set_task_and_variable_override(task=self._task, variables=variables, templar=templar)
-            #log.info('play_context updated with task info is now: %s', self._play_context)
+            #self.task_log.info('play_context updated with task info is now: %s', self._play_context)
             # fields set from the play/task may be based on variables, so we have to
             # do the same kind of post validation step on it here before we use it.
             self._play_context.post_validate(templar=templar)
@@ -437,7 +446,7 @@ class TaskExecutor:
             # We also add "magic" variables back into the variables dict to make sure
             # a certain subset of variables exist.
             self._play_context.update_vars(variables)
-            #log.info('play_context after _execute is %s', self._play_context)
+            #self.task_log.info('play_context after _execute is %s', self._play_context)
         except AnsibleError as e:
             # save the error, which we'll raise later if we don't end up
             # skipping this task during the conditional evaluation step
@@ -450,7 +459,7 @@ class TaskExecutor:
         try:
             if not self._task.evaluate_conditional(templar, variables):
                 display.debug("when evaluation is False, skipping this task")
-                log.debug("when evaluation is False, skipping this task")
+                self.task_log.debug("when evaluation is False, skipping this task")
 
                 return dict(changed=False, skipped=True, skip_reason='Conditional result was False', _ansible_no_log=self._play_context.no_log)
         except AnsibleError:
@@ -460,7 +469,7 @@ class TaskExecutor:
             # skip conditional exception in the case of includes as the vars needed might not be available except in the included tasks or due to tags
             if self._task.action not in ['include', 'include_tasks', 'include_role']:
                 raise
-            log.exception('dropped evaluated_conditional exception')
+            self.task_log.exception('dropped evaluated_conditional exception')
 
         # Not skipping, if we had loop error raised earlier we need to raise it now to halt the execution of this task
         if self._loop_eval_error is not None:
@@ -546,16 +555,16 @@ class TaskExecutor:
         vars_copy = variables.copy()
 
         display.debug("starting attempt loop")
-        log.debug("starting attempt loop")
+        self.task_log.debug("starting attempt loop")
 
         result = None
         for attempt in range(1, retries + 1):
             display.debug("running the handler")
-            log.debug("running the handler")
-            log.debug('attempt=%s', attempt)
+            self.task_log.debug("running the handler")
+            self.task_log.debug('attempt=%s', attempt)
 
             if self._task.async > 0 and self._task.poll == 0:
-                log.info('running the handler async fire and forget task=%s async=%s poll=%s', self._task, self._task.async, self._task.poll)
+                self.task_log.info('running the handler async fire and forget task=%s async=%s poll=%s', self._task, self._task.async, self._task.poll)
 
             try:
                 result = self._handler.run(task_vars=variables)
@@ -567,7 +576,7 @@ class TaskExecutor:
                 return dict(unreachable=True, msg=to_text(e))
 
             display.debug("handler run complete")
-            log.debug("handler run complete")
+            self.task_log.debug("handler run complete")
 
             # preserve no log
             result["_ansible_no_log"] = self._play_context.no_log
@@ -623,8 +632,8 @@ class TaskExecutor:
                 _evaluate_changed_when_result(result)
                 _evaluate_failed_when_result(result)
 
-            log.debug('retries=%s', retries)
-            log.debug('delay=%s', delay)
+            self.task_log.debug('retries=%s', retries)
+            self.task_log.debug('delay=%s', delay)
             if retries > 1:
                 cond = Conditional(loader=self._loader)
                 cond.when = self._task.until
@@ -639,7 +648,7 @@ class TaskExecutor:
 
                         msg = 'Retrying task, attempt %d of %d' % (attempt, retries)
                         display.debug(msg % (attempt, retries))
-                        log.debug(msg, attempt, retries)
+                        self.task_log.debug(msg, attempt, retries)
 
                         self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result, task_fields=self._task.dump_attrs()), block=False)
                         time.sleep(delay)
@@ -676,7 +685,7 @@ class TaskExecutor:
 
         # and return
         display.debug("attempt loop complete, returning result")
-        log.debug("attempt loop complete, returning result")
+        self.task_log.debug("attempt loop complete, returning result")
         return result
 
     def _poll_async_result(self, result, templar, task_vars=None):
@@ -684,10 +693,10 @@ class TaskExecutor:
         Polls for the specified JID to be complete
         '''
 
-        log.info('polling for async results for job_id=%s async=%s poll=%s',
-                 result.get('ansible_job_id'),
-                 self._task.async,
-                 self._task.poll)
+        self.task_log.info('polling for async results for job_id=%s async=%s poll=%s',
+                           result.get('ansible_job_id'),
+                           self._task.async,
+                           self._task.poll)
         if task_vars is None:
             task_vars = self._job_vars
 
@@ -717,7 +726,7 @@ class TaskExecutor:
 
         time_left = self._task.async
         while time_left > 0:
-            log.info('sleeping for %s seconds time_left=%s', self._task.poll, time_left)
+            self.task_log.info('sleeping for %s seconds time_left=%s', self._task.poll, time_left)
             time.sleep(self._task.poll)
 
             try:
@@ -817,10 +826,10 @@ class TaskExecutor:
                 connection._connect()
             except AnsibleConnectionFailure:
                 display.debug('connection failed, fallback to accelerate')
-                log.debug('connection failed, fallback to accelerate')
+                self.task_log.debug('connection failed, fallback to accelerate')
                 res = handler._execute_module(module_name='accelerate', module_args=accelerate_args, task_vars=variables, delete_remote_tmp=False)
                 display.debug(res)
-                log.debug('_execute_module results=%s', res)
+                self.task_log.debug('_execute_module results=%s', res)
                 connection._connect()
 
         return connection
