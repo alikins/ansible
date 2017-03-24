@@ -15,6 +15,27 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+
+# GOALS:
+# - finer grained fact gathering
+# - better tested facts code
+# - more module facts code
+# - pluggable fact gatherers (fact plugins)
+# - test cases
+# - split up this py module into smaller modules
+# - improve the multiplatform support and simplify how Facts implementations are chosen
+# - document model and structure of found facts
+# - try to make classes/methods have less side effects
+
+# TODO: module_utils/facts.py -> module_utils/facts/__init__.py
+# TODO: mv platform specific stuff into facts/* modules?
+# TODO: general pep8/style clean ups
+# TODO: tiny bit of abstractions for run_command() and get_file_content() use
+#       ie, code like self.module.run_command('some_netinfo_tool --someoption')[1].splitlines[][0].split()[1] ->
+#          netinfo_output = self._netinfo_provider()
+#          netinfo_data = self._netinfo_parse(netinfo_output)
+#       why?
+#          - much much easier to test
 import os
 import sys
 import stat
