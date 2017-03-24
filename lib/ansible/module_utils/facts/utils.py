@@ -21,6 +21,16 @@ def get_file_content(path, default=None, strip=True):
     return data
 
 
+def get_file_lines(path):
+    '''get list of lines from file'''
+    data = get_file_content(path)
+    if data:
+        ret = data.splitlines()
+    else:
+        ret = []
+    return ret
+
+
 # FIXME: be consitent about wrapped command (and files)
 # FIXME: move somewhere better
 def get_uname_version(module):
