@@ -3,7 +3,7 @@ import re
 from ansible.module_utils.facts import Hardware
 
 
-class AIX(Hardware):
+class AIXHardware(Hardware):
     """
     AIX-specific subclass of Hardware.  Defines memory and CPU facts:
     - memfree_mb
