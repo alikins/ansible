@@ -18,6 +18,7 @@ from ansible.module_utils.facts.hardware import aix
 from ansible.module_utils.facts.hardware import hpux
 from ansible.module_utils.facts.hardware import hurd
 from ansible.module_utils.facts.hardware import linux
+from ansible.module_utils.facts.hardware import openbsd
 from ansible.module_utils.facts.hardware import sunos
 
-__all__ = [aix, hpux, hurd, linux, sunos]
+__all__ = [aix, hpux, hurd, linux, openbsd, sunos]
