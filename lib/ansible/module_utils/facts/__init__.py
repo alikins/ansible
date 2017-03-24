@@ -54,7 +54,9 @@ from ansible.module_utils._text import to_text
 
 # FIXME: not a fan of importing symbols into a different namespace (vs import a module)
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
+
 from ansible.module_utils.facts.facts import Facts
+from ansible.module_utils.facts.ohai import Ohai
 
 try:
     import json
@@ -3943,24 +3945,6 @@ class SunOSVirtual(Virtual):
                         self.facts['virtualization_type'] = 'kvm'
                         self.facts['virtualization_role'] = 'guest'
 
-class Ohai(Facts):
-    """
-    This is a subclass of Facts for including information gathered from Ohai.
-    """
-
-    def populate(self):
-        self.run_ohai()
-        return self.facts
-
-    def run_ohai(self):
-        ohai_path = self.module.get_bin_path('ohai')
-        if ohai_path is None:
-            return
-        rc, out, err = self.module.run_command(ohai_path)
-        try:
-            self.facts.update(json.loads(out))
-        except:
-            pass
 
 class Facter(Facts):
     """
