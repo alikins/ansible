@@ -125,13 +125,12 @@ class TestNetBSDHardware(BaseTestFactsPlatform):
 
 class TestAIXHardware(BaseTestFactsPlatform):
     platform_id = 'AIX'
-    fact_class = hardware.aix.AIX
-    print(fact_class)
+    fact_class = hardware.aix.AIXHardware
 
 
 class TestHPUXHardware(BaseTestFactsPlatform):
     platform_id = 'HP-UX'
-    fact_class = hardware.hpux.HPUX
+    fact_class = hardware.hpux.HPUXHardware
 
 
 class TestDarwinHardware(BaseTestFactsPlatform):

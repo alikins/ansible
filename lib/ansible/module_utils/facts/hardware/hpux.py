@@ -4,7 +4,7 @@ import re
 from ansible.module_utils.facts import Hardware
 
 
-class HPUX(Hardware):
+class HPUXHardware(Hardware):
     """
     HP-UX-specific subclass of Hardware. Defines memory and CPU facts:
     - memfree_mb
