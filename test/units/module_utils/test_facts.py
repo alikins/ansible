@@ -131,7 +131,7 @@ class TestAIXHardware(BaseTestFactsPlatform):
 
 class TestHPUXHardware(BaseTestFactsPlatform):
     platform_id = 'HP-UX'
-    fact_class = facts.HPUX
+    fact_class = hardware.hpux.HPUX
 
 
 class TestDarwinHardware(BaseTestFactsPlatform):
