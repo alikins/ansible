@@ -117,9 +117,16 @@ def timeout(seconds=None, error_message="Timer expired"):
 
 # --------------------------------------------------------------
 
+
 # NOTE: This Facts class is mostly facts gathering implementation.
 #       A FactsModel data structure class would be useful, especially
-#       if we ever plan on documenting what various facts mean -akl
+#       if we ever plan on documenting what various facts mean. This would
+#       also be a good place to map fact label to fact class -akl
+# NOTE: And a class similar to this one that composites a set or tree of
+#       other fact gathering classes. Potentially driven by run time passing
+#       of a list of the fact gather classes to include (finer grained gather_facts)
+#       Or, possibly even a list or dict of fact labels 'ansible_lvm' for ex, that
+#       the driver class would use to determine which fact gathering classes to load
 class Facts(object):
     """
     This class should only attempt to populate those facts that
@@ -184,6 +191,25 @@ class Facts(object):
         #       then this wouldn't need to happen on init. There would still be some ordering required
         #       though. If the gather methods return a dict of the new facts, then the accumulated facts
         #       can be read-only to avoid manipulating it by side effect. -akl
+
+        # TODO: to avoid hard coding this, something like
+        # list so we can imply some order suggestions
+        # fact_providers is a map or lookup of fact label -> fact gather class/inst that provides it
+        #  - likely will also involve a fact plugin lookup
+        #    ( could fact providing modules include the list of fact labels in their metadata? so we could determine
+        #      with plugin to load before we actually load and inst it?)
+        # fact_gatherers = []
+        # for requested_fact in requested_facts:
+        #    fact_gatherer = self.fact_providers.get('requested_fact', None)
+        #    if not fact_gatherer:
+        #        continue
+        #    fact_gatherers.append(fact_gatherer)
+
+        ## TODO: de-dup fact_gatherers
+        #for gatherer in fact_gatherers:
+        #    data = gatherer.gather()
+        #    self.facts.update(data)
+
         if load_on_init:
             self.get_platform_facts()
             # Example of returning new facts and updating self.facts with it -akl
@@ -4011,6 +4037,7 @@ def get_file_lines(path):
         ret = []
     return ret
 
+#
 def ansible_facts(module, gather_subset):
     facts = {}
     facts['gather_subset'] = list(gather_subset)
@@ -4021,6 +4048,12 @@ def ansible_facts(module, gather_subset):
                                          cached_facts=facts).populate())
     return facts
 
+
+# This is the main entry point for facts.py. This is the only method from this module
+# called directly from setup.py module.
+# FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
+#        'gather_timeout', 'filter' instead of passing those are args or oblique ds
+#        module is passed in and self.module.misc_AnsibleModule_methods are used, so hard to decouple.
 def get_all_facts(module):
 
     setup_options = dict(module_setup=True)
