@@ -37,8 +37,6 @@
 #       why?
 #          - much much easier to test
 import os
-import sys
-import errno
 import fnmatch
 import glob
 import platform
@@ -49,8 +47,6 @@ import struct
 
 from ansible.module_utils.basic import get_all_subclasses
 from ansible.module_utils.six import PY3
-from ansible.module_utils.six.moves import reduce
-from ansible.module_utils._text import to_text
 
 # FIXME: not a fan of importing symbols into a different namespace (vs import a module)
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
@@ -78,6 +74,7 @@ except ImportError:
 # steps do not exceed a time limit
 
 GATHER_TIMEOUT = None
+
 
 class TimeoutError(Exception):
     pass
@@ -209,6 +206,7 @@ class Network(Facts):
 
     def populate(self):
         return self.facts
+
 
 class LinuxNetwork(Network):
     """
@@ -762,6 +760,7 @@ class HPUXNetwork(Network):
                                                    'address': address }
         return interfaces
 
+
 class DarwinNetwork(GenericBsdIfconfigNetwork):
     """
     This is the Mac OS X/Darwin Network Class.
@@ -918,6 +917,7 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
         current_if['macaddress'] = 'unknown'    # will be overwritten later
         return current_if
 
+
 class OpenBSDNetwork(GenericBsdIfconfigNetwork):
     """
     This is the OpenBSD Network Class.
@@ -933,6 +933,7 @@ class OpenBSDNetwork(GenericBsdIfconfigNetwork):
     def parse_lladdr_line(self, words, current_if, ips):
         current_if['macaddress'] = words[1]
         current_if['type'] = 'ether'
+
 
 class NetBSDNetwork(GenericBsdIfconfigNetwork):
     """
@@ -1045,6 +1046,7 @@ class SunOSNetwork(GenericBsdIfconfigNetwork):
             macaddress += (octet + ':')
         current_if['macaddress'] = macaddress[0:-1]
 
+
 class HurdPfinetNetwork(Network):
     """
     This is a GNU Hurd specific subclass of Network. It use fsysopts to
@@ -1133,6 +1135,7 @@ class Virtual(Facts):
     def get_virtual_facts(self):
         self.facts['virtualization_type'] = ''
         self.facts['virtualization_role'] = ''
+
 
 class LinuxVirtual(Virtual):
     """
@@ -1330,6 +1333,7 @@ class LinuxVirtual(Virtual):
         self.facts['virtualization_role'] = 'NA'
         return
 
+
 class VirtualSysctlDetectionMixin(object):
     def detect_sysctl(self):
         self.sysctl_path = self.module.get_bin_path('sysctl')
@@ -1389,8 +1393,10 @@ class FreeBSDVirtual(Virtual):
             self.facts['virtualization_type'] = 'xen'
             self.facts['virtualization_role'] = 'guest'
 
+
 class DragonFlyVirtual(FreeBSDVirtual):
     platform = 'DragonFly'
+
 
 class OpenBSDVirtual(Virtual, VirtualSysctlDetectionMixin):
     """
@@ -1419,6 +1425,7 @@ class OpenBSDVirtual(Virtual, VirtualSysctlDetectionMixin):
             if match:
                 self.facts['virtualization_type'] = 'vmm'
                 self.facts['virtualization_role'] = 'host'
+
 
 class NetBSDVirtual(Virtual, VirtualSysctlDetectionMixin):
     platform = 'NetBSD'
@@ -1560,8 +1567,6 @@ class SunOSVirtual(Virtual):
                         self.facts['virtualization_role'] = 'guest'
 
 
-
-
 def ansible_facts(module, gather_subset):
     facts = {}
     facts['gather_subset'] = list(gather_subset)
@@ -1647,13 +1652,14 @@ def _get_all_facts(gatherer_names, module):
     for (k, v) in facts.items():
         setup_options["ansible_%s" % k.replace('-', '_')] = v
 
-    setup_result = { 'ansible_facts': {} }
+    setup_result = {'ansible_facts': {}}
 
-    for (k,v) in setup_options.items():
+    for (k, v) in setup_options.items():
         if module.params['filter'] == '*' or fnmatch.fnmatch(k, module.params['filter']):
             setup_result['ansible_facts'][k] = v
 
     return setup_result
+
 
 def get_all_facts(module):
     gatherer_names = get_gatherer_names(module)
@@ -1662,6 +1668,7 @@ def get_all_facts(module):
     all_facts = _get_all_facts(gatherer_names, module)
 
     return all_facts
+
 
 # Allowed fact subset for gather_subset options and what classes they use
 # Note: have to define this at the bottom as it references classes defined earlier in this file
