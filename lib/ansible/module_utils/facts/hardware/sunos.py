@@ -96,7 +96,7 @@ class SunOSHardware(Hardware):
                 self.facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],
-                    'fstype' : fields[2],
+                    'fstype': fields[2],
                     'options': fields[3],
                     'time': fields[4],
                     'size_total': size_total,
@@ -111,7 +111,7 @@ class SunOSHardware(Hardware):
         """
         if out:
             system_conf = out.split('\n')[0]
-            found = re.search(r'(\w+\sEnterprise\s\w+)',system_conf)
+            found = re.search(r'(\w+\sEnterprise\s\w+)', system_conf)
             if found:
                 self.facts['product_name'] = found.group(1)
 
@@ -186,4 +186,3 @@ class SunOSHardware(Hardware):
             return
 
         self.facts['uptime_seconds'] = int(float(out.split('\t')[1]))
-
