@@ -120,7 +120,7 @@ class TestDragonFlyHardware(BaseTestFactsPlatform):
 
 class TestNetBSDHardware(BaseTestFactsPlatform):
     platform_id = 'NetBSD'
-    fact_class = facts.NetBSDHardware
+    fact_class = hardware.netbsd.NetBSDHardware
 
 
 class TestAIXHardware(BaseTestFactsPlatform):
