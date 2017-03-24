@@ -26,6 +26,22 @@ from ansible.compat.tests.mock import Mock, patch
 from ansible.module_utils import facts
 
 
+# FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
+class TestInPlace(unittest.TestCase):
+    def test(self):
+        mock_module = Mock()
+        mock_module.params = {'gather_subset': ['all', '!facter', '!ohai'],
+                              'gather_timeout': 5,
+                              'filter': '*'}
+        mock_module.get_bin_path = Mock(return_value=None)
+        res = facts.get_all_facts(mock_module)
+        #print(res)
+        self.assertIsInstance(res, dict)
+        self.assertIn('ansible_facts', res)
+        # just assert it's not almost empty
+        self.assertGreater(len(res['ansible_facts']), 40)
+
+
 class BaseTestFactsPlatform(unittest.TestCase):
     platform_id = 'Generic'
     fact_class = facts.Hardware
