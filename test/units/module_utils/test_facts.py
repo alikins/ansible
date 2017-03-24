@@ -24,6 +24,7 @@ from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import Mock, patch
 
 from ansible.module_utils import facts
+from ansible.module_utils.facts import hardware
 
 
 # FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
@@ -89,7 +90,12 @@ class BaseTestFactsPlatform(unittest.TestCase):
 
 class TestLinuxFactsPlatform(BaseTestFactsPlatform):
     platform_id = 'Linux'
-    fact_class = facts.LinuxHardware
+    fact_class = hardware.linux.LinuxHardware
+
+
+class TestHurdFactsPlatform(BaseTestFactsPlatform):
+    platform_id = 'GNU'
+    fact_class = hardware.hurd.HurdHardware
 
 
 class TestSunOSHardware(BaseTestFactsPlatform):
@@ -119,7 +125,8 @@ class TestNetBSDHardware(BaseTestFactsPlatform):
 
 class TestAIXHardware(BaseTestFactsPlatform):
     platform_id = 'AIX'
-    fact_class = facts.AIX
+    fact_class = hardware.aix.AIX
+    print(fact_class)
 
 
 class TestHPUXHardware(BaseTestFactsPlatform):
@@ -464,16 +471,16 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
     # The Hardware subclasses freakout if instaniated directly, so
     # mock platform.system and inst Hardware() so we get a LinuxHardware()
     # we can test.
-    @patch('ansible.module_utils.facts.LinuxHardware._mtab_entries', return_value=MTAB_ENTRIES)
-    @patch('ansible.module_utils.facts.LinuxHardware._find_bind_mounts', return_value=BIND_MOUNTS)
-    @patch('ansible.module_utils.facts.LinuxHardware._lsblk_uuid', return_value=LSBLK_UUIDS)
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._mtab_entries', return_value=MTAB_ENTRIES)
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._find_bind_mounts', return_value=BIND_MOUNTS)
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._lsblk_uuid', return_value=LSBLK_UUIDS)
     def test_get_mount_facts(self,
                              mock_lsblk_uuid,
                              mock_find_bind_mounts,
                              mock_mtab_entries):
         module = Mock()
         # Returns a LinuxHardware-ish
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
 
         # Nothing returned, just self.facts modified as a side effect
         lh.get_mount_facts()
@@ -482,20 +489,20 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         self.assertIsInstance(lh.facts['mounts'], list)
         self.assertIsInstance(lh.facts['mounts'][0], dict)
 
-    @patch('ansible.module_utils.facts.get_file_content', return_value=MTAB)
+    @patch('ansible.module_utils.facts.hardware.linux.get_file_content', return_value=MTAB)
     def test_get_mtab_entries(self, mock_get_file_content):
 
         module = Mock()
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         mtab_entries = lh._mtab_entries()
         self.assertIsInstance(mtab_entries, list)
         self.assertIsInstance(mtab_entries[0], list)
         self.assertEqual(len(mtab_entries), 38)
 
-    @patch('ansible.module_utils.facts.LinuxHardware._run_findmnt', return_value=(0, FINDMNT_OUTPUT, ''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_findmnt', return_value=(0, FINDMNT_OUTPUT, ''))
     def test_find_bind_mounts(self, mock_run_findmnt):
         module = Mock()
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         bind_mounts = lh._find_bind_mounts()
 
         # If bind_mounts becomes another seq type, feel free to change
@@ -503,10 +510,10 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         self.assertEqual(len(bind_mounts), 1)
         self.assertIn('/not/a/real/bind_mount', bind_mounts)
 
-    @patch('ansible.module_utils.facts.LinuxHardware._run_findmnt', return_value=(37, '', ''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_findmnt', return_value=(37, '', ''))
     def test_find_bind_mounts_non_zero(self, mock_run_findmnt):
         module = Mock()
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         bind_mounts = lh._find_bind_mounts()
 
         self.assertIsInstance(bind_mounts, set)
@@ -515,16 +522,16 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
     def test_find_bind_mounts_no_findmnts(self):
         module = Mock()
         module.get_bin_path = Mock(return_value=None)
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         bind_mounts = lh._find_bind_mounts()
 
         self.assertIsInstance(bind_mounts, set)
         self.assertEqual(len(bind_mounts), 0)
 
-    @patch('ansible.module_utils.facts.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT,''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT,''))
     def test_lsblk_uuid(self, mock_run_lsblk):
         module = Mock()
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         lsblk_uuids = lh._lsblk_uuid()
 
         self.assertIsInstance(lsblk_uuids, dict)
@@ -532,10 +539,10 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         self.assertIn(b'/dev/sda1', lsblk_uuids)
         self.assertEquals(lsblk_uuids[b'/dev/sda1'], b'32caaec3-ef40-4691-a3b6-438c3f9bc1c0')
 
-    @patch('ansible.module_utils.facts.LinuxHardware._run_lsblk', return_value=(37, LSBLK_OUTPUT,''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(37, LSBLK_OUTPUT,''))
     def test_lsblk_uuid_non_zero(self, mock_run_lsblk):
         module = Mock()
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         lsblk_uuids = lh._lsblk_uuid()
 
         self.assertIsInstance(lsblk_uuids, dict)
@@ -544,16 +551,16 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
     def test_lsblk_uuid_no_lsblk(self):
         module = Mock()
         module.get_bin_path = Mock(return_value=None)
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         lsblk_uuids = lh._lsblk_uuid()
 
         self.assertIsInstance(lsblk_uuids, dict)
         self.assertEquals(len(lsblk_uuids), 0)
 
-    @patch('ansible.module_utils.facts.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT_2,''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT_2,''))
     def test_lsblk_uuid_dev_with_space_in_name(self, mock_run_lsblk):
         module = Mock()
-        lh = facts.LinuxHardware(module=module, load_on_init=False)
+        lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         lsblk_uuids = lh._lsblk_uuid()
         self.assertIsInstance(lsblk_uuids, dict)
         self.assertIn(b'/dev/loop0', lsblk_uuids)
