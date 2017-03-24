@@ -15,8 +15,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
 from ansible.module_utils.facts.hardware import aix
-from ansible.module_utils.facts.hardware import linux
+from ansible.module_utils.facts.hardware import hpux
 from ansible.module_utils.facts.hardware import hurd
+from ansible.module_utils.facts.hardware import linux
 
 
-__all__ = [aix, hurd, linux]
+__all__ = [aix, hpux, hurd, linux]
