@@ -16,7 +16,7 @@ class DarwinHardware(Hardware):
     platform = 'Darwin'
 
     def populate(self):
-        self.sysctl = self.get_sysctl(['hw','machdep','kern'])
+        self.sysctl = self.get_sysctl(['hw', 'machdep', 'kern'])
         self.get_mac_facts()
         self.get_cpu_facts()
         self.get_memory_facts()
@@ -41,10 +41,10 @@ class DarwinHardware(Hardware):
         self.facts['osrevision'] = self.sysctl['kern.osrevision']
 
     def get_cpu_facts(self):
-        if 'machdep.cpu.brand_string' in self.sysctl: # Intel
+        if 'machdep.cpu.brand_string' in self.sysctl:  # Intel
             self.facts['processor'] = self.sysctl['machdep.cpu.brand_string']
             self.facts['processor_cores'] = self.sysctl['machdep.cpu.core_count']
-        else: # PowerPC
+        else:  # PowerPC
             system_profile = self.get_system_profile()
             self.facts['processor'] = '%s @ %s' % (system_profile['Processor Name'], system_profile['Processor Speed'])
             self.facts['processor_cores'] = self.sysctl['hw.physicalcpu']
