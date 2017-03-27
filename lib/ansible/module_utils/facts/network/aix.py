@@ -15,7 +15,7 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
 
         rc, out, err = self.module.run_command([netstat_path, '-nr'])
 
-        interface = dict(v4 = {}, v6 = {})
+        interface = dict(v4={}, v6={})
 
         lines = out.splitlines()
         for line in lines:
@@ -35,8 +35,8 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
         interfaces = {}
         current_if = {}
         ips = dict(
-            all_ipv4_addresses = [],
-            all_ipv6_addresses = [],
+            all_ipv4_addresses=[],
+            all_ipv6_addresses=[],
         )
 
         uname_rc = None
@@ -56,7 +56,7 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
                 # only this condition differs from GenericBsdIfconfigNetwork
                 if re.match('^\w*\d*:', line):
                     current_if = self.parse_interface_line(words)
-                    interfaces[ current_if['device'] ] = current_if
+                    interfaces[current_if['device']] = current_if
                 elif words[0].startswith('options='):
                     self.parse_options_line(words, current_if, ips)
                 elif words[0] == 'nd6':
@@ -83,7 +83,7 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
                 if current_if['macaddress'] == 'unknown' and re.match('^en', current_if['device']):
                     entstat_path = self.module.get_bin_path('entstat')
                     if entstat_path:
-                        rc, out, err = self.module.run_command([entstat_path, current_if['device'] ])
+                        rc, out, err = self.module.run_command([entstat_path, current_if['device']])
                         if rc != 0:
                             break
                         for line in out.splitlines():
@@ -101,7 +101,7 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
                 if 'mtu' not in current_if:
                     lsattr_path = self.module.get_bin_path('lsattr')
                     if lsattr_path:
-                        rc, out, err = self.module.run_command([lsattr_path,'-El', current_if['device'] ])
+                        rc, out, err = self.module.run_command([lsattr_path, '-El', current_if['device']])
                         if rc != 0:
                             break
                         for line in out.splitlines():
