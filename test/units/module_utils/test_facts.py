@@ -222,7 +222,7 @@ class TestOpenBSDVirtual(BaseTestFactsPlatform):
 
 class TestHPUXVirtual(BaseTestFactsPlatform):
     platform_id = 'HP-UX'
-    fact_class = facts.HPUXVirtual
+    fact_class = virtual.hpux.HPUXVirtual
 
 
 class TestSunOSVirtual(BaseTestFactsPlatform):
