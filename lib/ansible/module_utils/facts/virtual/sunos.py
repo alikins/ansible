@@ -57,15 +57,15 @@ class SunOSVirtual(Virtual):
                 try:
                     for line in out.splitlines():
                         fields = line.split('|')
-                        if( fields[0] == 'DOMAINROLE' and fields[1] == 'impl=LDoms' ):
+                        if fields[0] == 'DOMAINROLE' and fields[1] == 'impl=LDoms':
                             self.facts['virtualization_type'] = 'ldom'
                             self.facts['virtualization_role'] = 'guest'
                             hostfeatures = []
                             for field in fields[2:]:
                                 arg = field.split('=')
-                                if( arg[1] == 'true' ):
+                                if arg[1] == 'true':
                                     hostfeatures.append(arg[0])
-                            if( len(hostfeatures) > 0 ):
+                            if len(hostfeatures) > 0:
                                 self.facts['virtualization_role'] = 'host (' + ','.join(hostfeatures) + ')'
                 except ValueError:
                     pass
