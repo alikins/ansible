@@ -25,6 +25,7 @@ from ansible.compat.tests.mock import Mock, patch
 
 from ansible.module_utils import facts
 from ansible.module_utils.facts import hardware
+from ansible.module_utils.facts import network
 
 
 # FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
@@ -144,8 +145,8 @@ class TestGenericNetwork(BaseTestFactsPlatform):
 
 
 class TestLinuxNetwork(BaseTestFactsPlatform):
-    platform_id = 'Generic'
-    fact_class = facts.Network
+    platform_id = 'Linux'
+    fact_class = network.linux.LinuxNetwork
 
 
 class TestGenericBsdIfconfigNetwork(BaseTestFactsPlatform):
@@ -160,7 +161,7 @@ class TestHPUXNetwork(BaseTestFactsPlatform):
 
 class TestDarwinNetwork(BaseTestFactsPlatform):
     platform_id = 'Darwin'
-    fact_class = facts.DarwinNetwork
+    fact_class = network.darwin.DarwinNetwork
 
 
 class TestFreeBSDNetwork(BaseTestFactsPlatform):
