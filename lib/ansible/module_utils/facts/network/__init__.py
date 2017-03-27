@@ -16,5 +16,6 @@
 
 from ansible.module_utils.facts.network import linux
 from ansible.module_utils.facts.network import darwin
+from ansible.module_utils.facts.network import dragonfly
 
-__all__ = [darwin, linux]
+__all__ = [darwin, dragonfly, linux]
