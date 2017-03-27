@@ -101,22 +101,22 @@ class LinuxHardware(Hardware):
             memstats['swap:used'] = memstats['swaptotal'] - memstats['swapfree']
 
         self.facts['memory_mb'] = {
-            'real' : {
+            'real': {
                 'total': memstats.get('memtotal'),
                 'used': memstats.get('real:used'),
                 'free': memstats.get('memfree'),
-                },
-            'nocache' : {
+            },
+            'nocache': {
                 'free': memstats.get('nocache:free'),
                 'used': memstats.get('nocache:used'),
-                },
-            'swap' : {
+            },
+            'swap': {
                 'total': memstats.get('swaptotal'),
                 'free': memstats.get('swapfree'),
                 'used': memstats.get('swap:used'),
                 'cached': memstats.get('swapcached'),
-                },
-            }
+            },
+        }
 
     def get_cpu_facts(self):
         i = 0
@@ -225,14 +225,14 @@ class LinuxHardware(Hardware):
             # Use kernel DMI info, if available
 
             # DMI SPEC -- http://www.dmtf.org/sites/default/files/standards/documents/DSP0134_2.7.0.pdf
-            FORM_FACTOR = [ "Unknown", "Other", "Unknown", "Desktop",
-                            "Low Profile Desktop", "Pizza Box", "Mini Tower", "Tower",
-                            "Portable", "Laptop", "Notebook", "Hand Held", "Docking Station",
-                            "All In One", "Sub Notebook", "Space-saving", "Lunch Box",
-                            "Main Server Chassis", "Expansion Chassis", "Sub Chassis",
-                            "Bus Expansion Chassis", "Peripheral Chassis", "RAID Chassis",
-                            "Rack Mount Chassis", "Sealed-case PC", "Multi-system",
-                            "CompactPCI", "AdvancedTCA", "Blade" ]
+            FORM_FACTOR = ["Unknown", "Other", "Unknown", "Desktop",
+                           "Low Profile Desktop", "Pizza Box", "Mini Tower", "Tower",
+                           "Portable", "Laptop", "Notebook", "Hand Held", "Docking Station",
+                           "All In One", "Sub Notebook", "Space-saving", "Lunch Box",
+                           "Main Server Chassis", "Expansion Chassis", "Sub Chassis",
+                           "Bus Expansion Chassis", "Peripheral Chassis", "RAID Chassis",
+                           "Rack Mount Chassis", "Sealed-case PC", "Multi-system",
+                           "CompactPCI", "AdvancedTCA", "Blade"]
 
             DMI_DICT = {
                 'bios_date': '/sys/devices/virtual/dmi/id/bios_date',
@@ -243,9 +243,9 @@ class LinuxHardware(Hardware):
                 'product_uuid': '/sys/devices/virtual/dmi/id/product_uuid',
                 'product_version': '/sys/devices/virtual/dmi/id/product_version',
                 'system_vendor': '/sys/devices/virtual/dmi/id/sys_vendor'
-                }
+            }
 
-            for (key,path) in DMI_DICT.items():
+            for (key, path) in DMI_DICT.items():
                 data = get_file_content(path)
                 if data is not None:
                     if key == 'form_factor':
@@ -270,13 +270,13 @@ class LinuxHardware(Hardware):
                 'product_uuid': 'system-uuid',
                 'product_version': 'system-version',
                 'system_vendor': 'system-manufacturer'
-                }
+            }
             for (k, v) in DMI_DICT.items():
                 if dmi_bin is not None:
                     (rc, out, err) = self.module.run_command('%s -s %s' % (dmi_bin, v))
                     if rc == 0:
                         # Strip out commented lines (specific dmidecode output)
-                        thisvalue = ''.join([ line for line in out.splitlines() if not line.startswith('#') ])
+                        thisvalue = ''.join([line for line in out.splitlines() if not line.startswith('#')])
                         try:
                             json.dumps(thisvalue)
                         except UnicodeDecodeError:
@@ -293,7 +293,7 @@ class LinuxHardware(Hardware):
         # --exclude 2 makes lsblk ignore floppy disks, which are slower to answer than typical timeouts
         # this uses the linux major device number
         # for details see https://www.kernel.org/doc/Documentation/devices.txt
-        args = ['--list', '--noheadings', '--paths',  '--output', 'NAME,UUID', '--exclude', '2']
+        args = ['--list', '--noheadings', '--paths', '--output', 'NAME,UUID', '--exclude', '2']
         cmd = [lsblk_path] + args
         rc, out, err = self.module.run_command(cmd)
         return rc, out, err
@@ -488,8 +488,8 @@ class LinuxHardware(Hardware):
             for key in ['vendor', 'model']:
                 d[key] = get_file_content(sysdir + "/device/" + key)
 
-            for key,test in [ ('removable','/removable'), \
-                              ('support_discard','/queue/discard_granularity'),
+            for key, test in [('removable', '/removable'),
+                              ('support_discard', '/queue/discard_granularity'),
                               ]:
                 d[key] = get_file_content(sysdir + test)
 
@@ -504,11 +504,11 @@ class LinuxHardware(Hardware):
                     partname = m.group(1)
                     part_sysdir = sysdir + "/" + partname
 
-                    part['start'] = get_file_content(part_sysdir + "/start",0)
-                    part['sectors'] = get_file_content(part_sysdir + "/size",0)
+                    part['start'] = get_file_content(part_sysdir + "/start", 0)
+                    part['sectors'] = get_file_content(part_sysdir + "/size", 0)
                     part['sectorsize'] = get_file_content(part_sysdir + "/queue/logical_block_size")
                     if not part['sectorsize']:
-                        part['sectorsize'] = get_file_content(part_sysdir + "/queue/hw_sector_size",512)
+                        part['sectorsize'] = get_file_content(part_sysdir + "/queue/hw_sector_size", 512)
                     part['size'] = self.module.pretty_bytes((float(part['sectors']) * float(part['sectorsize'])))
                     part['uuid'] = get_partition_uuid(partname)
                     self.get_holders(part, part_sysdir)
@@ -528,7 +528,7 @@ class LinuxHardware(Hardware):
                 d['sectors'] = 0
             d['sectorsize'] = get_file_content(sysdir + "/queue/logical_block_size")
             if not d['sectorsize']:
-                d['sectorsize'] = get_file_content(sysdir + "/queue/hw_sector_size",512)
+                d['sectorsize'] = get_file_content(sysdir + "/queue/hw_sector_size", 512)
             d['size'] = self.module.pretty_bytes(float(d['sectors']) * float(d['sectorsize']))
 
             d['host'] = ""
@@ -571,13 +571,13 @@ class LinuxHardware(Hardware):
 
             vgs_path = self.module.get_bin_path('vgs')
             #vgs fields: VG #PV #LV #SN Attr VSize VFree
-            vgs={}
+            vgs = {}
             if vgs_path:
-                rc, vg_lines, err = self.module.run_command( '%s %s' % (vgs_path, lvm_util_options))
+                rc, vg_lines, err = self.module.run_command('%s %s' % (vgs_path, lvm_util_options))
                 for vg_line in vg_lines.splitlines():
                     items = vg_line.split()
-                    vgs[items[0]] = {'size_g':items[-2],
-                                     'free_g':items[-1],
+                    vgs[items[0]] = {'size_g': items[-2],
+                                     'free_g': items[-1],
                                      'num_lvs': items[2],
                                      'num_pvs': items[1]}
 
@@ -586,17 +586,16 @@ class LinuxHardware(Hardware):
             #LV VG Attr LSize Pool Origin Data% Move Log Copy% Convert
             lvs = {}
             if lvs_path:
-                rc, lv_lines, err = self.module.run_command( '%s %s' % (lvs_path, lvm_util_options))
+                rc, lv_lines, err = self.module.run_command('%s %s' % (lvs_path, lvm_util_options))
                 for lv_line in lv_lines.splitlines():
                     items = lv_line.split()
                     lvs[items[0]] = {'size_g': items[3], 'vg': items[1]}
-
 
             pvs_path = self.module.get_bin_path('pvs')
             #pvs fields: PV VG #Fmt #Attr PSize PFree
             pvs = {}
             if pvs_path:
-                rc, pv_lines, err = self.module.run_command( '%s %s' % (pvs_path, lvm_util_options))
+                rc, pv_lines, err = self.module.run_command('%s %s' % (pvs_path, lvm_util_options))
                 for pv_line in pv_lines.splitlines():
                     items = pv_line.split()
                     pvs[self._find_mapper_device_name(items[0])] = {
@@ -605,5 +604,3 @@ class LinuxHardware(Hardware):
                         'vg': items[1]}
 
             self.facts['lvm'] = {'lvs': lvs, 'vgs': vgs, 'pvs': pvs}
-
-
