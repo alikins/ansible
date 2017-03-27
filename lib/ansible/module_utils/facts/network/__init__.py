@@ -18,5 +18,7 @@ from ansible.module_utils.facts.network import linux
 from ansible.module_utils.facts.network import darwin
 from ansible.module_utils.facts.network import dragonfly
 from ansible.module_utils.facts.network import freebsd
+from ansible.module_utils.facts.network import netbsd
+from ansible.module_utils.facts.network import openbsd
 
-__all__ = [darwin, dragonfly, freebsd, linux]
+__all__ = [darwin, dragonfly, freebsd, linux, netbsd, openbsd]
