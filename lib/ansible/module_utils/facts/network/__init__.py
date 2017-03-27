@@ -18,9 +18,10 @@ from ansible.module_utils.facts.network import aix
 from ansible.module_utils.facts.network import darwin
 from ansible.module_utils.facts.network import dragonfly
 from ansible.module_utils.facts.network import freebsd
+from ansible.module_utils.facts.network import hpux
 from ansible.module_utils.facts.network import linux
 from ansible.module_utils.facts.network import netbsd
 from ansible.module_utils.facts.network import openbsd
 from ansible.module_utils.facts.network import sunos
 
-__all__ = [aix, darwin, dragonfly, freebsd, linux, netbsd, openbsd, sunos]
+__all__ = [aix, darwin, dragonfly, freebsd, hpux, linux, netbsd, openbsd, sunos]
