@@ -179,9 +179,14 @@ class TestAIXNetwork(BaseTestFactsPlatform):
     fact_class = facts.AIXNetwork
 
 
+class TestNetBSDNetwork(BaseTestFactsPlatform):
+    platform_id = 'NetBSD'
+    fact_class = network.netbsd.NetBSDNetwork
+
+
 class TestOpenBSDNetwork(BaseTestFactsPlatform):
     platform_id = 'OpenBSD'
-    fact_class = facts.OpenBSDNetwork
+    fact_class = network.openbsd.OpenBSDNetwork
 
 
 class TestSunOSNetwork(BaseTestFactsPlatform):
