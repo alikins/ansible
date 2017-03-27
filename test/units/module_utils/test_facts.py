@@ -144,6 +144,11 @@ class TestGenericNetwork(BaseTestFactsPlatform):
     fact_class = facts.Network
 
 
+class TestHurdPfinetNetwork(BaseTestFactsPlatform):
+    platform_id = 'GNU'
+    fact_class = network.hurd.HurdPfinetNetwork
+
+
 class TestLinuxNetwork(BaseTestFactsPlatform):
     platform_id = 'Linux'
     fact_class = network.linux.LinuxNetwork
