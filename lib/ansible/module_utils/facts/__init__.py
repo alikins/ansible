@@ -1183,7 +1183,7 @@ def ansible_facts(module, gather_subset):
 #        module is passed in and self.module.misc_AnsibleModule_methods
 #        are used, so hard to decouple.
 # FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
-#def get_all_facts(module):
+# def get_all_facts(module):
 def get_gatherer_names(module):
     # Retrieve module parameters
     gather_subset = module.params['gather_subset']
