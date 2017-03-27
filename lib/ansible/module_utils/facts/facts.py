@@ -89,28 +89,28 @@ class Facts(object):
     # NOTE: This is really constants. This dict is also used in a weird way by
     #       ansible.executor.action_write_locks that introduces a weird dep that could
     #       be avoided if this dict was elsewhere. -akl
-    PKG_MGRS = [{'path': '/usr/bin/yum',         'name': 'yum'},
-                {'path': '/usr/bin/dnf',         'name': 'dnf'},
-                {'path': '/usr/bin/apt-get',     'name': 'apt'},
-                {'path': '/usr/bin/zypper',      'name': 'zypper'},
-                {'path': '/usr/sbin/urpmi',      'name': 'urpmi'},
-                {'path': '/usr/bin/pacman',      'name': 'pacman'},
-                {'path': '/bin/opkg',            'name': 'opkg'},
-                {'path': '/usr/pkg/bin/pkgin',   'name': 'pkgin'},
+    PKG_MGRS = [{'path': '/usr/bin/yum', 'name': 'yum'},
+                {'path': '/usr/bin/dnf', 'name': 'dnf'},
+                {'path': '/usr/bin/apt-get', 'name': 'apt'},
+                {'path': '/usr/bin/zypper', 'name': 'zypper'},
+                {'path': '/usr/sbin/urpmi', 'name': 'urpmi'},
+                {'path': '/usr/bin/pacman', 'name': 'pacman'},
+                {'path': '/bin/opkg', 'name': 'opkg'},
+                {'path': '/usr/pkg/bin/pkgin', 'name': 'pkgin'},
                 {'path': '/opt/local/bin/pkgin', 'name': 'pkgin'},
                 {'path': '/opt/tools/bin/pkgin', 'name': 'pkgin'},
-                {'path': '/opt/local/bin/port',  'name': 'macports'},
-                {'path': '/usr/local/bin/brew',  'name': 'homebrew'},
-                {'path': '/sbin/apk',            'name': 'apk'},
-                {'path': '/usr/sbin/pkg',        'name': 'pkgng'},
-                {'path': '/usr/sbin/swlist',     'name': 'SD-UX'},
-                {'path': '/usr/bin/emerge',      'name': 'portage'},
-                {'path': '/usr/sbin/pkgadd',     'name': 'svr4pkg'},
-                {'path': '/usr/bin/pkg',         'name': 'pkg5'},
+                {'path': '/opt/local/bin/port', 'name': 'macports'},
+                {'path': '/usr/local/bin/brew', 'name': 'homebrew'},
+                {'path': '/sbin/apk', 'name': 'apk'},
+                {'path': '/usr/sbin/pkg', 'name': 'pkgng'},
+                {'path': '/usr/sbin/swlist', 'name': 'SD-UX'},
+                {'path': '/usr/bin/emerge', 'name': 'portage'},
+                {'path': '/usr/sbin/pkgadd', 'name': 'svr4pkg'},
+                {'path': '/usr/bin/pkg', 'name': 'pkg5'},
                 {'path': '/usr/bin/xbps-install', 'name': 'xbps'},
-                {'path': '/usr/local/sbin/pkg',  'name': 'pkgng'},
-                {'path': '/usr/bin/swupd',       'name': 'swupd'},
-                {'path': '/usr/sbin/sorcery',    'name': 'sorcery'},
+                {'path': '/usr/local/sbin/pkg', 'name': 'pkgng'},
+                {'path': '/usr/bin/swupd', 'name': 'swupd'},
+                {'path': '/usr/sbin/sorcery', 'name': 'sorcery'},
                 ]
 
     # NOTE: load_on_init is changed for ohai/facter classes. Ideally, all facts
@@ -581,7 +581,7 @@ class Facts(object):
             if len(tokens) == 0:
                 continue
             if tokens[0] == 'nameserver':
-                if not 'nameservers' in self.facts['dns']:
+                if 'nameservers' not in self.facts['dns']:
                     self.facts['dns']['nameservers'] = []
                 for nameserver in tokens[1:]:
                     self.facts['dns']['nameservers'].append(nameserver)
