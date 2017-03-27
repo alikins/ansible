@@ -56,12 +56,10 @@ class GenericBsdIfconfigNetwork(Network):
         #     route -n get -inet6 2404:6800:400a:800::1012    -> ipv6.google.com
         # to find out the default outgoing interface, address, and gateway
 
-        command = dict(
-            v4 = [route_path, '-n', 'get', '8.8.8.8'],
-            v6 = [route_path, '-n', 'get', '-inet6', '2404:6800:400a:800::1012']
-        )
+        command = dict(v4=[route_path, '-n', 'get', '8.8.8.8'],
+                       v6=[route_path, '-n', 'get', '-inet6', '2404:6800:400a:800::1012'])
 
-        interface = dict(v4 = {}, v6 = {})
+        interface = dict(v4={}, v6={})
 
         for v in 'v4', 'v6':
 
@@ -87,8 +85,8 @@ class GenericBsdIfconfigNetwork(Network):
         interfaces = {}
         current_if = {}
         ips = dict(
-            all_ipv4_addresses = [],
-            all_ipv6_addresses = [],
+            all_ipv4_addresses=[],
+            all_ipv6_addresses=[],
         )
         # FreeBSD, DragonflyBSD, NetBSD, OpenBSD and OS X all implicitly add '-a'
         # when running the command 'ifconfig'.
@@ -104,7 +102,7 @@ class GenericBsdIfconfigNetwork(Network):
                     continue
                 elif re.match('^\S', line) and len(words) > 3:
                     current_if = self.parse_interface_line(words)
-                    interfaces[ current_if['device'] ] = current_if
+                    interfaces[current_if['device']] = current_if
                 elif words[0].startswith('options='):
                     self.parse_options_line(words, current_if, ips)
                 elif words[0] == 'nd6':
@@ -131,12 +129,12 @@ class GenericBsdIfconfigNetwork(Network):
     def parse_interface_line(self, words):
         device = words[0][0:-1]
         current_if = {'device': device, 'ipv4': [], 'ipv6': [], 'type': 'unknown'}
-        current_if['flags']  = self.get_options(words[1])
+        current_if['flags'] = self.get_options(words[1])
         if 'LOOPBACK' in current_if['flags']:
             current_if['type'] = 'loopback'
         current_if['macaddress'] = 'unknown'    # will be overwritten later
 
-        if len(words) >= 5 :  # Newer FreeBSD versions
+        if len(words) >= 5:  # Newer FreeBSD versions
             current_if['metric'] = words[3]
             current_if['mtu'] = words[5]
         else:
