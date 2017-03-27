@@ -6,6 +6,7 @@ from ansible.module_utils.facts import Hardware
 from ansible.module_utils.facts import TimeoutError, timeout
 
 from ansible.module_utils.facts.utils import get_file_content
+from ansible.module_utils.facts.sysctl import get_sysctl
 
 
 class OpenBSDHardware(Hardware):
@@ -25,7 +26,7 @@ class OpenBSDHardware(Hardware):
     platform = 'OpenBSD'
 
     def populate(self):
-        self.sysctl = self.get_sysctl(['hw'])
+        self.sysctl = get_sysctl(self.module, ['hw'])
         self.get_memory_facts()
         self.get_processor_facts()
         self.get_device_facts()

@@ -38,7 +38,6 @@
 #          - much much easier to test
 import fnmatch
 import platform
-import re
 import signal
 
 from ansible.module_utils.basic import get_all_subclasses
@@ -145,21 +144,6 @@ class Hardware(Facts):
 
     def populate(self):
         return self.facts
-
-    def get_sysctl(self, prefixes):
-        sysctl_cmd = self.module.get_bin_path('sysctl')
-        cmd = [sysctl_cmd]
-        cmd.extend(prefixes)
-        rc, out, err = self.module.run_command(cmd)
-        if rc != 0:
-            return dict()
-        sysctl = dict()
-        for line in out.splitlines():
-            if not line:
-                continue
-            (key, value) = re.split('\s?=\s?|: ', line, maxsplit=1)
-            sysctl[key] = value.strip()
-        return sysctl
 
 
 class Network(Facts):
