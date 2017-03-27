@@ -176,7 +176,7 @@ class TestDragonFlyNetwork(BaseTestFactsPlatform):
 
 class TestAIXNetwork(BaseTestFactsPlatform):
     platform_id = 'AIX'
-    fact_class = facts.AIXNetwork
+    fact_class = network.aix.AIXNetwork
 
 
 class TestNetBSDNetwork(BaseTestFactsPlatform):
