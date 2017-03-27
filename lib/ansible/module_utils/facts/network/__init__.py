@@ -15,5 +15,6 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
 from ansible.module_utils.facts.network import linux
+from ansible.module_utils.facts.network import darwin
 
-__all__ = [linux]
+__all__ = [darwin, linux]
