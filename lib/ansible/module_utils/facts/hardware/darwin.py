@@ -1,6 +1,8 @@
 
 from ansible.module_utils.facts import Hardware
 
+from ansible.module_utils.facts.sysctl import get_sysctl
+
 
 class DarwinHardware(Hardware):
     """
@@ -16,7 +18,7 @@ class DarwinHardware(Hardware):
     platform = 'Darwin'
 
     def populate(self):
-        self.sysctl = self.get_sysctl(['hw', 'machdep', 'kern'])
+        self.sysctl = get_sysctl(self.module, ['hw', 'machdep', 'kern'])
         self.get_mac_facts()
         self.get_cpu_facts()
         self.get_memory_facts()
