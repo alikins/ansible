@@ -171,7 +171,7 @@ class TestFreeBSDNetwork(BaseTestFactsPlatform):
 
 class TestDragonFlyNetwork(BaseTestFactsPlatform):
     platform_id = 'DragonFly'
-    fact_class = facts.DragonFlyNetwork
+    fact_class = network.dragonfly.DragonFlyNetwork
 
 
 class TestAIXNetwork(BaseTestFactsPlatform):
@@ -196,12 +196,12 @@ class TestLinuxVirtual(BaseTestFactsPlatform):
 
 class TestFreeBSDVirtual(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
-    fact_class = facts.FreeBSDNetwork
+    fact_class = facts.FreeBSDVirtual
 
 
 class TestDragonFlyVirtual(BaseTestFactsPlatform):
     platform_id = 'DragonFly'
-    fact_class = facts.DragonFlyNetwork
+    fact_class = facts.DragonFlyVirtual
 
 
 class TestOpenBSDVirtual(BaseTestFactsPlatform):
