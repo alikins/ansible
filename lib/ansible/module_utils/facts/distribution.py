@@ -74,15 +74,15 @@ class Distribution(object):
 
     # A list with OS Family members
     OS_FAMILY = dict(
-        RedHat = 'RedHat', Fedora = 'RedHat', CentOS = 'RedHat', Scientific = 'RedHat',
-        SLC = 'RedHat', Ascendos = 'RedHat', CloudLinux = 'RedHat', PSBM = 'RedHat',
-        OracleLinux = 'RedHat', OVS = 'RedHat', OEL = 'RedHat', Amazon = 'RedHat', Virtuozzo = 'RedHat',
-        XenServer = 'RedHat', Ubuntu = 'Debian', Debian = 'Debian', Raspbian = 'Debian', Slackware = 'Slackware', SLES = 'Suse',
-        SLED = 'Suse', openSUSE = 'Suse', openSUSE_Tumbleweed = 'Suse', SuSE = 'Suse', SLES_SAP = 'Suse', SUSE_LINUX = 'Suse', Gentoo = 'Gentoo',
-        Funtoo = 'Gentoo', Archlinux = 'Archlinux', Manjaro = 'Archlinux', Mandriva = 'Mandrake', Mandrake = 'Mandrake', Altlinux = 'Altlinux', SMGL = 'SMGL',
-        Solaris = 'Solaris', Nexenta = 'Solaris', OmniOS = 'Solaris', OpenIndiana = 'Solaris',
-        SmartOS = 'Solaris', AIX = 'AIX', Alpine = 'Alpine', MacOSX = 'Darwin',
-        FreeBSD = 'FreeBSD', HPUX = 'HP-UX', openSUSE_Leap = 'Suse', Neon = 'Debian'
+        RedHat='RedHat', Fedora='RedHat', CentOS='RedHat', Scientific='RedHat',
+        SLC='RedHat', Ascendos='RedHat', CloudLinux='RedHat', PSBM='RedHat',
+        OracleLinux='RedHat', OVS='RedHat', OEL='RedHat', Amazon='RedHat', Virtuozzo = 'RedHat',
+        XenServer='RedHat', Ubuntu='Debian', Debian='Debian', Raspbian='Debian', Slackware='Slackware', SLES='Suse',
+        SLED='Suse', openSUSE='Suse', openSUSE_Tumbleweed='Suse', SuSE='Suse', SLES_SAP='Suse', SUSE_LINUX='Suse', Gentoo='Gentoo',
+        Funtoo='Gentoo', Archlinux='Archlinux', Manjaro='Archlinux', Mandriva='Mandrake', Mandrake='Mandrake', Altlinux='Altlinux', SMGL='SMGL',
+        Solaris='Solaris', Nexenta='Solaris', OmniOS='Solaris', OpenIndiana='Solaris',
+        SmartOS='Solaris', AIX='AIX', Alpine='Alpine', MacOSX='Darwin',
+        FreeBSD='FreeBSD', HPUX='HP-UX', openSUSE_Leap='Suse', Neon='Debian'
     )
 
     def __init__(self, module):
@@ -106,8 +106,8 @@ class Distribution(object):
         self.facts['distribution'] = self.system
 
         if self.system in systems_implemented:
-            cleanedname = self.system.replace('-','')
-            distfunc = getattr(self, 'get_distribution_'+cleanedname)
+            cleanedname = self.system.replace('-', '')
+            distfunc = getattr(self, 'get_distribution_' + cleanedname)
             distfunc()
         elif self.system == 'Linux':
             # try to find out which linux distribution this is
@@ -247,7 +247,7 @@ class Distribution(object):
         if 'Solaris' in data:
             ora_prefix = ''
             if 'Oracle Solaris' in data:
-                data = data.replace('Oracle ','')
+                data = data.replace('Oracle ', '')
                 ora_prefix = 'Oracle '
             self.facts['distribution'] = data.split()[0]
             self.facts['distribution_version'] = data.split()[1]
@@ -322,7 +322,7 @@ class Distribution(object):
                 elif "Desktop" in data:
                     self.facts['distribution'] = "SLED"
                 for line in lines:
-                    release = re.search('PATCHLEVEL = ([0-9]+)', line) # SLES doesn't got funny release names
+                    release = re.search('PATCHLEVEL = ([0-9]+)', line)  # SLES doesn't got funny release names
                     if release:
                         self.facts['distribution_release'] = release.group(1)
                         self.facts['distribution_version'] = self.facts['distribution_version'] + '.' + release.group(1)
