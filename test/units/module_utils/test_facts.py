@@ -212,7 +212,7 @@ class TestFreeBSDVirtual(BaseTestFactsPlatform):
 
 class TestDragonFlyVirtual(BaseTestFactsPlatform):
     platform_id = 'DragonFly'
-    fact_class = facts.DragonFlyVirtual
+    fact_class = virtual.dragonfly.DragonFlyVirtual
 
 
 class TestOpenBSDVirtual(BaseTestFactsPlatform):
