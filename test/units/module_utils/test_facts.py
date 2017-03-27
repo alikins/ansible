@@ -227,7 +227,7 @@ class TestHPUXVirtual(BaseTestFactsPlatform):
 
 class TestSunOSVirtual(BaseTestFactsPlatform):
     platform_id = 'SunOS'
-    fact_class = facts.SunOSVirtual
+    fact_class = virtual.sunos.SunOSVirtual
 
 
 LSBLK_OUTPUT = b"""
