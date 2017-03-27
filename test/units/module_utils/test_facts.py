@@ -191,7 +191,7 @@ class TestOpenBSDNetwork(BaseTestFactsPlatform):
 
 class TestSunOSNetwork(BaseTestFactsPlatform):
     platform_id = 'SunOS'
-    fact_class = facts.SunOSNetwork
+    fact_class = network.sunos.SunOSNetwork
 
 
 class TestLinuxVirtual(BaseTestFactsPlatform):

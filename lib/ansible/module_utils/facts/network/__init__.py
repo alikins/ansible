@@ -20,5 +20,6 @@ from ansible.module_utils.facts.network import dragonfly
 from ansible.module_utils.facts.network import freebsd
 from ansible.module_utils.facts.network import netbsd
 from ansible.module_utils.facts.network import openbsd
+from ansible.module_utils.facts.network import sunos
 
-__all__ = [darwin, dragonfly, freebsd, linux, netbsd, openbsd]
+__all__ = [darwin, dragonfly, freebsd, linux, netbsd, openbsd, sunos]
