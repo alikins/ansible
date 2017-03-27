@@ -40,11 +40,11 @@ class HPUXNetwork(Network):
             for i in range(len(words) - 1):
                 if words[i][:3] == 'lan':
                     device = words[i]
-                    interfaces[device] = { 'device': device }
-                    address = words[i+3]
-                    interfaces[device]['ipv4'] = { 'address': address }
-                    network = words[i+2]
-                    interfaces[device]['ipv4'] = { 'network': network,
-                                                   'interface': device,
-                                                   'address': address }
+                    interfaces[device] = {'device': device}
+                    address = words[i + 3]
+                    interfaces[device]['ipv4'] = {'address': address}
+                    network = words[i + 2]
+                    interfaces[device]['ipv4'] = {'network': network,
+                                                  'interface': device,
+                                                  'address': address}
         return interfaces
