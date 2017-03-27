@@ -213,7 +213,7 @@ class LinuxHardware(Hardware):
                     self.facts['processor_threads_per_core'] = 1 // self.facts['processor_cores']
 
                 self.facts['processor_vcpus'] = (self.facts['processor_threads_per_core'] *
-                    self.facts['processor_count'] * self.facts['processor_cores'])
+                                                 self.facts['processor_count'] * self.facts['processor_cores'])
 
     def get_dmi_facts(self):
         ''' learn dmi facts from system
@@ -570,7 +570,7 @@ class LinuxHardware(Hardware):
             lvm_util_options = '--noheadings --nosuffix --units g'
 
             vgs_path = self.module.get_bin_path('vgs')
-            #vgs fields: VG #PV #LV #SN Attr VSize VFree
+            # vgs fields: VG #PV #LV #SN Attr VSize VFree
             vgs = {}
             if vgs_path:
                 rc, vg_lines, err = self.module.run_command('%s %s' % (vgs_path, lvm_util_options))
@@ -582,8 +582,8 @@ class LinuxHardware(Hardware):
                                      'num_pvs': items[1]}
 
             lvs_path = self.module.get_bin_path('lvs')
-            #lvs fields:
-            #LV VG Attr LSize Pool Origin Data% Move Log Copy% Convert
+            # lvs fields:
+            # LV VG Attr LSize Pool Origin Data% Move Log Copy% Convert
             lvs = {}
             if lvs_path:
                 rc, lv_lines, err = self.module.run_command('%s %s' % (lvs_path, lvm_util_options))
@@ -592,7 +592,7 @@ class LinuxHardware(Hardware):
                     lvs[items[0]] = {'size_g': items[3], 'vg': items[1]}
 
             pvs_path = self.module.get_bin_path('pvs')
-            #pvs fields: PV VG #Fmt #Attr PSize PFree
+            # pvs fields: PV VG #Fmt #Attr PSize PFree
             pvs = {}
             if pvs_path:
                 rc, pv_lines, err = self.module.run_command('%s %s' % (pvs_path, lvm_util_options))
