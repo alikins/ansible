@@ -166,7 +166,7 @@ class TestDarwinNetwork(BaseTestFactsPlatform):
 
 class TestFreeBSDNetwork(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
-    fact_class = facts.FreeBSDNetwork
+    fact_class = network.freebsd.FreeBSDNetwork
 
 
 class TestDragonFlyNetwork(BaseTestFactsPlatform):
