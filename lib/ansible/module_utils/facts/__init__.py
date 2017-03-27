@@ -36,20 +36,13 @@
 #          netinfo_data = self._netinfo_parse(netinfo_output)
 #       why?
 #          - much much easier to test
-import os
 import fnmatch
-import glob
 import platform
 import re
 import signal
-import socket
-import struct
 
 from ansible.module_utils.basic import get_all_subclasses
 from ansible.module_utils.six import PY3
-
-# FIXME: not a fan of importing symbols into a different namespace (vs import a module)
-from ansible.module_utils.facts.utils import get_file_content, get_file_lines
 
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
