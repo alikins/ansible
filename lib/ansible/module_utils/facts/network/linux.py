@@ -47,10 +47,10 @@ class LinuxNetwork(Network):
         #     ip -6 route get 2404:6800:400a:800::1012    -> ipv6.google.com
         # to find out the default outgoing interface, address, and gateway
         command = dict(
-            v4 = [ip_path, '-4', 'route', 'get', '8.8.8.8'],
-            v6 = [ip_path, '-6', 'route', 'get', '2404:6800:400a:800::1012']
+            v4=[ip_path, '-4', 'route', 'get', '8.8.8.8'],
+            v6=[ip_path, '-6', 'route', 'get', '2404:6800:400a:800::1012']
         )
-        interface = dict(v4 = {}, v6 = {})
+        interface = dict(v4={}, v6={})
         for v in 'v4', 'v6':
             if (v == 'v6' and self.facts['os_family'] == 'RedHat' and
                     self.facts['distribution_version'].startswith('4.')):
@@ -67,25 +67,25 @@ class LinuxNetwork(Network):
             if len(words) > 0 and words[0] == command[v][-1]:
                 for i in range(len(words) - 1):
                     if words[i] == 'dev':
-                        interface[v]['interface'] = words[i+1]
+                        interface[v]['interface'] = words[i + 1]
                     elif words[i] == 'src':
-                        interface[v]['address'] = words[i+1]
-                    elif words[i] == 'via' and words[i+1] != command[v][-1]:
-                        interface[v]['gateway'] = words[i+1]
+                        interface[v]['address'] = words[i + 1]
+                    elif words[i] == 'via' and words[i + 1] != command[v][-1]:
+                        interface[v]['gateway'] = words[i + 1]
         return interface['v4'], interface['v6']
 
     def get_interfaces_info(self, ip_path, default_ipv4, default_ipv6):
         interfaces = {}
         ips = dict(
-            all_ipv4_addresses = [],
-            all_ipv6_addresses = [],
+            all_ipv4_addresses=[],
+            all_ipv6_addresses=[],
         )
 
         for path in glob.glob('/sys/class/net/*'):
             if not os.path.isdir(path):
                 continue
             device = os.path.basename(path)
-            interfaces[device] = { 'device': device }
+            interfaces[device] = {'device': device}
             if os.path.exists(os.path.join(path, 'address')):
                 macaddress = get_file_content(os.path.join(path, 'address'), default='')
                 if macaddress and macaddress != '00:00:00:00:00:00':
@@ -94,14 +94,14 @@ class LinuxNetwork(Network):
                 interfaces[device]['mtu'] = int(get_file_content(os.path.join(path, 'mtu')))
             if os.path.exists(os.path.join(path, 'operstate')):
                 interfaces[device]['active'] = get_file_content(os.path.join(path, 'operstate')) != 'down'
-            if os.path.exists(os.path.join(path, 'device','driver', 'module')):
+            if os.path.exists(os.path.join(path, 'device', 'driver', 'module')):
                 interfaces[device]['module'] = os.path.basename(os.path.realpath(os.path.join(path, 'device', 'driver', 'module')))
             if os.path.exists(os.path.join(path, 'type')):
                 _type = get_file_content(os.path.join(path, 'type'))
                 interfaces[device]['type'] = self.INTERFACE_TYPE.get(_type, 'unknown')
             if os.path.exists(os.path.join(path, 'bridge')):
                 interfaces[device]['type'] = 'bridge'
-                interfaces[device]['interfaces'] = [ os.path.basename(b) for b in glob.glob(os.path.join(path, 'brif', '*')) ]
+                interfaces[device]['interfaces'] = [os.path.basename(b) for b in glob.glob(os.path.join(path, 'brif', '*'))]
                 if os.path.exists(os.path.join(path, 'bridge', 'bridge_id')):
                     interfaces[device]['id'] = get_file_content(os.path.join(path, 'bridge', 'bridge_id'), default='')
                 if os.path.exists(os.path.join(path, 'bridge', 'stp_state')):
@@ -120,20 +120,20 @@ class LinuxNetwork(Network):
                         interfaces[device]['all_slaves_active'] = get_file_content(path) == '1'
             if os.path.exists(os.path.join(path, 'bonding_slave')):
                 interfaces[device]['perm_macaddress'] = get_file_content(os.path.join(path, 'bonding_slave', 'perm_hwaddr'), default='')
-            if os.path.exists(os.path.join(path,'device')):
-                interfaces[device]['pciid'] = os.path.basename(os.readlink(os.path.join(path,'device')))
+            if os.path.exists(os.path.join(path, 'device')):
+                interfaces[device]['pciid'] = os.path.basename(os.readlink(os.path.join(path, 'device')))
             if os.path.exists(os.path.join(path, 'speed')):
                 speed = get_file_content(os.path.join(path, 'speed'))
                 if speed is not None:
                     interfaces[device]['speed'] = int(speed)
 
             # Check whether an interface is in promiscuous mode
-            if os.path.exists(os.path.join(path,'flags')):
+            if os.path.exists(os.path.join(path, 'flags')):
                 promisc_mode = False
                 # The second byte indicates whether the interface is in promiscuous mode.
                 # 1 = promisc
                 # 0 = no promisc
-                data = int(get_file_content(os.path.join(path, 'flags')),16)
+                data = int(get_file_content(os.path.join(path, 'flags')), 16)
                 promisc_mode = (data & 0x0100 > 0)
                 interfaces[device]['promisc'] = promisc_mode
 
@@ -153,7 +153,7 @@ class LinuxNetwork(Network):
                             address = words[1]
                             netmask_length = "32"
                         address_bin = struct.unpack('!L', socket.inet_aton(address))[0]
-                        netmask_bin = (1<<32) - (1<<32>>int(netmask_length))
+                        netmask_bin = (1 << 32) - (1 << 32 >> int(netmask_length))
                         netmask = socket.inet_ntoa(struct.pack('!L', netmask_bin))
                         network = socket.inet_ntoa(struct.pack('!L', address_bin & netmask_bin))
                         iface = words[-1]
@@ -206,18 +206,18 @@ class LinuxNetwork(Network):
                             scope = words[3]
                         if 'ipv6' not in interfaces[device]:
                             interfaces[device]['ipv6'] = []
-                        interfaces[device]['ipv6'].append({
-                            'address' : address,
-                            'prefix'  : prefix,
-                            'scope'   : scope
-                        })
+                            interfaces[device]['ipv6'].append({
+                                'address': address,
+                                'prefix': prefix,
+                                'scope': scope
+                            })
                         # If this is the default address, update default_ipv6
                         if 'address' in default_ipv6 and default_ipv6['address'] == address:
-                            default_ipv6['prefix']     = prefix
-                            default_ipv6['scope']      = scope
+                            default_ipv6['prefix'] = prefix
+                            default_ipv6['scope'] = scope
                             default_ipv6['macaddress'] = macaddress
-                            default_ipv6['mtu']        = interfaces[device]['mtu']
-                            default_ipv6['type']       = interfaces[device].get("type", "unknown")
+                            default_ipv6['mtu'] = interfaces[device]['mtu']
+                            default_ipv6['type'] = interfaces[device].get("type", "unknown")
                         if not address == '::1':
                             ips['all_ipv6_addresses'].append(address)
 
@@ -238,7 +238,7 @@ class LinuxNetwork(Network):
         new_interfaces = {}
         for i in interfaces:
             if ':' in i:
-                new_interfaces[i.replace(':','_')] = interfaces[i]
+                new_interfaces[i.replace(':', '_')] = interfaces[i]
             else:
                 new_interfaces[i] = interfaces[i]
         return new_interfaces, ips
@@ -255,10 +255,10 @@ class LinuxNetwork(Network):
                 for line in stdout.strip().splitlines():
                     if not line or line.endswith(":"):
                         continue
-                    key,value = line.split(": ")
+                    key, value = line.split(": ")
                     if not value:
                         continue
-                    features[key.strip().replace('-','_')] = value.strip()
+                    features[key.strip().replace('-', '_')] = value.strip()
                 data['features'] = features
 
             args = [ethtool_path, '-T', device]
