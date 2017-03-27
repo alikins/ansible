@@ -30,7 +30,7 @@ class HPUXHardware(Hardware):
         if self.facts['architecture'] == '9000/800':
             rc, out, err = self.module.run_command("ioscan -FkCprocessor | wc -l", use_unsafe_shell=True)
             self.facts['processor_count'] = int(out.strip())
-        #Working with machinfo mess
+        # Working with machinfo mess
         elif self.facts['architecture'] == 'ia64':
             if self.facts['distribution_version'] == "B.11.23":
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep 'Number of CPUs'", use_unsafe_shell=True)
@@ -40,12 +40,12 @@ class HPUXHardware(Hardware):
                 rc, out, err = self.module.run_command("ioscan -FkCprocessor | wc -l", use_unsafe_shell=True)
                 self.facts['processor_cores'] = int(out.strip())
             if self.facts['distribution_version'] == "B.11.31":
-                #if machinfo return cores strings release B.11.31 > 1204
+                # if machinfo return cores strings release B.11.31 > 1204
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep core | wc -l", use_unsafe_shell=True)
                 if out.strip() == '0':
                     rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep Intel", use_unsafe_shell=True)
                     self.facts['processor_count'] = int(out.strip().split(" ")[0])
-                    #If hyperthreading is active divide cores by 2
+                    # If hyperthreading is active divide cores by 2
                     rc, out, err = self.module.run_command("/usr/sbin/psrset | grep LCPU", use_unsafe_shell=True)
                     data = re.sub(' +', ' ', out).strip().split(' ')
                     if len(data) == 1:
@@ -82,8 +82,8 @@ class HPUXHardware(Hardware):
                 data = re.search('.*Physical: ([0-9]*) Kbytes.*', out).groups()[0].strip()
                 self.facts['memtotal_mb'] = int(data) // 1024
             except AttributeError:
-                #For systems where memory details aren't sent to syslog or the log has rotated, use parsed
-                #adb output. Unfortunately /dev/kmem doesn't have world-read, so this only works as root.
+                # For systems where memory details aren't sent to syslog or the log has rotated, use parsed
+                # adb output. Unfortunately /dev/kmem doesn't have world-read, so this only works as root.
                 if os.access("/dev/kmem", os.R_OK):
                     rc, out, err = self.module.run_command("echo 'phys_mem_pages/D' | adb -k /stand/vmunix /dev/kmem | tail -1 | awk '{print $2}'",
                                                            use_unsafe_shell=True)
