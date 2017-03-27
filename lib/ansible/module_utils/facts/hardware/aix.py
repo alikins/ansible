@@ -72,7 +72,7 @@ class AIXHardware(Hardware):
             swaptotal_mb = int(data[0].rstrip('MB'))
             percused = int(data[1].rstrip('%'))
             self.facts['swaptotal_mb'] = swaptotal_mb
-            self.facts['swapfree_mb'] = int(swaptotal_mb * ( 100 - percused ) / 100)
+            self.facts['swapfree_mb'] = int(swaptotal_mb * (100 - percused) / 100)
 
     def get_dmi_facts(self):
         rc, out, err = self.module.run_command("/usr/sbin/lsattr -El sys0 -a fwversion")
@@ -90,6 +90,7 @@ class AIXHardware(Hardware):
                         self.facts['lpar_info'] = data[1].strip()
                     if 'System Model' in line:
                         self.facts['product_name'] = data[1].strip()
+
     def get_vgs_facts(self):
         """
         Get vg and pv Facts
@@ -108,27 +109,26 @@ class AIXHardware(Hardware):
 
         lsvg_path = self.module.get_bin_path("lsvg")
         xargs_path = self.module.get_bin_path("xargs")
-        cmd = "%s | %s %s -p" % (lsvg_path ,xargs_path,lsvg_path)
+        cmd = "%s | %s %s -p" % (lsvg_path, xargs_path, lsvg_path)
         if lsvg_path and xargs_path:
-            rc, out, err = self.module.run_command(cmd,use_unsafe_shell=True)
+            rc, out, err = self.module.run_command(cmd, use_unsafe_shell=True)
             if rc == 0 and out:
-                self.facts['vgs']= {}
+                self.facts['vgs'] = {}
                 for m in re.finditer(r'(\S+):\n.*FREE DISTRIBUTION(\n(\S+)\s+(\w+)\s+(\d+)\s+(\d+).*)+', out):
                     self.facts['vgs'][m.group(1)] = []
                     pp_size = 0
-                    cmd = "%s %s" % (lsvg_path,m.group(1))
+                    cmd = "%s %s" % (lsvg_path, m.group(1))
                     rc, out, err = self.module.run_command(cmd)
                     if rc == 0 and out:
-                        pp_size = re.search(r'PP SIZE:\s+(\d+\s+\S+)',out).group(1)
-                        for n in re.finditer(r'(\S+)\s+(\w+)\s+(\d+)\s+(\d+).*',m.group(0)):
-                            pv_info = { 'pv_name': n.group(1),
-                                        'pv_state': n.group(2),
-                                        'total_pps': n.group(3),
-                                        'free_pps': n.group(4),
-                                        'pp_size': pp_size
-                                      }
+                        pp_size = re.search(r'PP SIZE:\s+(\d+\s+\S+)', out).group(1)
+                        for n in re.finditer(r'(\S+)\s+(\w+)\s+(\d+)\s+(\d+).*', m.group(0)):
+                            pv_info = {'pv_name': n.group(1),
+                                       'pv_state': n.group(2),
+                                       'total_pps': n.group(3),
+                                       'free_pps': n.group(4),
+                                       'pp_size': pp_size
+                                       }
                             self.facts['vgs'][m.group(1)].append(pv_info)
-
 
     def get_mount_facts(self):
         self.facts['mounts'] = []
@@ -144,9 +144,9 @@ class AIXHardware(Hardware):
                         # normal mount
                         self.facts['mounts'].append({'mount': fields[1],
                                                  'device': fields[0],
-                                                 'fstype' : fields[2],
+                                                 'fstype': fields[2],
                                                  'options': fields[6],
-                                                 'time': '%s %s %s' % ( fields[3], fields[4], fields[5])})
+                                                 'time': '%s %s %s' % (fields[3], fields[4], fields[5])})
                     else:
                         # nfs or cifs based mount
                         # in case of nfs if no mount options are provided on command line
@@ -155,7 +155,6 @@ class AIXHardware(Hardware):
                             fields.append("")
                         self.facts['mounts'].append({'mount': fields[2],
                                                  'device': '%s:%s' % (fields[0], fields[1]),
-                                                 'fstype' : fields[3],
+                                                 'fstype': fields[3],
                                                  'options': fields[7],
-                                                 'time': '%s %s %s' % ( fields[4], fields[5], fields[6])})
-
+                                                 'time': '%s %s %s' % (fields[4], fields[5], fields[6])})
