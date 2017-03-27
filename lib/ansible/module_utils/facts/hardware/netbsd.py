@@ -6,6 +6,7 @@ from ansible.module_utils.facts import Hardware
 from ansible.module_utils.facts import TimeoutError, timeout
 
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
+from ansible.module_utils.facts.sysctl import get_sysctl
 
 
 class NetBSDHardware(Hardware):
@@ -24,7 +25,7 @@ class NetBSDHardware(Hardware):
     MEMORY_FACTS = ['MemTotal', 'SwapTotal', 'MemFree', 'SwapFree']
 
     def populate(self):
-        self.sysctl = self.get_sysctl(['machdep'])
+        self.sysctl = get_sysctl(self.module, ['machdep'])
         self.get_cpu_facts()
         self.get_memory_facts()
         try:
