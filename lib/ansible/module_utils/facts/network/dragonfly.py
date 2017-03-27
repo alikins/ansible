@@ -1,4 +1,4 @@
-from ansible.module_utils.facts import GenericBsdIfconfigNetwork
+from ansible.module_utils.facts.network.generic_bsd import GenericBsdIfconfigNetwork
 
 
 class DragonFlyNetwork(GenericBsdIfconfigNetwork):
