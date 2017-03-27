@@ -81,7 +81,7 @@ class Facts(object):
     _I386RE = re.compile(r'i([3456]86|86pc)')
     # For the most part, we assume that platform.dist() will tell the truth.
     # This is the fallback to handle unknowns or exceptions
-    SELINUX_MODE_DICT = { 1: 'enforcing', 0: 'permissive', -1: 'disabled' }
+    SELINUX_MODE_DICT = {1: 'enforcing', 0: 'permissive', -1: 'disabled'}
 
     # A list of dicts.  If there is a platform with more than one
     # package manager, put the preferred one last.  If there is an
@@ -89,28 +89,28 @@ class Facts(object):
     # NOTE: This is really constants. This dict is also used in a weird way by
     #       ansible.executor.action_write_locks that introduces a weird dep that could
     #       be avoided if this dict was elsewhere. -akl
-    PKG_MGRS = [ { 'path' : '/usr/bin/yum',         'name' : 'yum' },
-                 { 'path' : '/usr/bin/dnf',         'name' : 'dnf' },
-                 { 'path' : '/usr/bin/apt-get',     'name' : 'apt' },
-                 { 'path' : '/usr/bin/zypper',      'name' : 'zypper' },
-                 { 'path' : '/usr/sbin/urpmi',      'name' : 'urpmi' },
-                 { 'path' : '/usr/bin/pacman',      'name' : 'pacman' },
-                 { 'path' : '/bin/opkg',            'name' : 'opkg' },
-                 { 'path' : '/usr/pkg/bin/pkgin',   'name' : 'pkgin' },
-                 { 'path' : '/opt/local/bin/pkgin', 'name' : 'pkgin' },
-                 { 'path' : '/opt/tools/bin/pkgin', 'name' : 'pkgin' },
-                 { 'path' : '/opt/local/bin/port',  'name' : 'macports' },
-                 { 'path' : '/usr/local/bin/brew',  'name' : 'homebrew' },
-                 { 'path' : '/sbin/apk',            'name' : 'apk' },
-                 { 'path' : '/usr/sbin/pkg',        'name' : 'pkgng' },
-                 { 'path' : '/usr/sbin/swlist',     'name' : 'SD-UX' },
-                 { 'path' : '/usr/bin/emerge',      'name' : 'portage' },
-                 { 'path' : '/usr/sbin/pkgadd',     'name' : 'svr4pkg' },
-                 { 'path' : '/usr/bin/pkg',         'name' : 'pkg5' },
-                 { 'path' : '/usr/bin/xbps-install','name' : 'xbps' },
-                 { 'path' : '/usr/local/sbin/pkg',  'name' : 'pkgng' },
-                 { 'path' : '/usr/bin/swupd',       'name' : 'swupd' },
-                 { 'path' : '/usr/sbin/sorcery',    'name' : 'sorcery' },
+    PKG_MGRS = [{'path': '/usr/bin/yum',         'name': 'yum'},
+                {'path': '/usr/bin/dnf',         'name': 'dnf'},
+                {'path': '/usr/bin/apt-get',     'name': 'apt'},
+                {'path': '/usr/bin/zypper',      'name': 'zypper'},
+                {'path': '/usr/sbin/urpmi',      'name': 'urpmi'},
+                {'path': '/usr/bin/pacman',      'name': 'pacman'},
+                {'path': '/bin/opkg',            'name': 'opkg'},
+                {'path': '/usr/pkg/bin/pkgin',   'name': 'pkgin'},
+                {'path': '/opt/local/bin/pkgin', 'name': 'pkgin'},
+                {'path': '/opt/tools/bin/pkgin', 'name': 'pkgin'},
+                {'path': '/opt/local/bin/port',  'name': 'macports'},
+                {'path': '/usr/local/bin/brew',  'name': 'homebrew'},
+                {'path': '/sbin/apk',            'name': 'apk'},
+                {'path': '/usr/sbin/pkg',        'name': 'pkgng'},
+                {'path': '/usr/sbin/swlist',     'name': 'SD-UX'},
+                {'path': '/usr/bin/emerge',      'name': 'portage'},
+                {'path': '/usr/sbin/pkgadd',     'name': 'svr4pkg'},
+                {'path': '/usr/bin/pkg',         'name': 'pkg5'},
+                {'path': '/usr/bin/xbps-install', 'name': 'xbps'},
+                {'path': '/usr/local/sbin/pkg',  'name': 'pkgng'},
+                {'path': '/usr/bin/swupd',       'name': 'swupd'},
+                {'path': '/usr/sbin/sorcery',    'name': 'sorcery'},
                 ]
 
     # NOTE: load_on_init is changed for ohai/facter classes. Ideally, all facts
@@ -123,7 +123,7 @@ class Facts(object):
             self.facts = {}
         else:
             self.facts = cached_facts
-        ### TODO: Eventually, these should all get moved to populate().  But
+        # TODO: Eventually, these should all get moved to populate().  But
         # some of the values are currently being used by other subclasses (for
         # instance, os_family and distribution).  Have to sort out what to do
         # about those first.
@@ -146,7 +146,7 @@ class Facts(object):
         #    fact_gatherers.append(fact_gatherer)
 
         # TODO: de-dup fact_gatherers
-        #for gatherer in fact_gatherers:
+        # for gatherer in fact_gatherers:
         #    data = gatherer.gather()
         #    self.facts.update(data)
 
@@ -250,7 +250,7 @@ class Facts(object):
         local = {}
         for fn in sorted(glob.glob(fact_path + '/*.fact')):
             # where it will sit under local facts
-            fact_base = os.path.basename(fn).replace('.fact','')
+            fact_base = os.path.basename(fn).replace('.fact', '')
             if stat.S_IXUSR & os.stat(fn)[stat.ST_MODE]:
                 # run it
                 # try to read it as json first
@@ -284,7 +284,7 @@ class Facts(object):
                             fact[sect] = {}
                         for opt in cp.options(sect):
                             val = cp.get(sect, opt)
-                            fact[sect][opt]=val
+                            fact[sect][opt] = val
 
             local[fact_base] = fact
         # NOTE: just return the new facts dict, empty or not -akl
@@ -336,7 +336,7 @@ class Facts(object):
 
     # NOTE: This is definately complicated enough to warrant its own module or class (and tests) -akl
     def get_service_mgr_facts(self):
-        #TODO: detect more custom init setups like bootscripts, dmd, s6, Epoch, etc
+        # TODO: detect more custom init setups like bootscripts, dmd, s6, Epoch, etc
         # also other OSs other than linux might need to check across several possible candidates
 
         # Mapping of proc_1 values to more useful names
@@ -376,13 +376,13 @@ class Facts(object):
 
         # start with the easy ones
         elif self.facts['distribution'] == 'MacOSX':
-            #FIXME: find way to query executable, version matching is not ideal
+            # FIXME: find way to query executable, version matching is not ideal
             if LooseVersion(platform.mac_ver()[0]) >= LooseVersion('10.4'):
                 self.facts['service_mgr'] = 'launchd'
             else:
                 self.facts['service_mgr'] = 'systemstarter'
         elif 'BSD' in self.facts['system'] or self.facts['system'] in ['Bitrig', 'DragonFly']:
-            #FIXME: we might want to break out to individual BSDs or 'rc'
+            # FIXME: we might want to break out to individual BSDs or 'rc'
             self.facts['service_mgr'] = 'bsdinit'
         elif self.facts['system'] == 'AIX':
             self.facts['service_mgr'] = 'src'
@@ -428,7 +428,7 @@ class Facts(object):
         elif lsb_path is None and os.path.exists('/etc/lsb-release'):
             self.facts['lsb'] = {}
             for line in get_file_lines('/etc/lsb-release'):
-                value = line.split('=',1)[1].strip()
+                value = line.split('=', 1)[1].strip()
                 if 'DISTRIB_ID' in line:
                     self.facts['lsb']['id'] = value
                 elif 'DISTRIB_RELEASE' in line:
@@ -455,7 +455,7 @@ class Facts(object):
             self.facts['selinux']['status'] = 'enabled'
             try:
                 self.facts['selinux']['policyvers'] = selinux.security_policyvers()
-            except (AttributeError,OSError):
+            except (AttributeError, OSError):
                 self.facts['selinux']['policyvers'] = 'unknown'
             try:
                 (rc, configmode) = selinux.selinux_getenforcemode()
@@ -465,12 +465,12 @@ class Facts(object):
                     self.facts['selinux']['config_mode'] = Facts.SELINUX_MODE_DICT.get(configmode, 'unknown')
                 else:
                     self.facts['selinux']['config_mode'] = 'unknown'
-            except (AttributeError,OSError):
+            except (AttributeError, OSError):
                 self.facts['selinux']['config_mode'] = 'unknown'
             try:
                 mode = selinux.security_getenforce()
                 self.facts['selinux']['mode'] = Facts.SELINUX_MODE_DICT.get(mode, 'unknown')
-            except (AttributeError,OSError):
+            except (AttributeError, OSError):
                 self.facts['selinux']['mode'] = 'unknown'
             try:
                 (rc, policytype) = selinux.selinux_getpolicytype()
@@ -478,7 +478,7 @@ class Facts(object):
                     self.facts['selinux']['type'] = policytype
                 else:
                     self.facts['selinux']['type'] = 'unknown'
-            except (AttributeError,OSError):
+            except (AttributeError, OSError):
                 self.facts['selinux']['type'] = 'unknown'
 
     def get_apparmor_facts(self):
@@ -569,7 +569,7 @@ class Facts(object):
 
     def get_env_facts(self):
         self.facts['env'] = {}
-        for k,v in iteritems(os.environ):
+        for k, v in iteritems(os.environ):
             self.facts['env'][k] = v
 
     def get_dns_facts(self):
