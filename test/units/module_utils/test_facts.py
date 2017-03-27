@@ -207,7 +207,7 @@ class TestLinuxVirtual(BaseTestFactsPlatform):
 
 class TestFreeBSDVirtual(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
-    fact_class = facts.FreeBSDVirtual
+    fact_class = virtual.freebsd.FreeBSDVirtual
 
 
 class TestDragonFlyVirtual(BaseTestFactsPlatform):
