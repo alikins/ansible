@@ -84,12 +84,12 @@ class NetBSDHardware(Hardware):
             for line in fstab.splitlines():
                 if line.startswith('#') or line.strip() == '':
                     continue
-                fields = re.sub(r'\s+',' ',line).split()
+                fields = re.sub(r'\s+', ' ', line).split()
                 size_total, size_available = self._get_mount_size_facts(fields[1])
                 self.facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],
-                    'fstype' : fields[2],
+                    'fstype': fields[2],
                     'options': fields[3],
                     'size_total': size_total,
                     'size_available': size_available
@@ -103,11 +103,11 @@ class NetBSDHardware(Hardware):
         # best-effort basis. As a bonus we also get facts on non-amd64/i386
         # platforms this way.
         sysctl_to_dmi = {
-            'machdep.dmi.system-product':  'product_name',
-            'machdep.dmi.system-version':  'product_version',
-            'machdep.dmi.system-uuid':     'product_uuid',
-            'machdep.dmi.system-serial':   'product_serial',
-            'machdep.dmi.system-vendor':   'system_vendor',
+            'machdep.dmi.system-product': 'product_name',
+            'machdep.dmi.system-version': 'product_version',
+            'machdep.dmi.system-uuid': 'product_uuid',
+            'machdep.dmi.system-serial': 'product_serial',
+            'machdep.dmi.system-vendor': 'system_vendor',
         }
 
         for mib in sysctl_to_dmi:
