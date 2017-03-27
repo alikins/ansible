@@ -156,7 +156,7 @@ class TestLinuxNetwork(BaseTestFactsPlatform):
 
 class TestGenericBsdIfconfigNetwork(BaseTestFactsPlatform):
     platform_id = 'Generic_BSD_Ifconfig'
-    fact_class = facts.GenericBsdIfconfigNetwork
+    fact_class = network.generic_bsd.GenericBsdIfconfigNetwork
 
 
 class TestHPUXNetwork(BaseTestFactsPlatform):
