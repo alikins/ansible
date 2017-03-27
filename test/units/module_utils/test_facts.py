@@ -26,6 +26,7 @@ from ansible.compat.tests.mock import Mock, patch
 from ansible.module_utils import facts
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
+from ansible.module_utils.facts import virtual
 
 
 # FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
@@ -201,7 +202,7 @@ class TestSunOSNetwork(BaseTestFactsPlatform):
 
 class TestLinuxVirtual(BaseTestFactsPlatform):
     platform_id = 'Linux'
-    fact_class = facts.LinuxVirtual
+    fact_class = virtual.linux.LinuxVirtual
 
 
 class TestFreeBSDVirtual(BaseTestFactsPlatform):
