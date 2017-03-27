@@ -14,12 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-from ansible.module_utils.facts.network import linux
+from ansible.module_utils.facts.network import aix
 from ansible.module_utils.facts.network import darwin
 from ansible.module_utils.facts.network import dragonfly
 from ansible.module_utils.facts.network import freebsd
+from ansible.module_utils.facts.network import linux
 from ansible.module_utils.facts.network import netbsd
 from ansible.module_utils.facts.network import openbsd
 from ansible.module_utils.facts.network import sunos
 
-__all__ = [darwin, dragonfly, freebsd, linux, netbsd, openbsd, sunos]
+__all__ = [aix, darwin, dragonfly, freebsd, linux, netbsd, openbsd, sunos]
