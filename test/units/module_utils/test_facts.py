@@ -215,9 +215,14 @@ class TestDragonFlyVirtual(BaseTestFactsPlatform):
     fact_class = virtual.dragonfly.DragonFlyVirtual
 
 
+class TestNetBSDVirtual(BaseTestFactsPlatform):
+    platform_id = 'NetBSD'
+    fact_class = virtual.netbsd.NetBSDVirtual
+
+
 class TestOpenBSDVirtual(BaseTestFactsPlatform):
     platform_id = 'OpenBSD'
-    fact_class = facts.OpenBSDVirtual
+    fact_class = virtual.openbsd.OpenBSDVirtual
 
 
 class TestHPUXVirtual(BaseTestFactsPlatform):
