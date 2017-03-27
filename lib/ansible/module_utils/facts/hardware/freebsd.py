@@ -94,7 +94,7 @@ class FreeBSDHardware(Hardware):
             for line in fstab.splitlines():
                 if line.startswith('#') or line.strip() == '':
                     continue
-                fields = re.sub(r'\s+',' ',line).split()
+                fields = re.sub(r'\s+', ' ', line).split()
                 size_total, size_available = self._get_mount_size_facts(fields[1])
                 self.facts['mounts'].append({
                     'mount': fields[1],
@@ -108,7 +108,7 @@ class FreeBSDHardware(Hardware):
     def get_device_facts(self):
         sysdir = '/dev'
         self.facts['devices'] = {}
-        drives = re.compile('(ada?\d+|da\d+|a?cd\d+)') #TODO: rc, disks, err = self.module.run_command("/sbin/sysctl kern.disks")
+        drives = re.compile('(ada?\d+|da\d+|a?cd\d+)')  # TODO: rc, disks, err = self.module.run_command("/sbin/sysctl kern.disks")
         slices = re.compile('(ada?\d+s\d+\w*|da\d+s\d+\w*)')
         if os.path.isdir(sysdir):
             dirlist = sorted(os.listdir(sysdir))
@@ -142,7 +142,7 @@ class FreeBSDHardware(Hardware):
                 (rc, out, err) = self.module.run_command('%s -s %s' % (dmi_bin, v))
                 if rc == 0:
                     # Strip out commented lines (specific dmidecode output)
-                    self.facts[k] = ''.join([line for line in out.splitlines() if not line.startswith('#') ])
+                    self.facts[k] = ''.join([line for line in out.splitlines() if not line.startswith('#')])
                     try:
                         json.dumps(self.facts[k])
                     except UnicodeDecodeError:
