@@ -31,11 +31,13 @@
 # TODO: mv platform specific stuff into facts/* modules?
 # TODO: general pep8/style clean ups
 # TODO: tiny bit of abstractions for run_command() and get_file_content() use
-#       ie, code like self.module.run_command('some_netinfo_tool --someoption')[1].splitlines[][0].split()[1] ->
+#       ie, code like self.module.run_command('some_netinfo_tool
+#                                             --someoption')[1].splitlines[][0].split()[1] ->
 #          netinfo_output = self._netinfo_provider()
 #          netinfo_data = self._netinfo_parse(netinfo_output)
 #       why?
 #          - much much easier to test
+# TODO: mv timeout stuff to its own module
 import fnmatch
 import platform
 import signal
@@ -1098,12 +1100,12 @@ class Network(Facts):
     """
     platform = 'Generic'
 
-    IPV6_SCOPE = { '0' : 'global',
-                   '10' : 'host',
-                   '20' : 'link',
-                   '40' : 'admin',
-                   '50' : 'site',
-                   '80' : 'organization' }
+    IPV6_SCOPE = {'0': 'global',
+                  '10': 'host',
+                  '20': 'link',
+                  '40': 'admin',
+                  '50': 'site',
+                  '80': 'organization'}
 
     def __new__(cls, *arguments, **keyword):
         # When Network is created, it chooses a subclass to create instead.
@@ -1169,8 +1171,8 @@ def ansible_facts(module, gather_subset):
     facts.update(Facts(module).populate())
     for subset in gather_subset:
         facts.update(FACT_SUBSETS[subset](module,
-                                         load_on_init=False,
-                                         cached_facts=facts).populate())
+                                          load_on_init=False,
+                                          cached_facts=facts).populate())
     return facts
 
 
@@ -1178,7 +1180,8 @@ def ansible_facts(module, gather_subset):
 # called directly from setup.py module.
 # FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
 #        'gather_timeout', 'filter' instead of passing those are args or oblique ds
-#        module is passed in and self.module.misc_AnsibleModule_methods are used, so hard to decouple.
+#        module is passed in and self.module.misc_AnsibleModule_methods
+#        are used, so hard to decouple.
 # FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
 #def get_all_facts(module):
 def get_gatherer_names(module):
