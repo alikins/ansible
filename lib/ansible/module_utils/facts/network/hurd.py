@@ -27,7 +27,7 @@ class HurdPfinetNetwork(Network):
             self.facts['interfaces'] = []
             for i in out.split():
                 if '=' in i and i.startswith('--'):
-                    k,v = i.split('=',1)
+                    k, v = i.split('=', 1)
                     # remove '--'
                     k = k[2:]
                     if k == 'interface':
@@ -46,7 +46,7 @@ class HurdPfinetNetwork(Network):
                     elif k == 'netmask':
                         self.facts[current_if]['ipv4']['netmask'] = v
                     elif k == 'address6':
-                        address,prefix = v.split('/')
+                        address, prefix = v.split('/')
                         self.facts[current_if]['ipv6'].append({
                             'address': address,
                             'prefix': prefix,
