@@ -156,7 +156,7 @@ class TestGenericBsdIfconfigNetwork(BaseTestFactsPlatform):
 
 class TestHPUXNetwork(BaseTestFactsPlatform):
     platform_id = 'HP-UX'
-    fact_class = facts.HPUXNetwork
+    fact_class = network.hpux.HPUXNetwork
 
 
 class TestDarwinNetwork(BaseTestFactsPlatform):
