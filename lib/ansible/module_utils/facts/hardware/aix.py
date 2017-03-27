@@ -143,18 +143,19 @@ class AIXHardware(Hardware):
                     if re.match('^/', fields[0]):
                         # normal mount
                         self.facts['mounts'].append({'mount': fields[1],
-                                                 'device': fields[0],
-                                                 'fstype': fields[2],
-                                                 'options': fields[6],
-                                                 'time': '%s %s %s' % (fields[3], fields[4], fields[5])})
+                                                     'device': fields[0],
+                                                     'fstype': fields[2],
+                                                     'options': fields[6],
+                                                     'time': '%s %s %s' % (fields[3], fields[4], fields[5])})
                     else:
                         # nfs or cifs based mount
                         # in case of nfs if no mount options are provided on command line
                         # add into fields empty string...
                         if len(fields) < 8:
                             fields.append("")
+
                         self.facts['mounts'].append({'mount': fields[2],
-                                                 'device': '%s:%s' % (fields[0], fields[1]),
-                                                 'fstype': fields[3],
-                                                 'options': fields[7],
-                                                 'time': '%s %s %s' % (fields[4], fields[5], fields[6])})
+                                                     'device': '%s:%s' % (fields[0], fields[1]),
+                                                     'fstype': fields[3],
+                                                     'options': fields[7],
+                                                     'time': '%s %s %s' % (fields[4], fields[5], fields[6])})
