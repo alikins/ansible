@@ -1445,14 +1445,6 @@ class FreeBSDNetwork(GenericBsdIfconfigNetwork):
     platform = 'FreeBSD'
 
 
-class DragonFlyNetwork(GenericBsdIfconfigNetwork):
-    """
-    This is the DragonFly Network Class.
-    It uses the GenericBsdIfconfigNetwork unchanged.
-    """
-    platform = 'DragonFly'
-
-
 class AIXNetwork(GenericBsdIfconfigNetwork):
     """
     This is the AIX Network Class.
