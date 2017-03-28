@@ -1222,9 +1222,11 @@ def ansible_facts(module, gather_subset):
 #
 # NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
 # def get_all_facts(module):
-def get_collector_names(module, gather_subset=None, gather_timeout=None):
+def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_timeout=None):
     # Retrieve module parameters
     gather_subset = gather_subset or ['all']
+
+    valid_subsets = valid_subsets or frozenset([])
 
     global GATHER_TIMEOUT
     GATHER_TIMEOUT = gather_timeout
@@ -1234,18 +1236,18 @@ def get_collector_names(module, gather_subset=None, gather_timeout=None):
     exclude_subsets = set()
     for subset in gather_subset:
         if subset == 'all':
-            additional_subsets.update(VALID_SUBSETS)
+            additional_subsets.update(valid_subsets)
             continue
         if subset.startswith('!'):
             subset = subset[1:]
             if subset == 'all':
-                exclude_subsets.update(VALID_SUBSETS)
+                exclude_subsets.update(valid_subsets)
                 continue
             exclude = True
         else:
             exclude = False
 
-        if subset not in VALID_SUBSETS:
+        if subset not in valid_subsets:
             raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" % (subset, ", ".join(FACT_SUBSETS.keys())))
 
         if exclude:
@@ -1254,7 +1256,7 @@ def get_collector_names(module, gather_subset=None, gather_timeout=None):
             additional_subsets.add(subset)
 
     if not additional_subsets:
-        additional_subsets.update(VALID_SUBSETS)
+        additional_subsets.update(valid_subsets)
 
     additional_subsets.difference_update(exclude_subsets)
     return additional_subsets
@@ -1329,7 +1331,6 @@ class TempFactCollector(WrapperCollector):
 # that provide it. -akl
 
 FACT_SUBSETS = dict(
-    # FIXME: add facts=Facts,
     facts=TempFactCollector,
     hardware=HardwareCollector,
     network=NetworkCollector,
@@ -1344,7 +1345,7 @@ class FactCollector(BaseFactCollector):
     @classmethod
     def from_gather_subset(cls, module, gather_subset=None, gather_timeout=None):
         # use gather_name etc to get the list of collectors
-        collector_names = get_collector_names(module)
+        collector_names = get_collector_names(module, valid_subsets=VALID_SUBSETS)
 
         collectors = []
         for collector_name in collector_names:
