@@ -1905,6 +1905,12 @@ class AnsibleModule(object):
         # and we don't want to break modules unnecessarily
         return None
 
+    # TODO: move this to module method, only self.fail_json is used from self, and
+    #       that could/should just raise an exception, or second choice would be to return
+    #       a results data structure (bin_path, errors) for simplest case.
+    #       Why? because get_bin_path() is one of the few methods
+    #       facts use from AnsibleModule(). If module methods they wouldn't require an
+    #       instance of AnsibleModule
     def get_bin_path(self, arg, required=False, opt_dirs=[]):
         '''
         find system executable in PATH.
@@ -2257,7 +2263,6 @@ class AnsibleModule(object):
             e = get_exception()
             self.fail_json(msg='Could not write data to file (%s) from (%s): %s' % (dest, src, e), exception=traceback.format_exc())
 
-
     def _read_from_pipes(self, rpipes, rfds, file_descriptor):
         data = b('')
         if file_descriptor in rfds:
@@ -2267,6 +2272,10 @@ class AnsibleModule(object):
 
         return data
 
+    # TODO: extract this to a module scope method for easier reuse. self is only
+    #       used by self.fail_json/exit_json, self.log/self.debug (could be params),
+    #       self._read_from_pipes (should also me module static method),
+    #       self.run_command_environment, which should also be a param
     def run_command(self, args, check_rc=False, close_fds=True, executable=None, data=None, binary_data=False, path_prefix=None, cwd=None,
                     use_unsafe_shell=False, prompt_regex=None, environ_update=None, umask=None, encoding='utf-8', errors='surrogate_or_strict'):
         '''
