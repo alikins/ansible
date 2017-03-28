@@ -119,6 +119,8 @@ class WrapperCollector(BaseFactCollector):
     facts_class = None
 
     def __init__(self, module, collectors=None, namespace=None):
+        namespace = PrefixFactNamespace(namespace_name='ansible',
+                                        prefix='ansible_')
         super(WrapperCollector, self).__init__(collectors=collectors,
                                                namespace=namespace)
         self.module = module
@@ -130,8 +132,12 @@ class WrapperCollector(BaseFactCollector):
         #          so for now, pass in a copy()
         facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
 
-        return facts_obj.populate()
+        facts_dict = facts_obj.populate()
 
+        if self.namespace:
+            facts_dict = self._transform_dict_keys(facts_dict)
+
+        return facts_dict
 
 class Hardware(Facts):
     """
@@ -422,10 +428,7 @@ class AnsibleFactCollector(NestedFactCollector):
        Has a 'from_gather_subset() constructor that populates collectors based on a
        gather_subset specifier.'''
 
-    def __init__(self, collectors=None):
-        namespace = PrefixFactNamespace(namespace_name='ansible',
-                                        prefix='ansible_')
-
+    def __init__(self, collectors=None, namespace=None):
         super(AnsibleFactCollector, self).__init__('ansible_facts',
                                                    collectors=collectors,
                                                    namespace=namespace)
