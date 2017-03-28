@@ -1,21 +1,26 @@
 
 class BaseFactCollector:
-    def __init__(self, collectors=None, collected_facts=None):
+    def __init__(self, collectors=None):
         '''Base class for things that collect facts.
 
-        'collectors' is an optional list of other FactCollectors for composing.
+        'collectors' is an optional list of other FactCollectors for composing.'''
+        self.collectors = collectors or []
+
+    def collect(self, collected_facts=None):
+        '''do the fact collection
+
         'collected_facts' is a object (a dict, likely) that holds all previously
           facts. This is intended to be used if a FactCollector needs to reference
-          another fact (for ex, the system arch) and should not be modified (usually).'''
-        self.collectors = collectors or []
-        self.collected_facts = collected_facts or {}
+          another fact (for ex, the system arch) and should not be modified (usually).
 
-    def collect(self):
+          Returns a dict of facts.
+
+          '''
         facts_dict = {}
         for collector in self.collectors:
             info_dict = {}
             try:
-                info_dict = collector.collect()
+                info_dict = collector.collect(collected_facts=collected_facts)
             except Exception as e:
                 # FIXME: do fact collection exception warning/logging
                 print(e)
