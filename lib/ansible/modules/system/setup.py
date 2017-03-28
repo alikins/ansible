@@ -117,6 +117,10 @@ EXAMPLES = """
 # ansible windows -m setup -a "fact_path='c:\\custom_facts'"
 """
 
+# import module snippets
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts import FactCollector
+
 
 def main():
     module = AnsibleModule(
@@ -128,12 +132,22 @@ def main():
         ),
         supports_check_mode = True,
     )
-    data = get_all_facts(module)
-    module.exit_json(**data)
 
-# import module snippets
-from ansible.module_utils.basic import *
-from ansible.module_utils.facts import *
+    gather_subset = module.params['gather_subset']
+    gather_timeout = module.params['gather_timeout']
+
+    fact_collector = FactCollector.from_gather_subset(module,
+                                                      gather_subset=gather_subset,
+                                                      gather_timeout=gather_timeout)
+
+    facts_dict = {'gather_subset': gather_subset}
+
+    data = fact_collector.collect()
+
+    facts_dict.update(data)
+
+    module.exit_json(**facts_dict)
+
 
 if __name__ == '__main__':
     main()

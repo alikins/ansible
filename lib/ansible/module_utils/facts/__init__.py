@@ -45,6 +45,7 @@ import signal
 from ansible.module_utils.basic import get_all_subclasses
 from ansible.module_utils.six import PY3
 
+from ansible.module_utils.facts.collector import BaseFactCollector
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
@@ -1183,14 +1184,17 @@ def ansible_facts(module, gather_subset):
 #        module is passed in and self.module.misc_AnsibleModule_methods
 #        are used, so hard to decouple.
 # FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
+
+# FIXME: make sure get_collector_names returns a useful ordering
+#
 # NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
 # def get_all_facts(module):
-def get_gatherer_names(module):
+def get_collector_names(module, gather_subset=None, gather_timeout=None):
     # Retrieve module parameters
-    gather_subset = module.params['gather_subset']
+    gather_subset = gather_subset or ['all']
 
     global GATHER_TIMEOUT
-    GATHER_TIMEOUT = module.params['gather_timeout']
+    GATHER_TIMEOUT = gather_timeout
 
     # Retrieve all facts elements
     additional_subsets = set()
@@ -1240,6 +1244,8 @@ def _get_all_facts(gatherer_names, module):
             for (k, v) in facter_ds.items():
                 setup_options['facter_%s' % k.replace('-', '_')] = v
 
+    # FIXME/TODO: let Ohai/Facter class setup its own namespace
+    # TODO: support letting class set a namespace and somehow letting user/playbook set it
     if 'ohai' in additional_subsets:
         additional_subsets.difference_update(('ohai',))
         ohai_ds = FACT_SUBSETS['ohai'](module, load_on_init=False).populate()
@@ -1262,10 +1268,10 @@ def _get_all_facts(gatherer_names, module):
 
 
 def get_all_facts(module):
-    gatherer_names = get_gatherer_names(module)
+    collector_names = get_collector_names(module)
 
     # FIXME: avoid having to pass in module until we populate
-    all_facts = _get_all_facts(gatherer_names, module)
+    all_facts = _get_all_facts(collector_names, module)
 
     return all_facts
 
@@ -1286,3 +1292,22 @@ FACT_SUBSETS = dict(
     facter=Facter,
 )
 VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
+
+
+class FactCollector(BaseFactCollector):
+    @classmethod
+    def from_gather_subset(cls, module, gather_subset=None, gather_timeout=None):
+        # use gather_name etc to get the list of collectors
+        collector_names = get_collector_names(module)
+
+        print('collector_names: %s' % collector_names)
+        collectors = []
+        for collector_name in collector_names:
+            collector_class = FACT_SUBSETS.get(collector_name, None)
+            if not collector_class:
+                continue
+            collector = collector_class(module)
+            collectors.append(collector)
+
+        print('collectors: %s' % collectors)
+        return cls(collectors=collectors)
