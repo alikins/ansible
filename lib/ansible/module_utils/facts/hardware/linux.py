@@ -3,6 +3,8 @@ import os
 import re
 import sys
 
+from ansible.module_utils.basic import bytes_to_human
+
 from ansible.module_utils.facts import Hardware
 from ansible.module_utils.facts import TimeoutError, timeout
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
@@ -509,7 +511,7 @@ class LinuxHardware(Hardware):
                     part['sectorsize'] = get_file_content(part_sysdir + "/queue/logical_block_size")
                     if not part['sectorsize']:
                         part['sectorsize'] = get_file_content(part_sysdir + "/queue/hw_sector_size", 512)
-                    part['size'] = self.module.pretty_bytes((float(part['sectors']) * float(part['sectorsize'])))
+                    part['size'] = bytes_to_human((float(part['sectors']) * float(part['sectorsize'])))
                     part['uuid'] = get_partition_uuid(partname)
                     self.get_holders(part, part_sysdir)
 
@@ -529,7 +531,7 @@ class LinuxHardware(Hardware):
             d['sectorsize'] = get_file_content(sysdir + "/queue/logical_block_size")
             if not d['sectorsize']:
                 d['sectorsize'] = get_file_content(sysdir + "/queue/hw_sector_size", 512)
-            d['size'] = self.module.pretty_bytes(float(d['sectors']) * float(d['sectorsize']))
+            d['size'] = bytes_to_human(float(d['sectors']) * float(d['sectorsize']))
 
             d['host'] = ""
 

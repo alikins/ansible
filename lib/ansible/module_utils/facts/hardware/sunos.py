@@ -1,5 +1,7 @@
 import re
 
+from ansible.module_utils.basic import bytes_to_human
+
 from ansible.module_utils.facts.utils import get_file_content
 
 from ansible.module_utils.facts import Hardware
@@ -178,7 +180,7 @@ class SunOSHardware(Hardware):
                 stat = text.split(':')[3]
 
                 if stat == 'Size':
-                    d[disk_stats.get(stat)] = self.module.pretty_bytes(float(value))
+                    d[disk_stats.get(stat)] = bytes_to_human(float(value))
                 else:
                     d[disk_stats.get(stat)] = value.rstrip()
 
