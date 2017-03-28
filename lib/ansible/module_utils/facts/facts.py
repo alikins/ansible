@@ -123,6 +123,10 @@ class Facts(object):
             self.facts = {}
         else:
             self.facts = cached_facts
+        # FIXME: This is where Facts() should end, with the rest being left to some
+        #        composed fact gathering classes.
+
+
         # TODO: Eventually, these should all get moved to populate().  But
         # some of the values are currently being used by other subclasses (for
         # instance, os_family and distribution).  Have to sort out what to do

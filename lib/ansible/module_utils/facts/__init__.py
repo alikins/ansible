@@ -243,6 +243,7 @@ def ansible_facts(module, gather_subset):
 #        module is passed in and self.module.misc_AnsibleModule_methods
 #        are used, so hard to decouple.
 # FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
+# NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
 # def get_all_facts(module):
 def get_gatherer_names(module):
     # Retrieve module parameters
@@ -330,7 +331,12 @@ def get_all_facts(module):
 
 
 # Allowed fact subset for gather_subset options and what classes they use
-# Note: have to define this at the bottom as it references classes defined earlier in this file
+# Note: have to define this at the bottom as it references classes defined earlier in this file -akl
+
+# This map could be thought of as a fact name resolver, where we map
+# some fact identifier (currently just the couple of gather_subset types) to the classes
+# that provide it. -akl
+
 FACT_SUBSETS = dict(
     # FIXME: add facts=Facts,
     hardware=Hardware,
