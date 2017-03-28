@@ -119,7 +119,7 @@ EXAMPLES = """
 
 # import module snippets
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.facts import FactCollector
+from ansible.module_utils.facts import AnsibleFactCollector
 
 
 def main():
@@ -136,9 +136,9 @@ def main():
     gather_subset = module.params['gather_subset']
     gather_timeout = module.params['gather_timeout']
 
-    fact_collector = FactCollector.from_gather_subset(module,
-                                                      gather_subset=gather_subset,
-                                                      gather_timeout=gather_timeout)
+    fact_collector = AnsibleFactCollector.from_gather_subset(module,
+                                                             gather_subset=gather_subset,
+                                                             gather_timeout=gather_timeout)
 
     facts_dict = {'gather_subset': gather_subset}
 
