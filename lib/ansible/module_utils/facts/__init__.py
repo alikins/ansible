@@ -49,6 +49,7 @@ from ansible.module_utils.basic import get_all_subclasses
 from ansible.module_utils.six import PY3
 
 from ansible.module_utils.facts.collector import BaseFactCollector
+from ansible.module_utils.facts.namespace import PrefixFactNamespace
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
@@ -117,8 +118,9 @@ def timeout(seconds=None, error_message="Timer expired"):
 class WrapperCollector(BaseFactCollector):
     facts_class = None
 
-    def __init__(self, module, collectors=None):
-        super(WrapperCollector, self).__init__(collectors=collectors)
+    def __init__(self, module, collectors=None, namespace=None):
+        super(WrapperCollector, self).__init__(collectors=collectors,
+                                               namespace=namespace)
         self.module = module
 
     def collect(self, collected_facts=None):
@@ -403,8 +405,9 @@ VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
 class NestedFactCollector(BaseFactCollector):
     '''collect returns a dict with the rest of the collection results under top_level_name'''
-    def __init__(self, top_level_name, collectors=None):
-        super(NestedFactCollector, self).__init__(collectors=collectors)
+    def __init__(self, top_level_name, collectors=None, namespace=None):
+        super(NestedFactCollector, self).__init__(collectors=collectors,
+                                                  namespace=namespace)
         self.top_level_name = top_level_name
 
     def collect(self, collected_facts=None):
@@ -420,8 +423,12 @@ class AnsibleFactCollector(NestedFactCollector):
        gather_subset specifier.'''
 
     def __init__(self, collectors=None):
+        namespace = PrefixFactNamespace(namespace_name='ansible',
+                                        prefix='ansible_')
+
         super(AnsibleFactCollector, self).__init__('ansible_facts',
-                                                   collectors=collectors)
+                                                   collectors=collectors,
+                                                   namespace=namespace)
 
     @classmethod
     def from_gather_subset(cls, module, gather_subset=None, gather_timeout=None):
@@ -433,7 +440,10 @@ class AnsibleFactCollector(NestedFactCollector):
             collector_class = FACT_SUBSETS.get(collector_name, None)
             if not collector_class:
                 continue
+            # FIXME: hmm, kind of annoying... it would be useful to have a namespace instance
+            #        here...
             collector = collector_class(module)
             collectors.append(collector)
 
-        return cls(collectors=collectors)
+        instance = cls(collectors=collectors)
+        return instance
