@@ -1,4 +1,8 @@
 
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
+
 class BaseFactCollector:
     def __init__(self, collectors=None):
         '''Base class for things that collect facts.
@@ -23,7 +27,9 @@ class BaseFactCollector:
                 info_dict = collector.collect(collected_facts=collected_facts)
             except Exception as e:
                 # FIXME: do fact collection exception warning/logging
-                print(e)
+                import sys
+                sys.stderr.write(e)
+                sys.stderr.write('\n')
                 pass
 
             # NOTE: If we want complicated fact dict merging, this is where it would hook in
