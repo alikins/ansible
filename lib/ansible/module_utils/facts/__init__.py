@@ -401,7 +401,28 @@ FACT_SUBSETS = dict(
 VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
 
-class FactCollector(BaseFactCollector):
+class NestedFactCollector(BaseFactCollector):
+    '''collect returns a dict with the rest of the collection results under top_level_name'''
+    def __init__(self, top_level_name, collectors=None):
+        super(NestedFactCollector, self).__init__(collectors=collectors)
+        self.top_level_name = top_level_name
+
+    def collect(self, collected_facts=None):
+        collected = super(NestedFactCollector, self).collect(collected_facts=collected_facts)
+        facts_dict = {self.top_level_name: collected}
+        return facts_dict
+
+
+class AnsibleFactCollector(NestedFactCollector):
+    '''A FactCollector that returns results under 'ansible_facts' top level key.
+
+       Has a 'from_gather_subset() constructor that populates collectors based on a
+       gather_subset specifier.'''
+
+    def __init__(self, collectors=None):
+        super(AnsibleFactCollector, self).__init__('ansible_facts',
+                                                   collectors=collectors)
+
     @classmethod
     def from_gather_subset(cls, module, gather_subset=None, gather_timeout=None):
         # use gather_name etc to get the list of collectors

@@ -41,7 +41,10 @@ class TestInPlace(unittest.TestCase):
 
     def test(self):
         mock_module = self._mock_module()
-        res = facts.get_all_facts(mock_module)
+        #res = facts.get_all_facts(mock_module)
+        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       gather_subset=['all'])
+        res = fact_collector.collect()
         #print(res)
         self.assertIsInstance(res, dict)
         self.assertIn('ansible_facts', res)

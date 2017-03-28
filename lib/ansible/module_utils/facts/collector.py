@@ -3,12 +3,19 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 
+# TODO: BaseFactCollectors (plural) -> walks over list of collectors
+#       BaseFactCollector (singular) -> returns a dict (collectors 'leaf' node)
+#       and/or BaseFactCollectorNode etc
 class BaseFactCollector:
     def __init__(self, collectors=None):
         '''Base class for things that collect facts.
 
         'collectors' is an optional list of other FactCollectors for composing.'''
         self.collectors = collectors or []
+
+        # TODO: add a self.namespace for transforming fact names
+        # self.namespace is a object with a 'transform' method that transforms
+        # the name to indicate the namespace (ie, adds a prefix or suffix).
 
     def collect(self, collected_facts=None):
         '''do the fact collection
