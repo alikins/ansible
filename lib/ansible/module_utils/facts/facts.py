@@ -215,6 +215,7 @@ class Facts(object):
         else:
             self.facts['architecture'] = self.facts['machine']
 
+        # FIXME: as much as possible, avoid arch/platform bits here
         # NOTE: -> aix_platform = AixPlatform(); facts_dict.update(aix_platform) -akl
         if self.facts['system'] == 'AIX':
             # Attempt to use getconf to figure out architecture
