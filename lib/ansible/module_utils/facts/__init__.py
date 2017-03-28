@@ -38,6 +38,9 @@
 #       why?
 #          - much much easier to test
 # TODO: mv timeout stuff to its own module
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
 import fnmatch
 import platform
 import signal
@@ -111,6 +114,22 @@ def timeout(seconds=None, error_message="Timer expired"):
 
 # --------------------------------------------------------------
 
+class WrapperCollector(BaseFactCollector):
+    facts_class = None
+
+    def __init__(self, module, collectors=None):
+        super(WrapperCollector, self).__init__(collectors=collectors)
+        self.module = module
+
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        # WARNING: virtual.populate mutates cached_facts and returns a ref
+        #          so for now, pass in a copy()
+        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
+
+        return facts_obj.populate()
+
 
 class Hardware(Facts):
     """
@@ -147,6 +166,10 @@ class Hardware(Facts):
 
     def populate(self):
         return self.facts
+
+
+class HardwareCollector(WrapperCollector):
+    facts_class = Hardware
 
 
 class Network(Facts):
@@ -188,6 +211,11 @@ class Network(Facts):
         return self.facts
 
 
+
+class NetworkCollector(WrapperCollector):
+    facts_class = Network
+
+
 class Virtual(Facts):
     """
     This is a generic Virtual subclass of Facts.  This should be further
@@ -224,6 +252,11 @@ class Virtual(Facts):
     def get_virtual_facts(self):
         self.facts['virtualization_type'] = ''
         self.facts['virtualization_role'] = ''
+
+
+class VirtualCollector(WrapperCollector):
+    facts_class = Virtual
+
 
 
 def ansible_facts(module, gather_subset):
@@ -336,6 +369,18 @@ def get_all_facts(module):
     return all_facts
 
 
+class OhaiCollector(WrapperCollector):
+    facts_class = Ohai
+
+
+class FacterCollector(WrapperCollector):
+    facts_class = Facter
+
+
+class TempFactCollector(WrapperCollector):
+    facts_class = Facts
+
+
 # Allowed fact subset for gather_subset options and what classes they use
 # Note: have to define this at the bottom as it references classes defined earlier in this file -akl
 
@@ -345,11 +390,12 @@ def get_all_facts(module):
 
 FACT_SUBSETS = dict(
     # FIXME: add facts=Facts,
-    hardware=Hardware,
-    network=Network,
-    virtual=Virtual,
-    ohai=Ohai,
-    facter=Facter,
+    facts=TempFactCollector,
+    hardware=HardwareCollector,
+    network=NetworkCollector,
+    virtual=VirtualCollector,
+    ohai=OhaiCollector,
+    facter=FacterCollector,
 )
 VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
@@ -360,7 +406,6 @@ class FactCollector(BaseFactCollector):
         # use gather_name etc to get the list of collectors
         collector_names = get_collector_names(module)
 
-        print('collector_names: %s' % collector_names)
         collectors = []
         for collector_name in collector_names:
             collector_class = FACT_SUBSETS.get(collector_name, None)
@@ -369,5 +414,4 @@ class FactCollector(BaseFactCollector):
             collector = collector_class(module)
             collectors.append(collector)
 
-        print('collectors: %s' % collectors)
         return cls(collectors=collectors)
