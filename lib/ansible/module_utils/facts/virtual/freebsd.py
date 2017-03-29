@@ -1,6 +1,6 @@
 import os
 
-from ansible.module_utils.facts import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual
 
 
 class FreeBSDVirtual(Virtual):
