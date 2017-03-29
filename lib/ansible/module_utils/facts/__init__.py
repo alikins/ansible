@@ -38,6 +38,7 @@
 #       why?
 #          - much much easier to test
 # TODO: mv timeout stuff to its own module
+# TODO: replace Facts and subclasses with FactCollector subclasses
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -1324,6 +1325,14 @@ class OhaiCollector(WrapperCollector):
 class FacterCollector(WrapperCollector):
     facts_class = Facter
 
+    # TODO: wont need once we implement FacterCollector directly
+    def __init__(self, module, collectors=None, namespace=None):
+        namespace = PrefixFactNamespace(namespace_name='facter',
+                                        prefix='facter_')
+        super(FacterCollector, self).__init__(module,
+                                              collectors=collectors,
+                                              namespace=namespace)
+
 
 class TempFactCollector(WrapperCollector):
     facts_class = Facts
@@ -1405,10 +1414,12 @@ class AnsibleFactCollector(NestedFactCollector):
     def collect(self, collected_facts=None):
         facts_dict = super(AnsibleFactCollector, self).collect(collected_facts=collected_facts)
 
-        # FIXME: kluge
+        # FIXME: kluge, not really sure where the best place to do this would be.
         facts_dict['ansible_facts']['ansible_gather_subset'] = self.gather_subset
 
         # FIXME: double kluge, seems like 'setup.py' should do this?
+        #        (so we can distinquish facts collected by running setup.py and facts potentially
+        #         collected by invoking a FactsCollector() directly ?)
         #        also, this fact name doesnt follow namespace
         facts_dict['ansible_facts']['module_setup'] = True
 
