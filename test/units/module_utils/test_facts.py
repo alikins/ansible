@@ -112,6 +112,9 @@ class TestCollectedFacts(unittest.TestCase):
     def _assert_ansible_namespace(self, facts):
         subfacts = facts['ansible_facts']
 
+        # FIXME: kluge for non-namespace fact
+        subfacts.pop('module_setup', None)
+
         for fact_key in subfacts:
             self.assertTrue(fact_key.startswith('ansible_'),
                             'The fact name "%s" does not startwith "ansible_"' % fact_key)
@@ -122,11 +125,16 @@ class TestCollectedFacts(unittest.TestCase):
         re_ansible = re.compile('ansible')
         re_ansible_underscore = re.compile('ansible_')
 
+        # FIXME: kluge for non-namespace fact
+        subfacts.pop('module_setup', None)
+
         for fact_key in subfacts:
             ansible_count = re_ansible.findall(fact_key)
-            self.assertEqual(len(ansible_count), 1)
+            self.assertEqual(len(ansible_count), 1,
+                             'The fact name "%s" should have 1 "ansible" substring in it.' % fact_key)
             ansible_underscore_count = re_ansible_underscore.findall(fact_key)
-            self.assertEqual(len(ansible_underscore_count), 1)
+            self.assertEqual(len(ansible_underscore_count), 1,
+                             'The fact name "%s" should have 1 "ansible_" substring in it.' % fact_key)
 
     def _assert_known_facts(self, facts):
         subfacts = facts['ansible_facts']
