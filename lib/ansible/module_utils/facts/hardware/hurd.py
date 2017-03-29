@@ -1,4 +1,7 @@
-from ansible.module_utils.facts import TimeoutError
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
+from ansible.module_utils.facts.timeout import TimeoutError
 from ansible.module_utils.facts.hardware.linux import LinuxHardware
 
 

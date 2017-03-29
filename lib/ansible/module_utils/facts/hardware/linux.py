@@ -8,8 +8,8 @@ import sys
 
 from ansible.module_utils.basic import bytes_to_human
 
-from ansible.module_utils.facts import Hardware
-from ansible.module_utils.facts import TimeoutError, timeout
+from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.timeout import TimeoutError, timeout
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
 
 # FIXME: use compat or remove
