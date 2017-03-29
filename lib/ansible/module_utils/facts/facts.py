@@ -1,3 +1,7 @@
+
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
 import datetime
 import getpass
 import glob
@@ -67,7 +71,7 @@ if platform.system() != 'SunOS':
 #       of a list of the fact gather classes to include (finer grained gather_facts)
 #       Or, possibly even a list or dict of fact labels 'ansible_lvm' for ex, that
 #       the driver class would use to determine which fact gathering classes to load
-class Facts(object):
+class Facts:
     """
     This class should only attempt to populate those facts that
     are mostly generic to all systems.  This includes platform facts,

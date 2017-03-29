@@ -1,6 +1,6 @@
 import re
 
-from ansible.module_utils.facts import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual
 from ansible.module_utils.facts.virtual.sysctl import VirtualSysctlDetectionMixin
 
 from ansible.module_utils.facts.utils import get_file_content
