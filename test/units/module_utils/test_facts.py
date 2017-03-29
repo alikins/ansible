@@ -238,7 +238,7 @@ class TestDarwinHardware(BaseTestFactsPlatform):
 
 class TestGenericNetwork(BaseTestFactsPlatform):
     platform_id = 'Generic'
-    fact_class = facts.Network
+    fact_class = network.base.Network
 
 
 class TestHurdPfinetNetwork(BaseTestFactsPlatform):

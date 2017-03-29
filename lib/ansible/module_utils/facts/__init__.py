@@ -39,6 +39,7 @@
 #          - much much easier to test
 # TODO: mv timeout stuff to its own module
 # TODO: replace Facts and subclasses with FactCollector subclasses
+# TODO: empty out this __init__
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -56,7 +57,7 @@ from ansible.module_utils.facts.facter import Facter
 
 from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
-#from ansible.module_utils.facts import network
+from ansible.module_utils.facts import network
 
 from ansible.module_utils.facts import timeout
 
@@ -99,55 +100,12 @@ class WrapperCollector(BaseFactCollector):
         return facts_dict
 
 
-
 class HardwareCollector(WrapperCollector):
     facts_class = hardware.base.Hardware
 
 
-class Network(Facts):
-    """
-    This is a generic Network subclass of Facts.  This should be further
-    subclassed to implement per platform.  If you subclass this,
-    you must define:
-    - interfaces (a list of interface names)
-    - interface_<name> dictionary of ipv4, ipv6, and mac address information.
-
-    All subclasses MUST define platform.
-    """
-    platform = 'Generic'
-
-    IPV6_SCOPE = {'0': 'global',
-                  '10': 'host',
-                  '20': 'link',
-                  '40': 'admin',
-                  '50': 'site',
-                  '80': 'organization'}
-
-    def __new__(cls, *arguments, **keyword):
-        # When Network is created, it chooses a subclass to create instead.
-        # This check prevents the subclass from then trying to find a subclass
-        # and create that.
-        if cls is not Network:
-            return super(Network, cls).__new__(cls)
-
-        subclass = cls
-
-        for sc in get_all_subclasses(Network):
-            if sc.platform == platform.system():
-                subclass = sc
-        if PY3:
-            return super(cls, subclass).__new__(subclass)
-        else:
-            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
-
-    def populate(self):
-        return self.facts
-
-
-
 class NetworkCollector(WrapperCollector):
-    facts_class = Network
-
+    facts_class = network.base.Network
 
 
 def ansible_facts(module, gather_subset):
