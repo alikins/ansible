@@ -1,6 +1,9 @@
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
 import re
 
-from ansible.module_utils.facts import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware
 
 
 class AIXHardware(Hardware):

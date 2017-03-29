@@ -167,7 +167,7 @@ class TestCollectedFacts(unittest.TestCase):
 
 class BaseTestFactsPlatform(unittest.TestCase):
     platform_id = 'Generic'
-    fact_class = facts.Hardware
+    fact_class = hardware.base.Hardware
 
     """Verify that the automagic in Hardware.__new__ selects the right subclass."""
     @patch('platform.system')
