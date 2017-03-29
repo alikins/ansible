@@ -1,9 +1,12 @@
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
 import re
 
 from ansible.module_utils._text import to_text
 
-from ansible.module_utils.facts import Hardware
-from ansible.module_utils.facts import TimeoutError, timeout
+from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.timeout import TimeoutError, timeout
 
 from ansible.module_utils.facts.utils import get_file_content
 from ansible.module_utils.facts.sysctl import get_sysctl
