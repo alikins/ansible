@@ -1,8 +1,12 @@
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
 import glob
 import os
 import re
 
-from ansible.module_utils.facts import Virtual
+#from . base import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
 
 
@@ -201,3 +205,5 @@ class LinuxVirtual(Virtual):
         self.facts['virtualization_type'] = 'NA'
         self.facts['virtualization_role'] = 'NA'
         return
+
+
