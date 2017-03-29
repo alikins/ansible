@@ -42,8 +42,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import fnmatch
-
 from ansible.module_utils.facts.collector import BaseFactCollector
 from ansible.module_utils.facts.namespace import PrefixFactNamespace, FactNamespace
 from ansible.module_utils.facts.facts import Facts
@@ -71,7 +69,7 @@ try:
 except ImportError:
     import simplejson as json
 
-
+# TODO: remove these once we replace them
 class WrapperCollector(BaseFactCollector):
     facts_class = None
 
@@ -104,118 +102,6 @@ class HardwareCollector(WrapperCollector):
 
 class NetworkCollector(WrapperCollector):
     facts_class = network.base.Network
-
-
-def ansible_facts(module, gather_subset):
-    facts = {}
-    facts['gather_subset'] = list(gather_subset)
-    facts.update(Facts(module).populate())
-    for subset in gather_subset:
-        facts.update(FACT_SUBSETS[subset](module,
-                                          load_on_init=False,
-                                          cached_facts=facts).populate())
-    return facts
-
-
-# This is the main entry point for facts.py. This is the only method from this module
-# called directly from setup.py module.
-# FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
-#        'gather_timeout', 'filter' instead of passing those are args or oblique ds
-#        module is passed in and self.module.misc_AnsibleModule_methods
-#        are used, so hard to decouple.
-# FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
-
-# FIXME: make sure get_collector_names returns a useful ordering
-#
-# NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
-# def get_all_facts(module):
-def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_timeout=None):
-    # Retrieve module parameters
-    gather_subset = gather_subset or ['all']
-
-    valid_subsets = valid_subsets or frozenset([])
-
-    global GATHER_TIMEOUT
-    GATHER_TIMEOUT = gather_timeout
-
-    # Retrieve all facts elements
-    additional_subsets = set()
-    exclude_subsets = set()
-    for subset in gather_subset:
-        if subset == 'all':
-            additional_subsets.update(valid_subsets)
-            continue
-        if subset.startswith('!'):
-            subset = subset[1:]
-            if subset == 'all':
-                exclude_subsets.update(valid_subsets)
-                continue
-            exclude = True
-        else:
-            exclude = False
-
-        if subset not in valid_subsets:
-            raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" % (subset, ", ".join(FACT_SUBSETS.keys())))
-
-        if exclude:
-            exclude_subsets.add(subset)
-        else:
-            additional_subsets.add(subset)
-
-    if not additional_subsets:
-        additional_subsets.update(valid_subsets)
-
-    additional_subsets.difference_update(exclude_subsets)
-    return additional_subsets
-
-
-def _get_all_facts(gatherer_names, module):
-    additional_subsets = gatherer_names
-
-    setup_options = dict(module_setup=True)
-
-    # FIXME: it looks like we run Facter/Ohai twice...
-
-    # facter and ohai are given a different prefix than other subsets
-    if 'facter' in additional_subsets:
-        additional_subsets.difference_update(('facter',))
-        # FIXME: .populate(prefix='facter')
-        #   or a dict.update() that can prefix key names
-        facter_ds = FACT_SUBSETS['facter'](module, load_on_init=False).populate()
-        if facter_ds:
-            for (k, v) in facter_ds.items():
-                setup_options['facter_%s' % k.replace('-', '_')] = v
-
-    # FIXME/TODO: let Ohai/Facter class setup its own namespace
-    # TODO: support letting class set a namespace and somehow letting user/playbook set it
-    if 'ohai' in additional_subsets:
-        additional_subsets.difference_update(('ohai',))
-        ohai_ds = FACT_SUBSETS['ohai'](module, load_on_init=False).populate()
-        if ohai_ds:
-            for (k, v) in ohai_ds.items():
-                setup_options['ohai_%s' % k.replace('-', '_')] = v
-
-    facts = ansible_facts(module, additional_subsets)
-
-    for (k, v) in facts.items():
-        setup_options["ansible_%s" % k.replace('-', '_')] = v
-
-    setup_result = {'ansible_facts': {}}
-
-    for (k, v) in setup_options.items():
-        if module.params['filter'] == '*' or fnmatch.fnmatch(k, module.params['filter']):
-            setup_result['ansible_facts'][k] = v
-
-    return setup_result
-
-
-def get_all_facts(module):
-    collector_names = get_collector_names(module)
-
-    # FIXME: avoid having to pass in module until we populate
-    all_facts = _get_all_facts(collector_names, module)
-
-    return all_facts
 
 
 class OhaiCollector(WrapperCollector):
@@ -262,25 +148,9 @@ class TempFactCollector(WrapperCollector):
 
         return facts_dict
 
-# Allowed fact subset for gather_subset options and what classes they use
-# Note: have to define this at the bottom as it references classes defined earlier in this file -akl
 
-# This map could be thought of as a fact name resolver, where we map
-# some fact identifier (currently just the couple of gather_subset types) to the classes
-# that provide it. -akl
-
-
-FACT_SUBSETS = dict(
-    facts=TempFactCollector,
-    hardware=HardwareCollector,
-    network=NetworkCollector,
-    virtual=VirtualCollector,
-    ohai=OhaiCollector,
-    facter=FacterCollector,
-)
-VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
-
-
+# utility subclass of FactCollector
+# TODO: mv to collector.py?
 class NestedFactCollector(BaseFactCollector):
     '''collect returns a dict with the rest of the collection results under top_level_name'''
     def __init__(self, top_level_name, collectors=None, namespace=None):
@@ -293,6 +163,77 @@ class NestedFactCollector(BaseFactCollector):
         facts_dict = {self.top_level_name: collected}
         return facts_dict
 
+
+
+# FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
+# FIXME: decouple from 'module'
+# FIXME: make sure get_collector_names returns a useful ordering
+# TODO: method of AnsibleFactCollector ?
+# TODO: may need some form of AnsibleFactNameResolver
+# NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
+# def get_all_facts(module):
+def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_timeout=None):
+    # Retrieve module parameters
+    gather_subset = gather_subset or ['all']
+
+    valid_subsets = valid_subsets or frozenset([])
+
+    global GATHER_TIMEOUT
+    GATHER_TIMEOUT = gather_timeout
+
+    # Retrieve all facts elements
+    additional_subsets = set()
+    exclude_subsets = set()
+    for subset in gather_subset:
+        if subset == 'all':
+            additional_subsets.update(valid_subsets)
+            continue
+        if subset.startswith('!'):
+            subset = subset[1:]
+            if subset == 'all':
+                exclude_subsets.update(valid_subsets)
+                continue
+            exclude = True
+        else:
+            exclude = False
+
+        if subset not in valid_subsets:
+            raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" % (subset, ", ".join(FACT_SUBSETS.keys())))
+
+        if exclude:
+            exclude_subsets.add(subset)
+        else:
+            additional_subsets.add(subset)
+
+    if not additional_subsets:
+        additional_subsets.update(valid_subsets)
+
+    additional_subsets.difference_update(exclude_subsets)
+    return additional_subsets
+
+
+# Allowed fact subset for gather_subset options and what classes they use
+# Note: have to define this at the bottom as it references classes defined earlier in this file -akl
+
+# This map could be thought of as a fact name resolver, where we map
+# some fact identifier (currently just the couple of gather_subset types) to the classes
+# that provide it. -akl
+FACT_SUBSETS = dict(
+    facts=TempFactCollector,
+    hardware=HardwareCollector,
+    network=NetworkCollector,
+    virtual=VirtualCollector,
+    ohai=OhaiCollector,
+    facter=FacterCollector,
+)
+VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
+
+# This is the main entry point for facts.py. This is the only method from this module
+# called directly from setup.py module.
+# FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
+#        'gather_timeout', 'filter' instead of passing those are args or oblique ds
+#        module is passed in and self.module.misc_AnsibleModule_methods
+#        are used, so hard to decouple.
 
 class AnsibleFactCollector(NestedFactCollector):
     '''A FactCollector that returns results under 'ansible_facts' top level key.
