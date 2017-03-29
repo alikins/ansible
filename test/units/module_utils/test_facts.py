@@ -18,6 +18,7 @@ from __future__ import (absolute_import, division)
 __metaclass__ = type
 
 import os
+import re
 
 # for testing
 from ansible.compat.tests import unittest
@@ -70,6 +71,83 @@ class TestInPlace(unittest.TestCase):
         self.assertIn('python_version', res)
         # just assert it's not almost empty
         self.assertGreater(len(res), 30)
+
+
+class TestCollectedFacts(unittest.TestCase):
+    def _mock_module(self):
+        mock_module = Mock()
+        mock_module.params = {'gather_subset': ['all', '!facter', '!ohai'],
+                              'gather_timeout': 5,
+                              'filter': '*'}
+        mock_module.get_bin_path = Mock(return_value=None)
+        return mock_module
+
+    def setUp(self):
+        mock_module = self._mock_module()
+        #res = facts.get_all_facts(mock_module)
+        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       gather_subset=['all'])
+        self.facts = fact_collector.collect()
+        #print(res)
+
+    def test_basics(self):
+        self._assert_basics(self.facts)
+
+    def test_known_facts(self):
+        self._assert_known_facts(self.facts)
+
+    def test_has_ansible_namespace(self):
+        self._assert_ansible_namespace(self.facts)
+
+    def test_no_ansible_dupe_in_key(self):
+        self._assert_no_ansible_dupe(self.facts)
+
+    def _assert_basics(self, facts):
+        self.assertIsInstance(facts, dict)
+        self.assertIn('ansible_facts', facts)
+        # just assert it's not almost empty
+        self.assertGreater(len(facts['ansible_facts']), 30)
+
+    # everything starts with ansible_ namespace
+    def _assert_ansible_namespace(self, facts):
+        subfacts = facts['ansible_facts']
+
+        for fact_key in subfacts:
+            self.assertTrue(fact_key.startswith('ansible_'),
+                            'The fact name "%s" does not startwith "ansible_"' % fact_key)
+
+    # verify that we only add one 'ansible_' namespace
+    def _assert_no_ansible_dupe(self, facts):
+        subfacts = facts['ansible_facts']
+        re_ansible = re.compile('ansible')
+        re_ansible_underscore = re.compile('ansible_')
+
+        for fact_key in subfacts:
+            ansible_count = re_ansible.findall(fact_key)
+            self.assertEqual(len(ansible_count), 1)
+            ansible_underscore_count = re_ansible_underscore.findall(fact_key)
+            self.assertEqual(len(ansible_underscore_count), 1)
+
+    def _assert_known_facts(self, facts):
+        subfacts = facts['ansible_facts']
+
+        subfacts_keys = sorted(subfacts.keys())
+        self.assertIn('ansible_cmdline', subfacts_keys)
+        self.assertIn('ansible_date_time', subfacts_keys)
+        self.assertIn('ansible_user_id', subfacts_keys)
+        self.assertIn('ansible_distribution', subfacts_keys)
+
+        self.assertIn('ansible_gather_subset', subfacts_keys)
+        self.assertIn('module_setup', subfacts_keys)
+
+        self.assertIn('ansible_env', subfacts_keys)
+        self.assertIsInstance(subfacts['ansible_env'], dict)
+
+        self._assert_ssh_facts(subfacts)
+
+    def _assert_ssh_facts(self, subfacts):
+        self.assertIn('ansible_ssh_host_key_rsa_public', subfacts.keys())
+
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
