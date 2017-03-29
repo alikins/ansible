@@ -49,7 +49,7 @@ from ansible.module_utils.basic import get_all_subclasses
 from ansible.module_utils.six import PY3
 
 from ansible.module_utils.facts.collector import BaseFactCollector
-from ansible.module_utils.facts.namespace import PrefixFactNamespace
+from ansible.module_utils.facts.namespace import PrefixFactNamespace, FactNamespace
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
@@ -119,8 +119,6 @@ class WrapperCollector(BaseFactCollector):
     facts_class = None
 
     def __init__(self, module, collectors=None, namespace=None):
-        namespace = PrefixFactNamespace(namespace_name='ansible',
-                                        prefix='ansible_')
         super(WrapperCollector, self).__init__(collectors=collectors,
                                                namespace=namespace)
         self.module = module
@@ -390,6 +388,13 @@ class FacterCollector(WrapperCollector):
 class TempFactCollector(WrapperCollector):
     facts_class = Facts
 
+    # kluge to compensate for 'Facts' adding 'ansible_' prefix itself
+    def __init__(self, module, collectors=None, namespace=None):
+        namespace = FactNamespace(namespace_name='temp_fact')
+        super(TempFactCollector, self).__init__(module,
+                                                collectors=collectors,
+                                                namespace=namespace)
+
 
 # Allowed fact subset for gather_subset options and what classes they use
 # Note: have to define this at the bottom as it references classes defined earlier in this file -akl
@@ -428,10 +433,14 @@ class AnsibleFactCollector(NestedFactCollector):
        Has a 'from_gather_subset() constructor that populates collectors based on a
        gather_subset specifier.'''
 
-    def __init__(self, collectors=None, namespace=None):
+    def __init__(self, collectors=None, namespace=None,
+                 gather_subset=None):
+        namespace = PrefixFactNamespace(namespace_name='ansible',
+                                        prefix='ansible_')
         super(AnsibleFactCollector, self).__init__('ansible_facts',
                                                    collectors=collectors,
                                                    namespace=namespace)
+        self.gather_subset = gather_subset
 
     @classmethod
     def from_gather_subset(cls, module, gather_subset=None, gather_timeout=None):
@@ -448,5 +457,19 @@ class AnsibleFactCollector(NestedFactCollector):
             collector = collector_class(module)
             collectors.append(collector)
 
-        instance = cls(collectors=collectors)
+        instance = cls(collectors=collectors,
+                       gather_subset=gather_subset)
         return instance
+
+    # FIXME: best place to set gather_subset?
+    def collect(self, collected_facts=None):
+        facts_dict = super(AnsibleFactCollector, self).collect(collected_facts=collected_facts)
+
+        # FIXME: kluge
+        facts_dict['ansible_facts']['ansible_gather_subset'] = self.gather_subset
+
+        # FIXME: double kluge, seems like 'setup.py' should do this?
+        #        also, this fact name doesnt follow namespace
+        facts_dict['ansible_facts']['module_setup'] = True
+
+        return facts_dict
