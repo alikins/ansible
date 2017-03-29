@@ -272,13 +272,13 @@ class TempFactCollector(WrapperCollector):
 # that provide it. -akl
 
 
-#    facts=TempFactCollector,
 FACT_SUBSETS = dict(
+    facts=TempFactCollector,
     hardware=HardwareCollector,
     network=NetworkCollector,
     virtual=VirtualCollector,
     ohai=OhaiCollector,
-    #    facter=FacterCollector,
+    facter=FacterCollector,
 )
 VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
