@@ -7,7 +7,7 @@ import re
 import socket
 import struct
 
-from ansible.module_utils.facts import Network
+from ansible.module_utils.facts.network.base import Network
 
 from ansible.module_utils.facts.utils import get_file_content
 
