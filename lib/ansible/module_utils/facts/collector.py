@@ -1,7 +1,7 @@
-
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import sys
 
 
 # TODO: BaseFactCollectors (plural) -> walks over list of collectors
@@ -49,10 +49,10 @@ class BaseFactCollector:
                 info_dict = collector.collect(collected_facts=collected_facts)
             except Exception as e:
                 # FIXME: do fact collection exception warning/logging
-                import sys
-                sys.stderr.write(e)
+                sys.stderr.write(repr(e))
                 sys.stderr.write('\n')
-                pass
+
+                raise
 
             # NOTE: If we want complicated fact dict merging, this is where it would hook in
             facts_dict.update(info_dict)
@@ -63,3 +63,31 @@ class BaseFactCollector:
             facts_dict = self._transform_dict_keys(facts_dict)
 
         return facts_dict
+
+
+class WrapperCollector(BaseFactCollector):
+    facts_class = None
+
+    def __init__(self, module, collectors=None, namespace=None):
+        super(WrapperCollector, self).__init__(collectors=collectors,
+                                               namespace=namespace)
+        self.module = module
+
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        #print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
+
+        # WARNING: virtual.populate mutates cached_facts and returns a ref
+        #          so for now, pass in a copy()
+        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
+
+        #print('facts_obj: %s' % facts_obj)
+        #print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
+        facts_dict = facts_obj.populate()
+
+        if self.namespace:
+            facts_dict = self._transform_dict_keys(facts_dict)
+
+        return facts_dict
+

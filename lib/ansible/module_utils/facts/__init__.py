@@ -55,6 +55,10 @@ from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
 
+from ansible.module_utils.facts import virtual
+#from ansible.module_utils.facts import hardware
+#from ansible.module_utils.facts import network
+
 
 try:
     import json
@@ -127,10 +131,13 @@ class WrapperCollector(BaseFactCollector):
     def collect(self, collected_facts=None):
         collected_facts = collected_facts or {}
 
+        #print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
         # WARNING: virtual.populate mutates cached_facts and returns a ref
         #          so for now, pass in a copy()
         facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
 
+        #print('facts_obj: %s' % facts_obj)
+        #print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
         facts_dict = facts_obj.populate()
 
         if self.namespace:
@@ -206,6 +213,7 @@ class Network(Facts):
             return super(Network, cls).__new__(cls)
 
         subclass = cls
+
         for sc in get_all_subclasses(Network):
             if sc.platform == platform.system():
                 subclass = sc
@@ -221,48 +229,6 @@ class Network(Facts):
 
 class NetworkCollector(WrapperCollector):
     facts_class = Network
-
-
-class Virtual(Facts):
-    """
-    This is a generic Virtual subclass of Facts.  This should be further
-    subclassed to implement per platform.  If you subclass this,
-    you should define:
-    - virtualization_type
-    - virtualization_role
-    - container (e.g. solaris zones, freebsd jails, linux containers)
-
-    All subclasses MUST define platform.
-    """
-
-    def __new__(cls, *arguments, **keyword):
-        # When Virtual is created, it chooses a subclass to create instead.
-        # This check prevents the subclass from then trying to find a subclass
-        # and create that.
-        if cls is not Virtual:
-            return super(Virtual, cls).__new__(cls)
-
-        subclass = cls
-        for sc in get_all_subclasses(Virtual):
-            if sc.platform == platform.system():
-                subclass = sc
-
-        if PY3:
-            return super(cls, subclass).__new__(subclass)
-        else:
-            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
-
-    def populate(self):
-        self.get_virtual_facts()
-        return self.facts
-
-    def get_virtual_facts(self):
-        self.facts['virtualization_type'] = ''
-        self.facts['virtualization_role'] = ''
-
-
-class VirtualCollector(WrapperCollector):
-    facts_class = Virtual
 
 
 
@@ -394,6 +360,10 @@ class FacterCollector(WrapperCollector):
                                               namespace=namespace)
 
 
+class VirtualCollector(WrapperCollector):
+    facts_class = virtual.base.Virtual
+
+
 class TempFactCollector(WrapperCollector):
     facts_class = Facts
 
@@ -404,6 +374,19 @@ class TempFactCollector(WrapperCollector):
                                                 collectors=collectors,
                                                 namespace=namespace)
 
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        # WARNING: virtual.populate mutates cached_facts and returns a ref
+        #          so for now, pass in a copy()
+        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
+
+        facts_dict = facts_obj.populate()
+
+        if self.namespace:
+            facts_dict = self._transform_dict_keys(facts_dict)
+
+        return facts_dict
 
 # Allowed fact subset for gather_subset options and what classes they use
 # Note: have to define this at the bottom as it references classes defined earlier in this file -akl
@@ -412,13 +395,14 @@ class TempFactCollector(WrapperCollector):
 # some fact identifier (currently just the couple of gather_subset types) to the classes
 # that provide it. -akl
 
+
+#    facts=TempFactCollector,
 FACT_SUBSETS = dict(
-    facts=TempFactCollector,
     hardware=HardwareCollector,
     network=NetworkCollector,
     virtual=VirtualCollector,
     ohai=OhaiCollector,
-    facter=FacterCollector,
+    #    facter=FacterCollector,
 )
 VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
@@ -460,6 +444,8 @@ class AnsibleFactCollector(NestedFactCollector):
         for collector_name in collector_names:
             collector_class = FACT_SUBSETS.get(collector_name, None)
             if not collector_class:
+                # FIXME: remove whens table
+                raise Exception('collector_name: %s not found' % collector_name)
                 continue
             # FIXME: hmm, kind of annoying... it would be useful to have a namespace instance
             #        here...
