@@ -44,7 +44,6 @@ __metaclass__ = type
 
 import fnmatch
 import platform
-import signal
 
 from ansible.module_utils.basic import get_all_subclasses
 from ansible.module_utils.six import PY3
@@ -56,9 +55,10 @@ from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
 
 from ansible.module_utils.facts import virtual
-#from ansible.module_utils.facts import hardware
+from ansible.module_utils.facts import hardware
 #from ansible.module_utils.facts import network
 
+from ansible.module_utils.facts import timeout
 
 try:
     import json
@@ -72,53 +72,6 @@ try:
 except ImportError:
     import simplejson as json
 
-
-# --------------------------------------------------------------
-# timeout function to make sure some fact gathering
-# steps do not exceed a time limit
-
-GATHER_TIMEOUT = None
-
-
-class TimeoutError(Exception):
-    pass
-
-
-def timeout(seconds=None, error_message="Timer expired"):
-
-    if seconds is None:
-        seconds = globals().get('GATHER_TIMEOUT') or 10
-
-    def decorator(func):
-        def _handle_timeout(signum, frame):
-            raise TimeoutError(error_message)
-
-        def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                signal.alarm(0)
-            return result
-
-        return wrapper
-
-    # If we were called as @timeout, then the first parameter will be the
-    # function we are to wrap instead of the number of seconds.  Detect this
-    # and correct it by setting seconds to our default value and return the
-    # inner decorator function manually wrapped around the function
-    if callable(seconds):
-        func = seconds
-        seconds = 10
-        return decorator(func)
-
-    # If we were called as @timeout([...]) then python itself will take
-    # care of wrapping the inner decorator around the function
-
-    return decorator
-
-# --------------------------------------------------------------
 
 class WrapperCollector(BaseFactCollector):
     facts_class = None
@@ -145,45 +98,10 @@ class WrapperCollector(BaseFactCollector):
 
         return facts_dict
 
-class Hardware(Facts):
-    """
-    This is a generic Hardware subclass of Facts.  This should be further
-    subclassed to implement per platform.  If you subclass this, it
-    should define:
-    - memfree_mb
-    - memtotal_mb
-    - swapfree_mb
-    - swaptotal_mb
-    - processor (a list)
-    - processor_cores
-    - processor_count
-
-    All subclasses MUST define platform.
-    """
-    platform = 'Generic'
-
-    def __new__(cls, *arguments, **keyword):
-        # When Hardware is created, it chooses a subclass to create instead.
-        # This check prevents the subclass from then trying to find a subclass
-        # and create that.
-        if cls is not Hardware:
-            return super(Hardware, cls).__new__(cls)
-
-        subclass = cls
-        for sc in get_all_subclasses(Hardware):
-            if sc.platform == platform.system():
-                subclass = sc
-        if PY3:
-            return super(cls, subclass).__new__(subclass)
-        else:
-            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
-
-    def populate(self):
-        return self.facts
 
 
 class HardwareCollector(WrapperCollector):
-    facts_class = Hardware
+    facts_class = hardware.base.Hardware
 
 
 class Network(Facts):
