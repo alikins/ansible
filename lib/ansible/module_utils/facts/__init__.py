@@ -27,8 +27,6 @@
 # - try to make classes/methods have less side effects
 
 # TODO: try to increase unit test coverage
-# TODO: module_utils/facts.py -> module_utils/facts/__init__.py
-# TODO: mv platform specific stuff into facts/* modules?
 # TODO: general pep8/style clean ups
 # TODO: tiny bit of abstractions for run_command() and get_file_content() use
 #       ie, code like self.module.run_command('some_netinfo_tool
@@ -37,17 +35,14 @@
 #          netinfo_data = self._netinfo_parse(netinfo_output)
 #       why?
 #          - much much easier to test
-# TODO: mv timeout stuff to its own module
 # TODO: replace Facts and subclasses with FactCollector subclasses
 # TODO: empty out this __init__
+# TODO: hook up fact filtering again
+
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import fnmatch
-import platform
-
-from ansible.module_utils.basic import get_all_subclasses
-from ansible.module_utils.six import PY3
 
 from ansible.module_utils.facts.collector import BaseFactCollector
 from ansible.module_utils.facts.namespace import PrefixFactNamespace, FactNamespace
@@ -59,8 +54,11 @@ from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
 
+# FIXME: sort out when we fix facts api exporting / empty this __init__
 from ansible.module_utils.facts import timeout
 
+
+# FIXME: share and/or remove
 try:
     import json
     # Detect python-json which is incompatible and fallback to simplejson in
@@ -345,4 +343,6 @@ class AnsibleFactCollector(NestedFactCollector):
         #        also, this fact name doesnt follow namespace
         facts_dict['ansible_facts']['module_setup'] = True
 
+        # TODO: this may be best place to apply fact 'filters' as well. They
+        #       are currently ignored -akl
         return facts_dict
