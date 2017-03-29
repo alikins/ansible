@@ -1,8 +1,11 @@
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
 import re
 import socket
 import struct
 
-from ansible.module_utils.facts import Network
+from ansible.module_utils.facts.network.base import Network
 
 
 class GenericBsdIfconfigNetwork(Network):
