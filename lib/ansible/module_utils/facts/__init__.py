@@ -38,7 +38,19 @@
 # TODO: replace Facts and subclasses with FactCollector subclasses
 # TODO: empty out this __init__
 # TODO: hook up fact filtering again
-
+# IDEA: once Collector api is used, it wouldn't be that hard to add a collect_iter()
+#       that would return a generator that would yield facts
+#       ... top level Collector could 'emit' facts as found (or changed) which would
+#           make it possibly to watch a fact (or attach a callback to be called when changed)
+#            (more useful for controller side _info than client/remote _facts though given the
+#             controler->remote interface is not really async or non-blocking at all)
+# IDEA: parallel/threaded/multiprocess fact collection
+#       ... the collect_iter() approach above would make that easier, but even for blocking
+#           fact collection, a given Collector could choose to run its sub collectors concurrently.
+#           Might improve latency/total time to collect facts, since fact collection is currently very
+#           serial with lots of things that block and can be slow (more or less every run_command() for
+#           ex). In theory fact collection should be entirely 'read-only' (and with Collector api, with
+#           very few side effects) so might be a reasonable place for some concurency.
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
