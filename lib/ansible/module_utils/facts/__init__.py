@@ -56,13 +56,15 @@ __metaclass__ = type
 
 from ansible.module_utils.facts.collector import BaseFactCollector
 from ansible.module_utils.facts.namespace import PrefixFactNamespace, FactNamespace
-from ansible.module_utils.facts.facts import Facts, SystemFactCollector
+from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
 
 from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
+
+from ansible.module_utils.facts.system import SystemFactCollector
 
 # FIXME: sort out when we fix facts api exporting / empty this __init__
 from ansible.module_utils.facts import timeout
@@ -236,8 +238,8 @@ FACT_SUBSETS = dict(
     hardware=HardwareCollector,
     network=NetworkCollector,
     virtual=VirtualCollector,
-#    ohai=OhaiCollector,
-#    facter=FacterCollector,
+    #    ohai=OhaiCollector,
+    #    facter=FacterCollector,
 )
 VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
