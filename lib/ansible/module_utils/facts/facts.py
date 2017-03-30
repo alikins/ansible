@@ -163,7 +163,6 @@ class Facts:
             self.get_date_time_facts()
             self.get_local_facts()
             self.get_env_facts()
-            self.get_dns_facts()
 
     def populate(self):
         return self.facts
@@ -552,40 +551,6 @@ class Facts:
         self.facts['env'] = {}
         for k, v in iteritems(os.environ):
             self.facts['env'][k] = v
-
-    def get_dns_facts(self):
-        self.facts['dns'] = {}
-        for line in get_file_content('/etc/resolv.conf', '').splitlines():
-            if line.startswith('#') or line.startswith(';') or line.strip() == '':
-                continue
-            tokens = line.split()
-            if len(tokens) == 0:
-                continue
-            if tokens[0] == 'nameserver':
-                if 'nameservers' not in self.facts['dns']:
-                    self.facts['dns']['nameservers'] = []
-                for nameserver in tokens[1:]:
-                    self.facts['dns']['nameservers'].append(nameserver)
-            elif tokens[0] == 'domain':
-                if len(tokens) > 1:
-                    self.facts['dns']['domain'] = tokens[1]
-            elif tokens[0] == 'search':
-                self.facts['dns']['search'] = []
-                for suffix in tokens[1:]:
-                    self.facts['dns']['search'].append(suffix)
-            elif tokens[0] == 'sortlist':
-                self.facts['dns']['sortlist'] = []
-                for address in tokens[1:]:
-                    self.facts['dns']['sortlist'].append(address)
-            elif tokens[0] == 'options':
-                self.facts['dns']['options'] = {}
-                if len(tokens) > 1:
-                    for option in tokens[1:]:
-                        option_tokens = option.split(':', 1)
-                        if len(option_tokens) == 0:
-                            continue
-                        val = len(option_tokens) == 2 and option_tokens[1] or True
-                        self.facts['dns']['options'][option_tokens[0]] = val
 
     def _get_mount_size_facts(self, mountpoint):
         size_total = None
