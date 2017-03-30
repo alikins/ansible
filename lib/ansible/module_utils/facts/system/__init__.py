@@ -22,6 +22,7 @@ from ansible.module_utils.facts.namespace import FactNamespace
 from ansible.module_utils.facts.system.user import UserFactCollector
 from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
+from ansible.module_utils.facts.system.env import EnvFactCollector
 
 
 class SystemFactCollector(BaseFactCollector):
@@ -36,9 +37,12 @@ class SystemFactCollector(BaseFactCollector):
 
         dns_collector = DnsFactCollector()
 
+        env_collector = EnvFactCollector()
+
         _collectors = [user_collector,
                        python_collector,
-                       dns_collector]
+                       dns_collector,
+                       env_collector]
 
         system_namespace = FactNamespace(namespace_name='system')
 
