@@ -19,30 +19,30 @@ __metaclass__ = type
 from ansible.module_utils.facts.collector import BaseFactCollector
 from ansible.module_utils.facts.namespace import FactNamespace
 
-from ansible.module_utils.facts.system.user import UserFactCollector
-from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
+from ansible.module_utils.facts.system.python import PythonFactCollector
+from ansible.module_utils.facts.system.user import UserFactCollector
 
 
 class SystemFactCollector(BaseFactCollector):
     def __init__(self, collectors=None, namespace=None):
         _collectors = []
 
-        user_namespace = FactNamespace(namespace_name='user')
-        user_collector = UserFactCollector(namespace=user_namespace)
-
-        python_namespace = FactNamespace(namespace_name='python')
-        python_collector = PythonFactCollector(namespace=python_namespace)
-
         dns_collector = DnsFactCollector()
 
         env_collector = EnvFactCollector()
 
-        _collectors = [user_collector,
+        python_namespace = FactNamespace(namespace_name='python')
+        python_collector = PythonFactCollector(namespace=python_namespace)
+
+        user_namespace = FactNamespace(namespace_name='user')
+        user_collector = UserFactCollector(namespace=user_namespace)
+
+        _collectors = [dns_collector,
+                       env_collector,
                        python_collector,
-                       dns_collector,
-                       env_collector]
+                       user_collector,]
 
         system_namespace = FactNamespace(namespace_name='system')
 
