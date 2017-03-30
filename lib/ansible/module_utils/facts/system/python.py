@@ -29,6 +29,7 @@ try:
 except ImportError:
     HAS_SSLCONTEXT = False
 
+
 class PythonFactCollector(BaseFactCollector):
     def collect(self, collected_facts=None):
         python_facts = {}
