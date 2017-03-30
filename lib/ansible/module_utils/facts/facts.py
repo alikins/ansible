@@ -14,7 +14,6 @@ import time
 
 from ansible.module_utils.six.moves import configparser
 from ansible.module_utils.six.moves import StringIO
-from ansible.module_utils.six import iteritems
 
 from ansible.module_utils._text import to_native
 
@@ -162,7 +161,6 @@ class Facts:
             self.get_lsb_facts()
             self.get_date_time_facts()
             self.get_local_facts()
-            self.get_env_facts()
 
     def populate(self):
         return self.facts
@@ -547,10 +545,6 @@ class Facts:
                     return True
         return False
 
-    def get_env_facts(self):
-        self.facts['env'] = {}
-        for k, v in iteritems(os.environ):
-            self.facts['env'][k] = v
 
     def _get_mount_size_facts(self, mountpoint):
         size_total = None
