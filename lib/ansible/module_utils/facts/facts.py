@@ -3,16 +3,13 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import datetime
-import getpass
 import glob
 import os
 import platform
-import pwd
 import re
 import shlex
 import socket
 import stat
-import sys
 import time
 
 from ansible.module_utils.six.moves import configparser
@@ -23,8 +20,6 @@ from ansible.module_utils._text import to_native
 
 from ansible.module_utils.facts.distribution import Distribution
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
-from ansible.module_utils.facts.collector import BaseFactCollector
-from ansible.module_utils.facts.namespace import FactNamespace
 
 try:
     import selinux
@@ -32,15 +27,6 @@ try:
 except ImportError:
     HAVE_SELINUX = False
 
-# FIXME: move to compat etc
-try:
-    # Check if we have SSLContext support
-    from ssl import create_default_context, SSLContext
-    del create_default_context
-    del SSLContext
-    HAS_SSLCONTEXT = True
-except ImportError:
-    HAS_SSLCONTEXT = False
 
 # FIXME: compat or remove check (not needed for 2.6+)
 try:
@@ -62,42 +48,6 @@ except ImportError:
 # depend on LooseVersion, do not import it on Solaris.
 if platform.system() != 'SunOS':
     from distutils.version import LooseVersion
-
-
-class UserFactCollector(BaseFactCollector):
-    def collect(self,  collected_facts=None):
-        user_facts = {}
-
-        user_facts['user_id'] = getpass.getuser()
-
-        pwent = pwd.getpwnam(getpass.getuser())
-
-        user_facts['user_uid'] = pwent.pw_uid
-        user_facts['user_gid'] = pwent.pw_gid
-        user_facts['user_gecos'] = pwent.pw_gecos
-        user_facts['user_dir'] = pwent.pw_dir
-        user_facts['user_shell'] = pwent.pw_shell
-        user_facts['real_user_id'] = os.getuid()
-        user_facts['effective_user_id'] = os.geteuid()
-        user_facts['real_group_id'] = os.getgid()
-        user_facts['effective_group_id'] = os.getgid()
-
-        return user_facts
-
-
-class SystemFactCollector(BaseFactCollector):
-    def __init__(self, collectors=None, namespace=None):
-        _collectors = []
-
-        user_namespace = FactNamespace(namespace_name='user')
-        user_collector = UserFactCollector(namespace=user_namespace)
-
-        _collectors.append(user_collector)
-
-        system_namespace = FactNamespace(namespace_name='system')
-
-        super(SystemFactCollector, self).__init__(collectors=_collectors,
-                                                  namespace=system_namespace)
 
 
 # NOTE: This Facts class is mostly facts gathering implementation.
@@ -214,7 +164,6 @@ class Facts:
             self.get_local_facts()
             self.get_env_facts()
             self.get_dns_facts()
-            self.get_python_facts()
 
     def populate(self):
         return self.facts
@@ -649,23 +598,3 @@ class Facts:
             pass
         return size_total, size_available
 
-    def get_python_facts(self):
-        self.facts['python'] = {
-            'version': {
-                'major': sys.version_info[0],
-                'minor': sys.version_info[1],
-                'micro': sys.version_info[2],
-                'releaselevel': sys.version_info[3],
-                'serial': sys.version_info[4]
-            },
-            'version_info': list(sys.version_info),
-            'executable': sys.executable,
-            'has_sslcontext': HAS_SSLCONTEXT
-        }
-        try:
-            self.facts['python']['type'] = sys.subversion[0]
-        except AttributeError:
-            try:
-                self.facts['python']['type'] = sys.implementation.name
-            except AttributeError:
-                self.facts['python']['type'] = None
