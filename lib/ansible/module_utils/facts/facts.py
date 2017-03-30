@@ -23,6 +23,8 @@ from ansible.module_utils._text import to_native
 
 from ansible.module_utils.facts.distribution import Distribution
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
+from ansible.module_utils.facts.collector import BaseFactCollector
+from ansible.module_utils.facts.namespace import FactNamespace
 
 try:
     import selinux
@@ -60,6 +62,42 @@ except ImportError:
 # depend on LooseVersion, do not import it on Solaris.
 if platform.system() != 'SunOS':
     from distutils.version import LooseVersion
+
+
+class UserFactCollector(BaseFactCollector):
+    def collect(self,  collected_facts=None):
+        user_facts = {}
+
+        user_facts['user_id'] = getpass.getuser()
+
+        pwent = pwd.getpwnam(getpass.getuser())
+
+        user_facts['user_uid'] = pwent.pw_uid
+        user_facts['user_gid'] = pwent.pw_gid
+        user_facts['user_gecos'] = pwent.pw_gecos
+        user_facts['user_dir'] = pwent.pw_dir
+        user_facts['user_shell'] = pwent.pw_shell
+        user_facts['real_user_id'] = os.getuid()
+        user_facts['effective_user_id'] = os.geteuid()
+        user_facts['real_group_id'] = os.getgid()
+        user_facts['effective_group_id'] = os.getgid()
+
+        return user_facts
+
+
+class SystemFactCollector(BaseFactCollector):
+    def __init__(self, collectors=None, namespace=None):
+        _collectors = []
+
+        user_namespace = FactNamespace(namespace_name='user')
+        user_collector = UserFactCollector(namespace=user_namespace)
+
+        _collectors.append(user_collector)
+
+        system_namespace = FactNamespace(namespace_name='system')
+
+        super(SystemFactCollector, self).__init__(collectors=_collectors,
+                                                  namespace=system_namespace)
 
 
 # NOTE: This Facts class is mostly facts gathering implementation.
@@ -173,7 +211,6 @@ class Facts:
             self.get_service_mgr_facts()
             self.get_lsb_facts()
             self.get_date_time_facts()
-            self.get_user_facts()
             self.get_local_facts()
             self.get_env_facts()
             self.get_dns_facts()
@@ -561,20 +598,6 @@ class Facts:
                 if os.path.exists(canary):
                     return True
         return False
-
-    # User
-    def get_user_facts(self):
-        self.facts['user_id'] = getpass.getuser()
-        pwent = pwd.getpwnam(getpass.getuser())
-        self.facts['user_uid'] = pwent.pw_uid
-        self.facts['user_gid'] = pwent.pw_gid
-        self.facts['user_gecos'] = pwent.pw_gecos
-        self.facts['user_dir'] = pwent.pw_dir
-        self.facts['user_shell'] = pwent.pw_shell
-        self.facts['real_user_id'] = os.getuid()
-        self.facts['effective_user_id'] = os.geteuid()
-        self.facts['real_group_id'] = os.getgid()
-        self.facts['effective_group_id'] = os.getgid()
 
     def get_env_facts(self):
         self.facts['env'] = {}

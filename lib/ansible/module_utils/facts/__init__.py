@@ -56,7 +56,7 @@ __metaclass__ = type
 
 from ansible.module_utils.facts.collector import BaseFactCollector
 from ansible.module_utils.facts.namespace import PrefixFactNamespace, FactNamespace
-from ansible.module_utils.facts.facts import Facts
+from ansible.module_utils.facts.facts import Facts, SystemFactCollector
 from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
 
@@ -232,11 +232,12 @@ def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_t
 # that provide it. -akl
 FACT_SUBSETS = dict(
     facts=TempFactCollector,
+    system=SystemFactCollector,
     hardware=HardwareCollector,
     network=NetworkCollector,
     virtual=VirtualCollector,
-    ohai=OhaiCollector,
-    facter=FacterCollector,
+#    ohai=OhaiCollector,
+#    facter=FacterCollector,
 )
 VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
