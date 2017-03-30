@@ -66,9 +66,6 @@ from ansible.module_utils.facts import network
 
 from ansible.module_utils.facts.system import SystemFactCollector
 
-# FIXME: sort out when we fix facts api exporting / empty this __init__
-from ansible.module_utils.facts import timeout
-
 
 # FIXME: share and/or remove
 try:
