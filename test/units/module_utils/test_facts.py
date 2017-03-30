@@ -77,7 +77,7 @@ class TestInPlace(unittest.TestCase):
         self.assertIsInstance(res, dict)
         self.assertIn('python_version', res)
         # just assert it's not almost empty
-        self.assertGreater(len(res), 30)
+        self.assertGreater(len(res), 25)
 
 
 class TestCollectedFacts(unittest.TestCase):
@@ -110,6 +110,11 @@ class TestCollectedFacts(unittest.TestCase):
         self._assert_no_ansible_dupe(self.facts)
 
     def _assert_basics(self, facts):
+        import pprint
+        pprint.pprint(facts)
+        pprint.pprint(sorted(facts['ansible_facts'].keys()))
+        print(len(facts['ansible_facts']))
+
         self.assertIsInstance(facts, dict)
         self.assertIn('ansible_facts', facts)
         # just assert it's not almost empty
