@@ -347,7 +347,13 @@ def main():
             systemorgid=dict(default=None, required=False),
             enable_eus=dict(default=False, type='bool'),
             channels=dict(default=[], type='list'),
-        )
+        ),
+        # username/password is required for state=absent, or if channels is not empty
+        # (basically anything that uses self.api requires username/password) but it doesnt
+        # look like we can express that with required_if/required_together/mutually_exclusive
+
+        # only username+password can be used for unregister
+        required_if=[['state', 'absent', ['username', 'password']]]
     )
 
     if not HAS_UP2DATE_CLIENT:
