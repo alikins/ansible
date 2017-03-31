@@ -60,6 +60,8 @@ from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.facter import Facter
 
+from ansible.module_utils.facts import timeout
+
 from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
@@ -189,8 +191,7 @@ def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_t
 
     valid_subsets = valid_subsets or frozenset([])
 
-    global GATHER_TIMEOUT
-    GATHER_TIMEOUT = gather_timeout
+    timeout.GATHER_TIMEOUT = gather_timeout
 
     # Retrieve all facts elements
     additional_subsets = set()
@@ -263,9 +264,12 @@ class AnsibleFactCollector(NestedFactCollector):
         self.gather_subset = gather_subset
 
     @classmethod
-    def from_gather_subset(cls, module, gather_subset=None, gather_timeout=None):
+    def from_gather_subset(cls, module, gather_subset=None, valid_subsets=None, gather_timeout=None):
         # use gather_name etc to get the list of collectors
-        collector_names = get_collector_names(module, valid_subsets=VALID_SUBSETS)
+
+        valid_subsets = valid_subsets or VALID_SUBSETS
+        collector_names = get_collector_names(module, valid_subsets=valid_subsets,
+                                              gather_timeout=gather_timeout)
 
         collectors = []
         for collector_name in collector_names:
