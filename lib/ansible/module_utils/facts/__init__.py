@@ -68,6 +68,7 @@ from ansible.module_utils.facts import network
 
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
+from ansible.module_utils.facts.system.local import LocalFactCollector
 from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
 
@@ -253,6 +254,7 @@ class AnsibleFactCollector(NestedFactCollector):
         # system=SystemFactCollector,
         env=EnvFactCollector,
         dns=DnsFactCollector,
+        local=LocalFactCollector,
         python=PythonFactCollector,
         user=UserFactCollector,
         hardware=HardwareCollector,
