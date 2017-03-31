@@ -283,16 +283,14 @@ class AnsibleFactCollector(NestedFactCollector):
 
         valid_subsets = valid_subsets or cls.VALID_SUBSETS
 
+        # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
         id_collector_map = {}
         all_collector_classes = cls.FACT_SUBSETS.values()
-        #print('all_collecto_classes: %s' % all_collector_classes)
+
         for all_collector_class in all_collector_classes:
             for fact_id in all_collector_class._fact_ids:
                 id_collector_map[fact_id] = all_collector_class
 
-        #import pprint
-        #iprint('id_collector_map')
-        #pprint.pprint(id_collector_map)
 
         all_fact_subsets = {}
         all_fact_subsets.update(cls.FACT_SUBSETS)
@@ -300,6 +298,8 @@ class AnsibleFactCollector(NestedFactCollector):
         all_fact_subsets.update(id_collector_map)
 
         all_valid_subsets = frozenset(all_fact_subsets.keys())
+
+        # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
         collector_names = get_collector_names(module, valid_subsets=all_valid_subsets,
                                               gather_timeout=gather_timeout)
 
@@ -311,8 +311,7 @@ class AnsibleFactCollector(NestedFactCollector):
                 # FIXME: remove whens table
                 raise Exception('collector_name: %s not found' % collector_name)
                 continue
-            # FIXME: hmm, kind of annoying... it would be useful to have a namespace instance
-            #        here...
+
             if collector_class not in seen_collector_classes:
                 collector = collector_class(module)
                 collectors.append(collector)
