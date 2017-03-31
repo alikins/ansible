@@ -9,8 +9,10 @@ import sys
 from ansible.module_utils.basic import bytes_to_human
 
 from ansible.module_utils.facts.hardware.base import Hardware
-from ansible.module_utils.facts.timeout import TimeoutError, timeout
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
+
+# import this as a module to ensure we get the same module isntance
+from ansible.module_utils.facts import timeout
 
 # FIXME: use compat or remove
 try:
@@ -76,7 +78,7 @@ class LinuxHardware(Hardware):
         self.get_lvm_facts()
         try:
             self.get_mount_facts()
-        except TimeoutError:
+        except timeout.TimeoutError:
             pass
         return self.facts
 
@@ -376,7 +378,7 @@ class LinuxHardware(Hardware):
             mtab_entries.append(fields)
         return mtab_entries
 
-    @timeout()
+    @timeout.timeout()
     def get_mount_facts(self):
         self.facts['mounts'] = []
 
