@@ -31,6 +31,8 @@ except ImportError:
 
 
 class PythonFactCollector(BaseFactCollector):
+    _fact_ids = set(['python'])
+
     def collect(self, collected_facts=None):
         python_facts = {}
         python_facts['python'] = {

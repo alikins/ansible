@@ -8,6 +8,8 @@ import sys
 #       BaseFactCollector (singular) -> returns a dict (collectors 'leaf' node)
 #       and/or BaseFactCollectorNode etc
 class BaseFactCollector:
+    _fact_ids = set([])
+
     def __init__(self, collectors=None, namespace=None):
         '''Base class for things that collect facts.
 
@@ -17,6 +19,8 @@ class BaseFactCollector:
         # self.namespace is a object with a 'transform' method that transforms
         # the name to indicate the namespace (ie, adds a prefix or suffix).
         self.namespace = namespace
+
+        self.fact_ids = self._fact_ids or set([])
 
     def _transform_name(self, key_name):
         if self.namespace:
@@ -63,6 +67,38 @@ class BaseFactCollector:
             facts_dict = self._transform_dict_keys(facts_dict)
 
         return facts_dict
+
+    def collect_ids(self, collected_ids=None):
+        '''Return a list of the fact ids this collector can collector.
+
+        Used to allow gather_subset to address a single fact, potentially.
+
+        atm, the ids are based on the final fact name sans 'ansible_' prefix.
+        ie, 'env' for the 'ansible_env' fact.
+
+        'collected_ids' is passed so a collector could alter the ids it returns
+        based on what ids already are known. It should be considered read only.
+        '''
+
+        id_set = set([])
+        print('self.collectors: %s' % self.collectors)
+        for collector in self.collectors:
+            info_set = set([])
+            try:
+                info_set = collector.collect_ids(collected_ids=collected_ids)
+            except Exception as e:
+                # FIXME: do fact collection exception warning/logging
+                sys.stderr.write(repr(e))
+                sys.stderr.write('\n')
+
+                raise
+
+            # NOTE: If we want complicated fact id merging (custom set ops?) this is where
+            id_set.update(info_set)
+
+        id_set.update(self.fact_ids)
+
+        return id_set
 
 
 class WrapperCollector(BaseFactCollector):

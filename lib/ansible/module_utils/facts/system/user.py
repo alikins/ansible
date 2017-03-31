@@ -25,6 +25,11 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 
 class UserFactCollector(BaseFactCollector):
+    _fact_ids = set(['user_id', 'user_uid', 'user_gid',
+                     'user_gecos', 'user_dir', 'user_shell',
+                     'real_user_id', 'effective_user_id',
+                     'effective_group_ids'])
+
     def collect(self,  collected_facts=None):
         user_facts = {}
 
