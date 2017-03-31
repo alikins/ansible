@@ -7,7 +7,7 @@ import signal
 # steps do not exceed a time limit
 
 GATHER_TIMEOUT = None
-
+DEFAULT_GATHER_TIMEOUT = 10
 
 class TimeoutError(Exception):
     pass
@@ -16,7 +16,7 @@ class TimeoutError(Exception):
 def timeout(seconds=None, error_message="Timer expired"):
 
     if seconds is None:
-        seconds = globals().get('GATHER_TIMEOUT') or 10
+        seconds = globals().get('GATHER_TIMEOUT') or DEFAULT_GATHER_TIMEOUT
 
     def decorator(func):
         def _handle_timeout(signum, frame):
