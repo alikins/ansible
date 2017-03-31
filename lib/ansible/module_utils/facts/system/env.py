@@ -24,6 +24,8 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 
 class EnvFactCollector(BaseFactCollector):
+    _fact_ids = set(['env'])
+
     def collect(self, collected_facts=None):
         env_facts = {}
         env_facts['env'] = {}
