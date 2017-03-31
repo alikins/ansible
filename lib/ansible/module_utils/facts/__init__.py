@@ -303,23 +303,6 @@ class AnsibleFactCollector(NestedFactCollector):
         collector_names = get_collector_names(module, valid_subsets=all_valid_subsets,
                                               gather_timeout=gather_timeout)
 
-        # TODO: need a way to enumerate all the FactCollector classes we know of
-        #       so that we can get there _fact_ids to build a map of fact_id -> FactCollector class.
-        #       In the existing code, FACT_SUBSETS/VALID_SUBSETS hard codes that map.
-        #       Could use a metaclass to register FactCollector instances but would prefer if FactCollector
-        #       did not need to subclass FactCollector. May be able to get away with just requiring the 'root'
-        #       of the collector tree to be a FactCollector subclass. But then it doesnt know its child collectors
-        #       until it's been init'ed which seems to late to be useful. Kind of need something like PluginLoader,
-        #       but on the client side.
-        #
-        #       Alternatively, we could just inst everything and then ask for _fact_ids/collect_ids() on the instances.
-        #       That kind of loses the utility of being able to blacklist a fact collector because it crashes though.
-        #
-        #   Or ditch the hiearchy man, and require AnsibleFactsCollector to know or find all of the fact collectors,
-        #   build up the map via static class attributes. The nested collectors were mostly to solve some run time
-        #   ordering problems (factCollectorB needs to know 'system.uname' so it needs FactCollectorB to run first)
-        #   can be resolve with some some "simple" depencies.
-
         collectors = []
         seen_collector_classes = []
         for collector_name in collector_names:
