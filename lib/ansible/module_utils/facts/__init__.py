@@ -230,6 +230,8 @@ def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_t
 # This map could be thought of as a fact name resolver, where we map
 # some fact identifier (currently just the couple of gather_subset types) to the classes
 # that provide it. -akl
+
+# TODO: build this up semi dynamically
 FACT_SUBSETS = dict(
     facts=TempFactCollector,
     system=SystemFactCollector,
@@ -266,6 +268,8 @@ class AnsibleFactCollector(NestedFactCollector):
     @classmethod
     def from_gather_subset(cls, module, gather_subset=None, valid_subsets=None, gather_timeout=None):
         # use gather_name etc to get the list of collectors
+
+        gather_timeout = gather_timeout or timeout.DEFAULT_GATHER_TIMEOUT
 
         valid_subsets = valid_subsets or VALID_SUBSETS
         collector_names = get_collector_names(module, valid_subsets=valid_subsets,
