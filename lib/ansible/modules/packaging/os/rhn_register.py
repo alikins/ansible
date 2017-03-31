@@ -289,6 +289,23 @@ class Rhn(redhat.RegistrationBase):
             Unregister a previously registered system
         '''
 
+        # TODO: Use the RHN api 'system.deleteSystem' (singular) here.
+        # NOTE: the above method just needs the systemid contents and not user+pass
+        #       https://access.redhat.com/documentation/en-US/Red_Hat_Satellite/5.6/html/API_Overview/sect-system-deleteSystem.html
+        #
+        #       That is available for sat5's with 10.10 plus API (so at least sat 5.6+)
+        #
+        #       With that, unregister wouldn't need username+pass (though activation token still doesnt apply), so
+        #       it wouldn't need to be enforce via arg_spec (ala https://github.com/ansible/ansible/pull/23150).
+        #
+        #       It probably should check the Sat5 api version first though,
+        #       see https://access.redhat.com/documentation/en-US/Red_Hat_Satellite/5.6/html/API_Overview/sect-api-getVersion.html
+        #
+        #       (Could also require some tweaks to self.api here or just using the self.server to call the api without self.api
+        #        adding the session arg)
+        #
+        #       See https://github.com/ansible/ansible/issues/22300 for background
+
         # Initiate RPC connection
         self.api('system.deleteSystems', [self.systemid])
 
