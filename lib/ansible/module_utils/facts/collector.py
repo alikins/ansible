@@ -25,9 +25,6 @@ class BaseFactCollector:
         # HEADSUP can be None...
         self.module = module
 
-        if self.collectors:
-            print('self.collectors is %s' % self.collectors)
-
     def _transform_name(self, key_name):
         if self.namespace:
             return self.namespace.transform(key_name)

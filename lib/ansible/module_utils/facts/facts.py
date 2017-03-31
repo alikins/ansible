@@ -3,17 +3,12 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import datetime
-import glob
 import os
 import platform
 import re
 import shlex
 import socket
-import stat
 import time
-
-from ansible.module_utils.six.moves import configparser
-from ansible.module_utils.six.moves import StringIO
 
 from ansible.module_utils._text import to_native
 
@@ -160,7 +155,6 @@ class Facts:
             self.get_service_mgr_facts()
             self.get_lsb_facts()
             self.get_date_time_facts()
-            self.get_local_facts()
 
     def populate(self):
         return self.facts
@@ -229,60 +223,6 @@ class Facts:
         if machine_id:
             machine_id = machine_id.splitlines()[0]
             self.facts["machine_id"] = machine_id
-
-    def get_local_facts(self):
-
-        # NOTE: -> _has_local_facts()
-        #      or better, a local_facts iterator that is empty if there is no fact_path/etc -kl
-        fact_path = self.module.params.get('fact_path', None)
-        # NOTE: pretty much any unwrapped os.path.* is a PITA to unittest -akl
-        if not fact_path or not os.path.exists(fact_path):
-            return
-
-        local = {}
-        for fn in sorted(glob.glob(fact_path + '/*.fact')):
-            # where it will sit under local facts
-            fact_base = os.path.basename(fn).replace('.fact', '')
-            if stat.S_IXUSR & os.stat(fn)[stat.ST_MODE]:
-                # run it
-                # try to read it as json first
-                # if that fails read it with ConfigParser
-                # if that fails, skip it
-                try:
-                    rc, out, err = self.module.run_command(fn)
-                except UnicodeError:
-                    fact = 'error loading fact - output of running %s was not utf-8' % fn
-                    local[fact_base] = fact
-                    self.facts['local'] = local
-                    return
-            else:
-                out = get_file_content(fn, default='')
-
-            # load raw json
-            fact = 'loading %s' % fact_base
-            try:
-                fact = json.loads(out)
-            except ValueError:
-                # load raw ini
-                cp = configparser.ConfigParser()
-                try:
-                    cp.readfp(StringIO(out))
-                except configparser.Error:
-                    fact = "error loading fact - please check content"
-                else:
-                    fact = {}
-                    for sect in cp.sections():
-                        if sect not in fact:
-                            fact[sect] = {}
-                        for opt in cp.options(sect):
-                            val = cp.get(sect, opt)
-                            fact[sect][opt] = val
-
-            local[fact_base] = fact
-        # NOTE: just return the new facts dict, empty or not -akl
-        if not local:
-            return
-        self.facts['local'] = local
 
     def get_cmdline(self):
         data = get_file_content('/proc/cmdline')
