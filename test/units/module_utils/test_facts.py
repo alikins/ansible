@@ -59,6 +59,16 @@ class TestInPlace(unittest.TestCase):
         # just assert it's not almost empty
         self.assertGreater(len(res['ansible_facts']), 30)
 
+    def test_collect_ids(self):
+        mock_module = self._mock_module()
+        #res = facts.get_all_facts(mock_module)
+        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       gather_subset=['all'])
+        res = fact_collector.collect_ids()
+        print('collect_ids: %s' % res)
+
+        self.assertIsInstance(res, set)
+
     def test_facts_class(self):
         mock_module = self._mock_module()
         facts_obj = facts.Facts(mock_module)
