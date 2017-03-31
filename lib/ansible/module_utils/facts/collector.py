@@ -10,7 +10,7 @@ import sys
 class BaseFactCollector:
     _fact_ids = set([])
 
-    def __init__(self, collectors=None, namespace=None):
+    def __init__(self, module=None, collectors=None, namespace=None):
         '''Base class for things that collect facts.
 
         'collectors' is an optional list of other FactCollectors for composing.'''
@@ -21,6 +21,12 @@ class BaseFactCollector:
         self.namespace = namespace
 
         self.fact_ids = self._fact_ids or set([])
+
+        # HEADSUP can be None...
+        self.module = module
+
+        if self.collectors:
+            print('self.collectors is %s' % self.collectors)
 
     def _transform_name(self, key_name):
         if self.namespace:
@@ -81,7 +87,6 @@ class BaseFactCollector:
         '''
 
         id_set = set([])
-        print('self.collectors: %s' % self.collectors)
         for collector in self.collectors:
             info_set = set([])
             try:
@@ -104,7 +109,7 @@ class BaseFactCollector:
 class WrapperCollector(BaseFactCollector):
     facts_class = None
 
-    def __init__(self, module, collectors=None, namespace=None):
+    def __init__(self, module=None, collectors=None, namespace=None):
         super(WrapperCollector, self).__init__(collectors=collectors,
                                                namespace=namespace)
         self.module = module
