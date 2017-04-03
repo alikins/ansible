@@ -865,10 +865,13 @@ class Connection(ConnectionBase):
         # only 'ssh' (not sftp or scp) support -G. And only ~recentish versions.
 
         debug_args = tuple(args[:] + ('-G',))
-        cmd = self._build_command(*debug_args)
+        version_args = tuple(args[:] + ('-V',))
+
+        debug_cmd = self._build_command(*debug_args)
+        version_cmd = self._build_command(*version_args)
 
         try:
-            (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable, checkrc=False)
+            (returncode, stdout, stderr) = self._run(debug_cmd, in_data, sudoable, checkrc=False)
         except AnsibleConnectionFailure:
             # -G failed, could be too old, not openssh, etc.
             return
@@ -877,6 +880,18 @@ class Connection(ConnectionBase):
             return
 
         display.vvvv(u"SSH CONFIG DEBUG: {0}".format(stdout), host=self.host)
+
+        try:
+            (version_returncode, version_stdout, version_stderr) = self._run(version_cmd, in_data, sudoable, checkrc=False)
+        except AnsibleConnectionFailure:
+            # -G failed, could be too old, not openssh, etc.
+            return
+
+        if version_returncode != 0:
+            return
+
+        display.vvvv(u"SSH VERSION: {0}".format(version_stderr), host=self.host)
+
 
     def put_file(self, in_path, out_path):
         ''' transfer a file from local to remote '''
