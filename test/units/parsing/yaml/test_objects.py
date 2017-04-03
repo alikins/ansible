@@ -92,7 +92,7 @@ class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
     def assert_values(self, avu, seq):
         self.assertIsInstance(avu, objects.AnsibleVaultEncryptedUnicode)
 
-        self.assertEquals(avu, seq)
+        self.assertEqual(avu, seq)
         self.assertTrue(avu.vault is self.vault)
         self.assertIsInstance(avu.vault, vault.VaultLib)
 
@@ -132,7 +132,7 @@ class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
         avu = self._from_plaintext(seq)
         b_avu = avu.encode('utf-8', 'strict')
         self.assertIsInstance(avu, objects.AnsibleVaultEncryptedUnicode)
-        self.assertEquals(b_avu, seq.encode('utf-8', 'strict'))
+        self.assertEqual(b_avu, seq.encode('utf-8', 'strict'))
         self.assertTrue(avu.vault is self.vault)
         self.assertIsInstance(avu.vault, vault.VaultLib)
 

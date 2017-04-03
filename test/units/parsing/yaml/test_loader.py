@@ -270,20 +270,20 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
         vault_string = data_from_yaml['the_secret']
 
-        self.assertEquals(plaintext_var, data_from_yaml['the_secret'])
+        self.assertEqual(plaintext_var, data_from_yaml['the_secret'])
 
         test_dict = {}
         test_dict[vault_string] = 'did this work?'
 
-        self.assertEquals(vault_string.data, vault_string)
+        self.assertEqual(vault_string.data, vault_string)
 
         # This looks weird and useless, but the object in question has a custom __eq__
-        self.assertEquals(vault_string, vault_string)
+        self.assertEqual(vault_string, vault_string)
 
         another_vault_string = data_from_yaml['another_secret']
         different_vault_string = data_from_yaml['different_secret']
 
-        self.assertEquals(vault_string, another_vault_string)
+        self.assertEqual(vault_string, another_vault_string)
         self.assertNotEquals(vault_string, different_vault_string)
 
         # More testing of __eq__/__ne__
@@ -292,8 +292,8 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
 
         # Note this is a compare of the str/unicode of these, they are different types
         # so we want to test self == other, and other == self etc
-        self.assertEquals(plaintext_var, vault_string)
-        self.assertEquals(vault_string, plaintext_var)
+        self.assertEqual(plaintext_var, vault_string)
+        self.assertEqual(vault_string, plaintext_var)
         self.assertFalse(plaintext_var != vault_string)
         self.assertFalse(vault_string != plaintext_var)
 

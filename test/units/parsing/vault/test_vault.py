@@ -33,7 +33,6 @@ from ansible.compat.tests import unittest
 from ansible import errors
 from ansible.module_utils import six
 from ansible.module_utils._text import to_bytes, to_text
-from ansible.parsing.vault import VaultLib
 from ansible.parsing import vault
 
 

@@ -256,7 +256,7 @@ class TestVaultEditor(unittest.TestCase):
         ve.encrypt_file(src_file_path)
 
         res = ve.plaintext(src_file_path)
-        self.assertEquals(src_file_contents, res)
+        self.assertEqual(src_file_contents, res)
 
     def test_plaintext_not_encrypted(self):
         self._test_dir = self._create_test_dir()
@@ -441,7 +441,7 @@ class TestVaultEditor(unittest.TestCase):
         os.unlink(v10_file.name)
 
         assert error_hit is False, "error decrypting 1.0 file"
-        self.assertEquals(fdata.strip(), "foo")
+        self.assertEqual(fdata.strip(), "foo")
         assert fdata.strip() == "foo", "incorrect decryption of 1.0 file: %s" % fdata.strip()
 
     def test_decrypt_1_1(self):
