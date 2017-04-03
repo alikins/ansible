@@ -27,10 +27,9 @@ import tempfile
 from yaml import YAMLError
 
 from ansible.module_utils.six import text_type, string_types
-from ansible.errors import AnsibleFileNotFound, AnsibleParserError, AnsibleError
+from ansible.errors import AnsibleFileNotFound, AnsibleParserError
 from ansible.errors.yaml_strings import YAML_SYNTAX_ERROR
 from ansible.module_utils.basic import is_executable
-from ansible.module_utils.six import text_type, string_types
 from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.parsing.vault import VaultLib, b_HEADER, is_encrypted, is_encrypted_file
 from ansible.parsing.quoting import unquote
