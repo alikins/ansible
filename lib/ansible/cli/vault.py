@@ -26,7 +26,7 @@ from ansible.cli import CLI
 from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.module_utils._text import to_text, to_bytes
 from ansible.parsing.dataloader import DataLoader
-from ansible.parsing.vault import VaultEditor, FileVaultSecrets, PromptVaultSecrets
+from ansible.parsing.vault import VaultEditor
 from ansible.cli import CLI
 from ansible.module_utils._text import to_text, to_bytes
 

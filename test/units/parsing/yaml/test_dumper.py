@@ -19,12 +19,6 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import io
-import yaml
-
-try:
-    from _yaml import ParserError
-except ImportError:
-    from yaml.parser import ParserError
 
 from ansible.compat.tests import unittest
 from ansible.parsing import vault
@@ -62,4 +56,4 @@ class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
 
         data_from_yaml = loader.get_single_data()
 
-        self.assertEquals(plaintext, data_from_yaml.data)
+        self.assertEqual(plaintext, data_from_yaml.data)
