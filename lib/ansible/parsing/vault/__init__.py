@@ -269,7 +269,9 @@ class FileVaultSecrets(VaultSecrets):
                 # STDERR not captured to make it easier for users to prompt for input in their scripts
                 p = subprocess.Popen(this_path, stdout=subprocess.PIPE)
             except OSError as e:
-                raise AnsibleError("Problem running vault password script %s (%s). If this is not a script, remove the executable bit from the file." % (' '.join(this_path), e))
+                msg = "Problem running vault password script %s (%s)."
+                "If this is not a script, remove the executable bit from the file." % (' '.join(this_path), e)
+                raise AnsibleError(msg)
 
             stdout, stderr = p.communicate()
 
