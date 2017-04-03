@@ -26,7 +26,7 @@ import re
 import tempfile
 from yaml import YAMLError
 
-from ansible.compat.six import text_type, string_types
+from ansible.module_utils.six import text_type, string_types
 from ansible.errors import AnsibleFileNotFound, AnsibleParserError, AnsibleError
 from ansible.errors.yaml_strings import YAML_SYNTAX_ERROR
 from ansible.module_utils.basic import is_executable
