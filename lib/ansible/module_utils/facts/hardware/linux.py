@@ -10,7 +10,7 @@ from ansible.module_utils.basic import bytes_to_human
 
 from ansible.module_utils.facts.hardware.base import Hardware
 from ansible.module_utils.facts import _json
-from ansible.module_utils.facts.utils import get_file_content, get_file_lines
+from ansible.module_utils.facts.utils import get_file_content, get_file_lines, get_mount_size
 
 # import this as a module to ensure we get the same module isntance
 from ansible.module_utils.facts import timeout
@@ -384,7 +384,7 @@ class LinuxHardware(Hardware):
             if fstype == 'none':
                 continue
 
-            size_total, size_available = self._get_mount_size_facts(mount)
+            size_total, size_available = get_mount_size(mount)
 
             if mount in bind_mounts:
                 # only add if not already there, we might have a plain /etc/mtab

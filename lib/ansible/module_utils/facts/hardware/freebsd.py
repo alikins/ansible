@@ -8,7 +8,7 @@ from ansible.module_utils.facts.hardware.base import Hardware
 from ansible.module_utils.facts.timeout import TimeoutError, timeout
 from ansible.module_utils.facts import _json
 
-from ansible.module_utils.facts.utils import get_file_content
+from ansible.module_utils.facts.utils import get_file_content, get_mount_size
 
 
 class FreeBSDHardware(Hardware):
@@ -86,7 +86,7 @@ class FreeBSDHardware(Hardware):
                 if line.startswith('#') or line.strip() == '':
                     continue
                 fields = re.sub(r'\s+', ' ', line).split()
-                size_total, size_available = self._get_mount_size_facts(fields[1])
+                size_total, size_available = get_mount_size(fields[1])
                 self.facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],

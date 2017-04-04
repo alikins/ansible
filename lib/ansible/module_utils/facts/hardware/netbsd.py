@@ -7,7 +7,7 @@ import re
 from ansible.module_utils.facts.hardware.base import Hardware
 from ansible.module_utils.facts.timeout import TimeoutError, timeout
 
-from ansible.module_utils.facts.utils import get_file_content, get_file_lines
+from ansible.module_utils.facts.utils import get_file_content, get_file_lines, get_mount_size
 from ansible.module_utils.facts.sysctl import get_sysctl
 
 
@@ -87,7 +87,7 @@ class NetBSDHardware(Hardware):
                 if line.startswith('#') or line.strip() == '':
                     continue
                 fields = re.sub(r'\s+', ' ', line).split()
-                size_total, size_available = self._get_mount_size_facts(fields[1])
+                size_total, size_available = get_mount_size(fields[1])
                 self.facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],
