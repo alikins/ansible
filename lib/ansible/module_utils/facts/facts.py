@@ -11,8 +11,7 @@ import socket
 from ansible.module_utils._text import to_native
 
 from ansible.module_utils.facts.distribution import Distribution
-from ansible.module_utils.facts.utils import get_file_content, get_file_lines
-
+from ansible.module_utils.facts.utils import get_file_content
 
 # FIXME: compat module, if still needed
 # The distutils module is not shipped with SUNWPython on Solaris.
@@ -127,7 +126,6 @@ class Facts:
             # NOTE: lots of linux specific facts here.  A finer grained gather_subset could drive this. -akl
             self.get_pkg_mgr_facts()
             self.get_service_mgr_facts()
-            self.get_lsb_facts()
 
     def populate(self):
         return self.facts
@@ -308,43 +306,6 @@ class Facts:
         if not self.facts.get('service_mgr', False):
             # if we cannot detect, fallback to generic 'service'
             self.facts['service_mgr'] = 'service'
-
-    def get_lsb_facts(self):
-        # NOTE: looks like two seperate methods to me - akl
-        lsb_path = self.module.get_bin_path('lsb_release')
-        if lsb_path:
-            rc, out, err = self.module.run_command([lsb_path, "-a"], errors='surrogate_then_replace')
-            if rc == 0:
-                self.facts['lsb'] = {}
-                for line in out.splitlines():
-                    if len(line) < 1 or ':' not in line:
-                        continue
-                    value = line.split(':', 1)[1].strip()
-                    if 'LSB Version:' in line:
-                        self.facts['lsb']['release'] = value
-                    elif 'Distributor ID:' in line:
-                        self.facts['lsb']['id'] = value
-                    elif 'Description:' in line:
-                        self.facts['lsb']['description'] = value
-                    elif 'Release:' in line:
-                        self.facts['lsb']['release'] = value
-                    elif 'Codename:' in line:
-                        self.facts['lsb']['codename'] = value
-        elif lsb_path is None and os.path.exists('/etc/lsb-release'):
-            self.facts['lsb'] = {}
-            for line in get_file_lines('/etc/lsb-release'):
-                value = line.split('=', 1)[1].strip()
-                if 'DISTRIB_ID' in line:
-                    self.facts['lsb']['id'] = value
-                elif 'DISTRIB_RELEASE' in line:
-                    self.facts['lsb']['release'] = value
-                elif 'DISTRIB_DESCRIPTION' in line:
-                    self.facts['lsb']['description'] = value
-                elif 'DISTRIB_CODENAME' in line:
-                    self.facts['lsb']['codename'] = value
-
-        if 'lsb' in self.facts and 'release' in self.facts['lsb']:
-            self.facts['lsb']['major_release'] = self.facts['lsb']['release'].split('.')[0]
 
     def is_systemd_managed(self):
         # tools must be installed

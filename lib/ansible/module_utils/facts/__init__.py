@@ -74,6 +74,7 @@ from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.local import LocalFactCollector
+from ansible.module_utils.facts.system.lsb import LSBFactCollector
 from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
@@ -252,6 +253,7 @@ class AnsibleFactCollector(NestedFactCollector):
         dns=DnsFactCollector,
         fips=FipsFactCollector,
         local=LocalFactCollector,
+        lsb=LSBFactCollector,
         python=PythonFactCollector,
         selinux=SelinuxFactCollector,
         user=UserFactCollector,

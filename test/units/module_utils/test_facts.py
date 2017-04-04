@@ -34,6 +34,7 @@ from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
+from ansible.module_utils.facts.system.lsb import LSBFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
 
@@ -201,17 +202,6 @@ class BaseFactsTest(unittest.TestCase):
         mock_module.get_bin_path = Mock(return_value=None)
         return mock_module
 
-    def setUp(self):
-        mock_module = self._mock_module()
-        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
-                                                                       gather_subset=self.gather_subset)
-        self.facts = fact_collector.collect()
-
-    def test(self):
-        self.assertIsInstance(self.facts, dict)
-        self.assertIn('ansible_facts', self.facts)
-        self.assertIn(self.fact_namespace, self.facts['ansible_facts'])
-
     def test_class(self):
         module = self._mock_module()
         fact_collector = self.collector_class(module=module)
@@ -257,10 +247,6 @@ class TestApparmorFacts(BaseFactsTest):
         facts_dict = super(TestApparmorFacts, self).test_class()
         self.assertIn('status', facts_dict['apparmor'])
 
-    def test(self):
-        super(TestApparmorFacts, self).test_class()
-        self.assertIn('status', self.facts['ansible_facts']['ansible_apparmor'])
-
 
 class TestSelinuxFacts(BaseFactsTest):
     __test__ = True
@@ -277,6 +263,32 @@ class TestSelinuxFacts(BaseFactsTest):
             self.assertIsInstance(facts_dict, dict)
             self.assertFalse(facts_dict['selinux'])
             return facts_dict
+
+
+lsb_release_a_fedora_output = '''
+LSB Version:	:core-4.1-amd64:core-4.1-noarch:cxx-4.1-amd64:cxx-4.1-noarch:desktop-4.1-amd64:desktop-4.1-noarch:languages-4.1-amd64:languages-4.1-noarch:printing-4.1-amd64:printing-4.1-noarch
+Distributor ID:	Fedora
+Description:	Fedora release 25 (Twenty Five)
+Release:	25
+Codename:	TwentyFive
+'''
+
+
+class TestLSBFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'lsb']
+    valid_subsets = ['lsb']
+    fact_namespace = 'ansible_lsb'
+    collector_class = LSBFactCollector
+
+    def _mock_module(self):
+        mock_module = Mock()
+        mock_module.params = {'gather_subset': self.gather_subset,
+                              'gather_timeout': 10,
+                              'filter': '*'}
+        mock_module.get_bin_path = Mock(return_value='/usr/bin/lsb_release')
+        mock_module.run_command = Mock(return_value=(0, lsb_release_a_fedora_output, ''))
+        return mock_module
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
