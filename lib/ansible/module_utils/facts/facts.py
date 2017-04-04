@@ -2,13 +2,11 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import datetime
 import os
 import platform
 import re
 import shlex
 import socket
-import time
 
 from ansible.module_utils._text import to_native
 
@@ -141,7 +139,6 @@ class Facts:
             self.get_pkg_mgr_facts()
             self.get_service_mgr_facts()
             self.get_lsb_facts()
-            self.get_date_time_facts()
 
     def populate(self):
         return self.facts
@@ -435,31 +432,6 @@ class Facts:
         if data and data == '1':
             self.facts['fips'] = True
 
-    def get_date_time_facts(self):
-        self.facts['date_time'] = {}
-
-        now = datetime.datetime.now()
-        self.facts['date_time']['year'] = now.strftime('%Y')
-        self.facts['date_time']['month'] = now.strftime('%m')
-        self.facts['date_time']['weekday'] = now.strftime('%A')
-        self.facts['date_time']['weekday_number'] = now.strftime('%w')
-        self.facts['date_time']['weeknumber'] = now.strftime('%W')
-        self.facts['date_time']['day'] = now.strftime('%d')
-        self.facts['date_time']['hour'] = now.strftime('%H')
-        self.facts['date_time']['minute'] = now.strftime('%M')
-        self.facts['date_time']['second'] = now.strftime('%S')
-        self.facts['date_time']['epoch'] = now.strftime('%s')
-        if self.facts['date_time']['epoch'] == '' or self.facts['date_time']['epoch'][0] == '%':
-            # NOTE: in this case, the epoch wont match the rest of the date_time facts? ie, it's a few milliseconds later..? -akl
-            self.facts['date_time']['epoch'] = str(int(time.time()))
-        self.facts['date_time']['date'] = now.strftime('%Y-%m-%d')
-        self.facts['date_time']['time'] = now.strftime('%H:%M:%S')
-        self.facts['date_time']['iso8601_micro'] = now.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        self.facts['date_time']['iso8601'] = now.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        self.facts['date_time']['iso8601_basic'] = now.strftime("%Y%m%dT%H%M%S%f")
-        self.facts['date_time']['iso8601_basic_short'] = now.strftime("%Y%m%dT%H%M%S")
-        self.facts['date_time']['tz'] = time.strftime("%Z")
-        self.facts['date_time']['tz_offset'] = time.strftime("%z")
 
     def is_systemd_managed(self):
         # tools must be installed
