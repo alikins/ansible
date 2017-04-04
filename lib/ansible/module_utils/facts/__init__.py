@@ -70,6 +70,7 @@ from ansible.module_utils.facts import network
 from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
+from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.local import LocalFactCollector
 from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
@@ -244,6 +245,7 @@ class AnsibleFactCollector(NestedFactCollector):
         date_time=DateTimeFactCollector,
         env=EnvFactCollector,
         dns=DnsFactCollector,
+        fips=FipsFactCollector,
         local=LocalFactCollector,
         python=PythonFactCollector,
         user=UserFactCollector,
