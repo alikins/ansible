@@ -1,4 +1,6 @@
 # This file is part of Ansible
+# -*- coding: utf-8 -*-
+#
 #
 # Ansible is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,17 +14,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 # Make coding more python3-ish
 from __future__ import (absolute_import, division)
-#__metaclass__ = type
+__metaclass__ = type
 
 import os
 import re
 
 # for testing
 from ansible.compat.tests import unittest
-from ansible.compat.tests.mock import MagicMock, Mock, patch
+from ansible.compat.tests.mock import Mock, patch
 
 from ansible.module_utils import facts
 from ansible.module_utils.facts import hardware
@@ -279,6 +282,11 @@ DISTRIB_RELEASE=14.04
 DISTRIB_CODENAME=trusty
 DISTRIB_DESCRIPTION="Ubuntu 14.04.3 LTS"
 '''
+etc_lsb_release_no_decimal = '''DISTRIB_ID=AwesomeOS
+DISTRIB_RELEASE=11
+DISTRIB_CODENAME=stonehenge
+DISTRIB_DESCRIPTION="AwesomeÖS 11"
+'''
 
 class TestLSBFacts(BaseFactsTest):
     __test__ = True
@@ -308,7 +316,6 @@ class TestLSBFacts(BaseFactsTest):
         self.assertEqual(facts_dict['lsb']['codename'], 'TwentyFive')
         self.assertEqual(facts_dict['lsb']['major_release'], '25')
 
-
     def test_etc_lsb_release(self):
         module = self._mock_module()
         module.get_bin_path = Mock(return_value=None)
@@ -324,6 +331,22 @@ class TestLSBFacts(BaseFactsTest):
         self.assertEqual(facts_dict['lsb']['id'], 'Ubuntu')
         self.assertEqual(facts_dict['lsb']['description'], '"Ubuntu 14.04.3 LTS"')
         self.assertEqual(facts_dict['lsb']['codename'], 'trusty')
+
+    def test_etc_lsb_release_no_decimal_release(self):
+        module = self._mock_module()
+        module.get_bin_path = Mock(return_value=None)
+        with patch('ansible.module_utils.facts.system.lsb.os.path.exists',
+                   return_value=True):
+            with patch('ansible.module_utils.facts.system.lsb.get_file_lines',
+                       return_value=etc_lsb_release_no_decimal.splitlines()):
+                fact_collector = self.collector_class(module=module)
+                facts_dict = fact_collector.collect()
+
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['lsb']['release'], '11')
+        self.assertEqual(facts_dict['lsb']['id'], 'AwesomeOS')
+        self.assertEqual(facts_dict['lsb']['description'], '"AwesomeÖS 11"')
+        self.assertEqual(facts_dict['lsb']['codename'], 'stonehenge')
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
