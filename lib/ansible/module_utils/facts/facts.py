@@ -22,19 +22,6 @@ except ImportError:
     HAVE_SELINUX = False
 
 
-# FIXME: compat or remove check (not needed for 2.6+)
-try:
-    import json
-    # Detect python-json which is incompatible and fallback to simplejson in
-    # that case
-    try:
-        json.loads
-        json.dumps
-    except AttributeError:
-        raise ImportError
-except ImportError:
-    import simplejson as json
-
 # FIXME: compat module, if still needed
 # The distutils module is not shipped with SUNWPython on Solaris.
 # It's in the SUNWPython-devel package which also contains development files
