@@ -39,6 +39,17 @@ if platform.system() != 'SunOS':
 class ServiceMgrFactCollector(BaseFactCollector):
     _fact_ids = set(['service_mgr'])
 
+    def is_systemd_managed(self):
+        # tools must be installed
+        if self.module.get_bin_path('systemctl'):
+
+            # this should show if systemd is the boot init system, if checking init faild to mark as systemd
+            # these mirror systemd's own sd_boot test http://www.freedesktop.org/software/systemd/man/sd_booted.html
+            for canary in ["/run/systemd/system/", "/dev/.run/systemd/", "/dev/.systemd/"]:
+                if os.path.exists(canary):
+                    return True
+        return False
+
     def collect(self, collected_facts=None):
         # FIXME: no self
         facts_dict = {}
@@ -107,7 +118,7 @@ class ServiceMgrFactCollector(BaseFactCollector):
             service_mgr_name = 'openwrt_init'
         elif collected_facts.get('system') == 'Linux':
             # FIXME: mv is_systemd_managed
-            if self.module.is_systemd_managed():
+            if self.is_systemd_managed():
                 service_mgr_name = 'systemd'
             elif self.module.get_bin_path('initctl') and os.path.exists("/etc/init/"):
                 service_mgr_name = 'upstart'
