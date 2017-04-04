@@ -134,7 +134,6 @@ class Facts:
             # NOTE: lots of linux specific facts here.  A finer grained gather_subset could drive this. -akl
             self.get_selinux_facts()
             self.get_apparmor_facts()
-            self.get_caps_facts()
             self.get_pkg_mgr_facts()
             self.get_service_mgr_facts()
             self.get_lsb_facts()
@@ -402,28 +401,6 @@ class Facts:
             self.facts['apparmor']['status'] = 'enabled'
         else:
             self.facts['apparmor']['status'] = 'disabled'
-
-    def get_caps_facts(self):
-        capsh_path = self.module.get_bin_path('capsh')
-        # NOTE: early exit 'if not crash_path' and unindent rest of method -akl
-        if capsh_path:
-            # NOTE: -> get_caps_data()/parse_caps_data() for easier mocking -akl
-            rc, out, err = self.module.run_command([capsh_path, "--print"], errors='surrogate_then_replace')
-            enforced_caps = []
-            enforced = 'NA'
-            for line in out.splitlines():
-                if len(line) < 1:
-                    continue
-                if line.startswith('Current:'):
-                    if line.split(':')[1].strip() == '=ep':
-                        enforced = 'False'
-                    else:
-                        enforced = 'True'
-                        enforced_caps = [i.strip() for i in line.split('=')[1].split(',')]
-
-            self.facts['system_capabilities_enforced'] = enforced
-            self.facts['system_capabilities'] = enforced_caps
-
 
     def is_systemd_managed(self):
         # tools must be installed
