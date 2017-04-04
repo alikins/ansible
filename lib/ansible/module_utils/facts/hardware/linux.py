@@ -9,23 +9,11 @@ import sys
 from ansible.module_utils.basic import bytes_to_human
 
 from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts import _json
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
 
 # import this as a module to ensure we get the same module isntance
 from ansible.module_utils.facts import timeout
-
-# FIXME: use compat or remove
-try:
-    import json
-    # Detect python-json which is incompatible and fallback to simplejson in
-    # that case
-    try:
-        json.loads
-        json.dumps
-    except AttributeError:
-        raise ImportError
-except ImportError:
-    import simplejson as json
 
 
 def get_partition_uuid(partname):
@@ -285,7 +273,7 @@ class LinuxHardware(Hardware):
                         # Strip out commented lines (specific dmidecode output)
                         thisvalue = ''.join([line for line in out.splitlines() if not line.startswith('#')])
                         try:
-                            json.dumps(thisvalue)
+                            _json.dumps(thisvalue)
                         except UnicodeDecodeError:
                             thisvalue = "NA"
 
