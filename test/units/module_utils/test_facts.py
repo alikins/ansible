@@ -125,11 +125,6 @@ class TestCollectedFacts(unittest.TestCase):
         self._assert_no_ansible_dupe(self.facts)
 
     def _assert_basics(self, facts):
-        import pprint
-        pprint.pprint(facts)
-        pprint.pprint(sorted(facts['ansible_facts'].keys()))
-        print(len(facts['ansible_facts']))
-
         self.assertIsInstance(facts, dict)
         self.assertIn('ansible_facts', facts)
         # just assert it's not almost empty
@@ -241,7 +236,6 @@ class TestApparmorFacts(BaseFactsTest):
     fact_namespace = 'ansible_apparmor'
     collector_class = ApparmorFactCollector
 
-
     def test_class(self):
         facts_dict = super(TestApparmorFacts, self).test_class()
         self.assertIn('status', facts_dict['apparmor'])
@@ -270,6 +264,29 @@ class TestServiceMgrFacts(BaseFactsTest):
     valid_subsets = ['service_mgr']
     fact_namespace = 'ansible_service_mgr'
     collector_class = ServiceMgrFactCollector
+
+    @patch('ansible.module_utils.facts.system.service_mgr.get_file_content', return_value=None)
+    def test_no_proc1(self, mock_gfc):
+        # no /proc/1/comm, ps returns non-0
+        # should fallback to 'service'
+        module = self._mock_module()
+        #module.run_command = Mock(return_value=(0, '/sbin/sys11', ''))
+        module.run_command = Mock(return_value=(1, '', 'wat'))
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect()
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['service_mgr'], 'service')
+
+    @patch('ansible.module_utils.facts.system.service_mgr.get_file_content', return_value=None)
+    def test_no_proc1_ps_random_init(self, mock_gfc):
+        # no /proc/1/comm, ps returns '/sbin/sys11' which we dont know
+        # should end up return 'sys11'
+        module = self._mock_module()
+        module.run_command = Mock(return_value=(0, '/sbin/sys11', ''))
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect()
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['service_mgr'], 'sys11')
 
 
 lsb_release_a_fedora_output = '''
