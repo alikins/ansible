@@ -38,6 +38,7 @@ from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.lsb import LSBFactCollector
+from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
@@ -239,6 +240,14 @@ class TestApparmorFacts(BaseFactsTest):
     def test_class(self):
         facts_dict = super(TestApparmorFacts, self).test_class()
         self.assertIn('status', facts_dict['apparmor'])
+
+
+class TestPkgMgrFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'pkg_mgr']
+    valid_subsets = ['pkg_mgr']
+    fact_namespace = 'ansible_pkgmgr'
+    collector_class = PkgMgrFactCollector
 
 
 class TestSelinuxFacts(BaseFactsTest):

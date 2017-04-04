@@ -33,38 +33,9 @@ class Facts:
 
     # i86pc is a Solaris and derivatives-ism
     _I386RE = re.compile(r'i([3456]86|86pc)')
+
     # For the most part, we assume that platform.dist() will tell the truth.
     # This is the fallback to handle unknowns or exceptions
-
-    # A list of dicts.  If there is a platform with more than one
-    # package manager, put the preferred one last.  If there is an
-    # ansible module, use that as the value for the 'name' key.
-    # NOTE: This is really constants. This dict is also used in a weird way by
-    #       ansible.executor.action_write_locks that introduces a weird dep that could
-    #       be avoided if this dict was elsewhere. -akl
-    PKG_MGRS = [{'path': '/usr/bin/yum', 'name': 'yum'},
-                {'path': '/usr/bin/dnf', 'name': 'dnf'},
-                {'path': '/usr/bin/apt-get', 'name': 'apt'},
-                {'path': '/usr/bin/zypper', 'name': 'zypper'},
-                {'path': '/usr/sbin/urpmi', 'name': 'urpmi'},
-                {'path': '/usr/bin/pacman', 'name': 'pacman'},
-                {'path': '/bin/opkg', 'name': 'opkg'},
-                {'path': '/usr/pkg/bin/pkgin', 'name': 'pkgin'},
-                {'path': '/opt/local/bin/pkgin', 'name': 'pkgin'},
-                {'path': '/opt/tools/bin/pkgin', 'name': 'pkgin'},
-                {'path': '/opt/local/bin/port', 'name': 'macports'},
-                {'path': '/usr/local/bin/brew', 'name': 'homebrew'},
-                {'path': '/sbin/apk', 'name': 'apk'},
-                {'path': '/usr/sbin/pkg', 'name': 'pkgng'},
-                {'path': '/usr/sbin/swlist', 'name': 'SD-UX'},
-                {'path': '/usr/bin/emerge', 'name': 'portage'},
-                {'path': '/usr/sbin/pkgadd', 'name': 'svr4pkg'},
-                {'path': '/usr/bin/pkg', 'name': 'pkg5'},
-                {'path': '/usr/bin/xbps-install', 'name': 'xbps'},
-                {'path': '/usr/local/sbin/pkg', 'name': 'pkgng'},
-                {'path': '/usr/bin/swupd', 'name': 'swupd'},
-                {'path': '/usr/sbin/sorcery', 'name': 'sorcery'},
-                ]
 
     # NOTE: load_on_init is changed for ohai/facter classes. Ideally, all facts
     #       would be load_on_init=False and this could be removed. -akl
@@ -113,8 +84,6 @@ class Facts:
             self.facts.update(Distribution(module).populate())
             self.get_cmdline()
             self.get_public_ssh_host_keys()
-            # NOTE: lots of linux specific facts here.  A finer grained gather_subset could drive this. -akl
-            self.get_pkg_mgr_facts()
 
     def populate(self):
         return self.facts
@@ -217,14 +186,6 @@ class Facts:
                 if keydata is not None:
                     self.facts[factname] = keydata.split()[1]
 
-    def get_pkg_mgr_facts(self):
-        if self.facts['system'] == 'OpenBSD':
-            self.facts['pkg_mgr'] = 'openbsd_pkg'
-        else:
-            self.facts['pkg_mgr'] = 'unknown'
-            for pkg in Facts.PKG_MGRS:
-                if os.path.exists(pkg['path']):
-                    self.facts['pkg_mgr'] = pkg['name']
 
     def _get_mount_size_facts(self, mountpoint):
         size_total = None
