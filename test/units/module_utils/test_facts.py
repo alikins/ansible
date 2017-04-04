@@ -273,6 +273,12 @@ Release:	25
 Codename:	TwentyFive
 '''
 
+# FIXME: a
+etc_lsb_release_ubuntu14 = '''DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=14.04
+DISTRIB_CODENAME=trusty
+DISTRIB_DESCRIPTION="Ubuntu 14.04.3 LTS"
+'''
 
 class TestLSBFacts(BaseFactsTest):
     __test__ = True
@@ -289,6 +295,35 @@ class TestLSBFacts(BaseFactsTest):
         mock_module.get_bin_path = Mock(return_value='/usr/bin/lsb_release')
         mock_module.run_command = Mock(return_value=(0, lsb_release_a_fedora_output, ''))
         return mock_module
+
+    def test_lsb_release_bin(self):
+        module = self._mock_module()
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect()
+
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['lsb']['release'], '25')
+        self.assertEqual(facts_dict['lsb']['id'], 'Fedora')
+        self.assertEqual(facts_dict['lsb']['description'], 'Fedora release 25 (Twenty Five)')
+        self.assertEqual(facts_dict['lsb']['codename'], 'TwentyFive')
+        self.assertEqual(facts_dict['lsb']['major_release'], '25')
+
+
+    def test_etc_lsb_release(self):
+        module = self._mock_module()
+        module.get_bin_path = Mock(return_value=None)
+        with patch('ansible.module_utils.facts.system.lsb.os.path.exists',
+                   return_value=True):
+            with patch('ansible.module_utils.facts.system.lsb.get_file_lines',
+                       return_value=etc_lsb_release_ubuntu14.splitlines()):
+                fact_collector = self.collector_class(module=module)
+                facts_dict = fact_collector.collect()
+
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['lsb']['release'], '14.04')
+        self.assertEqual(facts_dict['lsb']['id'], 'Ubuntu')
+        self.assertEqual(facts_dict['lsb']['description'], '"Ubuntu 14.04.3 LTS"')
+        self.assertEqual(facts_dict['lsb']['codename'], 'trusty')
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
