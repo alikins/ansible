@@ -76,48 +76,21 @@ class LSBFactCollector(BaseFactCollector):
         return lsb_facts
 
     def collect(self, collected_facts=None):
-        # FIXME:kluge
-        self.facts = {}
+        facts_dict = {}
+        lsb_facts = {}
 
-        # NOTE: looks like two seperate methods to me - akl
         lsb_path = self.module.get_bin_path('lsb_release')
-        # if lsb_path:
-        #    lsb_facts = self_lsb_release_bin(lsb_path)
 
+        # try the 'lsb_release' script first
         if lsb_path:
-            rc, out, err = self.module.run_command([lsb_path, "-a"], errors='surrogate_then_replace')
-            if rc == 0:
-                self.facts['lsb'] = {}
-                for line in out.splitlines():
-                    if len(line) < 1 or ':' not in line:
-                        continue
-                    value = line.split(':', 1)[1].strip()
-                    if 'LSB Version:' in line:
-                        self.facts['lsb']['release'] = value
-                    elif 'Distributor ID:' in line:
-                        self.facts['lsb']['id'] = value
-                    elif 'Description:' in line:
-                        self.facts['lsb']['description'] = value
-                    elif 'Release:' in line:
-                        self.facts['lsb']['release'] = value
-                    elif 'Codename:' in line:
-                        self.facts['lsb']['codename'] = value
-        elif lsb_path is None and os.path.exists('/etc/lsb-release'):
-            self.facts['lsb'] = {}
-            for line in get_file_lines('/etc/lsb-release'):
-                # FIXME: an empty first line breaks this
-                value = line.split('=', 1)[1].strip()
-                if 'DISTRIB_ID' in line:
-                    self.facts['lsb']['id'] = value
-                elif 'DISTRIB_RELEASE' in line:
-                    self.facts['lsb']['release'] = value
-                elif 'DISTRIB_DESCRIPTION' in line:
-                    self.facts['lsb']['description'] = value
-                elif 'DISTRIB_CODENAME' in line:
-                    self.facts['lsb']['codename'] = value
+            lsb_facts = self._lsb_release_bin(lsb_path)
 
-        if 'lsb' in self.facts and 'release' in self.facts['lsb']:
-            self.facts['lsb']['major_release'] = self.facts['lsb']['release'].split('.')[0]
+        # no lsb_release, try looking in /etc/lsb-release
+        if not lsb_facts:
+            lsb_facts = self._lsb_release_file('/etc/lsb-release')
 
-        # FIXME: no self
-        return self.facts
+        if lsb_facts and 'release' in lsb_facts:
+            lsb_facts['major_release'] = lsb_facts['release'].split('.')[0]
+
+        facts_dict['lsb'] = lsb_facts
+        return facts_dict
