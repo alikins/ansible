@@ -51,6 +51,7 @@
 #           serial with lots of things that block and can be slow (more or less every run_command() for
 #           ex). In theory fact collection should be entirely 'read-only' (and with Collector api, with
 #           very few side effects) so might be a reasonable place for some concurency.
+# TODO: possibly rename FooCollector to just FooFacts, esp once the existing Facts() class is barebones/unneeded
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
