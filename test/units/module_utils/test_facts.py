@@ -87,7 +87,7 @@ class TestInPlace(unittest.TestCase):
         self.assertIsInstance(res, dict)
         self.assertIn('python_version', res)
         # just assert it's not almost empty
-        self.assertGreater(len(res), 25)
+        self.assertGreater(len(res), 20)
 
 
 class TestCollectedFacts(unittest.TestCase):
@@ -177,6 +177,29 @@ class TestCollectedFacts(unittest.TestCase):
 
     def _assert_ssh_facts(self, subfacts):
         self.assertIn('ansible_ssh_host_key_rsa_public', subfacts.keys())
+
+
+class TestCollectedFipsFacts(unittest.TestCase):
+    def _mock_module(self):
+        mock_module = Mock()
+        mock_module.params = {'gather_subset': ['fips'],
+                              'gather_timeout': 5,
+                              'filter': '*'}
+        mock_module.get_bin_path = Mock(return_value=None)
+        return mock_module
+
+    def setUp(self):
+        mock_module = self._mock_module()
+        #res = facts.get_all_facts(mock_module)
+        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       gather_subset=['fips'])
+        self.facts = fact_collector.collect()
+        #print(res)
+
+    def test(self):
+        self.assertIsInstance(self.facts, dict)
+        self.assertIn('ansible_facts', self.facts)
+        self.assertIn('ansible_fips', self.facts['ansible_facts'])
 
 
 
