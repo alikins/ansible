@@ -42,6 +42,7 @@ class ServiceMgrFactCollector(BaseFactCollector):
     def collect(self, collected_facts=None):
         # FIXME: no self
         self.facts = {}
+        collected_facts = collected_facts or {}
 
         # TODO: detect more custom init setups like bootscripts, dmd, s6, Epoch, etc
         # also other OSs other than linux might need to check across several possible candidates
@@ -57,6 +58,9 @@ class ServiceMgrFactCollector(BaseFactCollector):
         # try various forms of querying pid 1
         proc_1 = get_file_content('/proc/1/comm')
         if proc_1 is None:
+            # FIXME: return code isnt checked
+            # FIXME: if stdout is empty string, odd things
+            # FIXME: other code seems to think we could get proc_1 == None past this point
             rc, proc_1, err = self.module.run_command("ps -p 1 -o comm|tail -n 1", use_unsafe_shell=True)
             # If the output of the command starts with what looks like a PID, then the 'ps' command
             # probably didn't work the way we wanted, probably because it's busybox
@@ -67,6 +71,7 @@ class ServiceMgrFactCollector(BaseFactCollector):
         if proc_1 == "COMMAND\n":
             proc_1 = None
 
+        # FIXME: empty string proc_1 staus empty string
         if proc_1 is not None:
             proc_1 = os.path.basename(proc_1)
             proc_1 = to_native(proc_1)
@@ -79,26 +84,28 @@ class ServiceMgrFactCollector(BaseFactCollector):
         # if not init/None it should be an identifiable or custom init, so we are done!
         if proc_1 is not None:
             # Lookup proc_1 value in map and use proc_1 value itself if no match
+            # FIXME: empty string still falls through
             self.facts['service_mgr'] = proc_1_map.get(proc_1, proc_1)
 
         # start with the easy ones
-        elif self.facts['distribution'] == 'MacOSX':
+        elif collected_facts.get('distribution', None) == 'MacOSX':
             # FIXME: find way to query executable, version matching is not ideal
             if LooseVersion(platform.mac_ver()[0]) >= LooseVersion('10.4'):
                 self.facts['service_mgr'] = 'launchd'
             else:
                 self.facts['service_mgr'] = 'systemstarter'
-        elif 'BSD' in self.facts['system'] or self.facts['system'] in ['Bitrig', 'DragonFly']:
+        elif 'BSD' in collected_facts.get('system') or collected_facts.get('system') in ['Bitrig', 'DragonFly']:
             # FIXME: we might want to break out to individual BSDs or 'rc'
             self.facts['service_mgr'] = 'bsdinit'
-        elif self.facts['system'] == 'AIX':
+        elif collected_facts.get('system') == 'AIX':
             self.facts['service_mgr'] = 'src'
-        elif self.facts['system'] == 'SunOS':
+        elif collected_facts.get('system') == 'SunOS':
             self.facts['service_mgr'] = 'smf'
-        elif self.facts['distribution'] == 'OpenWrt':
+        elif collected_facts.get('distribution') == 'OpenWrt':
             self.facts['service_mgr'] = 'openwrt_init'
-        elif self.facts['system'] == 'Linux':
-            if self.is_systemd_managed():
+        elif collected_facts.get('system') == 'Linux':
+            # FIXME: mv is_systemd_managed
+            if self.module.is_systemd_managed():
                 self.facts['service_mgr'] = 'systemd'
             elif self.module.get_bin_path('initctl') and os.path.exists("/etc/init/"):
                 self.facts['service_mgr'] = 'upstart'
