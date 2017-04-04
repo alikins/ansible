@@ -133,7 +133,6 @@ class Facts:
             self.get_public_ssh_host_keys()
             # NOTE: lots of linux specific facts here.  A finer grained gather_subset could drive this. -akl
             self.get_selinux_facts()
-            self.get_apparmor_facts()
             self.get_pkg_mgr_facts()
             self.get_service_mgr_facts()
             self.get_lsb_facts()
@@ -395,13 +394,6 @@ class Facts:
             except (AttributeError, OSError):
                 self.facts['selinux']['type'] = 'unknown'
 
-    def get_apparmor_facts(self):
-        self.facts['apparmor'] = {}
-        if os.path.exists('/sys/kernel/security/apparmor'):
-            self.facts['apparmor']['status'] = 'enabled'
-        else:
-            self.facts['apparmor']['status'] = 'disabled'
-
     def is_systemd_managed(self):
         # tools must be installed
         if self.module.get_bin_path('systemctl'):
@@ -412,7 +404,6 @@ class Facts:
                 if os.path.exists(canary):
                     return True
         return False
-
 
     def _get_mount_size_facts(self, mountpoint):
         size_total = None
