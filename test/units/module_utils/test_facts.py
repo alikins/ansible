@@ -32,6 +32,10 @@ from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 #import ansible.module_utils.facts.virtual
 #from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 
+from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
+from ansible.module_utils.facts.system.fips import FipsFactCollector
+from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+
 print(virtual)
 print(dir(virtual))
 #print(virtual.linux)
@@ -179,76 +183,19 @@ class TestCollectedFacts(unittest.TestCase):
         self.assertIn('ansible_ssh_host_key_rsa_public', subfacts.keys())
 
 
-class TestCollectedFipsFacts(unittest.TestCase):
-    def _mock_module(self):
-        mock_module = Mock()
-        mock_module.params = {'gather_subset': ['fips'],
-                              'gather_timeout': 5,
-                              'filter': '*'}
-        mock_module.get_bin_path = Mock(return_value=None)
-        return mock_module
+class BaseFactsTest(unittest.TestCase):
+    # just a base class, not an actual test
+    __test__ = False
 
-    def setUp(self):
-        mock_module = self._mock_module()
-        #res = facts.get_all_facts(mock_module)
-        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
-                                                                       gather_subset=['fips'])
-        self.facts = fact_collector.collect()
-        #print(res)
-
-    def test(self):
-        self.assertIsInstance(self.facts, dict)
-        self.assertIn('ansible_facts', self.facts)
-        self.assertIn('ansible_fips', self.facts['ansible_facts'])
-
-    def test_class(self):
-        from ansible.module_utils.facts.system.fips import FipsFactCollector
-        module = self._mock_module()
-        fips = FipsFactCollector(module=module)
-        facts_dict = fips.collect()
-        self.assertIsInstance(facts_dict, dict)
-        #self.assertIn('ansible_fips', self.facts['ansible_facts'])
-
-
-
-class TestCollectedCapsFacts(unittest.TestCase):
-    def _mock_module(self):
-        mock_module = Mock()
-        mock_module.params = {'gather_subset': ['caps'],
-                              'gather_timeout': 10,
-                              'filter': '*'}
-        mock_module.get_bin_path = Mock(return_value='/usr/sbin/capsh')
-        mock_module.run_command = Mock(return_value=(0,'Current: =ep', ''))
-        return mock_module
-
-    def setUp(self):
-        mock_module = self._mock_module()
-        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
-                                                                       gather_subset=['caps'])
-        self.facts = fact_collector.collect()
-
-    def test_class(self):
-        from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
-        module = self._mock_module()
-        caps = SystemCapabilitiesFactCollector(module=module)
-        facts_dict = caps.collect()
-
-        self.assertIsInstance(facts_dict, dict)
-        self.assertIn('system_capabilities', facts_dict)
-
-    def test(self):
-        self.assertIsInstance(self.facts, dict)
-        self.assertIn('ansible_facts', self.facts)
-        self.assertIn('ansible_system_capabilities', self.facts['ansible_facts'])
-
-
-class TestApparmorCapsFacts(unittest.TestCase):
-    gather_subset = ['!all', 'apparmor']
+    gather_subset = ['all']
+    valid_subsets = None
+    fact_namespace = None
+    collector_class = None
 
     def _mock_module(self):
         mock_module = Mock()
         mock_module.params = {'gather_subset': self.gather_subset,
-                              'gather_timeout': 10,
+                              'gather_timeout': 5,
                               'filter': '*'}
         mock_module.get_bin_path = Mock(return_value=None)
         return mock_module
@@ -259,20 +206,58 @@ class TestApparmorCapsFacts(unittest.TestCase):
                                                                        gather_subset=self.gather_subset)
         self.facts = fact_collector.collect()
 
-    def test_class(self):
-        from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
-        module = self._mock_module()
-        apparmor = ApparmorFactCollector(module=module)
-        facts_dict = apparmor.collect()
-
-        self.assertIsInstance(facts_dict, dict)
-        self.assertIn('apparmor', facts_dict)
-        self.assertIn('status', facts_dict['apparmor'])
-
     def test(self):
         self.assertIsInstance(self.facts, dict)
         self.assertIn('ansible_facts', self.facts)
-        self.assertIn('ansible_apparmor', self.facts['ansible_facts'])
+        self.assertIn(self.fact_namespace, self.facts['ansible_facts'])
+
+    def test_class(self):
+        module = self._mock_module()
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect()
+        self.assertIsInstance(facts_dict, dict)
+        return facts_dict
+
+
+class TestCollectedFipsFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'fips']
+    valid_subsets = ['fips']
+    fact_namespace = 'ansible_fips'
+    collector_class = FipsFactCollector
+
+
+class TestCollectedCapsFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'caps']
+    valid_subsets = ['caps']
+    fact_namespace = 'ansible_system_capabilities'
+    collector_class = SystemCapabilitiesFactCollector
+
+    def _mock_module(self):
+        mock_module = Mock()
+        mock_module.params = {'gather_subset': self.gather_subset,
+                              'gather_timeout': 10,
+                              'filter': '*'}
+        mock_module.get_bin_path = Mock(return_value='/usr/sbin/capsh')
+        mock_module.run_command = Mock(return_value=(0,'Current: =ep', ''))
+        return mock_module
+
+
+class TestApparmorFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'apparmor']
+    valid_subsets = ['apparmor']
+    fact_namespace = 'ansible_apparmor'
+    collector_class = ApparmorFactCollector
+
+
+    def test_class(self):
+        facts_dict = super(TestApparmorFacts, self).test_class()
+        self.assertIn('status', facts_dict['apparmor'])
+
+    def test(self):
+        super(TestApparmorFacts, self).test_class()
         self.assertIn('status', self.facts['ansible_facts']['ansible_apparmor'])
 
 
