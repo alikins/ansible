@@ -202,6 +202,30 @@ class TestCollectedFipsFacts(unittest.TestCase):
         self.assertIn('ansible_fips', self.facts['ansible_facts'])
 
 
+class TestCollectedCapsFacts(unittest.TestCase):
+    def _mock_module(self):
+        mock_module = Mock()
+        mock_module.params = {'gather_subset': ['all'],
+                              'gather_timeout': 5,
+                              'filter': '*'}
+        mock_module.get_bin_path = Mock(return_value=None)
+        return mock_module
+
+    def setUp(self):
+        mock_module = self._mock_module()
+        #res = facts.get_all_facts(mock_module)
+        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       gather_subset=['all'])
+        self.facts = fact_collector.collect()
+        #print(res)
+
+    def test(self):
+        import pprint
+        pprint.pprint(self.facts)
+        self.assertIsInstance(self.facts, dict)
+        self.assertIn('ansible_facts', self.facts)
+        self.assertIn('ansible_system_capabilities', self.facts['ansible_facts'])
+
 
 class BaseTestFactsPlatform(unittest.TestCase):
     platform_id = 'Generic'
