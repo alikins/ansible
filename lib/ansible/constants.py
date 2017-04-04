@@ -178,6 +178,11 @@ DEFAULT_COW_WHITELIST = ['bud-frogs', 'bunny', 'cheese', 'daemon', 'default', 'd
                          'small', 'stegosaurus', 'stimpy', 'supermilker', 'three-eyes', 'turkey', 'turtle', 'tux', 'udder',
                          'vader-koala', 'vader', 'www',]
 
+PKG_MGR_MODULES = ['yum', 'dnf', 'apt', 'zipper', 'urpmi', 'pacman',
+                   'opkg', 'pkgin', 'macports', 'homebrew', 'apk',
+                   'pkgng', 'SD-UX', 'portage', 'svr4pkg', 'pkg5', 'xbps',
+                   'swupd', 'sorcery']
+
 # sections in config file
 DEFAULTS='defaults'
 
