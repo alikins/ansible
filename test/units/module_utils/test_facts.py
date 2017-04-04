@@ -265,6 +265,8 @@ class TestServiceMgrFacts(BaseFactsTest):
     fact_namespace = 'ansible_service_mgr'
     collector_class = ServiceMgrFactCollector
 
+    # TODO: dedupe some of this test code
+
     @patch('ansible.module_utils.facts.system.service_mgr.get_file_content', return_value=None)
     def test_no_proc1(self, mock_gfc):
         # no /proc/1/comm, ps returns non-0
@@ -287,6 +289,61 @@ class TestServiceMgrFacts(BaseFactsTest):
         facts_dict = fact_collector.collect()
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict['service_mgr'], 'sys11')
+
+    @patch('ansible.module_utils.facts.system.service_mgr.get_file_content', return_value=None)
+    def test_clowncar(self, mock_gfc):
+        # no /proc/1/comm, ps fails, distro and system are clowncar
+        # should end up return 'sys11'
+        module = self._mock_module()
+        module.run_command = Mock(return_value=(1, '', ''))
+        collected_facts = {'distribution': 'clowncar',
+                           'system': 'ClownCarOS'}
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect(collected_facts=collected_facts)
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['service_mgr'], 'service')
+
+    @patch('ansible.module_utils.facts.system.service_mgr.get_file_content', return_value=None)
+    def test_sunos_fallback(self, mock_gfc):
+        # no /proc/1/comm, ps fails, 'system' is SunOS
+        # should end up return 'smf'?
+        module = self._mock_module()
+        # FIXME: the result here is a kluge to at least cover more of service_mgr.collect
+        # TODO: remove
+        # FIXME: have to force a pid for results here to get into any of the system/distro checks
+        module.run_command = Mock(return_value=(1, ' 37 ', ''))
+        collected_facts = {'system': 'SunOS'}
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect(collected_facts=collected_facts)
+        print('facts_dict: %s' % facts_dict)
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['service_mgr'], 'smf')
+
+    @patch('ansible.module_utils.facts.system.service_mgr.get_file_content', return_value=None)
+    def test_aix_fallback(self, mock_gfc):
+        # no /proc/1/comm, ps fails, 'system' is SunOS
+        # should end up return 'smf'?
+        module = self._mock_module()
+        module.run_command = Mock(return_value=(1, '', ''))
+        collected_facts = {'system': 'AIX'}
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect(collected_facts=collected_facts)
+        print('facts_dict: %s' % facts_dict)
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['service_mgr'], 'src')
+
+    @patch('ansible.module_utils.facts.system.service_mgr.get_file_content', return_value=None)
+    def test_linux_fallback(self, mock_gfc):
+        # no /proc/1/comm, ps fails, 'system' is SunOS
+        # should end up return 'smf'?
+        module = self._mock_module()
+        module.run_command = Mock(return_value=(1, '  37 ', ''))
+        collected_facts = {'system': 'Linux'}
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect(collected_facts=collected_facts)
+        print('facts_dict: %s' % facts_dict)
+        self.assertIsInstance(facts_dict, dict)
+        self.assertEqual(facts_dict['service_mgr'], 'sdfadf')
 
 
 lsb_release_a_fedora_output = '''
