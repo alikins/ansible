@@ -135,7 +135,6 @@ class Facts:
             self.get_selinux_facts()
             self.get_apparmor_facts()
             self.get_caps_facts()
-            self.get_fips_facts()
             self.get_pkg_mgr_facts()
             self.get_service_mgr_facts()
             self.get_lsb_facts()
@@ -424,13 +423,6 @@ class Facts:
 
             self.facts['system_capabilities_enforced'] = enforced
             self.facts['system_capabilities'] = enforced_caps
-
-    def get_fips_facts(self):
-        # NOTE: this is populated even if it is not set
-        self.facts['fips'] = False
-        data = get_file_content('/proc/sys/crypto/fips_enabled')
-        if data and data == '1':
-            self.facts['fips'] = True
 
 
     def is_systemd_managed(self):
