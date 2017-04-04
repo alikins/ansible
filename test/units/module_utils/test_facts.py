@@ -22,7 +22,7 @@ import re
 
 # for testing
 from ansible.compat.tests import unittest
-from ansible.compat.tests.mock import Mock, patch
+from ansible.compat.tests.mock import MagicMock, Mock, patch
 
 from ansible.module_utils import facts
 from ansible.module_utils.facts import hardware
@@ -34,6 +34,7 @@ from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
+from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
 
 print(virtual)
@@ -259,6 +260,23 @@ class TestApparmorFacts(BaseFactsTest):
     def test(self):
         super(TestApparmorFacts, self).test_class()
         self.assertIn('status', self.facts['ansible_facts']['ansible_apparmor'])
+
+
+class TestSelinuxFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'selinux']
+    valid_subsets = ['selinux']
+    fact_namespace = 'ansible_selinux'
+    collector_class = SelinuxFactCollector
+
+    def test_no_selinux(self):
+        with patch('ansible.module_utils.facts.system.selinux.HAVE_SELINUX', False):
+            module = self._mock_module()
+            fact_collector = self.collector_class(module=module)
+            facts_dict = fact_collector.collect()
+            self.assertIsInstance(facts_dict, dict)
+            self.assertFalse(facts_dict['selinux'])
+            return facts_dict
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
