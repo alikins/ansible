@@ -67,6 +67,7 @@ from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
 
+from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
 from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
@@ -243,6 +244,7 @@ class AnsibleFactCollector(NestedFactCollector):
     FACT_SUBSETS = dict(
         facts=TempFactCollector,
         # system=SystemFactCollector,
+        apparmor=ApparmorFactCollector,
         caps=SystemCapabilitiesFactCollector,
         date_time=DateTimeFactCollector,
         env=EnvFactCollector,
