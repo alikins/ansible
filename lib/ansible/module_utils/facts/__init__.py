@@ -77,6 +77,7 @@ from ansible.module_utils.facts.system.local import LocalFactCollector
 from ansible.module_utils.facts.system.lsb import LSBFactCollector
 from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
+from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
 
 
@@ -256,6 +257,7 @@ class AnsibleFactCollector(NestedFactCollector):
         lsb=LSBFactCollector,
         python=PythonFactCollector,
         selinux=SelinuxFactCollector,
+        service_mgr=ServiceMgrFactCollector,
         user=UserFactCollector,
         hardware=HardwareCollector,
         network=NetworkCollector,
