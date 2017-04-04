@@ -74,19 +74,6 @@ from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
 
 
-# FIXME: share and/or remove
-try:
-    import json
-    # Detect python-json which is incompatible and fallback to simplejson in
-    # that case
-    try:
-        json.loads
-        json.dumps
-    except AttributeError:
-        raise ImportError
-except ImportError:
-    import simplejson as json
-
 # TODO: remove these once we replace them
 class WrapperCollector(BaseFactCollector):
     facts_class = None

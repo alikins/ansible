@@ -6,21 +6,9 @@ import re
 
 from ansible.module_utils.facts.hardware.base import Hardware
 from ansible.module_utils.facts.timeout import TimeoutError, timeout
+from ansible.module_utils.facts import _json
 
 from ansible.module_utils.facts.utils import get_file_content
-
-# FIXME: use compat or remove
-try:
-    import json
-    # Detect python-json which is incompatible and fallback to simplejson in
-    # that case
-    try:
-        json.loads
-        json.dumps
-    except AttributeError:
-        raise ImportError
-except ImportError:
-    import simplejson as json
 
 
 class FreeBSDHardware(Hardware):
@@ -147,7 +135,7 @@ class FreeBSDHardware(Hardware):
                     # Strip out commented lines (specific dmidecode output)
                     self.facts[k] = ''.join([line for line in out.splitlines() if not line.startswith('#')])
                     try:
-                        json.dumps(self.facts[k])
+                        _json.dumps(self.facts[k])
                     except UnicodeDecodeError:
                         self.facts[k] = 'NA'
                 else:

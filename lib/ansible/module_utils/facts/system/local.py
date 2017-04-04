@@ -24,21 +24,9 @@ from ansible.module_utils.six.moves import configparser
 from ansible.module_utils.six.moves import StringIO
 
 from ansible.module_utils.facts.utils import get_file_content
+from ansible.module_utils.facts import _json
 
 from ansible.module_utils.facts.collector import BaseFactCollector
-
-# UGH, mustfix eventually
-try:
-    import json
-    # Detect python-json which is incompatible and fallback to simplejson in
-    # that case
-    try:
-        json.loads
-        json.dumps
-    except AttributeError:
-        raise ImportError
-except ImportError:
-    import simplejson as json
 
 
 class LocalFactCollector(BaseFactCollector):
@@ -78,7 +66,7 @@ class LocalFactCollector(BaseFactCollector):
             # load raw json
             fact = 'loading %s' % fact_base
             try:
-                fact = json.loads(out)
+                fact = _json.loads(out)
             except ValueError:
                 # load raw ini
                 cp = configparser.ConfigParser()
