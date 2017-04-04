@@ -67,6 +67,7 @@ from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
 
+from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
 from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
@@ -242,6 +243,7 @@ class AnsibleFactCollector(NestedFactCollector):
     FACT_SUBSETS = dict(
         facts=TempFactCollector,
         # system=SystemFactCollector,
+        caps=SystemCapabilitiesFactCollector,
         date_time=DateTimeFactCollector,
         env=EnvFactCollector,
         dns=DnsFactCollector,
@@ -297,6 +299,7 @@ class AnsibleFactCollector(NestedFactCollector):
         collector_names = get_collector_names(module, valid_subsets=all_valid_subsets,
                                               gather_timeout=gather_timeout)
 
+        print('collector_names: %s' % collector_names)
         collectors = []
         seen_collector_classes = []
         for collector_name in collector_names:
@@ -311,7 +314,8 @@ class AnsibleFactCollector(NestedFactCollector):
                 collectors.append(collector)
                 seen_collector_classes.append(collector_class)
 
-        #print('collectors: %s' % pprint.pformat(collectors))
+        import pprint
+        print('collectors: %s' % pprint.pformat(collectors))
         instance = cls(collectors=collectors,
                        gather_subset=gather_subset)
         return instance
