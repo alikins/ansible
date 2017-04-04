@@ -13,12 +13,6 @@ from ansible.module_utils._text import to_native
 from ansible.module_utils.facts.distribution import Distribution
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
 
-try:
-    import selinux
-    HAVE_SELINUX = True
-except ImportError:
-    HAVE_SELINUX = False
-
 
 # FIXME: compat module, if still needed
 # The distutils module is not shipped with SUNWPython on Solaris.
@@ -52,7 +46,6 @@ class Facts:
     _I386RE = re.compile(r'i([3456]86|86pc)')
     # For the most part, we assume that platform.dist() will tell the truth.
     # This is the fallback to handle unknowns or exceptions
-    SELINUX_MODE_DICT = {1: 'enforcing', 0: 'permissive', -1: 'disabled'}
 
     # A list of dicts.  If there is a platform with more than one
     # package manager, put the preferred one last.  If there is an
@@ -132,7 +125,6 @@ class Facts:
             self.get_cmdline()
             self.get_public_ssh_host_keys()
             # NOTE: lots of linux specific facts here.  A finer grained gather_subset could drive this. -akl
-            self.get_selinux_facts()
             self.get_pkg_mgr_facts()
             self.get_service_mgr_facts()
             self.get_lsb_facts()
@@ -353,46 +345,6 @@ class Facts:
 
         if 'lsb' in self.facts and 'release' in self.facts['lsb']:
             self.facts['lsb']['major_release'] = self.facts['lsb']['release'].split('.')[0]
-
-    # NOTE: the weird module deps required for this is confusing. Likely no good approach though... - akl
-    # NOTE: also likely a good candidate for it's own module or class, it barely uses self
-    def get_selinux_facts(self):
-        if not HAVE_SELINUX:
-            self.facts['selinux'] = False
-            return
-        self.facts['selinux'] = {}
-        if not selinux.is_selinux_enabled():
-            self.facts['selinux']['status'] = 'disabled'
-        # NOTE: this could just return in the above clause and the rest of this is up an indent -akl
-        else:
-            self.facts['selinux']['status'] = 'enabled'
-            try:
-                self.facts['selinux']['policyvers'] = selinux.security_policyvers()
-            except (AttributeError, OSError):
-                self.facts['selinux']['policyvers'] = 'unknown'
-            try:
-                (rc, configmode) = selinux.selinux_getenforcemode()
-                if rc == 0:
-                    # NOTE: not sure I understand why the class attributes are referenced via Facts class here when it's self
-                    #       though that makes the case for all of that constants info to be in a constants class (ie, class SelinuxMode) -akl
-                    self.facts['selinux']['config_mode'] = Facts.SELINUX_MODE_DICT.get(configmode, 'unknown')
-                else:
-                    self.facts['selinux']['config_mode'] = 'unknown'
-            except (AttributeError, OSError):
-                self.facts['selinux']['config_mode'] = 'unknown'
-            try:
-                mode = selinux.security_getenforce()
-                self.facts['selinux']['mode'] = Facts.SELINUX_MODE_DICT.get(mode, 'unknown')
-            except (AttributeError, OSError):
-                self.facts['selinux']['mode'] = 'unknown'
-            try:
-                (rc, policytype) = selinux.selinux_getpolicytype()
-                if rc == 0:
-                    self.facts['selinux']['type'] = policytype
-                else:
-                    self.facts['selinux']['type'] = 'unknown'
-            except (AttributeError, OSError):
-                self.facts['selinux']['type'] = 'unknown'
 
     def is_systemd_managed(self):
         # tools must be installed
