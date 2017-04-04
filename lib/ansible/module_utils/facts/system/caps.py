@@ -46,10 +46,7 @@ class SystemCapabilitiesFactCollector(BaseFactCollector):
                         enforced = 'True'
                         enforced_caps = [i.strip() for i in line.split('=')[1].split(',')]
 
-            print('enforced %s enforced_caps %s' % (enforced, enforced_caps))
             facts_dict['system_capabilities_enforced'] = enforced
             facts_dict['system_capabilities'] = enforced_caps
 
-        import pprint
-        pprint.pprint(facts_dict)
         return facts_dict

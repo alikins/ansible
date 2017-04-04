@@ -299,7 +299,7 @@ class AnsibleFactCollector(NestedFactCollector):
         collector_names = get_collector_names(module, valid_subsets=all_valid_subsets,
                                               gather_timeout=gather_timeout)
 
-        print('collector_names: %s' % collector_names)
+        # print('collector_names: %s' % collector_names)
         collectors = []
         seen_collector_classes = []
         for collector_name in collector_names:
@@ -314,8 +314,8 @@ class AnsibleFactCollector(NestedFactCollector):
                 collectors.append(collector)
                 seen_collector_classes.append(collector_class)
 
-        import pprint
-        print('collectors: %s' % pprint.pformat(collectors))
+        # import pprint
+        # print('collectors: %s' % pprint.pformat(collectors))
         instance = cls(collectors=collectors,
                        gather_subset=gather_subset)
         return instance
