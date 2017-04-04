@@ -41,8 +41,9 @@ class ServiceMgrFactCollector(BaseFactCollector):
 
     def collect(self, collected_facts=None):
         # FIXME: no self
-        self.facts = {}
+        facts_dict = {}
         collected_facts = collected_facts or {}
+        service_mgr_name = None
 
         # TODO: detect more custom init setups like bootscripts, dmd, s6, Epoch, etc
         # also other OSs other than linux might need to check across several possible candidates
@@ -85,37 +86,39 @@ class ServiceMgrFactCollector(BaseFactCollector):
         if proc_1 is not None:
             # Lookup proc_1 value in map and use proc_1 value itself if no match
             # FIXME: empty string still falls through
-            self.facts['service_mgr'] = proc_1_map.get(proc_1, proc_1)
+            service_mgr_name = proc_1_map.get(proc_1, proc_1)
 
+        # FIXME: replace with a system->service_mgr_name map?
         # start with the easy ones
         elif collected_facts.get('distribution', None) == 'MacOSX':
             # FIXME: find way to query executable, version matching is not ideal
             if LooseVersion(platform.mac_ver()[0]) >= LooseVersion('10.4'):
-                self.facts['service_mgr'] = 'launchd'
+                service_mgr_name = 'launchd'
             else:
-                self.facts['service_mgr'] = 'systemstarter'
+                service_mgr_name = 'systemstarter'
         elif 'BSD' in collected_facts.get('system') or collected_facts.get('system') in ['Bitrig', 'DragonFly']:
             # FIXME: we might want to break out to individual BSDs or 'rc'
-            self.facts['service_mgr'] = 'bsdinit'
+            service_mgr_name = 'bsdinit'
         elif collected_facts.get('system') == 'AIX':
-            self.facts['service_mgr'] = 'src'
+            service_mgr_name = 'src'
         elif collected_facts.get('system') == 'SunOS':
-            self.facts['service_mgr'] = 'smf'
+            service_mgr_name = 'smf'
         elif collected_facts.get('distribution') == 'OpenWrt':
-            self.facts['service_mgr'] = 'openwrt_init'
+            service_mgr_name = 'openwrt_init'
         elif collected_facts.get('system') == 'Linux':
             # FIXME: mv is_systemd_managed
             if self.module.is_systemd_managed():
-                self.facts['service_mgr'] = 'systemd'
+                service_mgr_name = 'systemd'
             elif self.module.get_bin_path('initctl') and os.path.exists("/etc/init/"):
-                self.facts['service_mgr'] = 'upstart'
+                service_mgr_name = 'upstart'
             elif os.path.exists('/sbin/openrc'):
-                self.facts['service_mgr'] = 'openrc'
+                service_mgr_name = 'openrc'
             elif os.path.exists('/etc/init.d/'):
-                self.facts['service_mgr'] = 'sysvinit'
+                service_mgr_name = 'sysvinit'
 
-        if not self.facts.get('service_mgr', False):
+        if not service_mgr_name:
             # if we cannot detect, fallback to generic 'service'
-            self.facts['service_mgr'] = 'service'
+            service_mgr_name = 'service'
 
-        return self.facts
+        facts_dict['service_mgr'] = service_mgr_name
+        return facts_dict
