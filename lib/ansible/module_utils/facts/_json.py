@@ -1,3 +1,4 @@
+# compat module for json (builtin json, python-json, simplejson)
 #
 # This file is part of Ansible
 #
@@ -14,25 +15,28 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-from ansible.module_utils.facts import _json
-from ansible.module_utils.facts.facts import Facts
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
 
 
-class Ohai(Facts):
-    """
-    This is a subclass of Facts for including information gathered from Ohai.
-    """
+# 'builtin', 'simplejson'
+JSON_IMPL = None
 
-    def populate(self):
-        self.run_ohai()
-        return self.facts
+try:
+    import json
+    # Detect python-json which is incompatible and fallback to simplejson in
+    # that case
+    try:
+        json.loads
+        json.dumps
+    except AttributeError:
+        raise ImportError
+    JSON_IMPL = 'builtin'
+except ImportError:
+    import simplejson as json
+    JSON_IMPL = 'simplejson'
 
-    def run_ohai(self):
-        ohai_path = self.module.get_bin_path('ohai')
-        if ohai_path is None:
-            return
-        rc, out, err = self.module.run_command(ohai_path)
-        try:
-            self.facts.update(_json.loads(out))
-        except:
-            pass
+# facts code only seems to use loads/dumps
+from json import dumps, loads
+
+__all__ = [JSON_IMPL, json, dumps, loads]

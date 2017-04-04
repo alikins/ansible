@@ -14,20 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+from ansible.module_utils.facts import _json
 from ansible.module_utils.facts.facts import Facts
-
-# FIXME: compat or remove this cond import
-try:
-    import json
-    # Detect python-json which is incompatible and fallback to simplejson in
-    # that case
-    try:
-        json.loads
-        json.dumps
-    except AttributeError:
-        raise ImportError
-except ImportError:
-    import simplejson as json
 
 
 class Facter(Facts):
@@ -52,6 +40,6 @@ class Facter(Facts):
         # ruby-json is ALSO installed, include facter data in the JSON
         rc, out, err = self.module.run_command(facter_path + " --puppet --json")
         try:
-            self.facts = json.loads(out)
+            self.facts = _json.loads(out)
         except:
             pass
