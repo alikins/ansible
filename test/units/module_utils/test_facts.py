@@ -39,12 +39,8 @@ from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.lsb import LSBFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
+from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
-
-print(virtual)
-print(dir(virtual))
-#print(virtual.linux)
-#print(virtual.linux.LinuxVirtual)
 
 # FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
 class TestInPlace(unittest.TestCase):
@@ -266,6 +262,14 @@ class TestSelinuxFacts(BaseFactsTest):
             self.assertIsInstance(facts_dict, dict)
             self.assertFalse(facts_dict['selinux'])
             return facts_dict
+
+
+class TestServiceMgrFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'service_mgr']
+    valid_subsets = ['service_mgr']
+    fact_namespace = 'ansible_service_mgr'
+    collector_class = ServiceMgrFactCollector
 
 
 lsb_release_a_fedora_output = '''
