@@ -20,7 +20,8 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from multiprocessing import Lock
-from ansible.module_utils.facts import Facts
+
+from ansible import constants as C
 
 if 'action_write_locks' not in globals():
     # Do not initialize this more than once because it seems to bash
@@ -36,7 +37,7 @@ if 'action_write_locks' not in globals():
 
     # These plugins are called directly by action plugins (not going through
     # a strategy).  We precreate them here as an optimization
-    mods = set(p['name'] for p in Facts.PKG_MGRS)
+    mods = set(C.PKG_MGR_MODULES)
     mods.update(('copy', 'file', 'setup', 'slurp', 'stat'))
     for mod_name in mods:
         action_write_locks[mod_name] = Lock()
