@@ -201,27 +201,44 @@ class TestCollectedFipsFacts(unittest.TestCase):
         self.assertIn('ansible_facts', self.facts)
         self.assertIn('ansible_fips', self.facts['ansible_facts'])
 
+    def test_class(self):
+        from ansible.module_utils.facts.system.fips import FipsFactCollector
+        module = self._mock_module()
+        fips = FipsFactCollector(module=module)
+        facts_dict = fips.collect()
+        self.assertIsInstance(facts_dict, dict)
+        #self.assertIn('ansible_fips', self.facts['ansible_facts'])
+
+
 
 class TestCollectedCapsFacts(unittest.TestCase):
     def _mock_module(self):
         mock_module = Mock()
-        mock_module.params = {'gather_subset': ['all'],
-                              'gather_timeout': 5,
+        mock_module.params = {'gather_subset': ['caps'],
+                              'gather_timeout': 10,
                               'filter': '*'}
-        mock_module.get_bin_path = Mock(return_value=None)
+        mock_module.get_bin_path = Mock(return_value='/usr/sbin/capsh')
+        mock_module.run_command = Mock(return_value=(0,'Current: =ep', ''))
         return mock_module
 
     def setUp(self):
         mock_module = self._mock_module()
         #res = facts.get_all_facts(mock_module)
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
-                                                                       gather_subset=['all'])
+                                                                       gather_subset=['caps'])
         self.facts = fact_collector.collect()
         #print(res)
 
+    def test_class(self):
+        from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+        module = self._mock_module()
+        caps = SystemCapabilitiesFactCollector(module=module)
+        facts_dict = caps.collect()
+        self.assertIsInstance(facts_dict, dict)
+        self.assertIn('system_capabilities', facts_dict)
+        print(facts_dict)
+
     def test(self):
-        import pprint
-        pprint.pprint(self.facts)
         self.assertIsInstance(self.facts, dict)
         self.assertIn('ansible_facts', self.facts)
         self.assertIn('ansible_system_capabilities', self.facts['ansible_facts'])
