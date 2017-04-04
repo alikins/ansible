@@ -8,7 +8,7 @@ from ansible.module_utils._text import to_text
 from ansible.module_utils.facts.hardware.base import Hardware
 from ansible.module_utils.facts.timeout import TimeoutError, timeout
 
-from ansible.module_utils.facts.utils import get_file_content
+from ansible.module_utils.facts.utils import get_file_content, get_mount_size
 from ansible.module_utils.facts.sysctl import get_sysctl
 
 
@@ -51,7 +51,7 @@ class OpenBSDHardware(Hardware):
                 fields = re.sub(r'\s+', ' ', line).split()
                 if fields[1] == 'none' or fields[3] == 'xx':
                     continue
-                size_total, size_available = self._get_mount_size_facts(fields[1])
+                size_total, size_available = get_mount_size(fields[1])
                 self.facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],

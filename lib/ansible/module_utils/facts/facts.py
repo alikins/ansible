@@ -2,7 +2,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import os
 import platform
 import re
 import shlex
@@ -185,16 +184,3 @@ class Facts:
                 keydata = get_file_content(key_filename)
                 if keydata is not None:
                     self.facts[factname] = keydata.split()[1]
-
-
-    def _get_mount_size_facts(self, mountpoint):
-        size_total = None
-        size_available = None
-        try:
-            statvfs_result = os.statvfs(mountpoint)
-            size_total = statvfs_result.f_frsize * statvfs_result.f_blocks
-            size_available = statvfs_result.f_frsize * (statvfs_result.f_bavail)
-        except OSError:
-            pass
-        return size_total, size_available
-
