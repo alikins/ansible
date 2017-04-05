@@ -17,7 +17,7 @@ class TimeoutError(Exception):
 def timeout(seconds=None, error_message="Timer expired"):
 
     if seconds is None:
-        seconds = globals().get('GATHER_TIMEOUT') or DEFAULT_GATHER_TIMEOUT
+        seconds = globals().get('GATHER_TIMEOUT', DEFAULT_GATHER_TIMEOUT)
 
     def decorator(func):
         def _handle_timeout(signum, frame):
@@ -25,7 +25,7 @@ def timeout(seconds=None, error_message="Timer expired"):
             raise TimeoutError(msg)
 
         def wrapper(*args, **kwargs):
-            seconds = globals().get('GATHER_TIMEOUT')
+            seconds = globals().get('GATHER_TIMEOUT', DEFAULT_GATHER_TIMEOUT)
             signal.signal(signal.SIGALRM, _handle_timeout)
             signal.alarm(seconds)
 
