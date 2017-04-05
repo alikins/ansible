@@ -39,4 +39,4 @@ except ImportError:
 # facts code only seems to use loads/dumps
 from json import dumps, loads
 
-__all__ = [JSON_IMPL, json, dumps, loads]
+__all__ = ['JSON_IMPL', 'json', 'dumps', 'loads']
