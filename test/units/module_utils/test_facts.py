@@ -32,8 +32,6 @@ from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
 from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts.virtual.linux import LinuxVirtual
-#import ansible.module_utils.facts.virtual
-#from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
@@ -42,6 +40,7 @@ from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+
 
 # FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
 class TestInPlace(unittest.TestCase):
@@ -55,11 +54,9 @@ class TestInPlace(unittest.TestCase):
 
     def test(self):
         mock_module = self._mock_module()
-        #res = facts.get_all_facts(mock_module)
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
                                                                        gather_subset=['all'])
         res = fact_collector.collect()
-        #print(res)
         self.assertIsInstance(res, dict)
         self.assertIn('ansible_facts', res)
         # just assert it's not almost empty
@@ -67,29 +64,25 @@ class TestInPlace(unittest.TestCase):
 
     def test_collect_ids(self):
         mock_module = self._mock_module()
-        #res = facts.get_all_facts(mock_module)
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
                                                                        gather_subset=['all'])
         res = fact_collector.collect_ids()
-        print('collect_ids: %s' % res)
 
         self.assertIsInstance(res, set)
 
     def test_facts_class(self):
         mock_module = self._mock_module()
-        facts_obj = facts.Facts(mock_module)
-        print(facts_obj)
+        facts.Facts(mock_module)
 
     def test_facts_class_load_on_init_false(self):
         mock_module = self._mock_module()
-        facts_obj = facts.Facts(mock_module, load_on_init=False)
-        print(facts_obj)
+        facts.Facts(mock_module, load_on_init=False)
+        # FIXME: assert something
 
     def test_facts_class_populate(self):
         mock_module = self._mock_module()
         facts_obj = facts.Facts(mock_module)
         res = facts_obj.populate()
-        print(res)
         self.assertIsInstance(res, dict)
         self.assertIn('python_version', res)
         # just assert it's not almost empty
@@ -107,11 +100,9 @@ class TestCollectedFacts(unittest.TestCase):
 
     def setUp(self):
         mock_module = self._mock_module()
-        #res = facts.get_all_facts(mock_module)
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
                                                                        gather_subset=['all'])
         self.facts = fact_collector.collect()
-        #print(res)
 
     def test_basics(self):
         self._assert_basics(self.facts)
@@ -226,7 +217,7 @@ class TestCollectedCapsFacts(BaseFactsTest):
                               'gather_timeout': 10,
                               'filter': '*'}
         mock_module.get_bin_path = Mock(return_value='/usr/sbin/capsh')
-        mock_module.run_command = Mock(return_value=(0,'Current: =ep', ''))
+        mock_module.run_command = Mock(return_value=(0, 'Current: =ep', ''))
         return mock_module
 
 
@@ -281,7 +272,6 @@ class TestServiceMgrFacts(BaseFactsTest):
         # no /proc/1/comm, ps returns non-0
         # should fallback to 'service'
         module = self._mock_module()
-        #module.run_command = Mock(return_value=(0, '/sbin/sys11', ''))
         module.run_command = Mock(return_value=(1, '', 'wat'))
         fact_collector = self.collector_class(module=module)
         facts_dict = fact_collector.collect()
@@ -376,6 +366,7 @@ DISTRIB_RELEASE=11
 DISTRIB_CODENAME=stonehenge
 DISTRIB_DESCRIPTION="AwesomeÖS 11"
 '''
+
 
 class TestLSBFacts(BaseFactsTest):
     __test__ = True
@@ -621,7 +612,7 @@ LSBLK_OUTPUT = b"""
 /dev/mapper/docker-253:1-1050967-pool
 """
 
-LSBLK_OUTPUT_2  = b"""
+LSBLK_OUTPUT_2 = b"""
 /dev/sda
 /dev/sda1                            32caaec3-ef40-4691-a3b6-438c3f9bc1c0
 /dev/sda2                            66Ojcd-ULtu-1cZa-Tywo-mx0d-RF4O-ysA9jK
