@@ -86,7 +86,7 @@ class TestInPlace(unittest.TestCase):
         self.assertIsInstance(res, dict)
         self.assertIn('python_version', res)
         # just assert it's not almost empty
-        self.assertGreater(len(res), 20)
+        self.assertGreater(len(res), 5)
 
 
 class TestCollectedFacts(unittest.TestCase):
