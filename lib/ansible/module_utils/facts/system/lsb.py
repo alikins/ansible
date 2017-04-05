@@ -60,7 +60,6 @@ class LSBFactCollector(BaseFactCollector):
         if not os.path.exists(etc_lsb_release_location):
             return lsb_facts
 
-        #self.facts['lsb'] = {}
         for line in get_file_lines(etc_lsb_release_location):
             value = line.split('=', 1)[1].strip()
 

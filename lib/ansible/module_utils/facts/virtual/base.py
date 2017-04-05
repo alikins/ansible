@@ -45,4 +45,3 @@ class Virtual(Facts):
     def get_virtual_facts(self):
         self.facts['virtualization_type'] = ''
         self.facts['virtualization_role'] = ''
-

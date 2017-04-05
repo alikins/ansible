@@ -94,13 +94,13 @@ class WrapperCollector(BaseFactCollector):
     def collect(self, collected_facts=None):
         collected_facts = collected_facts or {}
 
-        #print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
+        # print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
         # WARNING: virtual.populate mutates cached_facts and returns a ref
         #          so for now, pass in a copy()
         facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
 
-        #print('facts_obj: %s' % facts_obj)
-        #print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
+        # print('facts_obj: %s' % facts_obj)
+        # print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
         facts_dict = facts_obj.populate()
 
         if self.namespace:
@@ -175,7 +175,6 @@ class NestedFactCollector(BaseFactCollector):
         collected = super(NestedFactCollector, self).collect(collected_facts=collected_facts)
         facts_dict = {self.top_level_name: collected}
         return facts_dict
-
 
 
 # FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
@@ -269,7 +268,6 @@ class AnsibleFactCollector(NestedFactCollector):
     )
     VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
-
     def __init__(self, collectors=None, namespace=None,
                  gather_subset=None):
         namespace = PrefixFactNamespace(namespace_name='ansible',
@@ -296,7 +294,6 @@ class AnsibleFactCollector(NestedFactCollector):
         for all_collector_class in all_collector_classes:
             for fact_id in all_collector_class._fact_ids:
                 id_collector_map[fact_id] = all_collector_class
-
 
         all_fact_subsets = {}
         all_fact_subsets.update(cls.FACT_SUBSETS)

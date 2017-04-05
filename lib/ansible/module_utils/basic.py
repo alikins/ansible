@@ -489,6 +489,7 @@ def heuristic_log_sanitize(data, no_log_values=None):
         output = remove_values(output, no_log_values)
     return output
 
+
 # TODO: mv/cp to ansible.utils? seems odd for plugin/filter/matchstuff.py to
 #       require module_utils for this...
 def bytes_to_human(size, isbits=False, unit=None):
@@ -508,6 +509,7 @@ def bytes_to_human(size, isbits=False, unit=None):
         suffix = base
 
     return '%.2f %s' % (float(size)/ limit, suffix)
+
 
 def human_to_bytes(number, default_unit=None, isbits=False):
 

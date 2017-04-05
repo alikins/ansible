@@ -9,6 +9,7 @@ import signal
 GATHER_TIMEOUT = None
 DEFAULT_GATHER_TIMEOUT = 10
 
+
 class TimeoutError(Exception):
     pass
 
@@ -29,7 +30,7 @@ def timeout(seconds=None, error_message="Timer expired"):
             signal.alarm(seconds)
 
             try:
-                result = func(*args,  **kwargs)
+                result = func(*args, **kwargs)
             finally:
                 signal.alarm(0)
             return result
