@@ -186,8 +186,7 @@ class NestedFactCollector(BaseFactCollector):
 # def get_all_facts(module):
 def get_collector_names(module, valid_subsets=None,
                         minimal_gather_subset=None,
-                        gather_subset=None,
-                        gather_timeout=None):
+                        gather_subset=None):
     # Retrieve module parameters
     gather_subset = gather_subset or ['all']
 
@@ -195,8 +194,6 @@ def get_collector_names(module, valid_subsets=None,
 
     # if provided, minimal_gather_subset is always added, even after all negations
     minimal_gather_subset = minimal_gather_subset or frozenset([])
-
-    timeout.GATHER_TIMEOUT = gather_timeout
 
     # Retrieve all facts elements
     additional_subsets = set()
@@ -299,7 +296,11 @@ class AnsibleFactCollector(NestedFactCollector):
 
         minimal_gather_subset = minimal_gather_subset or frozenset([])
 
+        # FIXME: decorator weirdness rel to timeout module scope
         gather_timeout = gather_timeout or timeout.DEFAULT_GATHER_TIMEOUT
+
+        # tweak the modules GATHER_TIMEOUT
+        timeout.GATHER_TIMEOUT = gather_timeout
 
         valid_subsets = valid_subsets or cls.VALID_SUBSETS
 
@@ -322,8 +323,7 @@ class AnsibleFactCollector(NestedFactCollector):
         collector_names = get_collector_names(module,
                                               valid_subsets=all_valid_subsets,
                                               minimal_gather_subset=minimal_gather_subset,
-                                              gather_subset=gather_subset,
-                                              gather_timeout=gather_timeout)
+                                              gather_subset=gather_subset)
 
 #        print('collector_names: %s' % collector_names)
         collectors = []
