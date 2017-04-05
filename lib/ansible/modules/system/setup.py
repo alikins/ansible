@@ -136,7 +136,19 @@ def main():
     gather_subset = module.params['gather_subset']
     gather_timeout = module.params['gather_timeout']
 
+    # TODO: this mimics existing behavior where gather_subset=["!all"] actually means
+    #       to collect nothing except for the below list
+    # TODO: decide what '!all' means, I lean towards making it mean none, but likely needs
+    #       some tweaking on how gather_subset operations are performed
+    minimal_gather_subset = frozenset(['apparmor', 'caps', 'date_time',
+                                       'env', 'fips', 'local', 'lsb',
+                                       'pkg_mgr', 'python', 'selinux',
+                                       'service_mgr', 'user',
+                                       # TODO: facts type should go away soon
+                                       'facts'])
+
     fact_collector = AnsibleFactCollector.from_gather_subset(module,
+                                                             minimal_gather_subset=minimal_gather_subset,
                                                              gather_subset=gather_subset,
                                                              gather_timeout=gather_timeout)
 
