@@ -34,7 +34,7 @@ class LocalFactCollector(BaseFactCollector):
 
     def collect(self, collected_facts=None):
         local_facts = {}
-        local_facts['env'] = {}
+        local_facts['local'] = {}
 
         # NOTE: -> _has_local_facts()
         #      or better, a local_facts iterator that is empty if there is no fact_path/etc -kl
