@@ -27,7 +27,7 @@ class ApparmorFactCollector(BaseFactCollector):
 
     def collect(self, collected_facts=None):
         facts_dict = {}
-        apparmor_facts =  {}
+        apparmor_facts = {}
         if os.path.exists('/sys/kernel/security/apparmor'):
             apparmor_facts['status'] = 'enabled'
         else:

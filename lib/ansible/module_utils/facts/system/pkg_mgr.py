@@ -70,5 +70,3 @@ class PkgMgrFactCollector(BaseFactCollector):
 
         facts_dict['pkg_mgr'] = pkg_mgr_name
         return facts_dict
-
-
