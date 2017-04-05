@@ -34,4 +34,3 @@ class EnvFactCollector(BaseFactCollector):
             env_facts['env'][k] = v
 
         return env_facts
-

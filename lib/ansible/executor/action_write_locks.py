@@ -41,4 +41,3 @@ if 'action_write_locks' not in globals():
     mods.update(('copy', 'file', 'setup', 'slurp', 'stat'))
     for mod_name in mods:
         action_write_locks[mod_name] = Lock()
-

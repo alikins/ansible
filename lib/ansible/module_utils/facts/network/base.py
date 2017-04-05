@@ -47,4 +47,3 @@ class Network(Facts):
 
     def populate(self):
         return self.facts
-

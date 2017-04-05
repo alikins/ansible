@@ -114,18 +114,17 @@ class WrapperCollector(BaseFactCollector):
     def collect(self, collected_facts=None):
         collected_facts = collected_facts or {}
 
-        #print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
+        # print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
 
         # WARNING: virtual.populate mutates cached_facts and returns a ref
         #          so for now, pass in a copy()
         facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
 
-        #print('facts_obj: %s' % facts_obj)
-        #print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
+        # print('facts_obj: %s' % facts_obj)
+        # print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
         facts_dict = facts_obj.populate()
 
         if self.namespace:
             facts_dict = self._transform_dict_keys(facts_dict)
 
         return facts_dict
-

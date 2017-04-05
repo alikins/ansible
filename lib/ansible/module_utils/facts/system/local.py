@@ -87,4 +87,3 @@ class LocalFactCollector(BaseFactCollector):
 
         local_facts['local'] = local
         return local_facts
-
