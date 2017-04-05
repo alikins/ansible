@@ -34,6 +34,7 @@ from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
+from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.lsb import LSBFactCollector
 from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
@@ -219,6 +220,20 @@ class TestCollectedCapsFacts(BaseFactsTest):
         mock_module.get_bin_path = Mock(return_value='/usr/sbin/capsh')
         mock_module.run_command = Mock(return_value=(0, 'Current: =ep', ''))
         return mock_module
+
+
+class TestEnvFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'env']
+    valid_subsets = ['env']
+    fact_namespace = 'ansible_env'
+    collector_class = EnvFactCollector
+
+    def test_class(self):
+        facts_dict = super(TestEnvFacts, self).test_class()
+        import pprint
+        pprint.pprint(facts_dict)
+        self.assertIn('status', facts_dict['env'])
 
 
 class TestApparmorFacts(BaseFactsTest):
