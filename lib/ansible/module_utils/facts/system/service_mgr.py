@@ -107,7 +107,7 @@ class ServiceMgrFactCollector(BaseFactCollector):
                 service_mgr_name = 'launchd'
             else:
                 service_mgr_name = 'systemstarter'
-        elif 'BSD' in collected_facts.get('system') or collected_facts.get('system') in ['Bitrig', 'DragonFly']:
+        elif 'BSD' in collected_facts.get('system', '') or collected_facts.get('system') in ['Bitrig', 'DragonFly']:
             # FIXME: we might want to break out to individual BSDs or 'rc'
             service_mgr_name = 'bsdinit'
         elif collected_facts.get('system') == 'AIX':
