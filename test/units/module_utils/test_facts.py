@@ -71,6 +71,20 @@ class TestInPlace(unittest.TestCase):
 
         self.assertIsInstance(res, set)
 
+    def test_collect_ids_minimal(self):
+        mock_module = self._mock_module()
+        gather_subset = ['!all']
+        mock_module.params['gather_subset'] = gather_subset
+
+        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       gather_subset=gather_subset)
+        res = fact_collector.collect_ids()
+
+        self.assertIsInstance(res, set)
+        not_expected_facts = ['facter', 'lsb', 'virtual']
+        for not_expected_fact in not_expected_facts:
+            self.assertNotIn(not_expected_fact, res)
+
     def test_facts_class(self):
         mock_module = self._mock_module()
         facts.Facts(mock_module)
