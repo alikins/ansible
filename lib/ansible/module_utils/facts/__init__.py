@@ -184,11 +184,17 @@ class NestedFactCollector(BaseFactCollector):
 # TODO: may need some form of AnsibleFactNameResolver
 # NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
 # def get_all_facts(module):
-def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_timeout=None):
+def get_collector_names(module, valid_subsets=None,
+                        minimal_gather_subset=None,
+                        gather_subset=None,
+                        gather_timeout=None):
     # Retrieve module parameters
     gather_subset = gather_subset or ['all']
 
     valid_subsets = valid_subsets or frozenset([])
+
+    # if provided, minimal_gather_subset is always added, even after all negations
+    minimal_gather_subset = minimal_gather_subset or frozenset([])
 
     timeout.GATHER_TIMEOUT = gather_timeout
 
@@ -218,8 +224,10 @@ def get_collector_names(module, valid_subsets=None, gather_subset=None, gather_t
 
     if not additional_subsets:
         additional_subsets.update(valid_subsets)
-
     additional_subsets.difference_update(exclude_subsets)
+
+    additional_subsets.update(minimal_gather_subset)
+
     return additional_subsets
 
 
@@ -244,6 +252,8 @@ class AnsibleFactCollector(NestedFactCollector):
 
        Has a 'from_gather_subset() constructor that populates collectors based on a
        gather_subset specifier.'''
+
+    # All the gather subsets aliases/nicks/shortnames
     FACT_SUBSETS = dict(
         facts=TempFactCollector,
         # system=SystemFactCollector,
@@ -263,8 +273,8 @@ class AnsibleFactCollector(NestedFactCollector):
         hardware=HardwareCollector,
         network=NetworkCollector,
         virtual=VirtualCollector,
-        #    ohai=OhaiCollector,
-        #    facter=FacterCollector,
+        ohai=OhaiCollector,
+        facter=FacterCollector,
     )
     VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
@@ -280,8 +290,14 @@ class AnsibleFactCollector(NestedFactCollector):
         self.gather_subset = gather_subset
 
     @classmethod
-    def from_gather_subset(cls, module, gather_subset=None, valid_subsets=None, gather_timeout=None):
+    def from_gather_subset(cls, module,
+                           valid_subsets=None,
+                           minimal_gather_subset=None,
+                           gather_subset=None,
+                           gather_timeout=None):
         # use gather_name etc to get the list of collectors
+
+        minimal_gather_subset = minimal_gather_subset or frozenset([])
 
         gather_timeout = gather_timeout or timeout.DEFAULT_GATHER_TIMEOUT
 
@@ -303,10 +319,13 @@ class AnsibleFactCollector(NestedFactCollector):
         all_valid_subsets = frozenset(all_fact_subsets.keys())
 
         # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
-        collector_names = get_collector_names(module, valid_subsets=all_valid_subsets,
+        collector_names = get_collector_names(module,
+                                              valid_subsets=all_valid_subsets,
+                                              minimal_gather_subset=minimal_gather_subset,
+                                              gather_subset=gather_subset,
                                               gather_timeout=gather_timeout)
 
-        # print('collector_names: %s' % collector_names)
+#        print('collector_names: %s' % collector_names)
         collectors = []
         seen_collector_classes = []
         for collector_name in collector_names:
