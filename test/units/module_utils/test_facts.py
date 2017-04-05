@@ -91,9 +91,19 @@ class TestInPlace(unittest.TestCase):
 
 
 class TestCollectedFacts(unittest.TestCase):
+    gather_subset = ['all', '!facter', '!ohai']
+    min_fact_count = 30
+    max_fact_count = 1000
+    expected_facts = ['ansible_cmdline', 'ansible_date_time',
+                      'ansible_user_id', 'ansible_distribution',
+                      'ansible_gather_subset', 'module_setup',
+                      'ansible_env',
+                      'ansible_ssh_host_key_rsa_public']
+    not_expected_facts = ['facter', 'ohai']
+
     def _mock_module(self):
         mock_module = Mock()
-        mock_module.params = {'gather_subset': ['all', '!facter', '!ohai'],
+        mock_module.params = {'gather_subset': self.gather_subset,
                               'gather_timeout': 5,
                               'filter': '*'}
         mock_module.get_bin_path = Mock(return_value=None)
@@ -102,14 +112,17 @@ class TestCollectedFacts(unittest.TestCase):
     def setUp(self):
         mock_module = self._mock_module()
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
-                                                                       gather_subset=['all'])
+                                                                       gather_subset=self.gather_subset)
         self.facts = fact_collector.collect()
 
     def test_basics(self):
         self._assert_basics(self.facts)
 
-    def test_known_facts(self):
-        self._assert_known_facts(self.facts)
+    def test_expected_facts(self):
+        self._assert_expected_facts(self.facts)
+
+    def test_not_expected_facts(self):
+        self._assert_not_expected_facts(self.facts)
 
     def test_has_ansible_namespace(self):
         self._assert_ansible_namespace(self.facts)
@@ -121,7 +134,9 @@ class TestCollectedFacts(unittest.TestCase):
         self.assertIsInstance(facts, dict)
         self.assertIn('ansible_facts', facts)
         # just assert it's not almost empty
-        self.assertGreater(len(facts['ansible_facts']), 30)
+        self.assertGreater(len(facts['ansible_facts']), self.min_fact_count)
+        # and that is not huge number of keys
+        self.assertLess(len(facts['ansible_facts']), self.max_fact_count)
 
     # everything starts with ansible_ namespace
     def _assert_ansible_namespace(self, facts):
@@ -151,25 +166,36 @@ class TestCollectedFacts(unittest.TestCase):
             self.assertEqual(len(ansible_underscore_count), 1,
                              'The fact name "%s" should have 1 "ansible_" substring in it.' % fact_key)
 
-    def _assert_known_facts(self, facts):
+    def _assert_expected_facts(self, facts):
         subfacts = facts['ansible_facts']
 
         subfacts_keys = sorted(subfacts.keys())
-        self.assertIn('ansible_cmdline', subfacts_keys)
-        self.assertIn('ansible_date_time', subfacts_keys)
-        self.assertIn('ansible_user_id', subfacts_keys)
-        self.assertIn('ansible_distribution', subfacts_keys)
+        for expected_fact in self.expected_facts:
+            self.assertIn(expected_fact, subfacts_keys)
+        #    self.assertIsInstance(subfacts['ansible_env'], dict)
 
-        self.assertIn('ansible_gather_subset', subfacts_keys)
-        self.assertIn('module_setup', subfacts_keys)
+        # self.assertIsInstance(subfacts['ansible_env'], dict)
 
-        self.assertIn('ansible_env', subfacts_keys)
-        self.assertIsInstance(subfacts['ansible_env'], dict)
+        # self._assert_ssh_facts(subfacts)
 
-        self._assert_ssh_facts(subfacts)
+    def _assert_not_expected_facts(self, facts):
+        subfacts = facts['ansible_facts']
+
+        subfacts_keys = sorted(subfacts.keys())
+        for not_expected_fact in self.not_expected_facts:
+            self.assertNotIn(not_expected_fact, subfacts_keys)
 
     def _assert_ssh_facts(self, subfacts):
         self.assertIn('ansible_ssh_host_key_rsa_public', subfacts.keys())
+
+
+class TestMinimalCollectedFacts(TestCollectedFacts):
+    gather_subset = ['!all']
+    min_fact_count = 1
+    max_fact_count = 10
+    expected_facts = ['ansible_gather_subset',
+                      'module_setup']
+    not_expected_facts = ['ansible_lsb']
 
 
 class BaseFactsTest(unittest.TestCase):
@@ -223,6 +249,7 @@ class TestCollectedCapsFacts(BaseFactsTest):
 
 
 class TestEnvFacts(BaseFactsTest):
+
     __test__ = True
     gather_subset = ['!all', 'env']
     valid_subsets = ['env']
@@ -231,9 +258,7 @@ class TestEnvFacts(BaseFactsTest):
 
     def test_class(self):
         facts_dict = super(TestEnvFacts, self).test_class()
-        import pprint
-        pprint.pprint(facts_dict)
-        self.assertIn('status', facts_dict['env'])
+        self.assertIn('HOME', facts_dict['env'])
 
 
 class TestApparmorFacts(BaseFactsTest):
