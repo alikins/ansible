@@ -64,7 +64,6 @@ from ansible.module_utils.facts.ohai import Ohai
 from ansible.module_utils.facts.namespace import PrefixFactNamespace
 from ansible.module_utils.facts import timeout
 
-from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
 
@@ -83,6 +82,8 @@ from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
+
+from ansible.module_utils.facts.virtual.base import VirtualCollector
 
 
 # TODO: remove these once we replace them
@@ -119,10 +120,6 @@ class NetworkCollector(WrapperCollector):
 
 class OhaiCollector(WrapperCollector):
     facts_class = Ohai
-
-
-class VirtualCollector(WrapperCollector):
-    facts_class = virtual.base.Virtual
 
 
 class TempFactCollector(WrapperCollector):
