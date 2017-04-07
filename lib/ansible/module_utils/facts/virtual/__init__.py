@@ -12,4 +12,6 @@ from ansible.module_utils.facts.virtual import netbsd
 from ansible.module_utils.facts.virtual import openbsd
 from ansible.module_utils.facts.virtual import sunos
 
-__all__ = [base, dragonfly, freebsd, hpux, linux, netbsd, openbsd, sunos, sysctl]
+__all__ = ['base', 'dragonfly', 'freebsd', 'hpux',
+           'linux', 'netbsd', 'openbsd', 'sunos',
+           'sysctl']

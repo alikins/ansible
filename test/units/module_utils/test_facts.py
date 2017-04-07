@@ -32,16 +32,6 @@ from ansible.module_utils.facts import network
 from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 
-from .facts.base import BaseFactsTest
-
-
-class TestFacterCollector(BaseFactsTest):
-    __test__ = True
-    gather_subset = ['!all', 'facter']
-    valid_subsets = ['facter']
-    fact_namespace = 'ansible_facter'
-    collector_class = facts.FacterFactCollector
-
 
 class BaseTestFactsPlatform(unittest.TestCase):
     platform_id = 'Generic'
@@ -176,7 +166,7 @@ class TestSunOSNetwork(BaseTestFactsPlatform):
 
 class TestLinuxVirtual(BaseTestFactsPlatform):
     platform_id = 'Linux'
-    fact_class = LinuxVirtual
+    fact_class = virtual.linux.LinuxVirtual
 
 
 class TestFreeBSDVirtual(BaseTestFactsPlatform):
