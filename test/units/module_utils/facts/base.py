@@ -40,9 +40,16 @@ class BaseFactsTest(unittest.TestCase):
         mock_module.get_bin_path = Mock(return_value=None)
         return mock_module
 
-    def test_class(self):
+    def test_collect(self):
         module = self._mock_module()
         fact_collector = self.collector_class(module=module)
         facts_dict = fact_collector.collect()
+        self.assertIsInstance(facts_dict, dict)
+        return facts_dict
+
+    def test_collect_with_namespace(self):
+        module = self._mock_module()
+        fact_collector = self.collector_class(module=module)
+        facts_dict = fact_collector.collect_with_namespace()
         self.assertIsInstance(facts_dict, dict)
         return facts_dict
