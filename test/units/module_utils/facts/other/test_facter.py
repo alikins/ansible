@@ -209,8 +209,7 @@ class TestFacterCollector(BaseFactsTest):
         facts_dict = fact_collector.collect()
 
         self.assertIsInstance(facts_dict, dict)
-        self.assertIn('facter', facts_dict)
-        self.assertEqual(facts_dict['facter'], {})
+        self.assertEqual(facts_dict, {})
 
     @patch('ansible.module_utils.facts.other.facter.FacterFactCollector.run_facter')
     def test_facter_non_zero_return_code(self, mock_run_facter):

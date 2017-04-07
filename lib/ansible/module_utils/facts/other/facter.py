@@ -17,6 +17,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from ansible.module_utils.facts import _json
+from ansible.module_utils.facts.namespace import PrefixFactNamespace
 
 from ansible.module_utils.facts.collector import BaseFactCollector
 
@@ -24,15 +25,24 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class FacterFactCollector(BaseFactCollector):
     _fact_ids = set(['facter'])
 
+    def __init__(self, module, collectors=None, namespace=None):
+        namespace = PrefixFactNamespace(namespace_name='facter',
+                                        prefix='facter_')
+        super(FacterFactCollector, self).__init__(module,
+                                                  collectors=collectors,
+                                                  namespace=namespace)
+
     def collect(self, collected_facts=None):
-        facter_facts = {}
+        # Note that this mirrors previous facter behavior, where there isnt
+        # a 'ansible_facter' key in the main fact dict, but instead, 'facter_whatever'
+        # items are added to the main dict.
         facter_dict = {}
 
         facter_output = self.get_facter_output()
 
         # TODO: if we fail, should we add a empty facter key or nothing?
         if facter_output is None:
-            return facter_facts
+            return facter_dict
 
         try:
             facter_dict = _json.loads(facter_output)
@@ -40,9 +50,7 @@ class FacterFactCollector(BaseFactCollector):
             # FIXME: maybe raise a FactCollectorError with some info attrs?
             pass
 
-        # TODO: needs some munging, since facter facts end up in the main keyspace
-        facter_facts['facter'] = facter_dict
-        return facter_facts
+        return facter_dict
 
     def get_facter_output(self):
         facter_path = self.find_facter()
