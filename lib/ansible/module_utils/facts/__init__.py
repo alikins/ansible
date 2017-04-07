@@ -59,13 +59,14 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 from ansible.module_utils.facts.namespace import PrefixFactNamespace, FactNamespace
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
-from ansible.module_utils.facts.facter import Facter
 
 from ansible.module_utils.facts import timeout
 
 from ansible.module_utils.facts import virtual
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
+
+from ansible.module_utils.facts.other.facter import FacterFactCollector
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
@@ -119,18 +120,6 @@ class NetworkCollector(WrapperCollector):
 
 class OhaiCollector(WrapperCollector):
     facts_class = Ohai
-
-
-class FacterCollector(WrapperCollector):
-    facts_class = Facter
-
-    # TODO: wont need once we implement FacterCollector directly
-    def __init__(self, module, collectors=None, namespace=None):
-        namespace = PrefixFactNamespace(namespace_name='facter',
-                                        prefix='facter_')
-        super(FacterCollector, self).__init__(module,
-                                              collectors=collectors,
-                                              namespace=namespace)
 
 
 class VirtualCollector(WrapperCollector):
@@ -271,7 +260,7 @@ class AnsibleFactCollector(NestedFactCollector):
         network=NetworkCollector,
         virtual=VirtualCollector,
         ohai=OhaiCollector,
-        facter=FacterCollector,
+        facter=FacterFactCollector,
     )
     VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 

@@ -40,7 +40,7 @@ class TestFacterCollector(BaseFactsTest):
     gather_subset = ['!all', 'facter']
     valid_subsets = ['facter']
     fact_namespace = 'ansible_facter'
-    collector_class = facts.FacterCollector
+    collector_class = facts.FacterFactCollector
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
