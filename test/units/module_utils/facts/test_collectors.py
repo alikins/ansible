@@ -39,8 +39,8 @@ class TestApparmorFacts(BaseFactsTest):
     fact_namespace = 'ansible_apparmor'
     collector_class = ApparmorFactCollector
 
-    def test_class(self):
-        facts_dict = super(TestApparmorFacts, self).test_class()
+    def test_collect(self):
+        facts_dict = super(TestApparmorFacts, self).test_collect()
         self.assertIn('status', facts_dict['apparmor'])
 
 
@@ -69,8 +69,8 @@ class TestEnvFacts(BaseFactsTest):
     fact_namespace = 'ansible_env'
     collector_class = EnvFactCollector
 
-    def test_class(self):
-        facts_dict = super(TestEnvFacts, self).test_class()
+    def test_collect(self):
+        facts_dict = super(TestEnvFacts, self).test_collect()
         self.assertIn('HOME', facts_dict['env'])
 
 
