@@ -55,11 +55,13 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import sys
+
 from ansible.module_utils.facts.collector import BaseFactCollector
-from ansible.module_utils.facts.namespace import PrefixFactNamespace, FactNamespace
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.ohai import Ohai
 
+from ansible.module_utils.facts.namespace import PrefixFactNamespace
 from ansible.module_utils.facts import timeout
 
 from ansible.module_utils.facts import virtual
@@ -104,9 +106,6 @@ class WrapperCollector(BaseFactCollector):
         # print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
         facts_dict = facts_obj.populate()
 
-        if self.namespace:
-            facts_dict = self._transform_dict_keys(facts_dict)
-
         return facts_dict
 
 
@@ -131,7 +130,8 @@ class TempFactCollector(WrapperCollector):
 
     # kluge to compensate for 'Facts' adding 'ansible_' prefix itself
     def __init__(self, module, collectors=None, namespace=None):
-        namespace = FactNamespace(namespace_name='temp_fact')
+        namespace = PrefixFactNamespace(namespace_name='temp_fact',
+                                        prefix='ansible_')
         super(TempFactCollector, self).__init__(module,
                                                 collectors=collectors,
                                                 namespace=namespace)
@@ -145,24 +145,6 @@ class TempFactCollector(WrapperCollector):
 
         facts_dict = facts_obj.populate()
 
-        if self.namespace:
-            facts_dict = self._transform_dict_keys(facts_dict)
-
-        return facts_dict
-
-
-# utility subclass of FactCollector
-# TODO: mv to collector.py?
-class NestedFactCollector(BaseFactCollector):
-    '''collect returns a dict with the rest of the collection results under top_level_name'''
-    def __init__(self, top_level_name, collectors=None, namespace=None):
-        super(NestedFactCollector, self).__init__(collectors=collectors,
-                                                  namespace=namespace)
-        self.top_level_name = top_level_name
-
-    def collect(self, collected_facts=None):
-        collected = super(NestedFactCollector, self).collect(collected_facts=collected_facts)
-        facts_dict = {self.top_level_name: collected}
         return facts_dict
 
 
@@ -233,7 +215,7 @@ def get_collector_names(module, valid_subsets=None,
 #        module is passed in and self.module.misc_AnsibleModule_methods
 #        are used, so hard to decouple.
 
-class AnsibleFactCollector(NestedFactCollector):
+class AnsibleFactCollector(BaseFactCollector):
     '''A FactCollector that returns results under 'ansible_facts' top level key.
 
        Has a 'from_gather_subset() constructor that populates collectors based on a
@@ -266,8 +248,8 @@ class AnsibleFactCollector(NestedFactCollector):
 
     def __init__(self, collectors=None, namespace=None,
                  gather_subset=None):
-        namespace = PrefixFactNamespace(namespace_name='ansible',
-                                        prefix='ansible_')
+        # namespace = PrefixFactNamespace(namespace_name='ansible',
+        #                                prefix='ansible_')
         self.VALID_SUBSETS = frozenset(self.FACT_SUBSETS.keys())
 
         super(AnsibleFactCollector, self).__init__('ansible_facts',
@@ -337,7 +319,23 @@ class AnsibleFactCollector(NestedFactCollector):
 
     # FIXME: best place to set gather_subset?
     def collect(self, collected_facts=None):
-        facts_dict = super(AnsibleFactCollector, self).collect(collected_facts=collected_facts)
+        facts_dict = {}
+        facts_dict['ansible_facts'] = {}
+
+        for collector in self.collectors:
+            info_dict = {}
+            try:
+                # Note: this collects with namespaces
+                info_dict = collector.collect_with_namespace(collected_facts=collected_facts)
+            except Exception as e:
+                # FIXME: do fact collection exception warning/logging
+                sys.stderr.write(repr(e))
+                sys.stderr.write('\n')
+
+                raise
+
+            # NOTE: If we want complicated fact dict merging, this is where it would hook in
+            facts_dict['ansible_facts'].update(info_dict)
 
         # FIXME: kluge, not really sure where the best place to do this would be.
         facts_dict['ansible_facts']['ansible_gather_subset'] = self.gather_subset
