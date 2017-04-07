@@ -3,6 +3,8 @@ __metaclass__ = type
 
 import sys
 
+from ansible.module_utils.facts.namespace import PrefixFactNamespace
+
 
 # TODO: BaseFactCollectors (plural) -> walks over list of collectors
 #       BaseFactCollector (singular) -> returns a dict (collectors 'leaf' node)
@@ -18,7 +20,8 @@ class BaseFactCollector:
 
         # self.namespace is a object with a 'transform' method that transforms
         # the name to indicate the namespace (ie, adds a prefix or suffix).
-        self.namespace = namespace
+        self.namespace = namespace or PrefixFactNamespace(namespace_name='ansible',
+                                                          prefix='ansible_')
 
         self.fact_ids = self._fact_ids or set([])
 
@@ -39,6 +42,13 @@ class BaseFactCollector:
             fact_dict[new_key] = fact_dict.pop(old_key)
         return fact_dict
 
+    def collect_with_namespace(self, collected_facts=None):
+        # collect, then transform the key names if needed
+        facts_dict = self.collect(collected_facts=collected_facts)
+        if self.namespace:
+            facts_dict = self._transform_dict_keys(facts_dict)
+        return facts_dict
+
     def collect(self, collected_facts=None):
         '''do the fact collection
 
@@ -49,26 +59,8 @@ class BaseFactCollector:
           Returns a dict of facts.
 
           '''
+        # abc or NotImplemented
         facts_dict = {}
-        for collector in self.collectors:
-            info_dict = {}
-            try:
-                info_dict = collector.collect(collected_facts=collected_facts)
-            except Exception as e:
-                # FIXME: do fact collection exception warning/logging
-                sys.stderr.write(repr(e))
-                sys.stderr.write('\n')
-
-                raise
-
-            # NOTE: If we want complicated fact dict merging, this is where it would hook in
-            facts_dict.update(info_dict)
-
-        # FIXME: maybe deserves a subclass
-        # transform all key names, or ex 'foo-baz-blip' -> 'ansible_foo_baz_blip'
-        if self.namespace:
-            facts_dict = self._transform_dict_keys(facts_dict)
-
         return facts_dict
 
     def collect_ids(self, collected_ids=None):
