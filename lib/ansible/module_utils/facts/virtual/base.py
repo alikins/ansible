@@ -70,12 +70,19 @@ class Virtual(Facts):
 class VirtualCollector(BaseFactCollector):
     _fact_ids = set(['virtual',
                      'virtualization_type', 'virtualization_role'])
+    _platform = 'NotGeneric'
+    _fact_class = Virtual
 
     def collect(self, collected_facts=None):
         collected_facts = collected_facts or {}
 
-        virtual_facts = Virtual(self.module, cached_facts=collected_facts.copy())
+        virtual_facts = self._fact_class(self.module, cached_facts=collected_facts.copy())
 
         facts_dict = virtual_facts.populate()
 
+        facts_dict['virtualization_whatever'] = (self._platform, virtual_facts.platform)
         return facts_dict
+
+
+class FreeBSDVirtualCollector(VirtualCollector):
+    _platform = 'FreeBSD'

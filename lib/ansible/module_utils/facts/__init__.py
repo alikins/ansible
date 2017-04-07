@@ -83,7 +83,7 @@ from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
 
-from ansible.module_utils.facts.virtual.base import VirtualCollector
+from ansible.module_utils.facts.virtual.base import VirtualCollector, FreeBSDVirtualCollector
 
 
 # TODO: remove these once we replace them
@@ -238,6 +238,7 @@ class AnsibleFactCollector(BaseFactCollector):
         hardware=HardwareCollector,
         network=NetworkCollector,
         virtual=VirtualCollector,
+        virual_bsd=FreeBSDVirtualCollector,
         ohai=OhaiCollector,
         facter=FacterFactCollector,
     )
@@ -276,10 +277,15 @@ class AnsibleFactCollector(BaseFactCollector):
         id_collector_map = {}
         all_collector_classes = cls.FACT_SUBSETS.values()
 
-        for all_collector_class in all_collector_classes:
-            for fact_id in all_collector_class._fact_ids:
-                id_collector_map[fact_id] = all_collector_class
+        for collector_class in all_collector_classes:
+            for fact_id in collector_class._fact_ids:
+                # TODO: multiple fact classes could provide the same fact_id,
+                #       (even with namespaces applied) that could conflict
+                #       throw an exception? track all and wait until we only need one to complain?
+                fact_id = (fact_id, getattr(collector_class, '_platform', 'Generic'))
+                id_collector_map[fact_id] = collector_class
 
+        # once all FactCollect provide fact_ids may not be needed nor FACT_SUBSETS keys
         all_fact_subsets = {}
         all_fact_subsets.update(cls.FACT_SUBSETS)
         # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
@@ -287,13 +293,13 @@ class AnsibleFactCollector(BaseFactCollector):
 
         all_valid_subsets = frozenset(all_fact_subsets.keys())
 
-        # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
+        # expand any fact_id/collectorname/gather_subset/alias term ('all', 'env', etc) to the list of names that represents
         collector_names = get_collector_names(module,
                                               valid_subsets=all_valid_subsets,
                                               minimal_gather_subset=minimal_gather_subset,
                                               gather_subset=gather_subset)
 
-#        print('collector_names: %s' % collector_names)
+#        print('collector_names: %s' % collector_names)c
         collectors = []
         seen_collector_classes = []
         for collector_name in collector_names:
@@ -302,6 +308,14 @@ class AnsibleFactCollector(BaseFactCollector):
                 # FIXME: remove whens table
                 raise Exception('collector_name: %s not found' % collector_name)
                 continue
+
+            # print(getattr(collector_class, '_platform', 'Generic'))
+            if getattr(collector_class, '_platform', 'Generic') not in ('Generic', 'FreeBSD'):
+                continue
+
+            # TODO: could filter collector_classes here (platform -> to find the right arch)
+            # if getattr(collector_class '_platform', 'Generic') != self._platform:
+            #    continue
 
             if collector_class not in seen_collector_classes:
                 collector = collector_class(module)
