@@ -2,6 +2,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+def _underscore(name):
+    return name.replace('-', '_')
 
 class FactNamespace:
     def __init__(self, namespace_name):
@@ -11,9 +13,6 @@ class FactNamespace:
         '''Take a text name, and transforms it as needed (add a namespace prefix, etc)'''
         return name
 
-    def _underscore(self, name):
-        return name.replace('-', '_')
-
 
 class PrefixFactNamespace(FactNamespace):
     def __init__(self, namespace_name, prefix=None):
@@ -21,5 +20,5 @@ class PrefixFactNamespace(FactNamespace):
         self.prefix = prefix
 
     def transform(self, name):
-        new_name = self._underscore(name)
+        new_name = _underscore(name)
         return '%s%s' % (self.prefix, new_name)

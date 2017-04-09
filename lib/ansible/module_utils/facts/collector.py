@@ -42,11 +42,30 @@ class BaseFactCollector:
             fact_dict[new_key] = fact_dict.pop(old_key)
         return fact_dict
 
+    def apply_namespace(self, namespace, facts_dict):
+        '''Apply any changes needed to use namespace.
+
+        This potentially includes changing the keys in facts_dict, or moving the
+        keys under a top level key (for, moving all top level keys under a 'ansible_facts' key).
+
+        Modifies facts_dict and returns the modified version. Currently it also changes facts_dict as
+        a side effect.'''
+        if not namespace:
+            return facts_dict
+
+        # NOTE: can do whatever needs to be done, including adding a nested layer (ie, {'ansible_facts': {'foo1': 'blip'}}})
+
+        # MAYBE: could copy() facts dict so we dont change facts_dict by side effect.
+        facts_dict = self._transform_dict_keys(facts_dict)
+        return facts_dict
+
     def collect_with_namespace(self, collected_facts=None):
         # collect, then transform the key names if needed
+        # TODO: maybe 'apply_namespace' is better name
         facts_dict = self.collect(collected_facts=collected_facts)
         if self.namespace:
-            facts_dict = self._transform_dict_keys(facts_dict)
+            #facts_dict = self._transform_dict_keys(facts_dict)
+            facts_dict = self.apply_namespace(self.namespace, facts_dict)
         return facts_dict
 
     def collect(self, collected_facts=None):

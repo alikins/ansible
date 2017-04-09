@@ -219,6 +219,14 @@ class AnsibleFactCollector(BaseFactCollector):
        gather_subset specifier.'''
 
     # All the gather subsets aliases/nicks/shortnames
+    # TODO: we dont need a map, the classes have _fact_ids id/names
+    # TODO: replace with just passing in a list of FactCollector classes to either __init__
+    #       or to from_gather_subset to select a subset of the collectors based on terms in gather_subset.
+    #       That would mean this module doesnt need to import any collector classes. And
+    #       a custom facts module provides its list of FactCollectors and can reuse the get_collector_names from here
+    #        and share gather_subset query/selector 'language'
+    #       DOWNSIDE: setup.py would need to know/find all the collector classes
+    #       UPSIDE: non-setup.py fact collector classes have to do this already.
     FACT_SUBSETS = dict(
         facts=TempFactCollector,
         # system=SystemFactCollector,
@@ -241,12 +249,14 @@ class AnsibleFactCollector(BaseFactCollector):
         ohai=OhaiCollector,
         facter=FacterFactCollector,
     )
+    # TODO: dont need
     VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
     def __init__(self, collectors=None, namespace=None,
                  gather_subset=None):
         # namespace = PrefixFactNamespace(namespace_name='ansible',
         #                                prefix='ansible_')
+        # TODO: remove, dont need at all
         self.VALID_SUBSETS = frozenset(self.FACT_SUBSETS.keys())
 
         super(AnsibleFactCollector, self).__init__('ansible_facts',
@@ -270,6 +280,7 @@ class AnsibleFactCollector(BaseFactCollector):
         # tweak the modules GATHER_TIMEOUT
         timeout.GATHER_TIMEOUT = gather_timeout
 
+        # FIXME: remove, not used anywhere
         valid_subsets = valid_subsets or cls.VALID_SUBSETS
 
         # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
@@ -281,7 +292,9 @@ class AnsibleFactCollector(BaseFactCollector):
                 id_collector_map[fact_id] = all_collector_class
 
         all_fact_subsets = {}
+        # TODO: remove, the id:collector_class mapping is redundant with id_collector_map based on _fact_ids
         all_fact_subsets.update(cls.FACT_SUBSETS)
+
         # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
         all_fact_subsets.update(id_collector_map)
 
@@ -317,6 +330,9 @@ class AnsibleFactCollector(BaseFactCollector):
     # FIXME: best place to set gather_subset?
     def collect(self, collected_facts=None):
         facts_dict = {}
+        # TODO: self.namespace can also be responsible for mv'ing items into a nested namespace key
+        #       ie collect_with_namespace() would transform {'name': 'Foo', 'address', 'FooBus1', 'size': 12345} ->
+        #                                                   {'ansible_facts': {'ansible_name': 'Foo', 'ansible_address': 'FooBus1', 'ansible_size': 12345}}
         facts_dict['ansible_facts'] = {}
 
         for collector in self.collectors:
