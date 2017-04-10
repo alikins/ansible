@@ -849,8 +849,8 @@ def _test_one_distribution(module, testcase):
     def mock_platform_system():
         return testcase.get('platform.system', 'Linux')
 
-    @patch('ansible.module_utils.facts.distribution.get_file_content', mock_get_file_content)
-    @patch('ansible.module_utils.facts.distribution.get_uname_version', mock_get_uname_version)
+    @patch('ansible.module_utils.facts.system.distribution.get_file_content', mock_get_file_content)
+    @patch('ansible.module_utils.facts.system.distribution.get_uname_version', mock_get_uname_version)
     @patch('os.path.exists', mock_path_exists)
     @patch('os.path.getsize', mock_path_getsize)
     @patch('platform.dist', lambda: testcase['platform.dist'])
