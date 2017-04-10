@@ -135,6 +135,7 @@ from ansible.module_utils.facts.other.facter import FacterFactCollector
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+from ansible.module_utils.facts.system.distribution import DistributionFactCollector
 from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
@@ -234,7 +235,7 @@ def main():
     #       to collect nothing except for the below list
     # TODO: decide what '!all' means, I lean towards making it mean none, but likely needs
     #       some tweaking on how gather_subset operations are performed
-    minimal_gather_subset = frozenset(['apparmor', 'caps', 'date_time', 'dns',
+    minimal_gather_subset = frozenset(['apparmor', 'caps', 'date_time', 'distribution', 'dns',
                                        'env', 'facts', 'fips', 'local', 'lsb',
                                        'pkg_mgr', 'python', 'selinux', 'service_mgr',
                                        'user'])
@@ -242,6 +243,7 @@ def main():
     # TODO: the ordering here is more or less arbitrary, except that it mimics the
     #       order facts.py used to collect these in.
     all_collector_classes = [TempFactCollector,
+                             DistributionFactCollector,
                              SelinuxFactCollector,
                              ApparmorFactCollector,
                              SystemCapabilitiesFactCollector,

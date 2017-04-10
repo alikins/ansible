@@ -24,12 +24,13 @@ from ansible.compat.tests.mock import Mock, patch
 from . base import BaseFactsTest
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
+from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+from ansible.module_utils.facts.system.distribution import DistributionFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
-from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
 
 
 class TestApparmorFacts(BaseFactsTest):
@@ -59,6 +60,14 @@ class TestCollectedCapsFacts(BaseFactsTest):
         mock_module.get_bin_path = Mock(return_value='/usr/sbin/capsh')
         mock_module.run_command = Mock(return_value=(0, 'Current: =ep', ''))
         return mock_module
+
+
+class TestDistributionFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'distribution']
+    valid_subsets = ['distribution']
+    fact_namespace = 'ansible_distribution'
+    collector_class = DistributionFactCollector
 
 
 class TestEnvFacts(BaseFactsTest):
