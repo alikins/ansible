@@ -26,8 +26,47 @@ import re
 from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import Mock
 
+from ansible.module_utils.facts.other.facter import FacterFactCollector
+
+from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
+from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
+from ansible.module_utils.facts.system.env import EnvFactCollector
+from ansible.module_utils.facts.system.dns import DnsFactCollector
+from ansible.module_utils.facts.system.fips import FipsFactCollector
+from ansible.module_utils.facts.system.local import LocalFactCollector
+from ansible.module_utils.facts.system.lsb import LSBFactCollector
+from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
+from ansible.module_utils.facts.system.python import PythonFactCollector
+from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
+from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
+from ansible.module_utils.facts.system.user import UserFactCollector
+
+from ansible.module_utils.facts.virtual.base import VirtualCollector
+
 # module under test
 from ansible.module_utils import facts
+
+
+all_collector_classes = [  # TempFactCollector,
+                         SelinuxFactCollector,
+                         ApparmorFactCollector,
+                         SystemCapabilitiesFactCollector,
+                         FipsFactCollector,
+                         PkgMgrFactCollector,
+                         ServiceMgrFactCollector,
+                         LSBFactCollector,
+                         DateTimeFactCollector,
+                         UserFactCollector,
+                         LocalFactCollector,
+                         EnvFactCollector,
+                         DnsFactCollector,
+                         PythonFactCollector,
+#                         HardwareCollector,
+#                         NetworkCollector,
+                         VirtualCollector,
+#                         OhaiCollector,
+                         FacterFactCollector]
 
 
 # FIXME: this is brute force, but hopefully enough to get some refactoring to make facts testable
@@ -113,6 +152,7 @@ class TestCollectedFacts(unittest.TestCase):
     def setUp(self):
         mock_module = self._mock_module()
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       all_collector_classes=all_collector_classes,
                                                                        gather_subset=self.gather_subset)
         self.facts = fact_collector.collect()
 
