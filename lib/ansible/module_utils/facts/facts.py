@@ -7,7 +7,7 @@ import re
 import shlex
 import socket
 
-from ansible.module_utils.facts.distribution import Distribution
+# from ansible.module_utils.facts.distribution import Distribution
 from ansible.module_utils.facts.utils import get_file_content
 
 
@@ -79,7 +79,7 @@ class Facts:
         if load_on_init:
             self.get_platform_facts()
             # Example of returning new facts and updating self.facts with it -akl
-            self.facts.update(Distribution(module).populate())
+#            self.facts.update(Distribution(module).populate())
             self.get_cmdline()
             self.get_public_ssh_host_keys()
 
