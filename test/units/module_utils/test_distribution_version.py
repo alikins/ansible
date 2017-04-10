@@ -486,6 +486,7 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
 """,
         },
         'platform.dist': ('', '', ''),
+        'platform.release': '',
         'result' : {
             "distribution": "CoreOS",
             "distribution_major_version": "NA",
@@ -859,7 +860,7 @@ def _test_one_distribution(module, testcase):
     @patch('os.path.getsize', mock_path_getsize)
     @patch('platform.dist', lambda: testcase['platform.dist'])
     @patch('platform.system', mock_platform_system)
-    #@patch('platform.release', mock_platform_release)
+    @patch('platform.release', mock_platform_release)
     def get_facts(testcase):
         #return Facts(module).populate()
         return Distribution(module).populate()

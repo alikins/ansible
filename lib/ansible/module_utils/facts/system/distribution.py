@@ -94,7 +94,9 @@ class Distribution(object):
         self.module = module
 
     def populate(self):
-        self.get_distribution_facts()
+        distribution_facts = self.get_distribution_facts()
+        self.facts.update(distribution_facts)
+        # FIXME: just return distribution_facts
         return self.facts
 
     def _has_dist_file(self, path, allow_empty=False):
@@ -144,16 +146,21 @@ class Distribution(object):
         # TODO: replace with a map or a class
         try:
             # FIXME: most of these dont actually look at the dist file contents, but random other stuff
-            distfunc = getattr(self, 'parse_distribution_file__' + name)
+            distfunc_name = 'parse_distribution_file_' + name
+            print('distfunc_name: %s' % distfunc_name)
+            distfunc = getattr(self, distfunc_name)
+            print('distfunc: %s' % distfunc)
             parsed, dist_file_dict = distfunc(name, dist_file_content, path)
             print('name: %s' % name)
             print('parsed: %s' % parsed)
             print('dist_file_dict: %s' % dist_file_dict)
             return parsed, dist_file_dict
-        except AttributeError:
+        except AttributeError as exc:
+            print('exc: %s' % exc)
             # this should never happen, but if it does fail quitely and not with a traceback
             return False, dist_file_dict
 
+        return True, dist_file_dict
             # to debug multiple matching release files, one can use:
             # self.facts['distribution_debug'].append({path + ' ' + name:
             #         (parsed,
@@ -184,10 +191,10 @@ class Distribution(object):
         elif self.system == 'Linux':
             # try to find out which linux distribution this is
             dist = platform.dist()
-            self.facts['distribution'] = dist[0].capitalize() or 'NA'
-            self.facts['distribution_version'] = dist[1] or 'NA'
-            self.facts['distribution_major_version'] = dist[1].split('.')[0] or 'NA'
-            self.facts['distribution_release'] = dist[2] or 'NA'
+            distribution_facts['distribution'] = dist[0].capitalize() or 'NA'
+            distribution_facts['distribution_version'] = dist[1] or 'NA'
+            distribution_facts['distribution_major_version'] = dist[1].split('.')[0] or 'NA'
+            distribution_facts['distribution_release'] = dist[2] or 'NA'
 
             # Try to handle the exceptions now ...
             # self.facts['distribution_debug'] = []
@@ -205,10 +212,13 @@ class Distribution(object):
 
                 # first valid os dist file we find we count
                 # FIXME: coreos and a few other bits expect this
-                self.facts['distribution'] = name
+                #self.facts['distribution'] = name
                 dist_file_facts['distribution'] = name
 
                 parsed_dist_file, parsed_dist_file_facts = self._parse_dist_file(name, dist_file_content, path)
+
+                print('parsed_dist_file: %s' % parsed_dist_file)
+                print('parsed_dist_file_facts: %s' % parsed_dist_file_facts)
 
                 # finally found the right os dist file and were able to parse it
                 if parsed_dist_file:
@@ -221,16 +231,16 @@ class Distribution(object):
         print('distribution_facts: %s' % pprint.pformat(distribution_facts))
 
         # FIXME: just return distribution_facts
-        self.facts.update(distribution_facts)
+        #self.facts.update(distribution_facts)
 
         distro = distribution_facts['distribution'].replace(' ', '_')
-        self.facts['distribution'] = distro
+        distribution_facts['distribution'] = distro
 
         # look for a os family alias for the 'distribution', if there isnt one, use 'distribution'
-        self.facts['os_family'] = self.OS_FAMILY.get(distro, None) or distro
+        distribution_facts['os_family'] = self.OS_FAMILY.get(distro, None) or distro
 
         # FIXME: replace with return distribution_facts once working
-        return self.facts
+        return distribution_facts
 
     def get_distribution_AIX(self):
         aix_facts = {}
@@ -369,6 +379,7 @@ class Distribution(object):
             sunos_facts['distribution'] = 'Nexenta'
             distribution_version = data.split()[-1].lstrip('v')
 
+        print('sunos_facts: %s' % sunos_facts)
         if sunos_facts.get('distribution_release', '') in ('SmartOS', 'OpenIndiana', 'OmniOS', 'Nexenta'):
             sunos_facts['distribution_release'] = data.strip()
             if distribution_version is not None:
@@ -472,10 +483,12 @@ class Distribution(object):
         na_facts = {}
         for line in data.splitlines():
             distribution = re.search("^NAME=(.*)", line)
-            if distribution and na_facts['distribution'] == 'NA':
+            # if distribution and na_facts['distribution'] == 'NA':
+            if distribution:
                 na_facts['distribution'] = distribution.group(1).strip('"')
             version = re.search("^VERSION=(.*)", line)
-            if version and na_facts['distribution_version'] == 'NA':
+            # if version and na_facts['distribution_version'] == 'NA':
+            if version:
                 na_facts['distribution_version'] = version.group(1).strip('"')
         return True, na_facts
 
