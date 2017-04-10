@@ -58,91 +58,8 @@ __metaclass__ = type
 import sys
 
 from ansible.module_utils.facts.collector import BaseFactCollector
-from ansible.module_utils.facts.facts import Facts
-from ansible.module_utils.facts.ohai import Ohai
 
-from ansible.module_utils.facts.namespace import PrefixFactNamespace
 from ansible.module_utils.facts import timeout
-
-from ansible.module_utils.facts import hardware
-from ansible.module_utils.facts import network
-
-from ansible.module_utils.facts.other.facter import FacterFactCollector
-
-from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
-from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
-from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
-from ansible.module_utils.facts.system.env import EnvFactCollector
-from ansible.module_utils.facts.system.dns import DnsFactCollector
-from ansible.module_utils.facts.system.fips import FipsFactCollector
-from ansible.module_utils.facts.system.local import LocalFactCollector
-from ansible.module_utils.facts.system.lsb import LSBFactCollector
-from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
-from ansible.module_utils.facts.system.python import PythonFactCollector
-from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
-from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
-from ansible.module_utils.facts.system.user import UserFactCollector
-
-from ansible.module_utils.facts.virtual.base import VirtualCollector
-
-
-# TODO: remove these once we replace them
-class WrapperCollector(BaseFactCollector):
-    facts_class = None
-
-    def __init__(self, module, collectors=None, namespace=None):
-        super(WrapperCollector, self).__init__(collectors=collectors,
-                                               namespace=namespace)
-        self.module = module
-
-    def collect(self, collected_facts=None):
-        collected_facts = collected_facts or {}
-
-        # print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
-        # WARNING: virtual.populate mutates cached_facts and returns a ref
-        #          so for now, pass in a copy()
-        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
-
-        # print('facts_obj: %s' % facts_obj)
-        # print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
-        facts_dict = facts_obj.populate()
-
-        return facts_dict
-
-
-class HardwareCollector(WrapperCollector):
-    facts_class = hardware.base.Hardware
-
-
-class NetworkCollector(WrapperCollector):
-    facts_class = network.base.Network
-
-
-class OhaiCollector(WrapperCollector):
-    facts_class = Ohai
-
-
-class TempFactCollector(WrapperCollector):
-    facts_class = Facts
-
-    # kluge to compensate for 'Facts' adding 'ansible_' prefix itself
-    def __init__(self, module, collectors=None, namespace=None):
-        namespace = PrefixFactNamespace(namespace_name='temp_fact',
-                                        prefix='ansible_')
-        super(TempFactCollector, self).__init__(module,
-                                                collectors=collectors,
-                                                namespace=namespace)
-
-    def collect(self, collected_facts=None):
-        collected_facts = collected_facts or {}
-
-        # WARNING: virtual.populate mutates cached_facts and returns a ref
-        #          so for now, pass in a copy()
-        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
-
-        facts_dict = facts_obj.populate()
-
-        return facts_dict
 
 
 # FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
@@ -195,6 +112,8 @@ def get_collector_names(module, valid_subsets=None,
 
     return additional_subsets
 
+import pprint
+
 
 # Allowed fact subset for gather_subset options and what classes they use
 # Note: have to define this at the bottom as it references classes defined earlier in this file -akl
@@ -218,36 +137,11 @@ class AnsibleFactCollector(BaseFactCollector):
        Has a 'from_gather_subset() constructor that populates collectors based on a
        gather_subset specifier.'''
 
-    # All the gather subsets aliases/nicks/shortnames
-    FACT_SUBSETS = dict(
-        facts=TempFactCollector,
-        # system=SystemFactCollector,
-        apparmor=ApparmorFactCollector,
-        caps=SystemCapabilitiesFactCollector,
-        date_time=DateTimeFactCollector,
-        env=EnvFactCollector,
-        dns=DnsFactCollector,
-        fips=FipsFactCollector,
-        local=LocalFactCollector,
-        lsb=LSBFactCollector,
-        pkg_mgr=PkgMgrFactCollector,
-        python=PythonFactCollector,
-        selinux=SelinuxFactCollector,
-        service_mgr=ServiceMgrFactCollector,
-        user=UserFactCollector,
-        hardware=HardwareCollector,
-        network=NetworkCollector,
-        virtual=VirtualCollector,
-        ohai=OhaiCollector,
-        facter=FacterFactCollector,
-    )
-    VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
-
     def __init__(self, collectors=None, namespace=None,
                  gather_subset=None):
         # namespace = PrefixFactNamespace(namespace_name='ansible',
         #                                prefix='ansible_')
-        self.VALID_SUBSETS = frozenset(self.FACT_SUBSETS.keys())
+        # self.VALID_SUBSETS = frozenset(self.FACT_SUBSETS.keys())
 
         super(AnsibleFactCollector, self).__init__('ansible_facts',
                                                    collectors=collectors,
@@ -256,11 +150,14 @@ class AnsibleFactCollector(BaseFactCollector):
 
     @classmethod
     def from_gather_subset(cls, module,
+                           all_collector_classes=None,
                            valid_subsets=None,
                            minimal_gather_subset=None,
                            gather_subset=None,
                            gather_timeout=None):
         # use gather_name etc to get the list of collectors
+
+        all_collector_classes = all_collector_classes or []
 
         minimal_gather_subset = minimal_gather_subset or frozenset([])
 
@@ -270,22 +167,29 @@ class AnsibleFactCollector(BaseFactCollector):
         # tweak the modules GATHER_TIMEOUT
         timeout.GATHER_TIMEOUT = gather_timeout
 
-        valid_subsets = valid_subsets or cls.VALID_SUBSETS
+        # valid_subsets = valid_subsets or cls.VALID_SUBSETS
+        valid_subsets = valid_subsets or frozenset([])
+        print('valid_subsets: %s' % pprint.pformat(valid_subsets))
 
         # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
         id_collector_map = {}
-        all_collector_classes = cls.FACT_SUBSETS.values()
+        # all_collector_classes = cls.FACT_SUBSETS.values()
 
         for all_collector_class in all_collector_classes:
             for fact_id in all_collector_class._fact_ids:
                 id_collector_map[fact_id] = all_collector_class
 
         all_fact_subsets = {}
-        all_fact_subsets.update(cls.FACT_SUBSETS)
+        # all_fact_subsets.update(cls.FACT_SUBSETS)
         # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
         all_fact_subsets.update(id_collector_map)
 
+        print('all_fact_subsets: %s' % pprint.pformat(all_fact_subsets))
+
+        # TODO: if we want to be picky about ordering, will need to avoid squashing into dicts
         all_valid_subsets = frozenset(all_fact_subsets.keys())
+
+        print('all_valid_subsets: %s' % pprint.pformat(all_valid_subsets))
 
         # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
         collector_names = get_collector_names(module,
@@ -293,10 +197,11 @@ class AnsibleFactCollector(BaseFactCollector):
                                               minimal_gather_subset=minimal_gather_subset,
                                               gather_subset=gather_subset)
 
-#        print('collector_names: %s' % collector_names)
+        print('collector_names: %s' % collector_names)
         collectors = []
         seen_collector_classes = []
         for collector_name in collector_names:
+            # TODO: fact_id -> [list, of, classes] instead of fact_id -> class 1:1 map?
             collector_class = all_fact_subsets.get(collector_name, None)
             if not collector_class:
                 # FIXME: remove whens table
@@ -309,7 +214,7 @@ class AnsibleFactCollector(BaseFactCollector):
                 seen_collector_classes.append(collector_class)
 
         # import pprint
-        # print('collectors: %s' % pprint.pformat(collectors))
+        print('collectors: %s' % pprint.pformat(collectors))
         instance = cls(collectors=collectors,
                        gather_subset=gather_subset)
         return instance
