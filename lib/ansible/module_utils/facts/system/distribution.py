@@ -13,13 +13,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
 
 import os
 import platform
 import re
 
-# FIXME: only Distribution uses get_uname_version()
 from ansible.module_utils.facts.utils import get_file_content
+
+from ansible.module_utils.facts.collector import BaseFactCollector
 
 
 # FIXME: be consitent about wrapped command (and files)
@@ -94,6 +97,69 @@ class Distribution(object):
         self.get_distribution_facts()
         return self.facts
 
+    def _has_dist_file(self, path, allow_empty=False):
+        # not finding the file, exit early
+        if not os.path.exists(path):
+            return False
+
+        # if just the path needs to exists (ie, it can be empty) we are done
+        if allow_empty:
+            return True
+
+        # file exists but is empty and we dont allow_empty
+        if os.path.getsize(path) == 0:
+            return False
+
+        # file exists with some content
+        return True
+
+    def _get_file_content(self, path):
+        return get_file_content(path)
+
+    def _get_dist_file_content(self, path, allow_empty=False):
+        # cant find that dist file or it is incorrectly empty
+        if not self._has_dist_file(path, allow_empty=allow_empty):
+            return False, None
+
+        data = self._get_file_content(path)
+        return True, data
+
+    def _parse_dist_file(self, name, dist_file_content, path):
+        dist_file_dict = {}
+        if name in self.SEARCH_STRING:
+            # look for the distribution string in the data and replace according to RELEASE_NAME_MAP
+            # only the distribution name is set, the version is assumed to be correct from platform.dist()
+            if self.SEARCH_STRING[name] in dist_file_content:
+                # this sets distribution=RedHat if 'Red Hat' shows up in data
+                # self.facts['distribution'] = name
+                dist_file_dict['distribution'] = name
+            else:
+                # this sets distribution to what's in the data, e.g. CentOS, Scientific, ...
+                # self.facts['distribution'] = dist_file_content.split()[0]
+                dist_file_dict['distribution'] = dist_file_content.split()[0]
+
+            return True, dist_file_dict
+
+        # call a dedicated function for parsing the file content
+        # TODO: replace with a map or a class
+        try:
+            # FIXME: most of these dont actually look at the dist file contents, but random other stuff
+            distfunc = getattr(self, 'get_distribution_' + name)
+            parsed, dist_file_dict = distfunc(name, dist_file_content, path)
+            return parsed, dist_file_dict
+        except AttributeError:
+            # this should never happen, but if it does fail quitely and not with a traceback
+            return False, dist_file_dict
+
+            # to debug multiple matching release files, one can use:
+            # self.facts['distribution_debug'].append({path + ' ' + name:
+            #         (parsed,
+            #          self.facts['distribution'],
+            #          self.facts['distribution_version'],
+            #          self.facts['distribution_release'],
+            #          )})
+
+
     def get_distribution_facts(self):
         # The platform module provides information about the running
         # system/distribution. Use this as a baseline and fix buggy systems
@@ -116,58 +182,36 @@ class Distribution(object):
             self.facts['distribution_version'] = dist[1] or 'NA'
             self.facts['distribution_major_version'] = dist[1].split('.')[0] or 'NA'
             self.facts['distribution_release'] = dist[2] or 'NA'
+
             # Try to handle the exceptions now ...
             # self.facts['distribution_debug'] = []
+            dist_file_facts = {}
             for ddict in self.OSDIST_LIST:
                 name = ddict['name']
                 path = ddict['path']
+                allow_empty = ddict.get('allowempty', False)
 
-                if not os.path.exists(path):
-                    continue
-                # if allowempty is set, we only check for file existance but not content
-                if 'allowempty' in ddict and ddict['allowempty']:
-                    self.facts['distribution'] = name
-                    break
-                if os.path.getsize(path) == 0:
+                has_dist_file, dist_file_content = self._get_dist_file_content(path, allow_empty=allow_empty)
+
+                if not has_dist_file:
+                    # keep looking
                     continue
 
-                data = get_file_content(path)
-                if name in self.SEARCH_STRING:
-                    # look for the distribution string in the data and replace according to RELEASE_NAME_MAP
-                    # only the distribution name is set, the version is assumed to be correct from platform.dist()
-                    if self.SEARCH_STRING[name] in data:
-                        # this sets distribution=RedHat if 'Red Hat' shows up in data
-                        self.facts['distribution'] = name
-                    else:
-                        # this sets distribution to what's in the data, e.g. CentOS, Scientific, ...
-                        self.facts['distribution'] = data.split()[0]
+                # first valid os dist file we find we count
+                self.facts['distribution'] = name
+
+                parsed_dist_file, dist_file_facts = self._parse_dist_file(name, dist_file_content, path)
+
+                # finally found the right os dist file and were able to parse it
+                if parsed_dist_file:
                     break
-                else:
-                    # call a dedicated function for parsing the file content
-                    try:
-                        distfunc = getattr(self, 'get_distribution_' + name)
-                        parsed = distfunc(name, data, path)
-                        if parsed is None or parsed:
-                            # distfunc return False if parsing failed
-                            # break only if parsing was succesful
-                            # otherwise continue with other distributions
-                            break
-                    except AttributeError:
-                        # this should never happen, but if it does fail quitely and not with a traceback
-                        pass
 
-                    # to debug multiple matching release files, one can use:
-                    # self.facts['distribution_debug'].append({path + ' ' + name:
-                    #         (parsed,
-                    #          self.facts['distribution'],
-                    #          self.facts['distribution_version'],
-                    #          self.facts['distribution_release'],
-                    #          )})
+        distro = dist_file_facts['distribution'].replace(' ', '_')
+        self.facts['distribution'] = distro
 
-        self.facts['os_family'] = self.facts['distribution']
-        distro = self.facts['distribution'].replace(' ', '_')
-        if distro in self.OS_FAMILY:
-            self.facts['os_family'] = self.OS_FAMILY[distro]
+        # look for a os family alias for the 'distribution', if there isnt one, use 'distribution'
+        self.facts['os_family'] = self.OS_FAMILY.get(distro, None) or distro
+
 
     def get_distribution_AIX(self):
         rc, out, err = self.module.run_command("/usr/bin/oslevel")
@@ -380,3 +424,18 @@ class Distribution(object):
                 self.facts['distribution_release'] = release.group(1).strip('"')
         else:
             return False  # TODO: remove if tested without this
+
+
+class DistributionFactCollector(BaseFactCollector):
+    _fact_ids = set(['distribution',
+                     'distribution_version',
+                     'distribution_release',
+                     'distribution_major_version'])
+
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        distribution = Distribution(module=self.module)
+        distro_facts = distribution.populate()
+
+        return distro_facts
