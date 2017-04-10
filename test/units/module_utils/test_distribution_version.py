@@ -18,7 +18,6 @@
 from __future__ import (absolute_import, division)
 __metaclass__ = type
 
-import sys
 
 # to work around basic.py reading stdin
 import json
@@ -27,11 +26,10 @@ import pytest
 from units.mock.procenv import swap_stdin_and_argv
 
 # for testing
-from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import patch
 
-# the module we are actually testing
-import ansible.module_utils.facts as facts
+# the module we are actually testing (sort of
+from ansible.module_utils.facts.facts import Facts
 
 
 # to generate the testcase data, you can use the script gen_distribution_version_testcase.py in hacking/tests
@@ -813,9 +811,10 @@ def test_distribution_version(testcase):
         basic._ANSIBLE_ARGS = None
         module = basic.AnsibleModule(argument_spec=dict())
 
-        _test_one_distribution(facts, module, testcase)
+        _test_one_distribution(module, testcase)
 
-def _test_one_distribution(facts, module, testcase):
+
+def _test_one_distribution(module, testcase):
     """run the test on one distribution testcase
 
     * prepare some mock functions to get the testdata in
@@ -828,7 +827,7 @@ def _test_one_distribution(facts, module, testcase):
         data = default
         if fname in testcase['input']:
             # for debugging
-            print('faked '+fname+' for '+testcase['name'])
+            print('faked ' + fname + ' for ' + testcase['name'])
             data = testcase['input'][fname].strip()
         if strip and data is not None:
             data = data.strip()
@@ -857,7 +856,7 @@ def _test_one_distribution(facts, module, testcase):
     @patch('platform.dist', lambda: testcase['platform.dist'])
     @patch('platform.system', mock_platform_system)
     def get_facts(testcase):
-        return facts.Facts(module).populate()
+        return Facts(module).populate()
 
     generated_facts = get_facts(testcase)
 

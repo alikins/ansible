@@ -26,6 +26,7 @@ import re
 from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import Mock
 
+from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.other.facter import FacterFactCollector
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
@@ -113,16 +114,16 @@ class TestInPlace(unittest.TestCase):
 
     def test_facts_class(self):
         mock_module = self._mock_module()
-        facts.Facts(mock_module)
+        Facts(mock_module)
 
     def test_facts_class_load_on_init_false(self):
         mock_module = self._mock_module()
-        facts.Facts(mock_module, load_on_init=False)
+        Facts(mock_module, load_on_init=False)
         # FIXME: assert something
 
     def test_facts_class_populate(self):
         mock_module = self._mock_module()
-        facts_obj = facts.Facts(mock_module)
+        facts_obj = Facts(mock_module)
         res = facts_obj.populate()
         self.assertIsInstance(res, dict)
         self.assertIn('python_version', res)
