@@ -30,7 +30,7 @@ from ansible.compat.tests.mock import patch
 
 # the module we are actually testing (sort of
 from ansible.module_utils.facts.facts import Facts
-
+from ansible.module_utils.facts.system.distribution import Distribution
 
 # to generate the testcase data, you can use the script gen_distribution_version_testcase.py in hacking/tests
 TESTSETS = [
@@ -608,6 +608,7 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
             "",
             ""
         ],
+        "platform.release:": "",
         "input": {
             "/etc/release": ("                         Open Storage Appliance v3.1.6\n           Copyright (c) 2014 Nexenta Systems, Inc.  "
                              "All Rights Reserved.\n           Copyright (c) 2011 Oracle.  All Rights Reserved.\n                         "
@@ -849,14 +850,19 @@ def _test_one_distribution(module, testcase):
     def mock_platform_system():
         return testcase.get('platform.system', 'Linux')
 
+    def mock_platform_release():
+        return testcase.get('platform.release', '')
+
     @patch('ansible.module_utils.facts.system.distribution.get_file_content', mock_get_file_content)
     @patch('ansible.module_utils.facts.system.distribution.get_uname_version', mock_get_uname_version)
     @patch('os.path.exists', mock_path_exists)
     @patch('os.path.getsize', mock_path_getsize)
     @patch('platform.dist', lambda: testcase['platform.dist'])
     @patch('platform.system', mock_platform_system)
+    #@patch('platform.release', mock_platform_release)
     def get_facts(testcase):
-        return Facts(module).populate()
+        #return Facts(module).populate()
+        return Distribution(module).populate()
 
     generated_facts = get_facts(testcase)
 
