@@ -119,18 +119,112 @@ EXAMPLES = """
 
 # import module snippets
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible.module_utils.facts import AnsibleFactCollector
+
+from ansible.module_utils.facts.facts import Facts
+
+from ansible.module_utils.facts import hardware
+from ansible.module_utils.facts import network
+
+from ansible.module_utils.facts.ohai import Ohai
+
+from ansible.module_utils.facts.collector import BaseFactCollector
+
+from ansible.module_utils.facts.other.facter import FacterFactCollector
+
+from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
+from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
+from ansible.module_utils.facts.system.env import EnvFactCollector
+from ansible.module_utils.facts.system.dns import DnsFactCollector
+from ansible.module_utils.facts.system.fips import FipsFactCollector
+from ansible.module_utils.facts.system.local import LocalFactCollector
+from ansible.module_utils.facts.system.lsb import LSBFactCollector
+from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
+from ansible.module_utils.facts.system.python import PythonFactCollector
+from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
+from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
+from ansible.module_utils.facts.system.user import UserFactCollector
+
+from ansible.module_utils.facts.virtual.base import VirtualCollector
+
+from ansible.module_utils.facts.namespace import PrefixFactNamespace
+
+
+# TODO: remove these once we replace them
+class WrapperCollector(BaseFactCollector):
+    facts_class = None
+
+    def __init__(self, module, collectors=None, namespace=None):
+        super(WrapperCollector, self).__init__(collectors=collectors,
+                                               namespace=namespace)
+        self.module = module
+
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        # print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
+        # WARNING: virtual.populate mutates cached_facts and returns a ref
+        #          so for now, pass in a copy()
+        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
+
+        # print('facts_obj: %s' % facts_obj)
+        # print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
+        facts_dict = facts_obj.populate()
+
+        return facts_dict
+
+
+class HardwareCollector(WrapperCollector):
+    _fact_ids = set(['hardware'])
+    facts_class = hardware.base.Hardware
+
+
+class NetworkCollector(WrapperCollector):
+    _fact_ids = set(['network'])
+    facts_class = network.base.Network
+
+
+class OhaiCollector(WrapperCollector):
+    _fact_ids = set(['ohai'])
+    facts_class = Ohai
+
+
+class TempFactCollector(WrapperCollector):
+    _fact_ids = set(['facts'])
+
+    facts_class = Facts
+
+    # kluge to compensate for 'Facts' adding 'ansible_' prefix itself
+    def __init__(self, module, collectors=None, namespace=None):
+        namespace = PrefixFactNamespace(namespace_name='temp_fact',
+                                        prefix='ansible_')
+        super(TempFactCollector, self).__init__(module,
+                                                collectors=collectors,
+                                                namespace=namespace)
+
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        # WARNING: virtual.populate mutates cached_facts and returns a ref
+        #          so for now, pass in a copy()
+        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
+
+        facts_dict = facts_obj.populate()
+
+        return facts_dict
 
 
 def main():
     module = AnsibleModule(
-        argument_spec = dict(
+        argument_spec=dict(
             gather_subset=dict(default=["all"], required=False, type='list'),
             gather_timeout=dict(default=10, required=False, type='int'),
             filter=dict(default="*", required=False),
             fact_path=dict(default='/etc/ansible/facts.d', required=False, type='path'),
         ),
-        supports_check_mode = True,
+        supports_check_mode=True,
     )
 
     gather_subset = module.params['gather_subset']
@@ -140,14 +234,35 @@ def main():
     #       to collect nothing except for the below list
     # TODO: decide what '!all' means, I lean towards making it mean none, but likely needs
     #       some tweaking on how gather_subset operations are performed
-    minimal_gather_subset = frozenset(['apparmor', 'caps', 'date_time',
-                                       'env', 'fips', 'local', 'lsb',
-                                       'pkg_mgr', 'python', 'selinux',
-                                       'service_mgr', 'user',
-                                       # TODO: facts type should go away soon
-                                       'facts'])
+    minimal_gather_subset = frozenset(['apparmor', 'caps', 'date_time', 'dns',
+                                       'env', 'facts', 'fips', 'local', 'lsb',
+                                       'pkg_mgr', 'python', 'selinux', 'service_mgr',
+                                       'user'])
+
+    # TODO: the ordering here is more or less arbitrary, except that it mimics the
+    #       order facts.py used to collect these in.
+    all_collector_classes = [TempFactCollector,
+                             SelinuxFactCollector,
+                             ApparmorFactCollector,
+                             SystemCapabilitiesFactCollector,
+                             FipsFactCollector,
+                             PkgMgrFactCollector,
+                             ServiceMgrFactCollector,
+                             LSBFactCollector,
+                             DateTimeFactCollector,
+                             UserFactCollector,
+                             LocalFactCollector,
+                             EnvFactCollector,
+                             DnsFactCollector,
+                             PythonFactCollector,
+                             HardwareCollector,
+                             NetworkCollector,
+                             VirtualCollector,
+                             OhaiCollector,
+                             FacterFactCollector]
 
     fact_collector = AnsibleFactCollector.from_gather_subset(module,
+                                                             all_collector_classes=all_collector_classes,
                                                              minimal_gather_subset=minimal_gather_subset,
                                                              gather_subset=gather_subset,
                                                              gather_timeout=gather_timeout)
