@@ -96,12 +96,14 @@ def get_collector_names(module, valid_subsets=None,
         else:
             exclude = False
 
-        if subset not in valid_subsets:
-            raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" % (subset, ", ".join(valid_subsets)))
-
         if exclude:
             exclude_subsets.add(subset)
         else:
+            # NOTE: this only considers adding an unknown gather subsetup an error. Asking to
+            #       exclude an unknown gather subset is ignored.
+            if subset not in valid_subsets:
+                raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" % (subset, ", ".join(valid_subsets)))
+
             additional_subsets.add(subset)
 
     if not additional_subsets:
