@@ -124,8 +124,6 @@ from ansible.module_utils.facts import AnsibleFactCollector
 
 from ansible.module_utils.facts.facts import Facts
 
-from ansible.module_utils.facts import hardware
-
 from ansible.module_utils.facts.ohai import Ohai
 
 from ansible.module_utils.facts.collector import BaseFactCollector
