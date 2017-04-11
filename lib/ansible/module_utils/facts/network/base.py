@@ -8,6 +8,8 @@ from ansible.module_utils.six import PY3
 
 from ansible.module_utils.facts.facts import Facts
 
+from ansible.module_utils.facts.collector import BaseFactCollector
+
 
 class Network(Facts):
     """
@@ -47,3 +49,23 @@ class Network(Facts):
 
     def populate(self):
         return self.facts
+
+
+class NetworkCollector(BaseFactCollector):
+    # MAYBE: we could try to build this based on the arch specific implemementation of Network() or its kin
+    _fact_ids = set(['network',
+                     'interfaces',
+                     'default_ipv4',
+                     'default_ipv6',
+                     'all_ipv4_addresses',
+                     'all_ipv6_addresses'])
+
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        # Network munges cached_facts by side effect, so give it a copy
+        network_facts = Network(self.module, cached_facts=collected_facts.copy())
+
+        facts_dict = network_facts.populate()
+
+        return facts_dict

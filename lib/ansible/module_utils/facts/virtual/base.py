@@ -59,8 +59,19 @@ class Virtual(Facts):
             return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
     def populate(self):
+        # FIXME: kluge around virtual fact stuff munges self.facts
         self.get_virtual_facts()
-        return self.facts
+
+        # now just return the facts from this module, not any passed in via collected_facts
+        virtual_fact_keys = ('virtualization_type',
+                             'virtualization_role',
+                             'container')
+        virtual_facts = {}
+        for key in virtual_fact_keys:
+            if key in self.facts:
+                virtual_facts[key] = self.facts[key]
+
+        return virtual_facts
 
     def get_virtual_facts(self):
         self.facts['virtualization_type'] = ''
@@ -74,6 +85,8 @@ class VirtualCollector(BaseFactCollector):
     def collect(self, collected_facts=None):
         collected_facts = collected_facts or {}
 
+        # Virtual isnt update to not munge self.facts yet, so just pass in the facts it
+        # needs
         virtual_facts = Virtual(self.module, cached_facts=collected_facts.copy())
 
         facts_dict = virtual_facts.populate()

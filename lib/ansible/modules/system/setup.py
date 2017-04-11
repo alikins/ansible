@@ -125,7 +125,6 @@ from ansible.module_utils.facts import AnsibleFactCollector
 from ansible.module_utils.facts.facts import Facts
 
 from ansible.module_utils.facts import hardware
-from ansible.module_utils.facts import network
 
 from ansible.module_utils.facts.ohai import Ohai
 
@@ -147,6 +146,10 @@ from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
+
+from ansible.module_utils.facts.hardware.base import HardwareCollector
+
+from ansible.module_utils.facts.network.base import NetworkCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 
@@ -177,16 +180,6 @@ class WrapperCollector(BaseFactCollector):
         return facts_dict
 
 
-class HardwareCollector(WrapperCollector):
-    _fact_ids = set(['hardware'])
-    facts_class = hardware.base.Hardware
-
-
-class NetworkCollector(WrapperCollector):
-    _fact_ids = set(['network'])
-    facts_class = network.base.Network
-
-
 class OhaiCollector(WrapperCollector):
     _fact_ids = set(['ohai'])
     facts_class = Ohai
@@ -208,6 +201,7 @@ class TempFactCollector(WrapperCollector):
     def collect(self, collected_facts=None):
         collected_facts = collected_facts or {}
 
+        collected_facts = {}
         # WARNING: virtual.populate mutates cached_facts and returns a ref
         #          so for now, pass in a copy()
         facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
@@ -260,7 +254,7 @@ def main():
                              HardwareCollector,
                              NetworkCollector,
                              VirtualCollector,
-                             OhaiCollector,
+#                             OhaiCollector,
                              FacterFactCollector]
 
     fact_collector = AnsibleFactCollector.from_gather_subset(module,

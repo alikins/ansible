@@ -55,9 +55,10 @@ class SunOSHardware(Hardware):
             elif key == 'implementation':
                 processor = brand or data[1].strip()
                 # Add clock speed to description for SPARC CPU
-                if self.facts['machine'] != 'i86pc':
+                # FIXME
+                if self.facts['ansible_machine'] != 'i86pc':
                     processor += " @ " + clock_mhz + "MHz"
-                if 'processor' not in self.facts:
+                if 'ansible_processor' not in self.facts:
                     self.facts['processor'] = []
                 self.facts['processor'].append(processor)
             elif key == 'chip_id':
