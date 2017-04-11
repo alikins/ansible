@@ -58,21 +58,35 @@ class LinuxHardware(Hardware):
     MTAB_BIND_MOUNT_RE = re.compile(r'.*bind.*"')
 
     def populate(self):
-        self.get_cpu_facts()
-        self.get_memory_facts()
-        self.get_dmi_facts()
-        self.get_device_facts()
-        self.get_uptime_facts()
-        self.get_lvm_facts()
+        hardware_facts = {}
+
+        cpu_facts = self.get_cpu_facts()
+        memory_facts = self.get_memory_facts()
+        dmi_facts = self.get_dmi_facts()
+        device_facts = self.get_device_facts()
+        uptime_facts = self.get_uptime_facts()
+        lvm_facts = self.get_lvm_facts()
+
+        mount_facts = {}
         try:
-            self.get_mount_facts()
+            mount_facts = self.get_mount_facts()
         except timeout.TimeoutError:
             pass
-        return self.facts
+
+        hardware_facts.update(cpu_facts)
+        hardware_facts.update(memory_facts)
+        hardware_facts.update(dmi_facts)
+        hardware_facts.update(device_facts)
+        hardware_facts.update(uptime_facts)
+        hardware_facts.update(lvm_facts)
+        hardware_facts.update(mount_facts)
+
+        return hardware_facts
 
     def get_memory_facts(self):
+        memory_facts = {}
         if not os.access("/proc/meminfo", os.R_OK):
-            return
+            return memory_facts
 
         memstats = {}
         for line in get_file_lines("/proc/meminfo"):
@@ -80,7 +94,7 @@ class LinuxHardware(Hardware):
             key = data[0]
             if key in self.ORIGINAL_MEMORY_FACTS:
                 val = data[1].strip().split(' ')[0]
-                self.facts["%s_mb" % key.lower()] = int(val) // 1024
+                memory_facts["%s_mb" % key.lower()] = int(val) // 1024
 
             if key in self.MEMORY_FACTS:
                 val = data[1].strip().split(' ')[0]
@@ -95,7 +109,7 @@ class LinuxHardware(Hardware):
         if None not in (memstats.get('swaptotal'), memstats.get('swapfree')):
             memstats['swap:used'] = memstats['swaptotal'] - memstats['swapfree']
 
-        self.facts['memory_mb'] = {
+        memory_facts['memory_mb'] = {
             'real': {
                 'total': memstats.get('memtotal'),
                 'used': memstats.get('real:used'),
@@ -113,7 +127,11 @@ class LinuxHardware(Hardware):
             },
         }
 
+        return memory_facts
+
     def get_cpu_facts(self):
+        cpu_facts = {}
+
         i = 0
         vendor_id_occurrence = 0
         model_name_occurrence = 0
@@ -137,8 +155,9 @@ class LinuxHardware(Hardware):
             pass
 
         if not os.access("/proc/cpuinfo", os.R_OK):
-            return
-        self.facts['processor'] = []
+            return cpu_facts
+
+        cpu_facts['processor'] = []
         for line in get_file_lines('/proc/cpuinfo'):
             data = line.split(":", 1)
             key = data[0].strip()
@@ -155,9 +174,9 @@ class LinuxHardware(Hardware):
             # model name is for Intel arch, Processor (mind the uppercase P)
             # works for some ARM devices, like the Sheevaplug.
             if key in ['model name', 'Processor', 'vendor_id', 'cpu', 'Vendor']:
-                if 'processor' not in self.facts:
-                    self.facts['processor'] = []
-                self.facts['processor'].append(data[1].strip())
+                if 'processor' not in cpu_facts:
+                    cpu_facts['processor'] = []
+                cpu_facts['processor'].append(data[1].strip())
                 if key == 'vendor_id':
                     vendor_id_occurrence += 1
                 if key == 'model name':
@@ -176,7 +195,7 @@ class LinuxHardware(Hardware):
             elif key == 'siblings':
                 cores[coreid] = int(data[1].strip())
             elif key == '# processors':
-                self.facts['processor_cores'] = int(data[1].strip())
+                cpu_facts['processor_cores'] = int(data[1].strip())
 
         # Skip for platforms without vendor_id/model_name in cpuinfo (e.g ppc64le)
         if vendor_id_occurrence > 0:
@@ -186,36 +205,40 @@ class LinuxHardware(Hardware):
         # FIXME
         if self.facts['ansible_architecture'] != 's390x':
             if xen_paravirt:
-                self.facts['processor_count'] = i
-                self.facts['processor_cores'] = i
-                self.facts['processor_threads_per_core'] = 1
-                self.facts['processor_vcpus'] = i
+                cpu_facts['processor_count'] = i
+                cpu_facts['processor_cores'] = i
+                cpu_facts['processor_threads_per_core'] = 1
+                cpu_facts['processor_vcpus'] = i
             else:
                 if sockets:
-                    self.facts['processor_count'] = len(sockets)
+                    cpu_facts['processor_count'] = len(sockets)
                 else:
-                    self.facts['processor_count'] = i
+                    cpu_facts['processor_count'] = i
 
                 socket_values = list(sockets.values())
                 if socket_values:
-                    self.facts['processor_cores'] = socket_values[0]
+                    cpu_facts['processor_cores'] = socket_values[0]
                 else:
-                    self.facts['processor_cores'] = 1
+                    cpu_facts['processor_cores'] = 1
 
                 core_values = list(cores.values())
                 if core_values:
-                    self.facts['processor_threads_per_core'] = core_values[0] // self.facts['processor_cores']
+                    cpu_facts['processor_threads_per_core'] = core_values[0] // cpu_facts['processor_cores']
                 else:
-                    self.facts['processor_threads_per_core'] = 1 // self.facts['processor_cores']
+                    cpu_facts['processor_threads_per_core'] = 1 // cpu_facts['processor_cores']
 
-                self.facts['processor_vcpus'] = (self.facts['processor_threads_per_core'] *
-                                                 self.facts['processor_count'] * self.facts['processor_cores'])
+                cpu_facts['processor_vcpus'] = (cpu_facts['processor_threads_per_core'] *
+                                                cpu_facts['processor_count'] * cpu_facts['processor_cores'])
+
+        return cpu_facts
 
     def get_dmi_facts(self):
         ''' learn dmi facts from system
 
         Try /sys first for dmi related facts.
         If that is not available, fall back to dmidecode executable '''
+
+        dmi_facts = {}
 
         if os.path.exists('/sys/devices/virtual/dmi/id/product_name'):
             # Use kernel DMI info, if available
@@ -246,13 +269,13 @@ class LinuxHardware(Hardware):
                 if data is not None:
                     if key == 'form_factor':
                         try:
-                            self.facts['form_factor'] = FORM_FACTOR[int(data)]
+                            dmi_facts['form_factor'] = FORM_FACTOR[int(data)]
                         except IndexError:
-                            self.facts['form_factor'] = 'unknown (%s)' % data
+                            dmi_facts['form_factor'] = 'unknown (%s)' % data
                     else:
-                        self.facts[key] = data
+                        dmi_facts[key] = data
                 else:
-                    self.facts[key] = 'NA'
+                    dmi_facts[key] = 'NA'
 
         else:
             # Fall back to using dmidecode, if available
@@ -278,11 +301,13 @@ class LinuxHardware(Hardware):
                         except UnicodeDecodeError:
                             thisvalue = "NA"
 
-                        self.facts[k] = thisvalue
+                        dmi_facts[k] = thisvalue
                     else:
-                        self.facts[k] = 'NA'
+                        dmi_facts[k] = 'NA'
                 else:
-                    self.facts[k] = 'NA'
+                    dmi_facts[k] = 'NA'
+
+        return dmi_facts
 
     def _run_lsblk(self, lsblk_path):
         # call lsblk and collect all uuids
@@ -369,7 +394,9 @@ class LinuxHardware(Hardware):
 
     @timeout.timeout()
     def get_mount_facts(self):
-        self.facts['mounts'] = []
+        mount_facts = {}
+
+        mount_facts['mounts'] = []
 
         bind_mounts = self._find_bind_mounts()
         uuids = self._lsblk_uuid()
@@ -403,7 +430,9 @@ class LinuxHardware(Hardware):
 
             mounts.append(mount_info)
 
-        self.facts['mounts'] = mounts
+        mount_facts['mounts'] = mounts
+
+        return mount_facts
 
     def get_holders(self, block_dev_dict, sysdir):
         block_dev_dict['holders'] = []
@@ -418,7 +447,9 @@ class LinuxHardware(Hardware):
                     block_dev_dict['holders'].append(folder)
 
     def get_device_facts(self):
-        self.facts['devices'] = {}
+        device_facts = {}
+
+        device_facts['devices'] = {}
         lspci = self.module.get_bin_path('lspci')
         if lspci:
             rc, pcidata, err = self.module.run_command([lspci, '-D'], errors='surrogate_then_replace')
@@ -428,7 +459,7 @@ class LinuxHardware(Hardware):
         try:
             block_devs = os.listdir("/sys/block")
         except OSError:
-            return
+            return device_facts
 
         devs_wwn = {}
         try:
@@ -540,13 +571,18 @@ class LinuxHardware(Hardware):
 
             self.get_holders(d, sysdir)
 
-            self.facts['devices'][diskname] = d
+            device_facts['devices'][diskname] = d
+
+        return device_facts
 
     def get_uptime_facts(self):
+        uptime_facts = {}
         uptime_file_content = get_file_content('/proc/uptime')
         if uptime_file_content:
             uptime_seconds_string = uptime_file_content.split(' ')[0]
-            self.facts['uptime_seconds'] = int(float(uptime_seconds_string))
+            uptime_facts['uptime_seconds'] = int(float(uptime_seconds_string))
+
+        return uptime_facts
 
     def _find_mapper_device_name(self, dm_device):
         dm_prefix = '/dev/dm-'
@@ -561,6 +597,8 @@ class LinuxHardware(Hardware):
 
     def get_lvm_facts(self):
         """ Get LVM Facts if running as root and lvm utils are available """
+
+        lvm_facts = {}
 
         if os.getuid() == 0 and self.module.get_bin_path('vgs'):
             lvm_util_options = '--noheadings --nosuffix --units g'
@@ -599,4 +637,6 @@ class LinuxHardware(Hardware):
                         'free_g': items[5],
                         'vg': items[1]}
 
-            self.facts['lvm'] = {'lvs': lvs, 'vgs': vgs, 'pvs': pvs}
+            lvm_facts['lvm'] = {'lvs': lvs, 'vgs': vgs, 'pvs': pvs}
+
+        return lvm_facts
