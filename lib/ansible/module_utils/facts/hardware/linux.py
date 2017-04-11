@@ -184,7 +184,7 @@ class LinuxHardware(Hardware):
                 i = vendor_id_occurrence
 
         # FIXME
-        if self.facts['architecture'] != 's390x':
+        if self.facts['ansible_architecture'] != 's390x':
             if xen_paravirt:
                 self.facts['processor_count'] = i
                 self.facts['processor_cores'] = i

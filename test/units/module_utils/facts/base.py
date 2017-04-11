@@ -32,6 +32,11 @@ class BaseFactsTest(unittest.TestCase):
     fact_namespace = None
     collector_class = None
 
+    # a dict ansible_facts. Some fact collectors depend on facts gathered by
+    # other collectors (like 'ansible_architecture' or 'ansible_system') which
+    # can be passed via the collected_facts arg to collect()
+    collected_facts = None
+
     def _mock_module(self):
         mock_module = Mock()
         mock_module.params = {'gather_subset': self.gather_subset,
@@ -43,13 +48,13 @@ class BaseFactsTest(unittest.TestCase):
     def test_collect(self):
         module = self._mock_module()
         fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect()
+        facts_dict = fact_collector.collect(collected_facts=self.collected_facts)
         self.assertIsInstance(facts_dict, dict)
         return facts_dict
 
     def test_collect_with_namespace(self):
         module = self._mock_module()
         fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect_with_namespace()
+        facts_dict = fact_collector.collect_with_namespace(collected_facts=self.collected_facts)
         self.assertIsInstance(facts_dict, dict)
         return facts_dict
