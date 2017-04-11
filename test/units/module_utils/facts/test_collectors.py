@@ -34,6 +34,7 @@ from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollecto
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 from ansible.module_utils.facts.network.base import NetworkCollector
+from ansible.module_utils.facts.hardware.base import HardwareCollector
 
 
 class TestApparmorFacts(BaseFactsTest):
@@ -48,7 +49,7 @@ class TestApparmorFacts(BaseFactsTest):
         self.assertIn('status', facts_dict['apparmor'])
 
 
-class TestCollectedCapsFacts(BaseFactsTest):
+class TestCapsFacts(BaseFactsTest):
     __test__ = True
     gather_subset = ['!all', 'caps']
     valid_subsets = ['caps']
@@ -86,12 +87,20 @@ class TestEnvFacts(BaseFactsTest):
         self.assertIn('HOME', facts_dict['env'])
 
 
-class TestCollectedFipsFacts(BaseFactsTest):
+class TestFipsFacts(BaseFactsTest):
     __test__ = True
     gather_subset = ['!all', 'fips']
     valid_subsets = ['fips']
     fact_namespace = 'ansible_fips'
     collector_class = FipsFactCollector
+
+
+class TestHardwareCollector(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'hardware']
+    valid_subsets = ['hardware']
+    fact_namespace = 'ansible_hardware'
+    collector_class = HardwareCollector
 
 
 class TestNetworkCollector(BaseFactsTest):
