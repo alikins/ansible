@@ -15,10 +15,18 @@ class HurdHardware(LinuxHardware):
     platform = 'GNU'
 
     def populate(self):
-        self.get_uptime_facts()
-        self.get_memory_facts()
+        hardware_facts = {}
+        uptime_facts = self.get_uptime_facts()
+        memory_facts = self.get_memory_facts()
+
+        mount_facts = {}
         try:
-            self.get_mount_facts()
+            mount_facts = self.get_mount_facts()
         except TimeoutError:
             pass
-        return self.facts
+
+        hardware_facts.update(uptime_facts)
+        hardware_facts.update(memory_facts)
+        hardware_facts.update(mount_facts)
+
+        return hardware_facts
