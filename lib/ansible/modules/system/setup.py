@@ -132,6 +132,7 @@ from ansible.module_utils.facts.other.facter import FacterFactCollector
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+from ansible.module_utils.facts.system.cmdline import CmdLineFactCollector
 from ansible.module_utils.facts.system.distribution import DistributionFactCollector
 from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
@@ -246,6 +247,7 @@ def main():
                              DateTimeFactCollector,
                              UserFactCollector,
                              LocalFactCollector,
+                             CmdLineFactCollector,
                              EnvFactCollector,
                              DnsFactCollector,
                              PythonFactCollector,
