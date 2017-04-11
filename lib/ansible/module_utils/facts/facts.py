@@ -2,6 +2,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+# almost gone now...
 
 
 # NOTE: This Facts class is mostly facts gathering implementation.
@@ -68,4 +69,3 @@ class Facts:
 
     def populate(self):
         return self.facts
-

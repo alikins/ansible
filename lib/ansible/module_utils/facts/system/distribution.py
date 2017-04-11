@@ -33,7 +33,6 @@ def get_uname_version(module):
     return None
 
 
-
 class DistributionFiles:
     '''has-a various distro file parsers (os-release, etc) and logic for finding the right one.'''
     # every distribution name mentioned here, must have one of
@@ -324,11 +323,9 @@ class DistributionFiles:
         for line in data.splitlines():
             distribution = re.search("^NAME=(.*)", line)
             if distribution and collected_facts['distribution'] == 'NA':
-            #if distribution:
                 na_facts['distribution'] = distribution.group(1).strip('"')
             version = re.search("^VERSION=(.*)", line)
             if version and collected_facts['distribution_version'] == 'NA':
-            #if version:
                 na_facts['distribution_version'] = version.group(1).strip('"')
         return True, na_facts
 

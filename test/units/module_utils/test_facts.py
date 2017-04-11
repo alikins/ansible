@@ -30,7 +30,6 @@ from ansible.module_utils import facts
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
 from ansible.module_utils.facts import virtual
-from ansible.module_utils.facts.virtual.linux import LinuxVirtual
 
 
 class BaseTestFactsPlatform(unittest.TestCase):
@@ -325,111 +324,111 @@ MTAB_ENTRIES = \
          '0',
          '0'],
         ['cgroup',
-        '/sys/fs/cgroup/freezer',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,freezer',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/freezer',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,freezer',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/memory',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,memory',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/memory',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,memory',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/pids',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,pids',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/pids',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,pids',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/blkio',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,blkio',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/blkio',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,blkio',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/cpuset',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,cpuset',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/cpuset',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,cpuset',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/cpu,cpuacct',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,cpu,cpuacct',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/cpu,cpuacct',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,cpu,cpuacct',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/hugetlb',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,hugetlb',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/hugetlb',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,hugetlb',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/perf_event',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,perf_event',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/perf_event',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,perf_event',
+         '0',
+         '0'],
         ['cgroup',
-        '/sys/fs/cgroup/net_cls,net_prio',
-        'cgroup',
-        'rw,nosuid,nodev,noexec,relatime,net_cls,net_prio',
-        '0',
-        '0'],
+         '/sys/fs/cgroup/net_cls,net_prio',
+         'cgroup',
+         'rw,nosuid,nodev,noexec,relatime,net_cls,net_prio',
+         '0',
+         '0'],
         ['configfs', '/sys/kernel/config', 'configfs', 'rw,relatime', '0', '0'],
         ['/dev/mapper/fedora_dhcp129--186-root',
-        '/',
-        'ext4',
-        'rw,seclabel,relatime,data=ordered',
-        '0',
-        '0'],
+         '/',
+         'ext4',
+         'rw,seclabel,relatime,data=ordered',
+         '0',
+         '0'],
         ['selinuxfs', '/sys/fs/selinux', 'selinuxfs', 'rw,relatime', '0', '0'],
         ['systemd-1',
-        '/proc/sys/fs/binfmt_misc',
-        'autofs',
-        'rw,relatime,fd=24,pgrp=1,timeout=0,minproto=5,maxproto=5,direct',
-        '0',
-        '0'],
+         '/proc/sys/fs/binfmt_misc',
+         'autofs',
+         'rw,relatime,fd=24,pgrp=1,timeout=0,minproto=5,maxproto=5,direct',
+         '0',
+         '0'],
         ['debugfs', '/sys/kernel/debug', 'debugfs', 'rw,seclabel,relatime', '0', '0'],
         ['hugetlbfs',
-        '/dev/hugepages',
-        'hugetlbfs',
-        'rw,seclabel,relatime',
-        '0',
-        '0'],
+         '/dev/hugepages',
+         'hugetlbfs',
+         'rw,seclabel,relatime',
+         '0',
+         '0'],
         ['tmpfs', '/tmp', 'tmpfs', 'rw,seclabel', '0', '0'],
         ['mqueue', '/dev/mqueue', 'mqueue', 'rw,seclabel,relatime', '0', '0'],
         ['/dev/loop0',
-        '/var/lib/machines',
-        'btrfs',
-        'rw,seclabel,relatime,space_cache,subvolid=5,subvol=/',
-        '0',
-        '0'],
+         '/var/lib/machines',
+         'btrfs',
+         'rw,seclabel,relatime,space_cache,subvolid=5,subvol=/',
+         '0',
+         '0'],
         ['/dev/sda1', '/boot', 'ext4', 'rw,seclabel,relatime,data=ordered', '0', '0'],
         # A 'none' fstype
         ['/dev/sdz3', '/not/a/real/device', 'none', 'rw,seclabel,relatime,data=ordered', '0', '0'],
         # lets assume this is a bindmount
         ['/dev/sdz4', '/not/a/real/bind_mount', 'ext4', 'rw,seclabel,relatime,data=ordered', '0', '0'],
         ['/dev/mapper/fedora_dhcp129--186-home',
-        '/home',
-        'ext4',
-        'rw,seclabel,relatime,data=ordered',
-        '0',
-        '0'],
+         '/home',
+         'ext4',
+         'rw,seclabel,relatime,data=ordered',
+         '0',
+         '0'],
         ['tmpfs',
-        '/run/user/1000',
-        'tmpfs',
-        'rw,seclabel,nosuid,nodev,relatime,size=1611044k,mode=700,uid=1000,gid=1000',
-        '0',
-        '0'],
+         '/run/user/1000',
+         'tmpfs',
+         'rw,seclabel,nosuid,nodev,relatime,size=1611044k,mode=700,uid=1000,gid=1000',
+         '0',
+         '0'],
         ['gvfsd-fuse',
-        '/run/user/1000/gvfs',
-        'fuse.gvfsd-fuse',
-        'rw,nosuid,nodev,relatime,user_id=1000,group_id=1000',
-        '0',
-        '0'],
+         '/run/user/1000/gvfs',
+         'fuse.gvfsd-fuse',
+         'rw,nosuid,nodev,relatime,user_id=1000,group_id=1000',
+         '0',
+         '0'],
         ['fusectl', '/sys/fs/fuse/connections', 'fusectl', 'rw,relatime', '0', '0']]
 
 BIND_MOUNTS = ['/not/a/real/bind_mount']
@@ -508,7 +507,7 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         self.assertIsInstance(bind_mounts, set)
         self.assertEqual(len(bind_mounts), 0)
 
-    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT,''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT, ''))
     def test_lsblk_uuid(self, mock_run_lsblk):
         module = Mock()
         lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
@@ -517,16 +516,16 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         self.assertIsInstance(lsblk_uuids, dict)
         self.assertIn(b'/dev/loop9', lsblk_uuids)
         self.assertIn(b'/dev/sda1', lsblk_uuids)
-        self.assertEquals(lsblk_uuids[b'/dev/sda1'], b'32caaec3-ef40-4691-a3b6-438c3f9bc1c0')
+        self.assertEqual(lsblk_uuids[b'/dev/sda1'], b'32caaec3-ef40-4691-a3b6-438c3f9bc1c0')
 
-    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(37, LSBLK_OUTPUT,''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(37, LSBLK_OUTPUT, ''))
     def test_lsblk_uuid_non_zero(self, mock_run_lsblk):
         module = Mock()
         lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
         lsblk_uuids = lh._lsblk_uuid()
 
         self.assertIsInstance(lsblk_uuids, dict)
-        self.assertEquals(len(lsblk_uuids), 0)
+        self.assertEqual(len(lsblk_uuids), 0)
 
     def test_lsblk_uuid_no_lsblk(self):
         module = Mock()
@@ -535,9 +534,9 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         lsblk_uuids = lh._lsblk_uuid()
 
         self.assertIsInstance(lsblk_uuids, dict)
-        self.assertEquals(len(lsblk_uuids), 0)
+        self.assertEqual(len(lsblk_uuids), 0)
 
-    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT_2,''))
+    @patch('ansible.module_utils.facts.hardware.linux.LinuxHardware._run_lsblk', return_value=(0, LSBLK_OUTPUT_2, ''))
     def test_lsblk_uuid_dev_with_space_in_name(self, mock_run_lsblk):
         module = Mock()
         lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
@@ -545,5 +544,5 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         self.assertIsInstance(lsblk_uuids, dict)
         self.assertIn(b'/dev/loop0', lsblk_uuids)
         self.assertIn(b'/dev/sda1', lsblk_uuids)
-        self.assertEquals(lsblk_uuids[b'/dev/mapper/an-example-mapper with a space in the name'], b'84639acb-013f-4d2f-9392-526a572b4373')
-        self.assertEquals(lsblk_uuids[b'/dev/sda1'], b'32caaec3-ef40-4691-a3b6-438c3f9bc1c0')
+        self.assertEqual(lsblk_uuids[b'/dev/mapper/an-example-mapper with a space in the name'], b'84639acb-013f-4d2f-9392-526a572b4373')
+        self.assertEqual(lsblk_uuids[b'/dev/sda1'], b'32caaec3-ef40-4691-a3b6-438c3f9bc1c0')
