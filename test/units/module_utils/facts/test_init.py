@@ -46,7 +46,7 @@ from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
 
-from ansible.module_utils.facts.hardware.base import HardwareCollector
+# from ansible.module_utils.facts.hardware.base import HardwareCollector
 from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 

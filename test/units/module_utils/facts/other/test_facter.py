@@ -135,7 +135,7 @@ facter_json_output = '''
     }
   },
   "lsbdistcodename": "TwentyFive",
-  "lsbrelease": ":core-4.1-amd64:core-4.1-noarch:cxx-4.1-amd64:cxx-4.1-noarch:desktop-4.1-amd64:desktop-4.1-noarch:languages-4.1-amd64:languages-4.1-noarch:printing-4.1-amd64:printing-4.1-noarch",
+  "lsbrelease": ":core-4.1-amd64:core-4.1-noarch:cxx-4.1-amd64:cxx-4.1-noarch:desktop-4.1-amd64:desktop-4.1-noarch:languages-4.1-amd64:languages-4.1-noarch:printing-4.1-amd64:printing-4.1-noarch",  # noqa
   "filesystems": "btrfs,ext2,ext3,ext4,xfs",
   "system_uptime": {
     "seconds": 1558090,

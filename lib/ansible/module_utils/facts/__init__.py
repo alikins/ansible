@@ -114,8 +114,6 @@ def get_collector_names(module, valid_subsets=None,
 
     return additional_subsets
 
-import pprint
-
 
 # Allowed fact subset for gather_subset options and what classes they use
 # Note: have to define this at the bottom as it references classes defined earlier in this file -akl

@@ -58,9 +58,6 @@ class LinuxNetwork(Network):
         )
         interface = dict(v4={}, v6={})
         for v in 'v4', 'v6':
-#            import pprint
-#            print('self.facts=%s' % pprint.pformat(self.facts))
-#            print('os_familt: %s' % self.facts['ansible_os_family'])
             # FIXME: eventually update to used collected_facts
             if (v == 'v6' and self.facts['ansible_os_family'] == 'RedHat' and
                     self.facts['ansible_distribution_version'].startswith('4.')):
