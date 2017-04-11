@@ -71,10 +71,7 @@ class HardwareCollector(BaseFactCollector):
                           'ansible_machine',
                           'ansible_distribution_version')
         filtered_collected_facts = {}
-        print(collected_facts)
         for key in collected_keys:
-            print('KEY: %s collected_facts.get(%s)=%s' %
-                  (key, key, collected_facts.get(key, None)))
             if key in collected_facts:
                 filtered_collected_facts[key] = collected_facts[key]
 

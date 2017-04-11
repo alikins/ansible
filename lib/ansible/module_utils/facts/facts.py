@@ -80,7 +80,6 @@ class Facts:
             self.get_platform_facts()
             # Example of returning new facts and updating self.facts with it -akl
 #            self.facts.update(Distribution(module).populate())
-            self.get_cmdline()
             self.get_public_ssh_host_keys()
 
     def populate(self):
@@ -150,20 +149,6 @@ class Facts:
         if machine_id:
             machine_id = machine_id.splitlines()[0]
             self.facts["machine_id"] = machine_id
-
-    def get_cmdline(self):
-        data = get_file_content('/proc/cmdline')
-        if data:
-            self.facts['cmdline'] = {}
-            try:
-                for piece in shlex.split(data):
-                    item = piece.split('=', 1)
-                    if len(item) == 1:
-                        self.facts['cmdline'][item[0]] = True
-                    else:
-                        self.facts['cmdline'][item[0]] = item[1]
-            except ValueError:
-                pass
 
     def get_public_ssh_host_keys(self):
         keytypes = ('dsa', 'rsa', 'ecdsa', 'ed25519')
