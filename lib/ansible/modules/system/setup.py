@@ -141,6 +141,7 @@ from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.local import LocalFactCollector
 from ansible.module_utils.facts.system.lsb import LSBFactCollector
 from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
+from ansible.module_utils.facts.system.platform import PlatformFactCollector
 from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
@@ -185,32 +186,6 @@ class OhaiCollector(WrapperCollector):
     facts_class = Ohai
 
 
-class TempFactCollector(WrapperCollector):
-    _fact_ids = set(['facts'])
-
-    facts_class = Facts
-
-    # kluge to compensate for 'Facts' adding 'ansible_' prefix itself
-    def __init__(self, module, collectors=None, namespace=None):
-        namespace = PrefixFactNamespace(namespace_name='temp_fact',
-                                        prefix='ansible_')
-        super(TempFactCollector, self).__init__(module,
-                                                collectors=collectors,
-                                                namespace=namespace)
-
-    def collect(self, collected_facts=None):
-        collected_facts = collected_facts or {}
-
-        collected_facts = {}
-        # WARNING: virtual.populate mutates cached_facts and returns a ref
-        #          so for now, pass in a copy()
-        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
-
-        facts_dict = facts_obj.populate()
-
-        return facts_dict
-
-
 def main():
     module = AnsibleModule(
         argument_spec=dict(
@@ -236,7 +211,7 @@ def main():
 
     # TODO: the ordering here is more or less arbitrary, except that it mimics the
     #       order facts.py used to collect these in.
-    all_collector_classes = [TempFactCollector,
+    all_collector_classes = [PlatformFactCollector,
                              DistributionFactCollector,
                              SelinuxFactCollector,
                              ApparmorFactCollector,
