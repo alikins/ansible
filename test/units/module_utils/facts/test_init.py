@@ -140,15 +140,6 @@ class TestInPlace(unittest.TestCase):
         Facts(mock_module, load_on_init=False)
         # FIXME: assert something
 
-    def test_facts_class_populate(self):
-        mock_module = self._mock_module()
-        facts_obj = Facts(mock_module)
-        res = facts_obj.populate()
-        self.assertIsInstance(res, dict)
-        self.assertIn('python_version', res)
-        # just assert it's not almost empty
-        self.assertGreater(len(res), 5)
-
 
 class TestCollectedFacts(unittest.TestCase):
     gather_subset = ['all', '!facter', '!ohai']
