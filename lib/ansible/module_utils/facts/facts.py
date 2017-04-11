@@ -4,7 +4,6 @@ __metaclass__ = type
 
 import platform
 import re
-import shlex
 import socket
 
 # from ansible.module_utils.facts.distribution import Distribution
@@ -80,7 +79,6 @@ class Facts:
             self.get_platform_facts()
             # Example of returning new facts and updating self.facts with it -akl
 #            self.facts.update(Distribution(module).populate())
-            self.get_public_ssh_host_keys()
 
     def populate(self):
         return self.facts
@@ -149,22 +147,3 @@ class Facts:
         if machine_id:
             machine_id = machine_id.splitlines()[0]
             self.facts["machine_id"] = machine_id
-
-    def get_public_ssh_host_keys(self):
-        keytypes = ('dsa', 'rsa', 'ecdsa', 'ed25519')
-
-        # list of directories to check for ssh keys
-        # used in the order listed here, the first one with keys is used
-        keydirs = ['/etc/ssh', '/etc/openssh', '/etc']
-
-        for keydir in keydirs:
-            for type_ in keytypes:
-                factname = 'ssh_host_key_%s_public' % type_
-                if factname in self.facts:
-                    # a previous keydir was already successful, stop looking
-                    # for keys
-                    return
-                key_filename = '%s/ssh_host_%s_key.pub' % (keydir, type_)
-                keydata = get_file_content(key_filename)
-                if keydata is not None:
-                    self.facts[factname] = keydata.split()[1]
