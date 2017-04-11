@@ -75,8 +75,8 @@ class HardwareCollector(BaseFactCollector):
             if key in collected_facts:
                 filtered_collected_facts[key] = collected_facts[key]
 
-        virtual_facts = Hardware(self.module, cached_facts=filtered_collected_facts)
+        hardware_facts = Hardware(self.module, cached_facts=filtered_collected_facts)
 
-        facts_dict = virtual_facts.populate()
+        facts_dict = hardware_facts.populate()
 
         return facts_dict

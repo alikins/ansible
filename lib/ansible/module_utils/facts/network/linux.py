@@ -57,6 +57,7 @@ class LinuxNetwork(Network):
             v6=[ip_path, '-6', 'route', 'get', '2404:6800:400a:800::1012']
         )
         interface = dict(v4={}, v6={})
+
         for v in 'v4', 'v6':
             # FIXME: eventually update to used collected_facts
             if (v == 'v6' and self.facts['ansible_os_family'] == 'RedHat' and
