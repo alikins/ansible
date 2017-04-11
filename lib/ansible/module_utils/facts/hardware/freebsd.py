@@ -27,20 +27,32 @@ class FreeBSDHardware(Hardware):
     DMESG_BOOT = '/var/run/dmesg.boot'
 
     def populate(self):
-        self.get_cpu_facts()
-        self.get_memory_facts()
-        self.get_dmi_facts()
-        self.get_device_facts()
+        hardware_facts = {}
+
+        cpu_facts = self.get_cpu_facts()
+        memory_facts = self.get_memory_facts()
+        dmi_facts = self.get_dmi_facts()
+        device_facts = self.get_device_facts()
+
+        mount_facts = {}
         try:
-            self.get_mount_facts()
+            mount_facts = self.get_mount_facts()
         except TimeoutError:
             pass
-        return self.facts
+
+        hardware_facts.update(cpu_facts)
+        hardware_facts.update(memory_facts)
+        hardware_facts.update(dmi_facts)
+        hardware_facts.update(device_facts)
+        hardware_facts.update(mount_facts)
+
+        return hardware_facts
 
     def get_cpu_facts(self):
-        self.facts['processor'] = []
+        cpu_facts = {}
+        cpu_facts['processor'] = []
         rc, out, err = self.module.run_command("/sbin/sysctl -n hw.ncpu")
-        self.facts['processor_count'] = out.strip()
+        cpu_facts['processor_count'] = out.strip()
 
         dmesg_boot = get_file_content(FreeBSDHardware.DMESG_BOOT)
         if not dmesg_boot:
@@ -48,11 +60,15 @@ class FreeBSDHardware(Hardware):
         for line in dmesg_boot.splitlines():
             if 'CPU:' in line:
                 cpu = re.sub(r'CPU:\s+', r"", line)
-                self.facts['processor'].append(cpu.strip())
+                cpu_facts['processor'].append(cpu.strip())
             if 'Logical CPUs per core' in line:
-                self.facts['processor_cores'] = line.split()[4]
+                cpu_facts['processor_cores'] = line.split()[4]
+
+        return cpu_facts
 
     def get_memory_facts(self):
+        memory_facts = {}
+
         rc, out, err = self.module.run_command("/sbin/sysctl vm.stats")
         for line in out.splitlines():
             data = line.split()
@@ -62,8 +78,8 @@ class FreeBSDHardware(Hardware):
                 pagecount = int(data[1])
             if 'vm.stats.vm.v_free_count' in line:
                 freecount = int(data[1])
-        self.facts['memtotal_mb'] = pagesize * pagecount // 1024 // 1024
-        self.facts['memfree_mb'] = pagesize * freecount // 1024 // 1024
+        memory_facts['memtotal_mb'] = pagesize * pagecount // 1024 // 1024
+        memory_facts['memfree_mb'] = pagesize * freecount // 1024 // 1024
         # Get swapinfo.  swapinfo output looks like:
         # Device          1M-blocks     Used    Avail Capacity
         # /dev/ada0p3        314368        0   314368     0%
@@ -74,12 +90,16 @@ class FreeBSDHardware(Hardware):
             lines.pop()
         data = lines[-1].split()
         if data[0] != 'Device':
-            self.facts['swaptotal_mb'] = int(data[1]) // 1024
-            self.facts['swapfree_mb'] = int(data[3]) // 1024
+            memory_facts['swaptotal_mb'] = int(data[1]) // 1024
+            memory_facts['swapfree_mb'] = int(data[3]) // 1024
+
+        return memory_facts
 
     @timeout()
     def get_mount_facts(self):
-        self.facts['mounts'] = []
+        mount_facts = {}
+
+        mount_facts['mounts'] = []
         fstab = get_file_content('/etc/fstab')
         if fstab:
             for line in fstab.splitlines():
@@ -87,7 +107,7 @@ class FreeBSDHardware(Hardware):
                     continue
                 fields = re.sub(r'\s+', ' ', line).split()
                 size_total, size_available = get_mount_size(fields[1])
-                self.facts['mounts'].append({
+                mount_facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],
                     'fstype': fields[2],
@@ -96,9 +116,13 @@ class FreeBSDHardware(Hardware):
                     'size_available': size_available
                 })
 
+        return mount_facts
+
     def get_device_facts(self):
+        device_facts = {}
+
         sysdir = '/dev'
-        self.facts['devices'] = {}
+        device_facts['devices'] = {}
         drives = re.compile('(ada?\d+|da\d+|a?cd\d+)')  # TODO: rc, disks, err = self.module.run_command("/sbin/sysctl kern.disks")
         slices = re.compile('(ada?\d+s\d+\w*|da\d+s\d+\w*)')
         if os.path.isdir(sysdir):
@@ -106,15 +130,19 @@ class FreeBSDHardware(Hardware):
             for device in dirlist:
                 d = drives.match(device)
                 if d:
-                    self.facts['devices'][d.group(1)] = []
+                    device_facts['devices'][d.group(1)] = []
                 s = slices.match(device)
                 if s:
-                    self.facts['devices'][d.group(1)].append(s.group(1))
+                    device_facts['devices'][d.group(1)].append(s.group(1))
+
+        return device_facts
 
     def get_dmi_facts(self):
         ''' learn dmi facts from system
 
         Use dmidecode executable if available'''
+
+        dmi_facts = {}
 
         # Fall back to using dmidecode, if available
         dmi_bin = self.module.get_bin_path('dmidecode')
@@ -133,12 +161,15 @@ class FreeBSDHardware(Hardware):
                 (rc, out, err) = self.module.run_command('%s -s %s' % (dmi_bin, v))
                 if rc == 0:
                     # Strip out commented lines (specific dmidecode output)
-                    self.facts[k] = ''.join([line for line in out.splitlines() if not line.startswith('#')])
+                    # FIXME: why add the fact and then test if it is json?
+                    dmi_facts[k] = ''.join([line for line in out.splitlines() if not line.startswith('#')])
                     try:
-                        _json.dumps(self.facts[k])
+                        _json.dumps(dmi_facts[k])
                     except UnicodeDecodeError:
-                        self.facts[k] = 'NA'
+                        dmi_facts[k] = 'NA'
                 else:
-                    self.facts[k] = 'NA'
+                    dmi_facts[k] = 'NA'
             else:
-                self.facts[k] = 'NA'
+                dmi_facts[k] = 'NA'
+
+        return dmi_facts
