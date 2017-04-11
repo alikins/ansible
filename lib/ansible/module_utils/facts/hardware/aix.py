@@ -20,15 +20,25 @@ class AIXHardware(Hardware):
     platform = 'AIX'
 
     def populate(self):
-        self.get_cpu_facts()
-        self.get_memory_facts()
-        self.get_dmi_facts()
-        self.get_vgs_facts()
-        self.get_mount_facts()
-        return self.facts
+        hardware_facts = {}
+
+        cpu_facts = self.get_cpu_facts()
+        memory_facts = self.get_memory_facts()
+        dmi_facts = self.get_dmi_facts()
+        vgs_facts = self.get_vgs_facts()
+        mount_facts = self.get_mount_facts()
+
+        hardware_facts.update(cpu_facts)
+        hardware_facts.update(memory_facts)
+        hardware_facts.update(dmi_facts)
+        hardware_facts.update(vgs_facts)
+        hardware_facts.update(mount_facts)
+
+        return hardware_facts
 
     def get_cpu_facts(self):
-        self.facts['processor'] = []
+        cpu_facts = {}
+        cpu_facts['processor'] = []
 
         rc, out, err = self.module.run_command("/usr/sbin/lsdev -Cc processor")
         if out:
@@ -41,19 +51,22 @@ class AIXHardware(Hardware):
                         cpudev = data[0]
 
                     i += 1
-            self.facts['processor_count'] = int(i)
+            cpu_facts['processor_count'] = int(i)
 
             rc, out, err = self.module.run_command("/usr/sbin/lsattr -El " + cpudev + " -a type")
 
             data = out.split(' ')
-            self.facts['processor'] = data[1]
+            cpu_facts['processor'] = data[1]
 
             rc, out, err = self.module.run_command("/usr/sbin/lsattr -El " + cpudev + " -a smt_threads")
 
             data = out.split(' ')
-            self.facts['processor_cores'] = int(data[1])
+            cpu_facts['processor_cores'] = int(data[1])
+
+        return cpu_facts
 
     def get_memory_facts(self):
+        memory_facts = {}
         pagesize = 4096
         rc, out, err = self.module.run_command("/usr/bin/vmstat -v")
         for line in out.splitlines():
@@ -62,8 +75,8 @@ class AIXHardware(Hardware):
                 pagecount = int(data[0])
             if 'free pages' in line:
                 freecount = int(data[0])
-        self.facts['memtotal_mb'] = pagesize * pagecount // 1024 // 1024
-        self.facts['memfree_mb'] = pagesize * freecount // 1024 // 1024
+        memory_facts['memtotal_mb'] = pagesize * pagecount // 1024 // 1024
+        memory_facts['memfree_mb'] = pagesize * freecount // 1024 // 1024
         # Get swapinfo.  swapinfo output looks like:
         # Device          1M-blocks     Used    Avail Capacity
         # /dev/ada0p3        314368        0   314368     0%
@@ -74,13 +87,17 @@ class AIXHardware(Hardware):
             data = lines[1].split()
             swaptotal_mb = int(data[0].rstrip('MB'))
             percused = int(data[1].rstrip('%'))
-            self.facts['swaptotal_mb'] = swaptotal_mb
-            self.facts['swapfree_mb'] = int(swaptotal_mb * (100 - percused) / 100)
+            memory_facts['swaptotal_mb'] = swaptotal_mb
+            memory_facts['swapfree_mb'] = int(swaptotal_mb * (100 - percused) / 100)
+
+        return memory_facts
 
     def get_dmi_facts(self):
+        dmi_facts = {}
+
         rc, out, err = self.module.run_command("/usr/sbin/lsattr -El sys0 -a fwversion")
         data = out.split()
-        self.facts['firmware_version'] = data[1].strip('IBM,')
+        dmi_facts['firmware_version'] = data[1].strip('IBM,')
         lsconf_path = self.module.get_bin_path("lsconf")
         if lsconf_path:
             rc, out, err = self.module.run_command(lsconf_path)
@@ -88,11 +105,12 @@ class AIXHardware(Hardware):
                 for line in out.splitlines():
                     data = line.split(':')
                     if 'Machine Serial Number' in line:
-                        self.facts['product_serial'] = data[1].strip()
+                        dmi_facts['product_serial'] = data[1].strip()
                     if 'LPAR Info' in line:
-                        self.facts['lpar_info'] = data[1].strip()
+                        dmi_facts['lpar_info'] = data[1].strip()
                     if 'System Model' in line:
-                        self.facts['product_name'] = data[1].strip()
+                        dmi_facts['product_name'] = data[1].strip()
+        return dmi_facts
 
     def get_vgs_facts(self):
         """
@@ -110,15 +128,16 @@ class AIXHardware(Hardware):
         hdisk106          active            999         599         200..00..00..199..200
         """
 
+        vgs_facts = {}
         lsvg_path = self.module.get_bin_path("lsvg")
         xargs_path = self.module.get_bin_path("xargs")
         cmd = "%s | %s %s -p" % (lsvg_path, xargs_path, lsvg_path)
         if lsvg_path and xargs_path:
             rc, out, err = self.module.run_command(cmd, use_unsafe_shell=True)
             if rc == 0 and out:
-                self.facts['vgs'] = {}
+                vgs_facts['vgs'] = {}
                 for m in re.finditer(r'(\S+):\n.*FREE DISTRIBUTION(\n(\S+)\s+(\w+)\s+(\d+)\s+(\d+).*)+', out):
-                    self.facts['vgs'][m.group(1)] = []
+                    vgs_facts['vgs'][m.group(1)] = []
                     pp_size = 0
                     cmd = "%s %s" % (lsvg_path, m.group(1))
                     rc, out, err = self.module.run_command(cmd)
@@ -131,10 +150,14 @@ class AIXHardware(Hardware):
                                        'free_pps': n.group(4),
                                        'pp_size': pp_size
                                        }
-                            self.facts['vgs'][m.group(1)].append(pv_info)
+                            vgs_facts['vgs'][m.group(1)].append(pv_info)
+
+        return vgs_facts
 
     def get_mount_facts(self):
-        self.facts['mounts'] = []
+        mount_facts = {}
+
+        mount_facts['mounts'] = []
         # AIX does not have mtab but mount command is only source of info (or to use
         # api calls to get same info)
         mount_path = self.module.get_bin_path('mount')
@@ -145,11 +168,11 @@ class AIXHardware(Hardware):
                 if len(fields) != 0 and fields[0] != 'node' and fields[0][0] != '-' and re.match('^/.*|^[a-zA-Z].*|^[0-9].*', fields[0]):
                     if re.match('^/', fields[0]):
                         # normal mount
-                        self.facts['mounts'].append({'mount': fields[1],
-                                                     'device': fields[0],
-                                                     'fstype': fields[2],
-                                                     'options': fields[6],
-                                                     'time': '%s %s %s' % (fields[3], fields[4], fields[5])})
+                        mount_facts['mounts'].append({'mount': fields[1],
+                                                      'device': fields[0],
+                                                      'fstype': fields[2],
+                                                      'options': fields[6],
+                                                      'time': '%s %s %s' % (fields[3], fields[4], fields[5])})
                     else:
                         # nfs or cifs based mount
                         # in case of nfs if no mount options are provided on command line
@@ -157,8 +180,9 @@ class AIXHardware(Hardware):
                         if len(fields) < 8:
                             fields.append("")
 
-                        self.facts['mounts'].append({'mount': fields[2],
-                                                     'device': '%s:%s' % (fields[0], fields[1]),
-                                                     'fstype': fields[3],
-                                                     'options': fields[7],
-                                                     'time': '%s %s %s' % (fields[4], fields[5], fields[6])})
+                        mount_facts['mounts'].append({'mount': fields[2],
+                                                      'device': '%s:%s' % (fields[0], fields[1]),
+                                                      'fstype': fields[3],
+                                                      'options': fields[7],
+                                                      'time': '%s %s %s' % (fields[4], fields[5], fields[6])})
+        return mount_facts
