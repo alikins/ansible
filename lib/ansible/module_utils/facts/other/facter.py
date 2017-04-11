@@ -32,6 +32,34 @@ class FacterFactCollector(BaseFactCollector):
                                                   collectors=collectors,
                                                   namespace=namespace)
 
+    def find_facter(self):
+        facter_path = self.module.get_bin_path('facter', opt_dirs=['/opt/puppetlabs/bin'])
+        cfacter_path = self.module.get_bin_path('cfacter', opt_dirs=['/opt/puppetlabs/bin'])
+
+        # Prefer to use cfacter if available
+        if cfacter_path is not None:
+            facter_path = cfacter_path
+
+        return facter_path
+
+    def run_facter(self, facter_path):
+        # if facter is installed, and we can use --json because
+        # ruby-json is ALSO installed, include facter data in the JSON
+        rc, out, err = self.module.run_command(facter_path + " --puppet --json")
+        return rc, out, err
+
+    def get_facter_output(self):
+        facter_path = self.find_facter()
+        if not facter_path:
+            return None
+
+        rc, out, err = self.run_facter(facter_path)
+
+        if rc != 0:
+            return None
+
+        return out
+
     def collect(self, collected_facts=None):
         # Note that this mirrors previous facter behavior, where there isnt
         # a 'ansible_facter' key in the main fact dict, but instead, 'facter_whatever'
@@ -51,34 +79,3 @@ class FacterFactCollector(BaseFactCollector):
             pass
 
         return facter_dict
-
-    def get_facter_output(self):
-        facter_path = self.find_facter()
-        if not facter_path:
-            return None
-
-        rc, out, err = self.run_facter(facter_path)
-
-        if rc != 0:
-            return None
-
-        return out
-
-    def find_facter(self):
-        facter_path = self.module.get_bin_path('facter', opt_dirs=['/opt/puppetlabs/bin'])
-        cfacter_path = self.module.get_bin_path('cfacter', opt_dirs=['/opt/puppetlabs/bin'])
-
-        # Prefer to use cfacter if available
-        if cfacter_path is not None:
-            facter_path = cfacter_path
-
-        if facter_path is None:
-            return
-
-        return facter_path
-
-    def run_facter(self, facter_path):
-        # if facter is installed, and we can use --json because
-        # ruby-json is ALSO installed, include facter data in the JSON
-        rc, out, err = self.module.run_command(facter_path + " --puppet --json")
-        return rc, out, err
