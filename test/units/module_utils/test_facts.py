@@ -462,11 +462,11 @@ class TestFactsLinuxHardwareGetMountFacts(unittest.TestCase):
         lh = hardware.linux.LinuxHardware(module=module, load_on_init=False)
 
         # Nothing returned, just self.facts modified as a side effect
-        lh.get_mount_facts()
-        self.assertIsInstance(lh.facts, dict)
-        self.assertIn('mounts', lh.facts)
-        self.assertIsInstance(lh.facts['mounts'], list)
-        self.assertIsInstance(lh.facts['mounts'][0], dict)
+        mount_facts = lh.get_mount_facts()
+        self.assertIsInstance(mount_facts, dict)
+        self.assertIn('mounts', mount_facts)
+        self.assertIsInstance(mount_facts['mounts'], list)
+        self.assertIsInstance(mount_facts['mounts'][0], dict)
 
     @patch('ansible.module_utils.facts.hardware.linux.get_file_content', return_value=MTAB)
     def test_get_mtab_entries(self, mock_get_file_content):
