@@ -112,6 +112,7 @@ class TestHardwareCollector(BaseFactsTest):
     valid_subsets = ['hardware']
     fact_namespace = 'ansible_hardware'
     collector_class = HardwareCollector
+    collected_facts = {'ansible_architecture': 'x86_64'}
 
 
 class TestNetworkCollector(BaseFactsTest):
