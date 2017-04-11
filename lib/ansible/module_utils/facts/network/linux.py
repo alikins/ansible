@@ -45,8 +45,6 @@ class LinuxNetwork(Network):
         network_facts['default_ipv6'] = default_ipv6
         network_facts['all_ipv4_addresses'] = ips['all_ipv4_addresses']
         network_facts['all_ipv6_addresses'] = ips['all_ipv6_addresses']
-        import pprint
-        print('NETWORK FACTS: %s' % pprint.pformat(network_facts))
         return network_facts
 
     def get_default_interfaces(self, ip_path):

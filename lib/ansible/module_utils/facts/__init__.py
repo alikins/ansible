@@ -171,7 +171,7 @@ class AnsibleFactCollector(BaseFactCollector):
 
         # valid_subsets = valid_subsets or cls.VALID_SUBSETS
         valid_subsets = valid_subsets or frozenset([])
-        print('valid_subsets: %s' % pprint.pformat(valid_subsets))
+        # print('valid_subsets: %s' % pprint.pformat(valid_subsets))
 
         # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
         id_collector_map = {}
@@ -186,12 +186,12 @@ class AnsibleFactCollector(BaseFactCollector):
         # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
         all_fact_subsets.update(id_collector_map)
 
-        print('all_fact_subsets: %s' % pprint.pformat(all_fact_subsets))
+        # print('all_fact_subsets: %s' % pprint.pformat(all_fact_subsets))
 
         # TODO: if we want to be picky about ordering, will need to avoid squashing into dicts
         all_valid_subsets = frozenset(all_fact_subsets.keys())
 
-        print('all_valid_subsets: %s' % pprint.pformat(all_valid_subsets))
+        # print('all_valid_subsets: %s' % pprint.pformat(all_valid_subsets))
 
         # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
         collector_names = get_collector_names(module,
@@ -199,7 +199,7 @@ class AnsibleFactCollector(BaseFactCollector):
                                               minimal_gather_subset=minimal_gather_subset,
                                               gather_subset=gather_subset)
 
-        print('collector_names: %s' % collector_names)
+        # print('collector_names: %s' % collector_names)
         collectors = []
         seen_collector_classes = []
         for collector_name in collector_names:
@@ -216,7 +216,7 @@ class AnsibleFactCollector(BaseFactCollector):
                 seen_collector_classes.append(collector_class)
 
         # import pprint
-        print('collectors: %s' % pprint.pformat(collectors))
+        # print('collectors: %s' % pprint.pformat(collectors))
         instance = cls(collectors=collectors,
                        gather_subset=gather_subset)
         return instance
@@ -238,7 +238,7 @@ class AnsibleFactCollector(BaseFactCollector):
             try:
                 # Note: this collects with namespaces, so collected_facts also includes namespaces
                 info_dict = collector.collect_with_namespace(collected_facts=collected_facts)
-                print('\nINFO_DICT(%s): %s' % (collector.__class__.__name__, pprint.pformat(info_dict)))
+                # print('\nINFO_DICT(%s): %s' % (collector.__class__.__name__, pprint.pformat(info_dict)))
             except Exception as e:
                 # FIXME: do fact collection exception warning/logging
                 sys.stderr.write(repr(e))
