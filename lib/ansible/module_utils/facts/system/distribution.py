@@ -297,6 +297,7 @@ class Distribution(object):
         netbsd_facts['distribution_major_version'] = platform_release.split('.')[0]
         return netbsd_facts
 
+    # TODO: FIXME: split distro file parsing into its own module or class
     def parse_distribution_file_Slackware(self, name, data, path):
         slackware_facts = {}
         if 'Slackware' not in data:
