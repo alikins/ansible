@@ -20,11 +20,18 @@ class DarwinHardware(Hardware):
     platform = 'Darwin'
 
     def populate(self):
+        hardware_facts = {}
+
         self.sysctl = get_sysctl(self.module, ['hw', 'machdep', 'kern'])
-        self.get_mac_facts()
-        self.get_cpu_facts()
-        self.get_memory_facts()
-        return self.facts
+        mac_facts = self.get_mac_facts()
+        cpu_facts = self.get_cpu_facts()
+        memory_facts = self.get_memory_facts()
+
+        hardware_facts.update(mac_facts)
+        hardware_facts.update(cpu_facts)
+        hardware_facts.update(memory_facts)
+
+        return hardware_facts
 
     def get_system_profile(self):
         rc, out, err = self.module.run_command(["/usr/sbin/system_profiler", "SPHardwareDataType"])
@@ -38,24 +45,34 @@ class DarwinHardware(Hardware):
         return system_profile
 
     def get_mac_facts(self):
+        mac_facts = {}
         rc, out, err = self.module.run_command("sysctl hw.model")
         if rc == 0:
-            self.facts['model'] = out.splitlines()[-1].split()[1]
-        self.facts['osversion'] = self.sysctl['kern.osversion']
-        self.facts['osrevision'] = self.sysctl['kern.osrevision']
+            mac_facts['model'] = out.splitlines()[-1].split()[1]
+        mac_facts['osversion'] = self.sysctl['kern.osversion']
+        mac_facts['osrevision'] = self.sysctl['kern.osrevision']
+
+        return mac_facts
 
     def get_cpu_facts(self):
+        cpu_facts = {}
         if 'machdep.cpu.brand_string' in self.sysctl:  # Intel
-            self.facts['processor'] = self.sysctl['machdep.cpu.brand_string']
-            self.facts['processor_cores'] = self.sysctl['machdep.cpu.core_count']
+            cpu_facts['processor'] = self.sysctl['machdep.cpu.brand_string']
+            cpu_facts['processor_cores'] = self.sysctl['machdep.cpu.core_count']
         else:  # PowerPC
             system_profile = self.get_system_profile()
-            self.facts['processor'] = '%s @ %s' % (system_profile['Processor Name'], system_profile['Processor Speed'])
-            self.facts['processor_cores'] = self.sysctl['hw.physicalcpu']
+            cpu_facts['processor'] = '%s @ %s' % (system_profile['Processor Name'], system_profile['Processor Speed'])
+            cpu_facts['processor_cores'] = self.sysctl['hw.physicalcpu']
+
+        return cpu_facts
 
     def get_memory_facts(self):
-        self.facts['memtotal_mb'] = int(self.sysctl['hw.memsize']) // 1024 // 1024
+        memory_facts = {}
+
+        memory_facts['memtotal_mb'] = int(self.sysctl['hw.memsize']) // 1024 // 1024
 
         rc, out, err = self.module.run_command("sysctl hw.usermem")
         if rc == 0:
-            self.facts['memfree_mb'] = int(out.splitlines()[-1].split()[1]) // 1024 // 1024
+            memory_facts['memfree_mb'] = int(out.splitlines()[-1].split()[1]) // 1024 // 1024
+
+        return memory_facts
