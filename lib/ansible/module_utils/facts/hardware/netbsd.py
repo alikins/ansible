@@ -27,33 +27,44 @@ class NetBSDHardware(Hardware):
     MEMORY_FACTS = ['MemTotal', 'SwapTotal', 'MemFree', 'SwapFree']
 
     def populate(self):
+        hardware_facts = {}
         self.sysctl = get_sysctl(self.module, ['machdep'])
-        self.get_cpu_facts()
-        self.get_memory_facts()
+        cpu_facts = self.get_cpu_facts()
+        memory_facts = self.get_memory_facts()
+
+        mount_facts = {}
         try:
-            self.get_mount_facts()
+            mount_facts = self.get_mount_facts()
         except TimeoutError:
             pass
-        self.get_dmi_facts()
-        return self.facts
+
+        dmi_facts = self.get_dmi_facts()
+
+        hardware_facts.update(cpu_facts)
+        hardware_facts.update(memory_facts)
+        hardware_facts.update(mount_facts)
+        hardware_facts.update(dmi_facts)
+
+        return hardware_facts
 
     def get_cpu_facts(self):
+        cpu_facts = {}
 
         i = 0
         physid = 0
         sockets = {}
         if not os.access("/proc/cpuinfo", os.R_OK):
-            return
-        self.facts['processor'] = []
+            return cpu_facts
+        cpu_facts['processor'] = []
         for line in get_file_lines("/proc/cpuinfo"):
             data = line.split(":", 1)
             key = data[0].strip()
             # model name is for Intel arch, Processor (mind the uppercase P)
             # works for some ARM devices, like the Sheevaplug.
             if key == 'model name' or key == 'Processor':
-                if 'processor' not in self.facts:
-                    self.facts['processor'] = []
-                self.facts['processor'].append(data[1].strip())
+                if 'processor' not in cpu_facts:
+                    cpu_facts['processor'] = []
+                cpu_facts['processor'].append(data[1].strip())
                 i += 1
             elif key == 'physical id':
                 physid = data[1].strip()
@@ -62,25 +73,32 @@ class NetBSDHardware(Hardware):
             elif key == 'cpu cores':
                 sockets[physid] = int(data[1].strip())
         if len(sockets) > 0:
-            self.facts['processor_count'] = len(sockets)
-            self.facts['processor_cores'] = reduce(lambda x, y: x + y, sockets.values())
+            cpu_facts['processor_count'] = len(sockets)
+            cpu_facts['processor_cores'] = reduce(lambda x, y: x + y, sockets.values())
         else:
-            self.facts['processor_count'] = i
-            self.facts['processor_cores'] = 'NA'
+            cpu_facts['processor_count'] = i
+            cpu_facts['processor_cores'] = 'NA'
+
+        return cpu_facts
 
     def get_memory_facts(self):
+        memory_facts = {}
         if not os.access("/proc/meminfo", os.R_OK):
-            return
+            return memory_facts
         for line in get_file_lines("/proc/meminfo"):
             data = line.split(":", 1)
             key = data[0]
             if key in NetBSDHardware.MEMORY_FACTS:
                 val = data[1].strip().split(' ')[0]
-                self.facts["%s_mb" % key.lower()] = int(val) // 1024
+                memory_facts["%s_mb" % key.lower()] = int(val) // 1024
+
+        return memory_facts
 
     @timeout()
     def get_mount_facts(self):
-        self.facts['mounts'] = []
+        mount_facts = {}
+
+        mount_facts['mounts'] = []
         fstab = get_file_content('/etc/fstab')
         if fstab:
             for line in fstab.splitlines():
@@ -88,7 +106,7 @@ class NetBSDHardware(Hardware):
                     continue
                 fields = re.sub(r'\s+', ' ', line).split()
                 size_total, size_available = get_mount_size(fields[1])
-                self.facts['mounts'].append({
+                mount_facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],
                     'fstype': fields[2],
@@ -96,8 +114,10 @@ class NetBSDHardware(Hardware):
                     'size_total': size_total,
                     'size_available': size_available
                 })
+        return mount_facts
 
     def get_dmi_facts(self):
+        dmi_facts = {}
         # We don't use dmidecode(1) here because:
         # - it would add dependency on an external package
         # - dmidecode(1) can only be ran as root
@@ -114,4 +134,6 @@ class NetBSDHardware(Hardware):
 
         for mib in sysctl_to_dmi:
             if mib in self.sysctl:
-                self.facts[sysctl_to_dmi[mib]] = self.sysctl[mib]
+                dmi_facts[sysctl_to_dmi[mib]] = self.sysctl[mib]
+
+        return dmi_facts
