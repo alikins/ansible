@@ -29,7 +29,6 @@ from units.mock.procenv import swap_stdin_and_argv
 from ansible.compat.tests.mock import patch
 
 # the module we are actually testing (sort of
-from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.system.distribution import Distribution
 
 # to generate the testcase data, you can use the script gen_distribution_version_testcase.py in hacking/tests
@@ -39,7 +38,7 @@ TESTSETS = [
             "centos",
             "7.2.1511",
             "Core"
-            ],
+        ],
         "input": {
             "/etc/redhat-release": "CentOS Linux release 7.2.1511 (Core) \n",
             "/etc/os-release": ("NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\n"
@@ -47,7 +46,7 @@ TESTSETS = [
                                 "HOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\n"
                                 "CENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\n"),
             "/etc/system-release": "CentOS Linux release 7.2.1511 (Core) \n"
-            },
+        },
         "name": "CentOS 7.2.1511",
         "result": {
             "distribution_release": "Core",
@@ -55,36 +54,36 @@ TESTSETS = [
             "distribution_major_version": "7",
             "os_family": "RedHat",
             "distribution_version": "7.2.1511"
-            }
-        },
+        }
+    },
     {
         "name": "CentOS 6.7",
         "platform.dist": [
             "centos",
             "6.7",
             "Final"
-            ],
+        ],
         "input": {
             "/etc/redhat-release": "CentOS release 6.7 (Final)\n",
             "/etc/lsb-release": ("LSB_VERSION=base-4.0-amd64:base-4.0-noarch:core-4.0-amd64:core-4.0-noarch:graphics-4.0-amd64:graphics-4.0-noarch:"
                                  "printing-4.0-amd64:printing-4.0-noarch\n"),
             "/etc/system-release": "CentOS release 6.7 (Final)\n"
-            },
+        },
         "result": {
             "distribution_release": "Final",
             "distribution": "CentOS",
             "distribution_major_version": "6",
             "os_family": "RedHat",
             "distribution_version": "6.7"
-            }
-        },
+        }
+    },
     {
         "name": "RedHat 7.2",
         "platform.dist": [
             "redhat",
             "7.2",
             "Maipo"
-            ],
+        ],
         "input": {
             "/etc/redhat-release": "Red Hat Enterprise Linux Server release 7.2 (Maipo)\n",
             "/etc/os-release": ("NAME=\"Red Hat Enterprise Linux Server\"\nVERSION=\"7.2 (Maipo)\"\nID=\"rhel\"\nID_LIKE=\"fedora\"\nVERSION_ID=\"7.2\"\n"
@@ -94,43 +93,43 @@ TESTSETS = [
                                 "REDHAT_BUGZILLA_PRODUCT_VERSION=7.2\nREDHAT_SUPPORT_PRODUCT=\"Red Hat Enterprise Linux\"\n"
                                 "REDHAT_SUPPORT_PRODUCT_VERSION=\"7.2\"\n"),
             "/etc/system-release": "Red Hat Enterprise Linux Server release 7.2 (Maipo)\n"
-            },
+        },
         "result": {
             "distribution_release": "Maipo",
             "distribution": "RedHat",
             "distribution_major_version": "7",
             "os_family": "RedHat",
             "distribution_version": "7.2"
-            }
-        },
+        }
+    },
     {
         "name": "RedHat 6.7",
         "platform.dist": [
             "redhat",
             "6.7",
             "Santiago"
-            ],
+        ],
         "input": {
             "/etc/redhat-release": "Red Hat Enterprise Linux Server release 6.7 (Santiago)\n",
             "/etc/lsb-release": ("LSB_VERSION=base-4.0-amd64:base-4.0-noarch:core-4.0-amd64:core-4.0-noarch:graphics-4.0-amd64:graphics-4.0-noarch:"
                                  "printing-4.0-amd64:printing-4.0-noarch\n"),
             "/etc/system-release": "Red Hat Enterprise Linux Server release 6.7 (Santiago)\n"
-            },
+        },
         "result": {
             "distribution_release": "Santiago",
             "distribution": "RedHat",
             "distribution_major_version": "6",
             "os_family": "RedHat",
             "distribution_version": "6.7"
-            }
-        },
+        }
+    },
     {
         "name": "Virtuozzo 7.3",
         "platform.dist": [
             "redhat",
             "7.3",
             ""
-            ],
+        ],
         "input": {
             "/etc/redhat-release": "Virtuozzo Linux release 7.3\n",
             "/etc/os-release": ("NAME=\"Virtuozzo\"\n"
@@ -144,17 +143,17 @@ TESTSETS = [
                                 "HOME_URL=\"http://www.virtuozzo.com\"\n"
                                 "BUG_REPORT_URL=\"https://bugs.openvz.org/\"\n"),
             "/etc/system-release": "Virtuozzo release 7.0.3 (640)\n"
-            },
+        },
         "result": {
             "distribution_release": "NA",
             "distribution": "Virtuozzo",
             "distribution_major_version": "7",
             "os_family": "RedHat",
             "distribution_version": "7.3"
-            }
-        },
+        }
+    },
     {
-        "name" : "openSUSE Leap 42.1",
+        "name": "openSUSE Leap 42.1",
         "input": {
             "/etc/os-release":
             """
@@ -169,7 +168,7 @@ BUG_REPORT_URL="https://bugs.opensuse.org"
 HOME_URL="https://opensuse.org/"
 ID_LIKE="suse"
             """,
-            "/etc/SuSE-release":"""
+            "/etc/SuSE-release": """
 openSUSE 42.1 (x86_64)
 VERSION = 42.1
 CODENAME = Malachite
@@ -233,7 +232,7 @@ ID_LIKE="suse"
     {  # see https://github.com/ansible/ansible/issues/14837
         "name": "SLES 11.3",
         "input": {
-            "/etc/SuSE-release":"""
+            "/etc/SuSE-release": """
 SUSE Linux Enterprise Server 11 (x86_64)
 VERSION = 11
 PATCHLEVEL = 3
@@ -251,12 +250,12 @@ PATCHLEVEL = 3
     {  # see https://github.com/ansible/ansible/issues/14837
         "name": "SLES 11.4",
         "input": {
-            "/etc/SuSE-release":"""
+            "/etc/SuSE-release": """
 SUSE Linux Enterprise Server 11 (x86_64)
 VERSION = 11
 PATCHLEVEL = 4
             """,
-            "/etc/os-release":"""
+            "/etc/os-release": """
 NAME="SLES"
 VERSION="11.4"
 VERSION_ID="11.4"
@@ -278,14 +277,14 @@ CPE_NAME="cpe:/o:suse:sles:11:4"
     {  # see https://github.com/ansible/ansible/issues/14837
         "name": "SLES 12 SP0",
         "input": {
-            "/etc/SuSE-release":"""
+            "/etc/SuSE-release": """
 SUSE Linux Enterprise Server 12 (x86_64)
 VERSION = 12
 PATCHLEVEL = 0
 # This file is deprecated and will be removed in a future service pack or release.
 # Please check /etc/os-release for details about this release.
             """,
-            "/etc/os-release":"""
+            "/etc/os-release": """
 NAME="SLES"
 VERSION="12"
 VERSION_ID="12"
@@ -308,14 +307,14 @@ CPE_NAME="cpe:/o:suse:sles:12"
     {  # see https://github.com/ansible/ansible/issues/14837
         "name": "SLES 12 SP1",
         "input": {
-            "/etc/SuSE-release":"""
+            "/etc/SuSE-release": """
 SUSE Linux Enterprise Server 12 (x86_64)
 VERSION = 12
 PATCHLEVEL = 0
 # This file is deprecated and will be removed in a future service pack or release.
 # Please check /etc/os-release for details about this release.
             """,
-            "/etc/os-release":"""
+            "/etc/os-release": """
 NAME="SLES"
 VERSION="12-SP1"
 VERSION_ID="12.1"
@@ -338,7 +337,7 @@ CPE_NAME="cpe:/o:suse:sles:12:sp1"
     {
         "name": "Debian stretch/sid",
         "input": {
-            "/etc/os-release":"""
+            "/etc/os-release": """
 PRETTY_NAME="Debian GNU/Linux stretch/sid"
 NAME="Debian GNU/Linux"
 ID=debian
@@ -346,12 +345,12 @@ HOME_URL="https://www.debian.org/"
 SUPPORT_URL="https://www.debian.org/support"
 BUG_REPORT_URL="https://bugs.debian.org/"
             """,
-            "/etc/debian_version":"""
+            "/etc/debian_version": """
             stretch/sid
             """,
         },
         "platform.dist": ('debian', 'stretch/sid', ''),
-        "result":{
+        "result": {
             "distribution": "Debian",
             "distribution_major_version": "stretch/sid",
             "distribution_release": "NA",
@@ -468,7 +467,7 @@ VERSION_ID="12.04"
     {
         'name': 'Core OS',
         'input': {
-            '/etc/os-release':"""
+            '/etc/os-release': """
 NAME=CoreOS
 ID=coreos
 VERSION=976.0.0
@@ -479,7 +478,7 @@ ANSI_COLOR="1;32"
 HOME_URL="https://coreos.com/"
 BUG_REPORT_URL="https://github.com/coreos/bugs/issues"
             """,
-            '/etc/lsb-release':"""DISTRIB_ID=CoreOS
+            '/etc/lsb-release': """DISTRIB_ID=CoreOS
 DISTRIB_RELEASE=976.0.0
 DISTRIB_CODENAME="Coeur Rouge"
 DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
@@ -487,7 +486,7 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
         },
         'platform.dist': ('', '', ''),
         'platform.release': '',
-        'result' : {
+        'result': {
             "distribution": "CoreOS",
             "distribution_major_version": "NA",
             "distribution_release": "NA",
@@ -686,19 +685,19 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
             "",
             "",
             ""
-            ],
+        ],
         "input": {
             "/etc/release": ("                             Oracle Solaris 11.3 X86\n  Copyright (c) 1983, 2015, Oracle and/or its affiliates.  "
-            "All rights reserved.\n                            Assembled 06 October 2015\n")
-            },
+                             "All rights reserved.\n                            Assembled 06 October 2015\n")
+        },
         "platform.system": "SunOS",
         "result": {
             "distribution_release": "Oracle Solaris 11.3 X86",
             "distribution": "Solaris",
             "os_family": "Solaris",
             "distribution_version": "11.3"
-            }
-        },
+        }
+    },
 
     {
         "name": "Solaris 10",
@@ -706,19 +705,19 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
             "",
             "",
             ""
-            ],
+        ],
         "input": {
             "/etc/release": ("                    Oracle Solaris 10 1/13 s10x_u11wos_24a X86\n  Copyright (c) 1983, 2013, Oracle and/or its affiliates. "
                              "All rights reserved.\n                            Assembled 17 January 2013\n")
-            },
+        },
         "platform.system": "SunOS",
         "result": {
             "distribution_release": "Oracle Solaris 10 1/13 s10x_u11wos_24a X86",
             "distribution": "Solaris",
             "os_family": "Solaris",
             "distribution_version": "10"
-            }
-        },
+        }
+    },
 
     {
         "name": "Fedora 22",
@@ -726,7 +725,7 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
             "fedora",
             "22",
             "Twenty Two"
-            ],
+        ],
         "input": {
             "/etc/redhat-release": "Fedora release 22 (Twenty Two)\n",
             "/etc/os-release": ("NAME=Fedora\nVERSION=\"22 (Twenty Two)\"\nID=fedora\nVERSION_ID=22\nPRETTY_NAME=\"Fedora 22 (Twenty Two)\"\n"
@@ -735,21 +734,21 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
                                 "REDHAT_SUPPORT_PRODUCT=\"Fedora\"\nREDHAT_SUPPORT_PRODUCT_VERSION=22\n"
                                 "PRIVACY_POLICY_URL=https://fedoraproject.org/wiki/Legal:PrivacyPolicy\n"),
             "/etc/system-release": "Fedora release 22 (Twenty Two)\n"
-            },
+        },
         "result": {
             "distribution_release": "Twenty Two",
             "distribution": "Fedora",
             "distribution_major_version": "22",
             "os_family": "RedHat",
             "distribution_version": "22"
-            }
-        },
+        }
+    },
     {
         "platform.dist": [
             "fedora",
             "25",
             "Rawhide"
-            ],
+        ],
         "input": {
             "/etc/redhat-release": "Fedora release 25 (Rawhide)\n",
             "/etc/os-release": ("NAME=Fedora\nVERSION=\"25 (Workstation Edition)\"\nID=fedora\nVERSION_ID=25\n"
@@ -759,7 +758,7 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
                                 "REDHAT_SUPPORT_PRODUCT_VERSION=rawhide\nPRIVACY_POLICY_URL=https://fedoraproject.org/wiki/Legal:PrivacyPolicy\n"
                                 "VARIANT=\"Workstation Edition\"\nVARIANT_ID=workstation\n"),
             "/etc/system-release": "Fedora release 25 (Rawhide)\n"
-            },
+        },
         "name": "Fedora 25",
         "result": {
             "distribution_release": "Rawhide",
@@ -767,8 +766,8 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
             "distribution_major_version": "25",
             "os_family": "RedHat",
             "distribution_version": "25"
-            }
-        },
+        }
+    },
 
     {
         "platform.dist": [
@@ -787,8 +786,8 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
             "distribution_major_version": "NA",
             "os_family": "SMGL",
             "distribution_version": "NA"
-            }
-        },
+        }
+    },
 
 ]
 
@@ -862,7 +861,6 @@ def _test_one_distribution(module, testcase):
     @patch('platform.system', mock_platform_system)
     @patch('platform.release', mock_platform_release)
     def get_facts(testcase):
-        #return Facts(module).populate()
         return Distribution(module).populate()
 
     generated_facts = get_facts(testcase)
