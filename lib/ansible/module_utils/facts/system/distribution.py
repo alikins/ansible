@@ -180,9 +180,6 @@ class DistributionFiles:
 
             parsed_dist_file, parsed_dist_file_facts = self._parse_dist_file(name, dist_file_content, path, dist_file_facts)
 
-            print('parsed_dist_file: %s' % parsed_dist_file)
-            print('parsed_dist_file_facts: %s' % parsed_dist_file_facts)
-
             dist_file_facts['distribution_file_parsed'] = parsed_dist_file
 
             # finally found the right os dist file and were able to parse it
@@ -446,12 +443,8 @@ class Distribution(object):
             distribution_files = DistributionFiles()
 
             dist_file_facts = distribution_files.process_dist_files()
-            print('res prociess_dist_files: %s' % dist_file_facts)
 
             distribution_facts.update(dist_file_facts)
-
-        import pprint
-        print('distribution_facts: %s' % pprint.pformat(distribution_facts))
 
         # FIXME: just return distribution_facts
         # self.facts.update(distribution_facts)
@@ -532,7 +525,7 @@ class Distribution(object):
         # print('platform.release: %s' % distribution_release)
         data = get_file_content('/etc/release').splitlines()[0]
 
-        print('get_file_content: data=%s' % data)
+        # print('get_file_content: data=%s' % data)
 
         if 'Solaris' in data:
             ora_prefix = ''
@@ -547,7 +540,7 @@ class Distribution(object):
         uname_v = get_uname_version(self.module)
         distribution_version = None
 
-        print('uname_v: %s' % uname_v)
+        # print('uname_v: %s' % uname_v)
 
         if 'SmartOS' in data:
             sunos_facts['distribution'] = 'SmartOS'
@@ -564,7 +557,7 @@ class Distribution(object):
             sunos_facts['distribution'] = 'Nexenta'
             distribution_version = data.split()[-1].lstrip('v')
 
-        print('sunos_facts: %s' % sunos_facts)
+        # print('sunos_facts: %s' % sunos_facts)
         if sunos_facts.get('distribution_release', '') in ('SmartOS', 'OpenIndiana', 'OmniOS', 'Nexenta'):
             sunos_facts['distribution_release'] = data.strip()
             if distribution_version is not None:
@@ -637,6 +630,6 @@ class DistributionFactCollector(BaseFactCollector):
         distribution = Distribution(module=self.module)
         distro_facts = distribution.populate()
 
-        import pprint
-        print('distro_facts: %s' % pprint.pformat(distro_facts))
+        # import pprint
+        # print('distro_facts: %s' % pprint.pformat(distro_facts))
         return distro_facts
