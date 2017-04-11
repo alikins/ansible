@@ -100,20 +100,23 @@ class NetBSDHardware(Hardware):
 
         mount_facts['mounts'] = []
         fstab = get_file_content('/etc/fstab')
-        if fstab:
-            for line in fstab.splitlines():
-                if line.startswith('#') or line.strip() == '':
-                    continue
-                fields = re.sub(r'\s+', ' ', line).split()
-                size_total, size_available = get_mount_size(fields[1])
-                mount_facts['mounts'].append({
-                    'mount': fields[1],
-                    'device': fields[0],
-                    'fstype': fields[2],
-                    'options': fields[3],
-                    'size_total': size_total,
-                    'size_available': size_available
-                })
+
+        if not fstab:
+            return mount_facts
+
+        for line in fstab.splitlines():
+            if line.startswith('#') or line.strip() == '':
+                continue
+            fields = re.sub(r'\s+', ' ', line).split()
+            size_total, size_available = get_mount_size(fields[1])
+            mount_facts['mounts'].append({
+                'mount': fields[1],
+                'device': fields[0],
+                'fstype': fields[2],
+                'options': fields[3],
+                'size_total': size_total,
+                'size_available': size_available
+            })
         return mount_facts
 
     def get_dmi_facts(self):
