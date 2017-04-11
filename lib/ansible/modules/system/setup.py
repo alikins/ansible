@@ -122,13 +122,8 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible.module_utils.facts import AnsibleFactCollector
 
-from ansible.module_utils.facts.facts import Facts
-
-from ansible.module_utils.facts.ohai import Ohai
-
-from ansible.module_utils.facts.collector import BaseFactCollector
-
 from ansible.module_utils.facts.other.facter import FacterFactCollector
+from ansible.module_utils.facts.other.ohai import OhaiFactCollector
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
@@ -154,37 +149,6 @@ from ansible.module_utils.facts.network.base import NetworkCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 
-from ansible.module_utils.facts.namespace import PrefixFactNamespace
-
-
-# TODO: remove these once we replace them
-class WrapperCollector(BaseFactCollector):
-    facts_class = None
-
-    def __init__(self, module, collectors=None, namespace=None):
-        super(WrapperCollector, self).__init__(collectors=collectors,
-                                               namespace=namespace)
-        self.module = module
-
-    def collect(self, collected_facts=None):
-        collected_facts = collected_facts or {}
-
-        # print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
-        # WARNING: virtual.populate mutates cached_facts and returns a ref
-        #          so for now, pass in a copy()
-        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
-
-        # print('facts_obj: %s' % facts_obj)
-        # print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
-        facts_dict = facts_obj.populate()
-
-        return facts_dict
-
-
-class OhaiCollector(WrapperCollector):
-    _fact_ids = set(['ohai'])
-    facts_class = Ohai
-
 
 def main():
     module = AnsibleModule(
@@ -204,10 +168,10 @@ def main():
     #       to collect nothing except for the below list
     # TODO: decide what '!all' means, I lean towards making it mean none, but likely needs
     #       some tweaking on how gather_subset operations are performed
-    minimal_gather_subset = frozenset(['apparmor', 'caps', 'date_time', 'distribution', 'dns',
-                                       'env', 'facts', 'fips', 'local', 'lsb',
-                                       'pkg_mgr', 'python', 'selinux', 'service_mgr',
-                                       'user'])
+    minimal_gather_subset = frozenset(['apparmor', 'caps', 'cmdline', 'date_time',
+                                       'distribution', 'dns', 'env', 'fips', 'local', 'lsb',
+                                       'pkg_mgr', 'platform', 'python', 'selinux',
+                                       'service_mgr', 'ssh_pub_keys', 'user'])
 
     # TODO: the ordering here is more or less arbitrary, except that it mimics the
     #       order facts.py used to collect these in.
@@ -231,7 +195,7 @@ def main():
                              HardwareCollector,
                              NetworkCollector,
                              VirtualCollector,
-#                             OhaiCollector,
+                             OhaiFactCollector,
                              FacterFactCollector]
 
     fact_collector = AnsibleFactCollector.from_gather_subset(module,

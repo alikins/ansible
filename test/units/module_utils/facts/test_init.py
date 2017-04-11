@@ -28,6 +28,7 @@ from ansible.compat.tests.mock import Mock
 
 from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.other.facter import FacterFactCollector
+from ansible.module_utils.facts.other.ohai import OhaiFactCollector
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
@@ -70,7 +71,7 @@ all_collector_classes = [PlatformFactCollector,
 #                         HardwareCollector,
                          NetworkCollector,
                          VirtualCollector,
-#                         OhaiCollector,
+                         OhaiFactCollector,
                          FacterFactCollector]
 
 
