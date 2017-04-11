@@ -16,35 +16,36 @@ class SunOSVirtual(Virtual):
     platform = 'SunOS'
 
     def get_virtual_facts(self):
-
+        virtual_facts = {}
         # Check if it's a zone
 
         zonename = self.module.get_bin_path('zonename')
         if zonename:
             rc, out, err = self.module.run_command(zonename)
             if rc == 0 and out.rstrip() != "global":
-                self.facts['container'] = 'zone'
+                virtual_facts['container'] = 'zone'
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
         if os.path.isdir('/.SUNWnative'):
-            self.facts['container'] = 'zone'
+            virtual_facts['container'] = 'zone'
         # If it's a zone check if we can detect if our global zone is itself virtualized.
         # Relies on the "guest tools" (e.g. vmware tools) to be installed
-        if 'container' in self.facts and self.facts['container'] == 'zone':
+
+        if 'container' in virtual_facts and virtual_facts['container'] == 'zone':
             modinfo = self.module.get_bin_path('modinfo')
             if modinfo:
                 rc, out, err = self.module.run_command(modinfo)
                 if rc == 0:
                     for line in out.splitlines():
                         if 'VMware' in line:
-                            self.facts['virtualization_type'] = 'vmware'
-                            self.facts['virtualization_role'] = 'guest'
+                            virtual_facts['virtualization_type'] = 'vmware'
+                            virtual_facts['virtualization_role'] = 'guest'
                         if 'VirtualBox' in line:
-                            self.facts['virtualization_type'] = 'virtualbox'
-                            self.facts['virtualization_role'] = 'guest'
+                            virtual_facts['virtualization_type'] = 'virtualbox'
+                            virtual_facts['virtualization_role'] = 'guest'
 
         if os.path.exists('/proc/vz'):
-            self.facts['virtualization_type'] = 'virtuozzo'
-            self.facts['virtualization_role'] = 'guest'
+            virtual_facts['virtualization_type'] = 'virtuozzo'
+            virtual_facts['virtualization_role'] = 'guest'
 
         # Detect domaining on Sparc hardware
         virtinfo = self.module.get_bin_path('virtinfo')
@@ -61,15 +62,15 @@ class SunOSVirtual(Virtual):
                     for line in out.splitlines():
                         fields = line.split('|')
                         if fields[0] == 'DOMAINROLE' and fields[1] == 'impl=LDoms':
-                            self.facts['virtualization_type'] = 'ldom'
-                            self.facts['virtualization_role'] = 'guest'
+                            virtual_facts['virtualization_type'] = 'ldom'
+                            virtual_facts['virtualization_role'] = 'guest'
                             hostfeatures = []
                             for field in fields[2:]:
                                 arg = field.split('=')
                                 if arg[1] == 'true':
                                     hostfeatures.append(arg[0])
                             if len(hostfeatures) > 0:
-                                self.facts['virtualization_role'] = 'host (' + ','.join(hostfeatures) + ')'
+                                virtual_facts['virtualization_role'] = 'host (' + ','.join(hostfeatures) + ')'
                 except ValueError:
                     pass
 
@@ -81,17 +82,19 @@ class SunOSVirtual(Virtual):
             if rc == 0:
                 for line in out.splitlines():
                     if 'VMware' in line:
-                        self.facts['virtualization_type'] = 'vmware'
-                        self.facts['virtualization_role'] = 'guest'
+                        virtual_facts['virtualization_type'] = 'vmware'
+                        virtual_facts['virtualization_role'] = 'guest'
                     elif 'Parallels' in line:
-                        self.facts['virtualization_type'] = 'parallels'
-                        self.facts['virtualization_role'] = 'guest'
+                        virtual_facts['virtualization_type'] = 'parallels'
+                        virtual_facts['virtualization_role'] = 'guest'
                     elif 'VirtualBox' in line:
-                        self.facts['virtualization_type'] = 'virtualbox'
-                        self.facts['virtualization_role'] = 'guest'
+                        virtual_facts['virtualization_type'] = 'virtualbox'
+                        virtual_facts['virtualization_role'] = 'guest'
                     elif 'HVM domU' in line:
-                        self.facts['virtualization_type'] = 'xen'
-                        self.facts['virtualization_role'] = 'guest'
+                        virtual_facts['virtualization_type'] = 'xen'
+                        virtual_facts['virtualization_role'] = 'guest'
                     elif 'KVM' in line:
-                        self.facts['virtualization_type'] = 'kvm'
-                        self.facts['virtualization_role'] = 'guest'
+                        virtual_facts['virtualization_type'] = 'kvm'
+                        virtual_facts['virtualization_role'] = 'guest'
+
+        return virtual_facts

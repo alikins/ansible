@@ -33,6 +33,7 @@ from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
 from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
+from ansible.module_utils.facts.system.distribution import DistributionFactCollector
 from ansible.module_utils.facts.system.dns import DnsFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.local import LocalFactCollector
@@ -44,12 +45,14 @@ from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollecto
 from ansible.module_utils.facts.system.user import UserFactCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
+from ansible.module_utils.facts.network.base import NetworkCollector
 
 # module under test
 from ansible.module_utils import facts
 
 
-all_collector_classes = [  # TempFactCollector,
+all_collector_classes = [# TempFactCollector,
+                         DistributionFactCollector,
                          SelinuxFactCollector,
                          ApparmorFactCollector,
                          SystemCapabilitiesFactCollector,
@@ -64,7 +67,7 @@ all_collector_classes = [  # TempFactCollector,
                          DnsFactCollector,
                          PythonFactCollector,
 #                         HardwareCollector,
-#                         NetworkCollector,
+                         NetworkCollector,
                          VirtualCollector,
 #                         OhaiCollector,
                          FacterFactCollector]
@@ -83,16 +86,30 @@ class TestInPlace(unittest.TestCase):
     def test(self):
         mock_module = self._mock_module()
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       all_collector_classes=all_collector_classes,
                                                                        gather_subset=['all'])
         res = fact_collector.collect()
         self.assertIsInstance(res, dict)
         self.assertIn('ansible_facts', res)
         # just assert it's not almost empty
-        self.assertGreater(len(res['ansible_facts']), 30)
+        # with run_command and get_file_content mock, many facts are empty, like network
+        self.assertGreater(len(res['ansible_facts']), 20)
+
+    def test_empty_all_collector_classes(self):
+        mock_module = self._mock_module()
+        fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       all_collector_classes=[],
+                                                                       gather_subset=['all'])
+        res = fact_collector.collect()
+        self.assertIsInstance(res, dict)
+        self.assertIn('ansible_facts', res)
+        # just assert it's not almost empty
+        self.assertLess(len(res['ansible_facts']), 3)
 
     def test_collect_ids(self):
         mock_module = self._mock_module()
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       all_collector_classes=all_collector_classes,
                                                                        gather_subset=['all'])
         res = fact_collector.collect_ids()
 
@@ -104,6 +121,7 @@ class TestInPlace(unittest.TestCase):
         mock_module.params['gather_subset'] = gather_subset
 
         fact_collector = facts.AnsibleFactCollector.from_gather_subset(mock_module,
+                                                                       all_collector_classes=all_collector_classes,
                                                                        gather_subset=gather_subset)
         res = fact_collector.collect_ids()
 
@@ -135,11 +153,12 @@ class TestCollectedFacts(unittest.TestCase):
     gather_subset = ['all', '!facter', '!ohai']
     min_fact_count = 30
     max_fact_count = 1000
-    expected_facts = ['ansible_cmdline', 'ansible_date_time',
+
+    # TODO: add ansible_cmdline, ansible_*_pubkey* back when TempFactCollector goes away
+    expected_facts = ['ansible_date_time',
                       'ansible_user_id', 'ansible_distribution',
                       'ansible_gather_subset', 'module_setup',
-                      'ansible_env',
-                      'ansible_ssh_host_key_rsa_public']
+                      'ansible_env']
     not_expected_facts = ['facter', 'ohai']
 
     def _mock_module(self):

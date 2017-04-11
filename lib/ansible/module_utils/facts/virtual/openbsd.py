@@ -19,14 +19,18 @@ class OpenBSDVirtual(Virtual, VirtualSysctlDetectionMixin):
     DMESG_BOOT = '/var/run/dmesg.boot'
 
     def get_virtual_facts(self):
+        virtual_facts = {}
 
         # Set empty values as default
-        self.facts['virtualization_type'] = ''
-        self.facts['virtualization_role'] = ''
+        virtual_facts['virtualization_type'] = ''
+        virtual_facts['virtualization_role'] = ''
 
-        self.detect_virt_product('hw.product')
-        if self.facts['virtualization_type'] == '':
-            self.detect_virt_vendor('hw.vendor')
+        virtual_product_facts = self.detect_virt_product('hw.product')
+        virtual_facts.update(virtual_product_facts)
+
+        if virtual_facts['virtualization_type'] == '':
+            virtual_vendor_facts = self.detect_virt_vendor('hw.vendor')
+            virtual_facts.update(virtual_vendor_facts)
 
         # Check the dmesg if vmm(4) attached, indicating the host is
         # capable of virtualization.
@@ -34,5 +38,7 @@ class OpenBSDVirtual(Virtual, VirtualSysctlDetectionMixin):
         for line in dmesg_boot.splitlines():
             match = re.match('^vmm0 at mainbus0: (SVM/RVI|VMX/EPT)$', line)
             if match:
-                self.facts['virtualization_type'] = 'vmm'
-                self.facts['virtualization_role'] = 'host'
+                virtual_facts['virtualization_type'] = 'vmm'
+                virtual_facts['virtualization_role'] = 'host'
+
+        return virtual_facts

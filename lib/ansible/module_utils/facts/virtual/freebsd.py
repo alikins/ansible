@@ -15,11 +15,13 @@ class FreeBSDVirtual(Virtual):
     platform = 'FreeBSD'
 
     def get_virtual_facts(self):
-
+        virtual_facts = {}
         # Set empty values as default
-        self.facts['virtualization_type'] = ''
-        self.facts['virtualization_role'] = ''
+        virtual_facts['virtualization_type'] = ''
+        virtual_facts['virtualization_role'] = ''
 
         if os.path.exists('/dev/xen/xenstore'):
-            self.facts['virtualization_type'] = 'xen'
-            self.facts['virtualization_role'] = 'guest'
+            virtual_facts['virtualization_type'] = 'xen'
+            virtual_facts['virtualization_role'] = 'guest'
+
+        return virtual_facts
