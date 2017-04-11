@@ -32,6 +32,9 @@ from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 
+from ansible.module_utils.facts.virtual.base import VirtualCollector
+from ansible.module_utils.facts.network.base import NetworkCollector
+
 
 class TestApparmorFacts(BaseFactsTest):
     __test__ = True
@@ -89,6 +92,14 @@ class TestCollectedFipsFacts(BaseFactsTest):
     valid_subsets = ['fips']
     fact_namespace = 'ansible_fips'
     collector_class = FipsFactCollector
+
+
+class TestNetworkCollector(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'network']
+    valid_subsets = ['network']
+    fact_namespace = 'ansible_network'
+    collector_class = NetworkCollector
 
 
 class TestPkgMgrFacts(BaseFactsTest):
@@ -203,3 +214,11 @@ class TestServiceMgrFacts(BaseFactsTest):
 #        print('facts_dict: %s' % facts_dict)
 #        self.assertIsInstance(facts_dict, dict)
 #        self.assertEqual(facts_dict['service_mgr'], 'sdfadf')
+
+
+class TestVirtualFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'virtual']
+    valid_subsets = ['virtual']
+    fact_namespace = 'ansible_virtual'
+    collector_class = VirtualCollector

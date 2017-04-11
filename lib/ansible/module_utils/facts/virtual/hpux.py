@@ -16,24 +16,27 @@ class HPUXVirtual(Virtual):
     platform = 'HP-UX'
 
     def get_virtual_facts(self):
+        virtual_facts = {}
         if os.path.exists('/usr/sbin/vecheck'):
             rc, out, err = self.module.run_command("/usr/sbin/vecheck")
             if rc == 0:
-                self.facts['virtualization_type'] = 'guest'
-                self.facts['virtualization_role'] = 'HP vPar'
+                virtual_facts['virtualization_type'] = 'guest'
+                virtual_facts['virtualization_role'] = 'HP vPar'
         if os.path.exists('/opt/hpvm/bin/hpvminfo'):
             rc, out, err = self.module.run_command("/opt/hpvm/bin/hpvminfo")
             if rc == 0 and re.match('.*Running.*HPVM vPar.*', out):
-                self.facts['virtualization_type'] = 'guest'
-                self.facts['virtualization_role'] = 'HPVM vPar'
+                virtual_facts['virtualization_type'] = 'guest'
+                virtual_facts['virtualization_role'] = 'HPVM vPar'
             elif rc == 0 and re.match('.*Running.*HPVM guest.*', out):
-                self.facts['virtualization_type'] = 'guest'
-                self.facts['virtualization_role'] = 'HPVM IVM'
+                virtual_facts['virtualization_type'] = 'guest'
+                virtual_facts['virtualization_role'] = 'HPVM IVM'
             elif rc == 0 and re.match('.*Running.*HPVM host.*', out):
-                self.facts['virtualization_type'] = 'host'
-                self.facts['virtualization_role'] = 'HPVM'
+                virtual_facts['virtualization_type'] = 'host'
+                virtual_facts['virtualization_role'] = 'HPVM'
         if os.path.exists('/usr/sbin/parstatus'):
             rc, out, err = self.module.run_command("/usr/sbin/parstatus")
             if rc == 0:
-                self.facts['virtualization_type'] = 'guest'
-                self.facts['virtualization_role'] = 'HP nPar'
+                virtual_facts['virtualization_type'] = 'guest'
+                virtual_facts['virtualization_role'] = 'HP nPar'
+
+        return virtual_facts
