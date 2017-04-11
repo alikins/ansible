@@ -25,6 +25,7 @@ from . base import BaseFactsTest
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
+from ansible.module_utils.facts.system.cmdline import CmdLineFactCollector
 from ansible.module_utils.facts.system.distribution import DistributionFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
@@ -64,6 +65,14 @@ class TestCapsFacts(BaseFactsTest):
         mock_module.get_bin_path = Mock(return_value='/usr/sbin/capsh')
         mock_module.run_command = Mock(return_value=(0, 'Current: =ep', ''))
         return mock_module
+
+
+class TestCmdLineFacts(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'cmdline']
+    valid_subsets = ['cmdline']
+    fact_namespace = 'ansible_cmdline'
+    collector_class = CmdLineFactCollector
 
 
 class TestDistributionFacts(BaseFactsTest):
