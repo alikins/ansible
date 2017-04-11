@@ -223,14 +223,22 @@ class AnsibleFactCollector(BaseFactCollector):
 
     # FIXME: best place to set gather_subset?
     def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
         facts_dict = {}
         facts_dict['ansible_facts'] = {}
 
         for collector in self.collectors:
             info_dict = {}
+
+            # shallow copy of the accumulated collected facts to pass to each collector
+            # for reference.
+            collected_facts.update(facts_dict['ansible_facts'].copy())
+
             try:
-                # Note: this collects with namespaces
+                # Note: this collects with namespaces, so collected_facts also includes namespaces
                 info_dict = collector.collect_with_namespace(collected_facts=collected_facts)
+                print('\nINFO_DICT(%s): %s' % (collector.__class__.__name__, pprint.pformat(info_dict)))
             except Exception as e:
                 # FIXME: do fact collection exception warning/logging
                 sys.stderr.write(repr(e))

@@ -183,6 +183,7 @@ class LinuxHardware(Hardware):
             if vendor_id_occurrence == model_name_occurrence:
                 i = vendor_id_occurrence
 
+        # FIXME
         if self.facts['architecture'] != 's390x':
             if xen_paravirt:
                 self.facts['processor_count'] = i
