@@ -46,8 +46,9 @@ from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.user import UserFactCollector
 
-from ansible.module_utils.facts.virtual.base import VirtualCollector
+from ansible.module_utils.facts.hardware.base import HardwareCollector
 from ansible.module_utils.facts.network.base import NetworkCollector
+from ansible.module_utils.facts.virtual.base import VirtualCollector
 
 # module under test
 from ansible.module_utils import facts
@@ -68,7 +69,8 @@ all_collector_classes = [PlatformFactCollector,
                          EnvFactCollector,
                          DnsFactCollector,
                          PythonFactCollector,
-#                         HardwareCollector,
+                         # FIXME: re-enable when hardware doesnt Hardware() doesnt munge self.facts
+                         #                         HardwareCollector
                          NetworkCollector,
                          VirtualCollector,
                          OhaiFactCollector,
