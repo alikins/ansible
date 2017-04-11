@@ -24,30 +24,39 @@ class HPUXHardware(Hardware):
     platform = 'HP-UX'
 
     def populate(self):
-        self.get_cpu_facts()
-        self.get_memory_facts()
-        self.get_hw_facts()
-        return self.facts
+        hardware_facts = {}
+
+        cpu_facts = self.get_cpu_facts()
+        memory_facts = self.get_memory_facts()
+        hw_facts = self.get_hw_facts()
+
+        hardware_facts.update(cpu_facts)
+        hardware_facts.update(memory_facts)
+        hardware_facts.update(hw_facts)
+
+        return hardware_facts
 
     def get_cpu_facts(self):
+        cpu_facts = {}
+
         if self.facts['ansible_architecture'] == '9000/800':
             rc, out, err = self.module.run_command("ioscan -FkCprocessor | wc -l", use_unsafe_shell=True)
-            self.facts['processor_count'] = int(out.strip())
+            cpu_facts['processor_count'] = int(out.strip())
         # Working with machinfo mess
         elif self.facts['ansible_architecture'] == 'ia64':
             if self.facts['ansible_distribution_version'] == "B.11.23":
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep 'Number of CPUs'", use_unsafe_shell=True)
-                self.facts['processor_count'] = int(out.strip().split('=')[1])
+                cpu_facts['processor_count'] = int(out.strip().split('=')[1])
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep 'processor family'", use_unsafe_shell=True)
-                self.facts['processor'] = re.search('.*(Intel.*)', out).groups()[0].strip()
+                cpu_facts['processor'] = re.search('.*(Intel.*)', out).groups()[0].strip()
                 rc, out, err = self.module.run_command("ioscan -FkCprocessor | wc -l", use_unsafe_shell=True)
-                self.facts['processor_cores'] = int(out.strip())
+                cpu_facts['processor_cores'] = int(out.strip())
             if self.facts['ansible_distribution_version'] == "B.11.31":
                 # if machinfo return cores strings release B.11.31 > 1204
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep core | wc -l", use_unsafe_shell=True)
                 if out.strip() == '0':
                     rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep Intel", use_unsafe_shell=True)
-                    self.facts['processor_count'] = int(out.strip().split(" ")[0])
+                    cpu_facts['processor_count'] = int(out.strip().split(" ")[0])
                     # If hyperthreading is active divide cores by 2
                     rc, out, err = self.module.run_command("/usr/sbin/psrset | grep LCPU", use_unsafe_shell=True)
                     data = re.sub(' +', ' ', out).strip().split(' ')
@@ -58,32 +67,36 @@ class HPUXHardware(Hardware):
                     rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep logical", use_unsafe_shell=True)
                     data = out.strip().split(" ")
                     if hyperthreading == 'ON':
-                        self.facts['processor_cores'] = int(data[0]) / 2
+                        cpu_facts['processor_cores'] = int(data[0]) / 2
                     else:
                         if len(data) == 1:
-                            self.facts['processor_cores'] = self.facts['processor_count']
+                            cpu_facts['processor_cores'] = self.facts['processor_count']
                         else:
-                            self.facts['processor_cores'] = int(data[0])
+                            cpu_facts['processor_cores'] = int(data[0])
                     rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep Intel |cut -d' ' -f4-", use_unsafe_shell=True)
-                    self.facts['processor'] = out.strip()
+                    cpu_facts['processor'] = out.strip()
                 else:
                     rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | egrep 'socket[s]?$' | tail -1", use_unsafe_shell=True)
-                    self.facts['processor_count'] = int(out.strip().split(" ")[0])
+                    cpu_facts['processor_count'] = int(out.strip().split(" ")[0])
                     rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep -e '[0-9] core' | tail -1", use_unsafe_shell=True)
-                    self.facts['processor_cores'] = int(out.strip().split(" ")[0])
+                    cpu_facts['processor_cores'] = int(out.strip().split(" ")[0])
                     rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep Intel", use_unsafe_shell=True)
-                    self.facts['processor'] = out.strip()
+                    cpu_facts['processor'] = out.strip()
+
+        return cpu_facts
 
     def get_memory_facts(self):
+        memory_facts = {}
+
         pagesize = 4096
         rc, out, err = self.module.run_command("/usr/bin/vmstat | tail -1", use_unsafe_shell=True)
         data = int(re.sub(' +', ' ', out).split(' ')[5].strip())
-        self.facts['memfree_mb'] = pagesize * data // 1024 // 1024
+        memory_facts['memfree_mb'] = pagesize * data // 1024 // 1024
         if self.facts['ansible_architecture'] == '9000/800':
             try:
                 rc, out, err = self.module.run_command("grep Physical /var/adm/syslog/syslog.log")
                 data = re.search('.*Physical: ([0-9]*) Kbytes.*', out).groups()[0].strip()
-                self.facts['memtotal_mb'] = int(data) // 1024
+                memory_facts['memtotal_mb'] = int(data) // 1024
             except AttributeError:
                 # For systems where memory details aren't sent to syslog or the log has rotated, use parsed
                 # adb output. Unfortunately /dev/kmem doesn't have world-read, so this only works as root.
@@ -92,28 +105,34 @@ class HPUXHardware(Hardware):
                                                            use_unsafe_shell=True)
                     if not err:
                         data = out
-                        self.facts['memtotal_mb'] = int(data) / 256
+                        memory_facts['memtotal_mb'] = int(data) / 256
         else:
             rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep Memory", use_unsafe_shell=True)
             data = re.search('Memory[\ :=]*([0-9]*).*MB.*', out).groups()[0].strip()
-            self.facts['memtotal_mb'] = int(data)
+            memory_facts['memtotal_mb'] = int(data)
         rc, out, err = self.module.run_command("/usr/sbin/swapinfo -m -d -f -q")
-        self.facts['swaptotal_mb'] = int(out.strip())
+        memory_facts['swaptotal_mb'] = int(out.strip())
         rc, out, err = self.module.run_command("/usr/sbin/swapinfo -m -d -f | egrep '^dev|^fs'", use_unsafe_shell=True)
         swap = 0
         for line in out.strip().splitlines():
             swap += int(re.sub(' +', ' ', line).split(' ')[3].strip())
-        self.facts['swapfree_mb'] = swap
+        memory_facts['swapfree_mb'] = swap
+
+        return memory_facts
 
     def get_hw_facts(self):
+        hw_facts = {}
+
         rc, out, err = self.module.run_command("model")
-        self.facts['model'] = out.strip()
+        hw_facts['model'] = out.strip()
         if self.facts['ansible_architecture'] == 'ia64':
             separator = ':'
             if self.facts['ansible_distribution_version'] == "B.11.23":
                 separator = '='
             rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo |grep -i 'Firmware revision' | grep -v BMC", use_unsafe_shell=True)
-            self.facts['firmware_version'] = out.split(separator)[1].strip()
+            hw_facts['firmware_version'] = out.split(separator)[1].strip()
             rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo |grep -i 'Machine serial number' ", use_unsafe_shell=True)
             if rc == 0 and out:
-                self.facts['product_serial'] = out.split(separator)[1].strip()
+                hw_facts['product_serial'] = out.split(separator)[1].strip()
+
+        return hw_facts
