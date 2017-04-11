@@ -30,19 +30,24 @@ class LinuxNetwork(Network):
     }
 
     def populate(self):
+        # FIXME: remove munging of self.facts
+        network_facts = {}
         ip_path = self.module.get_bin_path('ip')
         if ip_path is None:
-            return self.facts
+            return network_facts
         default_ipv4, default_ipv6 = self.get_default_interfaces(ip_path)
         interfaces, ips = self.get_interfaces_info(ip_path, default_ipv4, default_ipv6)
-        self.facts['interfaces'] = interfaces.keys()
+        # self.facts['interfaces'] = interfaces.keys()
+        network_facts['interfaces'] = interfaces.keys()
         for iface in interfaces:
-            self.facts[iface] = interfaces[iface]
-        self.facts['default_ipv4'] = default_ipv4
-        self.facts['default_ipv6'] = default_ipv6
-        self.facts['all_ipv4_addresses'] = ips['all_ipv4_addresses']
-        self.facts['all_ipv6_addresses'] = ips['all_ipv6_addresses']
-        return self.facts
+            network_facts[iface] = interfaces[iface]
+        network_facts['default_ipv4'] = default_ipv4
+        network_facts['default_ipv6'] = default_ipv6
+        network_facts['all_ipv4_addresses'] = ips['all_ipv4_addresses']
+        network_facts['all_ipv6_addresses'] = ips['all_ipv6_addresses']
+        import pprint
+        print('NETWORK FACTS: %s' % pprint.pformat(network_facts))
+        return network_facts
 
     def get_default_interfaces(self, ip_path):
         # Use the commands:
@@ -55,8 +60,12 @@ class LinuxNetwork(Network):
         )
         interface = dict(v4={}, v6={})
         for v in 'v4', 'v6':
-            if (v == 'v6' and self.facts['os_family'] == 'RedHat' and
-                    self.facts['distribution_version'].startswith('4.')):
+#            import pprint
+#            print('self.facts=%s' % pprint.pformat(self.facts))
+#            print('os_familt: %s' % self.facts['ansible_os_family'])
+            # FIXME: eventually update to used collected_facts
+            if (v == 'v6' and self.facts['ansible_os_family'] == 'RedHat' and
+                    self.facts['ansible_distribution_version'].startswith('4.')):
                 continue
             if v == 'v6' and not socket.has_ipv6:
                 continue

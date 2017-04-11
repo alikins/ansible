@@ -8,6 +8,8 @@ from ansible.module_utils.six import PY3
 
 from ansible.module_utils.facts.facts import Facts
 
+from ansible.module_utils.facts.collector import BaseFactCollector
+
 
 class Hardware(Facts):
     """
@@ -44,3 +46,40 @@ class Hardware(Facts):
 
     def populate(self):
         return self.facts
+
+
+class HardwareCollector(BaseFactCollector):
+    _fact_ids = set(['hardware',
+                     'processor',
+                     'processor_cores',
+                     'processor_count',
+                     # TODO: mounts isnt exactly hardware
+                     'mounts',
+                     'devices',
+                     'virtualization_type', 'virtualization_role'])
+
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        # Virtual isnt update to not munge self.facts yet, so just pass in the facts it
+        # needs
+
+        # facts from other modules that we need to pass to Hardware
+        # FIXME: this can be removed once Hardware stops return self.facts
+        collected_keys = ('ansible_processor',
+                          'ansible_architecture',
+                          'ansible_machine',
+                          'ansible_distribution_version')
+        filtered_collected_facts = {}
+        print(collected_facts)
+        for key in collected_keys:
+            print('KEY: %s collected_facts.get(%s)=%s' %
+                  (key, key, collected_facts.get(key, None)))
+            if key in collected_facts:
+                filtered_collected_facts[key] = collected_facts[key]
+
+        virtual_facts = Hardware(self.module, cached_facts=filtered_collected_facts)
+
+        facts_dict = virtual_facts.populate()
+
+        return facts_dict
