@@ -32,6 +32,7 @@ from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
+from ansible.module_utils.facts.system.ssh_pub_keys import SshPubKeyFactCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 from ansible.module_utils.facts.network.base import NetworkCollector
@@ -232,6 +233,14 @@ class TestServiceMgrFacts(BaseFactsTest):
 #        print('facts_dict: %s' % facts_dict)
 #        self.assertIsInstance(facts_dict, dict)
 #        self.assertEqual(facts_dict['service_mgr'], 'sdfadf')
+
+
+class TestSshPubKeyFactCollector(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'ssh_pub_keys']
+    valid_subsets = ['ssh_pub_keys']
+    fact_namespace = 'ansible_ssh_pub_leys'
+    collector_class = SshPubKeyFactCollector
 
 
 class TestVirtualFacts(BaseFactsTest):
