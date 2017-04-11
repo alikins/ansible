@@ -30,6 +30,7 @@ from ansible.module_utils.facts.system.distribution import DistributionFactColle
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
+from ansible.module_utils.facts.system.platform import PlatformFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.ssh_pub_keys import SshPubKeyFactCollector
@@ -127,6 +128,14 @@ class TestPkgMgrFacts(BaseFactsTest):
     valid_subsets = ['pkg_mgr']
     fact_namespace = 'ansible_pkgmgr'
     collector_class = PkgMgrFactCollector
+
+
+class TestPlatformFactCollector(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'platform']
+    valid_subsets = ['platform']
+    fact_namespace = 'ansible_platform'
+    collector_class = PlatformFactCollector
 
 
 class TestSelinuxFacts(BaseFactsTest):
