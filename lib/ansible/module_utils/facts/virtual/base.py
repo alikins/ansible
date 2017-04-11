@@ -58,24 +58,16 @@ class Virtual(Facts):
         else:
             return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
+    # FIXME: just here for existing tests cases till they are updated
     def populate(self):
-        # FIXME: kluge around virtual fact stuff munges self.facts
-        self.get_virtual_facts()
-
-        # now just return the facts from this module, not any passed in via collected_facts
-        virtual_fact_keys = ('virtualization_type',
-                             'virtualization_role',
-                             'container')
-        virtual_facts = {}
-        for key in virtual_fact_keys:
-            if key in self.facts:
-                virtual_facts[key] = self.facts[key]
+        virtual_facts = self.get_virtual_facts()
 
         return virtual_facts
 
     def get_virtual_facts(self):
-        self.facts['virtualization_type'] = ''
-        self.facts['virtualization_role'] = ''
+        virtual_facts = {'virtualization_type': '',
+                         'virtualization_role': ''}
+        return virtual_facts
 
 
 class VirtualCollector(BaseFactCollector):
@@ -89,6 +81,6 @@ class VirtualCollector(BaseFactCollector):
         # needs
         virtual_facts = Virtual(self.module, cached_facts=collected_facts.copy())
 
-        facts_dict = virtual_facts.populate()
+        facts_dict = virtual_facts.get_virtual_facts()
 
         return facts_dict
