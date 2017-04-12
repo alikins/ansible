@@ -69,7 +69,6 @@ from ansible.module_utils.facts import timeout
 # FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
 # FIXME: decouple from 'module'
 # FIXME: make sure get_collector_names returns a useful ordering
-# TODO: method of AnsibleFactCollector ?
 # TODO: may need some form of AnsibleFactNameResolver
 # NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
 # def get_all_facts(module):
@@ -138,6 +137,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     # valid_subsets = valid_subsets or cls.VALID_SUBSETS
     valid_subsets = valid_subsets or frozenset([])
+    # import pprint
     # print('valid_subsets: %s' % pprint.pformat(valid_subsets))
 
     # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
@@ -181,20 +181,3 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
             seen_collector_classes.append(collector_class)
 
     return selected_collector_classes
-
-
-# Allowed fact subset for gather_subset options and what classes they use
-# Note: have to define this at the bottom as it references classes defined earlier in this file -akl
-
-# This map could be thought of as a fact name resolver, where we map
-# some fact identifier (currently just the couple of gather_subset types) to the classes
-# that provide it. -akl
-
-# TODO: build this up semi dynamically
-
-# This is the main entry point for facts.py. This is the only method from this module
-# called directly from setup.py module.
-# FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
-#        'gather_timeout', 'filter' instead of passing those are args or oblique ds
-#        module is passed in and self.module.misc_AnsibleModule_methods
-#        are used, so hard to decouple.
