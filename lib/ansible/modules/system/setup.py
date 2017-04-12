@@ -116,11 +116,16 @@ EXAMPLES = """
 # Display facts from Windows hosts with custom facts stored in C(C:\\custom_facts).
 # ansible windows -m setup -a "fact_path='c:\\custom_facts'"
 """
+import sys
 
 # import module snippets
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible.module_utils.facts import AnsibleFactCollector
+# TODO: mv to facts/base.py ?
+from ansible.module_utils import facts
+
+from ansible.module_utils.facts.collector import BaseFactCollector, CollectorMetaDataCollector
+
 
 from ansible.module_utils.facts.other.facter import FacterFactCollector
 from ansible.module_utils.facts.other.ohai import OhaiFactCollector
@@ -148,6 +153,93 @@ from ansible.module_utils.facts.hardware.base import HardwareCollector
 from ansible.module_utils.facts.network.base import NetworkCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
+
+
+# TODO: build this up semi dynamically
+
+# This is the main entry point for setup.py facts.py.
+# FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
+#        'gather_timeout', 'filter' instead of passing those are args or oblique ds
+#        module is passed in and self.module.misc_AnsibleModule_methods
+#        are used, so hard to decouple.
+
+class AnsibleFactCollector(BaseFactCollector):
+    '''A FactCollector that returns results under 'ansible_facts' top level key.
+
+       Has a 'from_gather_subset() constructor that populates collectors based on a
+       gather_subset specifier.'''
+
+    def __init__(self, collectors=None, namespace=None):
+        # namespace = PrefixFactNamespace(namespace_name='ansible',
+        #                                prefix='ansible_')
+        # self.VALID_SUBSETS = frozenset(self.FACT_SUBSETS.keys())
+
+        super(AnsibleFactCollector, self).__init__('ansible_facts',
+                                                   collectors=collectors,
+                                                   namespace=namespace)
+
+    @classmethod
+    def from_collector_classes(cls, collector_classes, module, gather_subset=None):
+        '''Create an instance from a list of collectors and gather_subset spec.
+
+        This creates the passed in collector_classes and a CollectorMetaDataCollector
+        to report the gather_subset as a fact.'''
+
+        collectors = []
+        for collector_class in collector_classes:
+            collector_obj = collector_class(module)
+            collectors.append(collector_obj)
+
+        # Add a collector that knows what gather_subset we used so it it can provide a fact
+        collector_meta_data_collector = \
+            CollectorMetaDataCollector(module,
+                                       gather_subset=gather_subset)
+        collectors.append(collector_meta_data_collector)
+
+        instance = cls(collectors=collectors)
+        return instance
+
+    # FIXME: best place to set gather_subset?
+    def collect(self, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        facts_dict = {}
+        facts_dict['ansible_facts'] = {}
+
+        for collector in self.collectors:
+            info_dict = {}
+
+            # shallow copy of the accumulated collected facts to pass to each collector
+            # for reference.
+            collected_facts.update(facts_dict['ansible_facts'].copy())
+
+            try:
+                # Note: this collects with namespaces, so collected_facts also includes namespaces
+                info_dict = collector.collect_with_namespace(collected_facts=collected_facts)
+                # print('\nINFO_DICT(%s): %s' % (collector.__class__.__name__, pprint.pformat(info_dict)))
+            except Exception as e:
+                # FIXME: do fact collection exception warning/logging
+                sys.stderr.write(repr(e))
+                sys.stderr.write('\n')
+
+                raise
+
+            # NOTE: If we want complicated fact dict merging, this is where it would hook in
+            facts_dict['ansible_facts'].update(info_dict)
+
+        # FIXME: kluge, not really sure where the best place to do this would be.
+        # GatherSubsetFactCollector added to collector_classes?
+        #facts_dict['ansible_facts']['blorp_ansible_gather_subset'] = self.gather_subset
+
+        # FIXME: double kluge, seems like 'setup.py' should do this?
+        #        (so we can distinquish facts collected by running setup.py and facts potentially
+        #         collected by invoking a FactsCollector() directly ?)
+        #        also, this fact name doesnt follow namespace
+        facts_dict['ansible_facts']['blorp_module_setup'] = True
+
+        # TODO: this may be best place to apply fact 'filters' as well. They
+        #       are currently ignored -akl
+        return facts_dict
 
 
 def main():
@@ -198,17 +290,17 @@ def main():
                              OhaiFactCollector,
                              FacterFactCollector]
 
-    fact_collector = AnsibleFactCollector.from_gather_subset(module,
-                                                             all_collector_classes=all_collector_classes,
-                                                             minimal_gather_subset=minimal_gather_subset,
-                                                             gather_subset=gather_subset,
-                                                             gather_timeout=gather_timeout)
+    collector_classes = \
+        facts.collector_classes_from_gather_subset(
+            all_collector_classes=all_collector_classes,
+            minimal_gather_subset=minimal_gather_subset,
+            gather_subset=gather_subset,
+            gather_timeout=gather_timeout)
 
-    facts_dict = {'gather_subset': gather_subset}
+    fact_collector = \
+        AnsibleFactCollector.from_collector_classes(collector_classes, module, gather_subset)
 
-    data = fact_collector.collect()
-
-    facts_dict.update(data)
+    facts_dict = fact_collector.collect()
 
     module.exit_json(**facts_dict)
 
