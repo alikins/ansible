@@ -32,13 +32,16 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class LocalFactCollector(BaseFactCollector):
     _fact_ids = set(['local'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         local_facts = {}
         local_facts['local'] = {}
 
+        if not module:
+            return local_facts
+
         # NOTE: -> _has_local_facts()
         #      or better, a local_facts iterator that is empty if there is no fact_path/etc -kl
-        fact_path = self.module.params.get('fact_path', None)
+        fact_path = module.params.get('fact_path', None)
 
         # NOTE: pretty much any unwrapped os.path.* is a PITA to unittest -akl
         if not fact_path or not os.path.exists(fact_path):
@@ -54,7 +57,7 @@ class LocalFactCollector(BaseFactCollector):
                 # if that fails read it with ConfigParser
                 # if that fails, skip it
                 try:
-                    rc, out, err = self.module.run_command(fn)
+                    rc, out, err = module.run_command(fn)
                 except UnicodeError:
                     fact = 'error loading fact - output of running %s was not utf-8' % fn
                     local[fact_base] = fact

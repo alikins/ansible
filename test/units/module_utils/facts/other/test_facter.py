@@ -205,8 +205,8 @@ class TestFacterCollector(BaseFactsTest):
         # bogus json
         mock_get_facter_output.return_value = '{'
 
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect()
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect(module=module)
 
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict, {})
@@ -218,8 +218,8 @@ class TestFacterCollector(BaseFactsTest):
         # bogus json
         mock_run_facter.return_value = (1, '{}', '')
 
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect()
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect(module=module)
 
         self.assertIsInstance(facts_dict, dict)
 

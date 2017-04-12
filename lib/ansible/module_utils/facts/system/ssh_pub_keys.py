@@ -29,7 +29,7 @@ class SshPubKeyFactCollector(BaseFactCollector):
                      'ssh_host_key_ecdsa_public',
                      'ssh_host_key_ed25519_public'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         ssh_pub_key_facts = {}
         keytypes = ('dsa', 'rsa', 'ecdsa', 'ed25519')
 

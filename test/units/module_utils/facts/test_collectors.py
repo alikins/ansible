@@ -149,8 +149,8 @@ class TestSelinuxFacts(BaseFactsTest):
     def test_no_selinux(self):
         with patch('ansible.module_utils.facts.system.selinux.HAVE_SELINUX', False):
             module = self._mock_module()
-            fact_collector = self.collector_class(module=module)
-            facts_dict = fact_collector.collect()
+            fact_collector = self.collector_class()
+            facts_dict = fact_collector.collect(module=module)
             self.assertIsInstance(facts_dict, dict)
             self.assertFalse(facts_dict['selinux'])
             return facts_dict
@@ -171,8 +171,8 @@ class TestServiceMgrFacts(BaseFactsTest):
         # should fallback to 'service'
         module = self._mock_module()
         module.run_command = Mock(return_value=(1, '', 'wat'))
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect()
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect(module=module)
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict['service_mgr'], 'service')
 
@@ -182,8 +182,8 @@ class TestServiceMgrFacts(BaseFactsTest):
         # should end up return 'sys11'
         module = self._mock_module()
         module.run_command = Mock(return_value=(0, '/sbin/sys11', ''))
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect()
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect(module=module)
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict['service_mgr'], 'sys11')
 
@@ -195,8 +195,9 @@ class TestServiceMgrFacts(BaseFactsTest):
         module.run_command = Mock(return_value=(1, '', ''))
         collected_facts = {'distribution': 'clowncar',
                            'system': 'ClownCarOS'}
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect(collected_facts=collected_facts)
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect(module=module,
+                                            collected_facts=collected_facts)
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict['service_mgr'], 'service')
 

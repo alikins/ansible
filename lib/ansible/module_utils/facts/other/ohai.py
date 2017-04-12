@@ -29,36 +29,37 @@ class OhaiFactCollector(BaseFactCollector):
 
     _fact_ids = set(['ohai'])
 
-    def __init__(self, module, collectors=None, namespace=None):
+    def __init__(self, collectors=None, namespace=None):
         namespace = PrefixFactNamespace(namespace_name='ohai',
                                         prefix='ohai_')
-        super(OhaiFactCollector, self).__init__(module,
-                                                collectors=collectors,
+        super(OhaiFactCollector, self).__init__(collectors=collectors,
                                                 namespace=namespace)
 
-    def find_ohai(self):
-        ohai_path = self.module.get_bin_path('ohai')
+    def find_ohai(self, module):
+        ohai_path = module.get_bin_path('ohai')
         return ohai_path
 
-    def run_ohai(self, ohai_path):
-        rc, out, err = self.module.run_command(ohai_path)
+    def run_ohai(self, module, ohai_path,):
+        rc, out, err = module.run_command(ohai_path)
         return rc, out, err
 
-    def get_ohai_output(self):
-        ohai_path = self.find_ohai()
+    def get_ohai_output(self, module):
+        ohai_path = self.find_ohai(module)
         if not ohai_path:
             return None
 
-        rc, out, err = self.run_ohai(ohai_path)
+        rc, out, err = self.run_ohai(module, ohai_path)
         if rc != 0:
             return None
 
         return out
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         ohai_facts = {}
+        if not module:
+            return ohai_facts
 
-        ohai_output = self.get_ohai_output()
+        ohai_output = self.get_ohai_output(module)
 
         if ohai_output is None:
             return ohai_facts

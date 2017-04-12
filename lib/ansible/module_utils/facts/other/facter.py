@@ -25,16 +25,15 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class FacterFactCollector(BaseFactCollector):
     _fact_ids = set(['facter'])
 
-    def __init__(self, module, collectors=None, namespace=None):
+    def __init__(self, collectors=None, namespace=None):
         namespace = PrefixFactNamespace(namespace_name='facter',
                                         prefix='facter_')
-        super(FacterFactCollector, self).__init__(module,
-                                                  collectors=collectors,
+        super(FacterFactCollector, self).__init__(collectors=collectors,
                                                   namespace=namespace)
 
-    def find_facter(self):
-        facter_path = self.module.get_bin_path('facter', opt_dirs=['/opt/puppetlabs/bin'])
-        cfacter_path = self.module.get_bin_path('cfacter', opt_dirs=['/opt/puppetlabs/bin'])
+    def find_facter(self, module):
+        facter_path = module.get_bin_path('facter', opt_dirs=['/opt/puppetlabs/bin'])
+        cfacter_path = module.get_bin_path('cfacter', opt_dirs=['/opt/puppetlabs/bin'])
 
         # Prefer to use cfacter if available
         if cfacter_path is not None:
@@ -42,31 +41,34 @@ class FacterFactCollector(BaseFactCollector):
 
         return facter_path
 
-    def run_facter(self, facter_path):
+    def run_facter(self, module, facter_path):
         # if facter is installed, and we can use --json because
         # ruby-json is ALSO installed, include facter data in the JSON
-        rc, out, err = self.module.run_command(facter_path + " --puppet --json")
+        rc, out, err = module.run_command(facter_path + " --puppet --json")
         return rc, out, err
 
-    def get_facter_output(self):
-        facter_path = self.find_facter()
+    def get_facter_output(self, module):
+        facter_path = self.find_facter(module)
         if not facter_path:
             return None
 
-        rc, out, err = self.run_facter(facter_path)
+        rc, out, err = self.run_facter(module, facter_path)
 
         if rc != 0:
             return None
 
         return out
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         # Note that this mirrors previous facter behavior, where there isnt
         # a 'ansible_facter' key in the main fact dict, but instead, 'facter_whatever'
         # items are added to the main dict.
         facter_dict = {}
 
-        facter_output = self.get_facter_output()
+        if not module:
+            return facter_dict
+
+        facter_output = self.get_facter_output(module)
 
         # TODO: if we fail, should we add a empty facter key or nothing?
         if facter_output is None:

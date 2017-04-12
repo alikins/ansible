@@ -37,7 +37,7 @@ class PlatformFactCollector(BaseFactCollector):
                      'python_version',
                      'machine_id'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         platform_facts = {}
         # Platform
         # platform.system() can be Linux, Darwin, Java, or Windows
@@ -86,14 +86,14 @@ class PlatformFactCollector(BaseFactCollector):
             # NOTE: in general, the various 'get_bin_path(); data=run_command()' could be split to methods/classes for providing info
             #        one to get the raw data, another to parse it into useful chunks
             #        then both are easy to mock for testing -akl
-            getconf_bin = self.module.get_bin_path('getconf')
+            getconf_bin = module.get_bin_path('getconf')
             if getconf_bin:
-                rc, out, err = self.module.run_command([getconf_bin, 'MACHINE_ARCHITECTURE'])
+                rc, out, err = module.run_command([getconf_bin, 'MACHINE_ARCHITECTURE'])
                 data = out.splitlines()
                 platform_facts['architecture'] = data[0]
             else:
-                bootinfo_bin = self.module.get_bin_path('bootinfo')
-                rc, out, err = self.module.run_command([bootinfo_bin, '-p'])
+                bootinfo_bin = module.get_bin_path('bootinfo')
+                rc, out, err = module.run_command([bootinfo_bin, '-p'])
                 data = out.splitlines()
                 platform_facts['architecture'] = data[0]
         elif platform_facts['system'] == 'OpenBSD':

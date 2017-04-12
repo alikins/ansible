@@ -39,9 +39,9 @@ if platform.system() != 'SunOS':
 class ServiceMgrFactCollector(BaseFactCollector):
     _fact_ids = set(['service_mgr'])
 
-    def is_systemd_managed(self):
+    def is_systemd_managed(self, module):
         # tools must be installed
-        if self.module.get_bin_path('systemctl'):
+        if module.get_bin_path('systemctl'):
 
             # this should show if systemd is the boot init system, if checking init faild to mark as systemd
             # these mirror systemd's own sd_boot test http://www.freedesktop.org/software/systemd/man/sd_booted.html
@@ -50,9 +50,12 @@ class ServiceMgrFactCollector(BaseFactCollector):
                     return True
         return False
 
-    def collect(self, collected_facts=None):
-        # FIXME: no self
+    def collect(self, module=None, collected_facts=None):
         facts_dict = {}
+
+        if not module:
+            return facts_dict
+
         collected_facts = collected_facts or {}
         service_mgr_name = None
 
@@ -73,7 +76,7 @@ class ServiceMgrFactCollector(BaseFactCollector):
             # FIXME: return code isnt checked
             # FIXME: if stdout is empty string, odd things
             # FIXME: other code seems to think we could get proc_1 == None past this point
-            rc, proc_1, err = self.module.run_command("ps -p 1 -o comm|tail -n 1", use_unsafe_shell=True)
+            rc, proc_1, err = module.run_command("ps -p 1 -o comm|tail -n 1", use_unsafe_shell=True)
             # If the output of the command starts with what looks like a PID, then the 'ps' command
             # probably didn't work the way we wanted, probably because it's busybox
             if re.match(r' *[0-9]+ ', proc_1):
@@ -118,9 +121,9 @@ class ServiceMgrFactCollector(BaseFactCollector):
             service_mgr_name = 'openwrt_init'
         elif collected_facts.get('system') == 'Linux':
             # FIXME: mv is_systemd_managed
-            if self.is_systemd_managed():
+            if self.is_systemd_managed(module=module):
                 service_mgr_name = 'systemd'
-            elif self.module.get_bin_path('initctl') and os.path.exists("/etc/init/"):
+            elif module.get_bin_path('initctl') and os.path.exists("/etc/init/"):
                 service_mgr_name = 'upstart'
             elif os.path.exists('/sbin/openrc'):
                 service_mgr_name = 'openrc'

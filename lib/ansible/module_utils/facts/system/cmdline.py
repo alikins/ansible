@@ -26,7 +26,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class CmdLineFactCollector(BaseFactCollector):
     _fact_ids = set(['cmdline'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         cmdline_facts = {}
 
         data = get_file_content('/proc/cmdline')
