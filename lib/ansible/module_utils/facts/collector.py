@@ -106,6 +106,19 @@ class BaseFactCollector:
         return id_set
 
 
+class CollectorMetaDataCollector(BaseFactCollector):
+    '''Collector that provides a facts with the gather_subset metadata.'''
+
+    _fact_ids = set(['gather_subset'])
+
+    def __init__(self, module=None, collectors=None, namespace=None, gather_subset=None):
+        super(CollectorMetaDataCollector, self).__init__(module, collectors, namespace)
+        self.gather_subset = gather_subset
+
+    def collect(self, collected_facts=None):
+        return {'gather_subset': self.gather_subset}
+
+
 class WrapperCollector(BaseFactCollector):
     facts_class = None
 
