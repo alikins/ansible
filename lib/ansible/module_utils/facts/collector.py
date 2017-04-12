@@ -15,7 +15,7 @@ from ansible.module_utils.facts.namespace import PrefixFactNamespace
 class BaseFactCollector:
     _fact_ids = set([])
 
-    def __init__(self, module=None, collectors=None, namespace=None):
+    def __init__(self, collectors=None, namespace=None):
         '''Base class for things that collect facts.
 
         'collectors' is an optional list of other FactCollectors for composing.'''
@@ -27,9 +27,6 @@ class BaseFactCollector:
                                                           prefix='ansible_')
 
         self.fact_ids = self._fact_ids or set([])
-
-        # HEADSUP can be None...
-        self.module = module
 
     def _transform_name(self, key_name):
         if self.namespace:
@@ -53,14 +50,14 @@ class BaseFactCollector:
     # TODO/MAYBE: rename to 'collect' and add 'collect_without_namespace'
     # TODO: this could also add a top level direct with namespace (for ex, 'ansible_facts'
     #       for normal case, or 'whatever_some_other_facts' for others based on self.namespace
-    def collect_with_namespace(self, collected_facts=None):
+    def collect_with_namespace(self, module=None, collected_facts=None):
         # collect, then transform the key names if needed
-        facts_dict = self.collect(collected_facts=collected_facts)
+        facts_dict = self.collect(module=module, collected_facts=collected_facts)
         if self.namespace:
             facts_dict = self._transform_dict_keys(facts_dict)
         return facts_dict
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         '''do the fact collection
 
         'collected_facts' is a object (a dict, likely) that holds all previously
@@ -111,36 +108,9 @@ class CollectorMetaDataCollector(BaseFactCollector):
 
     _fact_ids = set(['gather_subset'])
 
-    def __init__(self, module=None, collectors=None, namespace=None, gather_subset=None):
-        super(CollectorMetaDataCollector, self).__init__(module, collectors, namespace)
+    def __init__(self, collectors=None, namespace=None, gather_subset=None):
+        super(CollectorMetaDataCollector, self).__init__(collectors, namespace)
         self.gather_subset = gather_subset
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         return {'gather_subset': self.gather_subset}
-
-
-class WrapperCollector(BaseFactCollector):
-    facts_class = None
-
-    def __init__(self, module=None, collectors=None, namespace=None):
-        super(WrapperCollector, self).__init__(collectors=collectors,
-                                               namespace=namespace)
-        self.module = module
-
-    def collect(self, collected_facts=None):
-        collected_facts = collected_facts or {}
-
-        # print('self.facts_class: %s %s' % (self.facts_class, self.__class__.__name__))
-
-        # WARNING: virtual.populate mutates cached_facts and returns a ref
-        #          so for now, pass in a copy()
-        facts_obj = self.facts_class(self.module, cached_facts=collected_facts.copy())
-
-        # print('facts_obj: %s' % facts_obj)
-        # print('self.facts_class.__subclasses__: %s' % self.facts_class.__subclasses__())
-        facts_dict = facts_obj.populate()
-
-        if self.namespace:
-            facts_dict = self._transform_dict_keys(facts_dict)
-
-        return facts_dict

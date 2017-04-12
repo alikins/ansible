@@ -621,10 +621,13 @@ class DistributionFactCollector(BaseFactCollector):
                      'distribution_release',
                      'distribution_major_version'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
+        facts_dict = {}
+        if not module:
+            return facts_dict
 
-        distribution = Distribution(module=self.module)
+        distribution = Distribution(module=module)
         distro_facts = distribution.populate()
 
         # import pprint

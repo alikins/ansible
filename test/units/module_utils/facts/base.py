@@ -47,14 +47,15 @@ class BaseFactsTest(unittest.TestCase):
 
     def test_collect(self):
         module = self._mock_module()
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect(collected_facts=self.collected_facts)
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect(module=module, collected_facts=self.collected_facts)
         self.assertIsInstance(facts_dict, dict)
         return facts_dict
 
     def test_collect_with_namespace(self):
         module = self._mock_module()
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect_with_namespace(collected_facts=self.collected_facts)
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect_with_namespace(module=module,
+                                                           collected_facts=self.collected_facts)
         self.assertIsInstance(facts_dict, dict)
         return facts_dict

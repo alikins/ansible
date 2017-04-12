@@ -30,7 +30,7 @@ class UserFactCollector(BaseFactCollector):
                      'real_user_id', 'effective_user_id',
                      'effective_group_ids'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         user_facts = {}
 
         user_facts['user_id'] = getpass.getuser()

@@ -35,7 +35,7 @@ SELINUX_MODE_DICT = {1: 'enforcing',
 class SelinuxFactCollector(BaseFactCollector):
     _fact_ids = set(['selinux'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         facts_dict = {}
         selinux_facts = {}
 

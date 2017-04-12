@@ -54,7 +54,7 @@ PKG_MGRS = [{'path': '/usr/bin/yum', 'name': 'yum'},
 class PkgMgrFactCollector(BaseFactCollector):
     _fact_ids = set(['pkg_mgr'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         facts_dict = {}
         collected_facts = collected_facts or {}
 
