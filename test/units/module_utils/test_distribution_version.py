@@ -29,7 +29,7 @@ from units.mock.procenv import swap_stdin_and_argv
 from ansible.compat.tests.mock import patch
 
 # the module we are actually testing (sort of
-from ansible.module_utils.facts.system.distribution import Distribution
+from ansible.module_utils.facts.system.distribution import Distribution, DistributionFactCollector
 
 # to generate the testcase data, you can use the script gen_distribution_version_testcase.py in hacking/tests
 TESTSETS = [
@@ -587,6 +587,7 @@ DISTRIB_DESCRIPTION="CoreOS 976.0.0 (Coeur Rouge)"
             "",
             ""
         ],
+#        "platform.release": 'OmniOS',
         "input": {
             "/etc/release": (
                 "  OmniOS v11 r151012\n  Copyright 2014 OmniTI Computer Consulting, Inc. All rights reserved.\n  Use is subject to license terms.\n\n"
@@ -853,6 +854,9 @@ def _test_one_distribution(module, testcase):
     def mock_platform_release():
         return testcase.get('platform.release', '')
 
+    def mock_platform_version():
+        return testcase.get('platform.version', '')
+
     @patch('ansible.module_utils.facts.system.distribution.get_file_content', mock_get_file_content)
     @patch('ansible.module_utils.facts.system.distribution.get_uname_version', mock_get_uname_version)
     @patch('os.path.exists', mock_path_exists)
@@ -860,8 +864,12 @@ def _test_one_distribution(module, testcase):
     @patch('platform.dist', lambda: testcase['platform.dist'])
     @patch('platform.system', mock_platform_system)
     @patch('platform.release', mock_platform_release)
+    @patch('platform.version', mock_platform_version)
     def get_facts(testcase):
-        return Distribution(module).populate()
+        distro_collector = DistributionFactCollector()
+        res = distro_collector.collect(module)
+        return res
+        #return Distribution(module).populate()
 
     generated_facts = get_facts(testcase)
 
