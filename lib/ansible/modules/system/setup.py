@@ -172,32 +172,10 @@ class AnsibleFactCollector(BaseFactCollector):
     def __init__(self, collectors=None, namespace=None):
         # namespace = PrefixFactNamespace(namespace_name='ansible',
         #                                prefix='ansible_')
-        # self.VALID_SUBSETS = frozenset(self.FACT_SUBSETS.keys())
 
         super(AnsibleFactCollector, self).__init__(collectors=collectors,
                                                    namespace=namespace)
 
-    @classmethod
-    def from_collector_classes(cls, collector_classes, gather_subset=None):
-        '''Create an instance from a list of collectors and gather_subset spec.
-
-        This creates the passed in collector_classes and a CollectorMetaDataCollector
-        to report the gather_subset as a fact.'''
-
-        collectors = []
-        for collector_class in collector_classes:
-            collector_obj = collector_class()
-            collectors.append(collector_obj)
-
-        # Add a collector that knows what gather_subset we used so it it can provide a fact
-        collector_meta_data_collector = \
-            CollectorMetaDataCollector(gather_subset=gather_subset)
-        collectors.append(collector_meta_data_collector)
-
-        instance = cls(collectors=collectors)
-        return instance
-
-    # FIXME: best place to set gather_subset?
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
 
@@ -212,6 +190,8 @@ class AnsibleFactCollector(BaseFactCollector):
             collected_facts.update(facts_dict['ansible_facts'].copy())
 
             try:
+
+                # print('\n about to collect %s for module %s' % (collector.__class__.__name__, module))
                 # Note: this collects with namespaces, so collected_facts also includes namespaces
                 info_dict = collector.collect_with_namespace(module=module,
                                                              collected_facts=collected_facts)
@@ -293,6 +273,8 @@ def main():
             gather_subset=gather_subset,
             gather_timeout=gather_timeout)
 
+    # print('collector_classes: %s' % pprint.pformat(collector_classes))
+
     collectors = []
     for collector_class in collector_classes:
         collector_obj = collector_class()
@@ -303,10 +285,12 @@ def main():
         CollectorMetaDataCollector(gather_subset=gather_subset)
     collectors.append(collector_meta_data_collector)
 
+    # print('collectors: %s' % pprint.pformat(collectors))
+
     fact_collector = \
         AnsibleFactCollector(collectors=collectors)
 
-    facts_dict = fact_collector.collect()
+    facts_dict = fact_collector.collect(module=module)
 
     module.exit_json(**facts_dict)
 
