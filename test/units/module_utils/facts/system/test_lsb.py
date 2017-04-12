@@ -65,8 +65,8 @@ class TestLSBFacts(BaseFactsTest):
 
     def test_lsb_release_bin(self):
         module = self._mock_module()
-        fact_collector = self.collector_class(module=module)
-        facts_dict = fact_collector.collect()
+        fact_collector = self.collector_class()
+        facts_dict = fact_collector.collect(module=module)
 
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict['lsb']['release'], '25')
@@ -82,8 +82,8 @@ class TestLSBFacts(BaseFactsTest):
                    return_value=True):
             with patch('ansible.module_utils.facts.system.lsb.get_file_lines',
                        return_value=etc_lsb_release_ubuntu14.splitlines()):
-                fact_collector = self.collector_class(module=module)
-                facts_dict = fact_collector.collect()
+                fact_collector = self.collector_class()
+                facts_dict = fact_collector.collect(module=module)
 
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict['lsb']['release'], '14.04')
@@ -98,8 +98,8 @@ class TestLSBFacts(BaseFactsTest):
                    return_value=True):
             with patch('ansible.module_utils.facts.system.lsb.get_file_lines',
                        return_value=etc_lsb_release_no_decimal.splitlines()):
-                fact_collector = self.collector_class(module=module)
-                facts_dict = fact_collector.collect()
+                fact_collector = self.collector_class()
+                facts_dict = fact_collector.collect(module=module)
 
         self.assertIsInstance(facts_dict, dict)
         self.assertEqual(facts_dict['lsb']['release'], '11')

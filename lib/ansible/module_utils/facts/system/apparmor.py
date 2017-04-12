@@ -25,7 +25,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class ApparmorFactCollector(BaseFactCollector):
     _fact_ids = set(['apparmor'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         facts_dict = {}
         apparmor_facts = {}
         if os.path.exists('/sys/kernel/security/apparmor'):

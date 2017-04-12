@@ -74,12 +74,12 @@ class VirtualCollector(BaseFactCollector):
     _fact_ids = set(['virtual',
                      'virtualization_type', 'virtualization_role'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
 
         # Virtual isnt update to not munge self.facts yet, so just pass in the facts it
         # needs
-        virtual_facts = Virtual(self.module, cached_facts=collected_facts.copy())
+        virtual_facts = Virtual(module, cached_facts=collected_facts.copy())
 
         facts_dict = virtual_facts.get_virtual_facts()
 

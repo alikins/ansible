@@ -26,13 +26,13 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class LSBFactCollector(BaseFactCollector):
     _fact_ids = set(['lsb'])
 
-    def _lsb_release_bin(self, lsb_path):
+    def _lsb_release_bin(self, lsb_path, module):
         lsb_facts = {}
 
         if not lsb_path:
             return lsb_facts
 
-        rc, out, err = self.module.run_command([lsb_path, "-a"], errors='surrogate_then_replace')
+        rc, out, err = module.run_command([lsb_path, "-a"], errors='surrogate_then_replace')
         if rc != 0:
             return lsb_facts
 
@@ -74,15 +74,19 @@ class LSBFactCollector(BaseFactCollector):
 
         return lsb_facts
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         facts_dict = {}
         lsb_facts = {}
 
-        lsb_path = self.module.get_bin_path('lsb_release')
+        if not module:
+            return facts_dict
+
+        lsb_path = module.get_bin_path('lsb_release')
 
         # try the 'lsb_release' script first
         if lsb_path:
-            lsb_facts = self._lsb_release_bin(lsb_path)
+            lsb_facts = self._lsb_release_bin(lsb_path,
+                                              module=module)
 
         # no lsb_release, try looking in /etc/lsb-release
         if not lsb_facts:

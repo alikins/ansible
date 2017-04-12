@@ -26,14 +26,16 @@ class SystemCapabilitiesFactCollector(BaseFactCollector):
                      'system_capabilities',
                      'system_capabilities_enforced'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         facts_dict = {}
+        if not module:
+            return facts_dict
 
-        capsh_path = self.module.get_bin_path('capsh')
+        capsh_path = module.get_bin_path('capsh')
         # NOTE: early exit 'if not crash_path' and unindent rest of method -akl
         if capsh_path:
             # NOTE: -> get_caps_data()/parse_caps_data() for easier mocking -akl
-            rc, out, err = self.module.run_command([capsh_path, "--print"], errors='surrogate_then_replace')
+            rc, out, err = module.run_command([capsh_path, "--print"], errors='surrogate_then_replace')
             enforced_caps = []
             enforced = 'NA'
             for line in out.splitlines():

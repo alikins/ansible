@@ -60,11 +60,13 @@ class NetworkCollector(BaseFactCollector):
                      'all_ipv4_addresses',
                      'all_ipv6_addresses'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
+        if not module:
+            return {}
 
         # Network munges cached_facts by side effect, so give it a copy
-        network_facts = Network(self.module, cached_facts=collected_facts.copy())
+        network_facts = Network(module, cached_facts=collected_facts.copy())
 
         facts_dict = network_facts.populate()
 

@@ -58,9 +58,11 @@ class HardwareCollector(BaseFactCollector):
                      'devices',
                      'virtualization_type', 'virtualization_role'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
 
+        if not module:
+            return {}
         # Virtual isnt update to not munge self.facts yet, so just pass in the facts it
         # needs
 
@@ -75,7 +77,7 @@ class HardwareCollector(BaseFactCollector):
             if key in collected_facts:
                 filtered_collected_facts[key] = collected_facts[key]
 
-        hardware_facts = Hardware(self.module, cached_facts=filtered_collected_facts)
+        hardware_facts = Hardware(module, cached_facts=filtered_collected_facts)
 
         facts_dict = hardware_facts.populate()
 

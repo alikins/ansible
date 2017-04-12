@@ -26,7 +26,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class DateTimeFactCollector(BaseFactCollector):
     _fact_ids = set(['date_time'])
 
-    def collect(self, collected_facts=None):
+    def collect(self, module=None, collected_facts=None):
         facts_dict = {}
         date_time_facts = {}
 
