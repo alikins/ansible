@@ -9,6 +9,9 @@ from ansible.module_utils.facts.namespace import PrefixFactNamespace
 # TODO: BaseFactCollectors (plural) -> walks over list of collectors
 #       BaseFactCollector (singular) -> returns a dict (collectors 'leaf' node)
 #       and/or BaseFactCollectorNode etc
+# TODO/MAYBE: static/cls method of fact_id/tag matching? Someway for the gather spec
+#             matcher to handle semi dynamic names (like networks 'ansible_INTERFACENAME' facts)
+#             so gather could match them
 class BaseFactCollector:
     _fact_ids = set([])
 
@@ -36,12 +39,20 @@ class BaseFactCollector:
     def _transform_dict_keys(self, fact_dict):
         '''update a dicts keys to use new names as transformed by self._transform_name'''
 
+        # TODO: instead of changing fact_dict, just create a new dict and copy items into
+        #       it with transformed key name.
+        # TODO: rename... apply? apply_namespace?
+        # TODO: this could also move items into a sub dict from the top level space
+        #       (ie, from {'my_fact: ['sdf'], 'fact2': 1} -> {'ansible_facts': {'my_fact': ['sdf'], 'facts2': 1}}
         for old_key in list(fact_dict.keys()):
             new_key = self._transform_name(old_key)
             # pop the item by old_key and replace it using new_key
             fact_dict[new_key] = fact_dict.pop(old_key)
         return fact_dict
 
+    # TODO/MAYBE: rename to 'collect' and add 'collect_without_namespace'
+    # TODO: this could also add a top level direct with namespace (for ex, 'ansible_facts'
+    #       for normal case, or 'whatever_some_other_facts' for others based on self.namespace
     def collect_with_namespace(self, collected_facts=None):
         # collect, then transform the key names if needed
         facts_dict = self.collect(collected_facts=collected_facts)

@@ -38,6 +38,14 @@
 # TODO: replace Facts and subclasses with FactCollector subclasses
 # TODO: empty out this __init__
 # TODO: hook up fact filtering again
+# IDEA: gather 'tags' in addition to gather 'ids'
+#       - ids identify _a_ fact collector uniquely
+#       - tags can identify multiple facts collectors
+#       - gather tag for 'hardware' for all 'hardware' tagged collectors
+#       - id could be a namespaced tag (ie, 'id:ansible.module_utils.facts.system.env.EnvFactCollector')
+#       - arch/system/dist could also be namespaced tags
+#           - 'system:Linux'
+#           - 'arch: x86_64'
 # IDEA: once Collector api is used, it wouldn't be that hard to add a collect_iter()
 #       that would return a generator that would yield facts
 #       ... top level Collector could 'emit' facts as found (or changed) which would
@@ -131,6 +139,8 @@ def get_collector_names(module, valid_subsets=None,
 #        module is passed in and self.module.misc_AnsibleModule_methods
 #        are used, so hard to decouple.
 
+# TODO: after moving from_gather_subset to module scope, mv AnsibleFactCollector to setup.py
+#       (then rename SetupFactCollector?)
 class AnsibleFactCollector(BaseFactCollector):
     '''A FactCollector that returns results under 'ansible_facts' top level key.
 
@@ -148,6 +158,10 @@ class AnsibleFactCollector(BaseFactCollector):
                                                    namespace=namespace)
         self.gather_subset = gather_subset
 
+
+    # TODO: this could be a module level method, so it could be reused by other code and/or
+    #       collector classes that are not necc subclasses of collector.BaseFactCollector
+    # TODO: return collector classes instead of instances. Add another method for
     @classmethod
     def from_gather_subset(cls, module,
                            all_collector_classes=None,
