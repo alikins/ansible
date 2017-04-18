@@ -37,6 +37,9 @@ class Facts:
             self.facts = {}
         else:
             self.facts = cached_facts
+
+        # FIXME: tmp workaround
+        self.collected_facts = cached_facts
         # FIXME: This is where Facts() should end, with the rest being left to some
         #        composed fact gathering classes.
 
