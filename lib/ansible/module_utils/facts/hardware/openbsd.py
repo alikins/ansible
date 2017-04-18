@@ -6,7 +6,7 @@ import re
 from ansible.module_utils._text import to_text
 
 from ansible.module_utils.facts.hardware.base import Hardware
-from ansible.module_utils.facts.timeout import TimeoutError, timeout
+from ansible.module_utils.facts import timeout
 
 from ansible.module_utils.facts.utils import get_file_content, get_mount_size
 from ansible.module_utils.facts.sysctl import get_sysctl
@@ -29,20 +29,34 @@ class OpenBSDHardware(Hardware):
     platform = 'OpenBSD'
 
     def populate(self):
+        hardware_facts = {}
         self.sysctl = get_sysctl(self.module, ['hw'])
-        self.get_memory_facts()
-        self.get_processor_facts()
-        self.get_device_facts()
-        try:
-            self.get_mount_facts()
-        except TimeoutError:
-            pass
-        self.get_dmi_facts()
-        return self.facts
 
-    @timeout()
+        # TODO: change name
+        cpu_facts = self.get_processor_facts()
+        memory_facts = self.get_memory_facts()
+        device_facts = self.get_device_facts()
+        dmi_facts = self.get_dmi_facts()
+
+        mount_facts = {}
+        try:
+            mount_facts = self.get_mount_facts()
+        except timeout.TimeoutError:
+            pass
+
+        hardware_facts.update(cpu_facts)
+        hardware_facts.update(memory_facts)
+        hardware_facts.update(dmi_facts)
+        hardware_facts.update(device_facts)
+        hardware_facts.update(mount_facts)
+
+        return hardware_facts
+
+    @timeout.timeout()
     def get_mount_facts(self):
-        self.facts['mounts'] = []
+        mount_facts = {}
+
+        mount_facts['mounts'] = []
         fstab = get_file_content('/etc/fstab')
         if fstab:
             for line in fstab.splitlines():
@@ -52,7 +66,7 @@ class OpenBSDHardware(Hardware):
                 if fields[1] == 'none' or fields[3] == 'xx':
                     continue
                 size_total, size_available = get_mount_size(fields[1])
-                self.facts['mounts'].append({
+                mount_facts['mounts'].append({
                     'mount': fields[1],
                     'device': fields[0],
                     'fstype': fields[2],
@@ -60,16 +74,18 @@ class OpenBSDHardware(Hardware):
                     'size_total': size_total,
                     'size_available': size_available
                 })
+        return mount_facts
 
     def get_memory_facts(self):
+        memory_facts = {}
         # Get free memory. vmstat output looks like:
         #  procs    memory       page                    disks    traps          cpu
         #  r b w    avm     fre  flt  re  pi  po  fr  sr wd0 fd0  int   sys   cs us sy id
         #  0 0 0  47512   28160   51   0   0   0   0   0   1   0  116    89   17  0  1 99
         rc, out, err = self.module.run_command("/usr/bin/vmstat")
         if rc == 0:
-            self.facts['memfree_mb'] = int(out.splitlines()[-1].split()[4]) // 1024
-            self.facts['memtotal_mb'] = int(self.sysctl['hw.usermem']) // 1024 // 1024
+            memory_facts['memfree_mb'] = int(out.splitlines()[-1].split()[4]) // 1024
+            memory_facts['memtotal_mb'] = int(self.sysctl['hw.usermem']) // 1024 // 1024
 
         # Get swapctl info. swapctl output looks like:
         # total: 69268 1K-blocks allocated, 0 used, 69268 available
@@ -81,15 +97,18 @@ class OpenBSDHardware(Hardware):
                          ord(u'm'): None,
                          ord(u'g'): None}
             data = to_text(out, errors='surrogate_or_strict').split()
-            self.facts['swapfree_mb'] = int(data[-2].translate(swaptrans)) // 1024
-            self.facts['swaptotal_mb'] = int(data[1].translate(swaptrans)) // 1024
+            memory_facts['swapfree_mb'] = int(data[-2].translate(swaptrans)) // 1024
+            memory_facts['swaptotal_mb'] = int(data[1].translate(swaptrans)) // 1024
+
+        return memory_facts
 
     def get_processor_facts(self):
+        cpu_facts = {}
         processor = []
         for i in range(int(self.sysctl['hw.ncpu'])):
             processor.append(self.sysctl['hw.model'])
 
-        self.facts['processor'] = processor
+        cpu_facts['processor'] = processor
         # The following is partly a lie because there is no reliable way to
         # determine the number of physical CPUs in the system. We can only
         # query the number of logical CPUs, which hides the number of cores.
@@ -97,15 +116,21 @@ class OpenBSDHardware(Hardware):
         # dmesg, however even those have proven to be unreliable.
         # So take a shortcut and report the logical number of processors in
         # 'processor_count' and 'processor_cores' and leave it at that.
-        self.facts['processor_count'] = self.sysctl['hw.ncpu']
-        self.facts['processor_cores'] = self.sysctl['hw.ncpu']
+        cpu_facts['processor_count'] = self.sysctl['hw.ncpu']
+        cpu_facts['processor_cores'] = self.sysctl['hw.ncpu']
+
+        return cpu_facts
 
     def get_device_facts(self):
+        device_facts = {}
         devices = []
         devices.extend(self.sysctl['hw.disknames'].split(','))
-        self.facts['devices'] = devices
+        device_facts['devices'] = devices
+
+        return device_facts
 
     def get_dmi_facts(self):
+        dmi_facts = {}
         # We don't use dmidecode(1) here because:
         # - it would add dependency on an external package
         # - dmidecode(1) can only be ran as root
@@ -122,4 +147,6 @@ class OpenBSDHardware(Hardware):
 
         for mib in sysctl_to_dmi:
             if mib in self.sysctl:
-                self.facts[sysctl_to_dmi[mib]] = self.sysctl[mib]
+                dmi_facts[sysctl_to_dmi[mib]] = self.sysctl[mib]
+
+        return dmi_facts
