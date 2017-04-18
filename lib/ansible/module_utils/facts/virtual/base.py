@@ -59,7 +59,7 @@ class Virtual(Facts):
             return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
     # FIXME: just here for existing tests cases till they are updated
-    def populate(self):
+    def populate(self, collected_facts=None):
         virtual_facts = self.get_virtual_facts()
 
         return virtual_facts
@@ -77,10 +77,9 @@ class VirtualCollector(BaseFactCollector):
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
 
-        # Virtual isnt update to not munge self.facts yet, so just pass in the facts it
-        # needs
-        virtual_facts = Virtual(module, cached_facts=collected_facts.copy())
+        virtual_facts = Virtual(module)
 
-        facts_dict = virtual_facts.get_virtual_facts()
+        # keeping this using .populate() until we can move all Fact() subclasses at once
+        facts_dict = virtual_facts.populate(collected_facts=collected_facts)
 
         return facts_dict
