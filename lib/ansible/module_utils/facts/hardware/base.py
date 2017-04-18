@@ -79,6 +79,6 @@ class HardwareCollector(BaseFactCollector):
 
         hardware_facts = Hardware(module, cached_facts=filtered_collected_facts)
 
-        facts_dict = hardware_facts.populate()
+        facts_dict = hardware_facts.populate(collected_facts=collected_facts)
 
         return facts_dict

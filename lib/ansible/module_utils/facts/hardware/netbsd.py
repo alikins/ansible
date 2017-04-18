@@ -26,7 +26,7 @@ class NetBSDHardware(Hardware):
     platform = 'NetBSD'
     MEMORY_FACTS = ['MemTotal', 'SwapTotal', 'MemFree', 'SwapFree']
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
         self.sysctl = get_sysctl(self.module, ['machdep'])
         cpu_facts = self.get_cpu_facts()
