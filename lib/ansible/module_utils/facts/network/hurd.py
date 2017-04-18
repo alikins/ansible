@@ -14,20 +14,28 @@ class HurdPfinetNetwork(Network):
     platform = 'GNU'
     _socket_dir = '/servers/socket/'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
+        network_facts = {}
+
         fsysopts_path = self.module.get_bin_path('fsysopts')
         if fsysopts_path is None:
-            return self.facts
+            return network_facts
+
         socket_path = None
+
         for l in ('inet', 'inet6'):
             link = os.path.join(self._socket_dir, l)
             if os.path.exists(link):
                 socket_path = link
                 break
 
+        # FIXME: extract to method
+        # FIXME: exit early on falsey socket_path and un-indent whole block
+
         if socket_path:
             rc, out, err = self.module.run_command([fsysopts_path, '-L', socket_path])
-            self.facts['interfaces'] = []
+            # FIXME: build up a interfaces datastructure, then assign into network_facts
+            network_facts['interfaces'] = []
             for i in out.split():
                 if '=' in i and i.startswith('--'):
                     k, v = i.split('=', 1)
@@ -36,8 +44,8 @@ class HurdPfinetNetwork(Network):
                     if k == 'interface':
                         # remove /dev/ from /dev/eth0
                         v = v[5:]
-                        self.facts['interfaces'].append(v)
-                        self.facts[v] = {
+                        network_facts['interfaces'].append(v)
+                        network_facts[v] = {
                             'active': True,
                             'device': v,
                             'ipv4': {},
@@ -45,14 +53,14 @@ class HurdPfinetNetwork(Network):
                         }
                         current_if = v
                     elif k == 'address':
-                        self.facts[current_if]['ipv4']['address'] = v
+                        network_facts[current_if]['ipv4']['address'] = v
                     elif k == 'netmask':
-                        self.facts[current_if]['ipv4']['netmask'] = v
+                        network_facts[current_if]['ipv4']['netmask'] = v
                     elif k == 'address6':
                         address, prefix = v.split('/')
-                        self.facts[current_if]['ipv6'].append({
+                        network_facts[current_if]['ipv6'].append({
                             'address': address,
                             'prefix': prefix,
                         })
 
-        return self.facts
+        return network_facts

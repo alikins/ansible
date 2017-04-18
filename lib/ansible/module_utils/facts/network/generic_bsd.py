@@ -7,6 +7,9 @@ import struct
 
 from ansible.module_utils.facts.network.base import Network
 
+# FIXME: lots and lots of side effects munging could be removed
+# FIXME: a good chunk of this class could be in a BsdNetworkInterface() class instead
+
 
 class GenericBsdIfconfigNetwork(Network):
     """
@@ -18,39 +21,42 @@ class GenericBsdIfconfigNetwork(Network):
     """
     platform = 'Generic_BSD_Ifconfig'
 
-    def populate(self):
-
+    def populate(self, collected_facts=None):
+        network_facts = {}
         ifconfig_path = self.module.get_bin_path('ifconfig')
 
         if ifconfig_path is None:
-            return self.facts
+            return network_facts
+
         route_path = self.module.get_bin_path('route')
 
         if route_path is None:
-            return self.facts
+            return network_facts
 
         default_ipv4, default_ipv6 = self.get_default_interfaces(route_path)
         interfaces, ips = self.get_interfaces_info(ifconfig_path)
-        self.detect_type_media(interfaces)
+        interfaces = self.detect_type_media(interfaces)
+
         self.merge_default_interface(default_ipv4, interfaces, 'ipv4')
         self.merge_default_interface(default_ipv6, interfaces, 'ipv6')
-        self.facts['interfaces'] = interfaces.keys()
+        network_facts['interfaces'] = interfaces.keys()
 
         for iface in interfaces:
-            self.facts[iface] = interfaces[iface]
+            network_facts[iface] = interfaces[iface]
 
-        self.facts['default_ipv4'] = default_ipv4
-        self.facts['default_ipv6'] = default_ipv6
-        self.facts['all_ipv4_addresses'] = ips['all_ipv4_addresses']
-        self.facts['all_ipv6_addresses'] = ips['all_ipv6_addresses']
+        network_facts['default_ipv4'] = default_ipv4
+        network_facts['default_ipv6'] = default_ipv6
+        network_facts['all_ipv4_addresses'] = ips['all_ipv4_addresses']
+        network_facts['all_ipv6_addresses'] = ips['all_ipv6_addresses']
 
-        return self.facts
+        return network_facts
 
     def detect_type_media(self, interfaces):
         for iface in interfaces:
             if 'media' in interfaces[iface]:
                 if 'ether' in interfaces[iface]['media'].lower():
                     interfaces[iface]['type'] = 'ether'
+        return interfaces
 
     def get_default_interfaces(self, route_path):
 
@@ -222,6 +228,8 @@ class GenericBsdIfconfigNetwork(Network):
         # a bad idea - but you can override it in your subclass
         pass
 
+    # TODO: these are module scope static function candidates
+    #       (most of the class is really...)
     def get_options(self, option_string):
         start = option_string.find('<') + 1
         end = option_string.rfind('>')
