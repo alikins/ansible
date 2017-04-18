@@ -54,8 +54,8 @@ class Network(Facts):
 
 class NetworkCollector(BaseFactCollector):
     # MAYBE: we could try to build this based on the arch specific implemementation of Network() or its kin
-    _fact_ids = set(['network',
-                     'interfaces',
+    name = 'network'
+    _fact_ids = set(['interfaces',
                      'default_ipv4',
                      'default_ipv6',
                      'all_ipv4_addresses',

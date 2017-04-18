@@ -30,8 +30,8 @@ solaris_i86_re = re.compile(SOLARIS_I86_RE_PATTERN)
 
 
 class PlatformFactCollector(BaseFactCollector):
-    _fact_ids = set(['platform',
-                     'system',
+    name = 'platform'
+    _fact_ids = set(['system',
                      'kernel',
                      'machine',
                      'python_version',

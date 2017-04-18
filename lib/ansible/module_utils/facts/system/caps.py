@@ -22,8 +22,8 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 
 class SystemCapabilitiesFactCollector(BaseFactCollector):
-    _fact_ids = set(['caps',
-                     'system_capabilities',
+    name = 'caps'
+    _fact_ids = set(['system_capabilities',
                      'system_capabilities_enforced'])
 
     def collect(self, module=None, collected_facts=None):

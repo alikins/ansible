@@ -616,8 +616,8 @@ class Distribution(object):
 
 
 class DistributionFactCollector(BaseFactCollector):
-    _fact_ids = set(['distribution',
-                     'distribution_version',
+    name = 'distribution'
+    _fact_ids = set(['distribution_version',
                      'distribution_release',
                      'distribution_major_version'])
 
