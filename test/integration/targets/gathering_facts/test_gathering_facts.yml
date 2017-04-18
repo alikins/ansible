@@ -1,5 +1,21 @@
 ---
 
+- hosts: facthost7
+  tags: [ 'fact_negation' ]
+  connection: local
+  gather_subset: "!hardware"
+  gather_facts: no
+  tasks:
+    - name: setup with not hardware
+      setup:
+       gather_subset:
+           - "!hardware"
+      register: not_hardware_facts
+
+    - name: debug setup with not hardware
+      debug:
+        var: not_hardware_facts
+
 - hosts: facthost0
   tags: [ 'fact_min' ]
   connection: local
@@ -101,6 +117,7 @@
           - 'ansible_interfaces|default("UNDEF_NET") != "UNDEF_NET"'
           - 'ansible_mounts|default("UNDEF_HW") == "UNDEF_HW"'
           - 'ansible_virtualization_role|default("UNDEF_VIRT") != "UNDEF_VIRT"'
+
 
 - hosts: facthost7
   tags: [ 'fact_negation' ]

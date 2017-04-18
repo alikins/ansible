@@ -29,6 +29,7 @@ from ansible.module_utils.facts.namespace import PrefixFactNamespace
 #             so gather could match them
 class BaseFactCollector:
     _fact_ids = set([])
+    name = None
 
     def __init__(self, collectors=None, namespace=None):
         '''Base class for things that collect facts.
@@ -41,7 +42,8 @@ class BaseFactCollector:
         self.namespace = namespace or PrefixFactNamespace(namespace_name='ansible',
                                                           prefix='ansible_')
 
-        self.fact_ids = self._fact_ids or set([])
+        self.fact_ids = set([self.name])
+        self.fact_ids.update(self._fact_ids)
 
     def _transform_name(self, key_name):
         if self.namespace:
@@ -121,7 +123,8 @@ class BaseFactCollector:
 class CollectorMetaDataCollector(BaseFactCollector):
     '''Collector that provides a facts with the gather_subset metadata.'''
 
-    _fact_ids = set(['gather_subset'])
+    name = 'gather_subset'
+    _fact_ids = set([])
 
     def __init__(self, collectors=None, namespace=None, gather_subset=None):
         super(CollectorMetaDataCollector, self).__init__(collectors, namespace)

@@ -70,18 +70,18 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+from collections import defaultdict
+
 from ansible.module_utils.facts import timeout
 
 
-# FIXME: split 'build list of fact subset names' from 'inst those classes' and 'run those classes'
-# FIXME: decouple from 'module'
 # FIXME: make sure get_collector_names returns a useful ordering
 # TODO: may need some form of AnsibleFactNameResolver
 # NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
-# def get_all_facts(module):
 def get_collector_names(valid_subsets=None,
                         minimal_gather_subset=None,
-                        gather_subset=None):
+                        gather_subset=None,
+                        aliases_map=None):
     '''return a set of FactCollector names based on gather_subset spec.
 
     gather_subset is a spec describing which facts to gather.
@@ -96,6 +96,8 @@ def get_collector_names(valid_subsets=None,
 
     # if provided, minimal_gather_subset is always added, even after all negations
     minimal_gather_subset = minimal_gather_subset or frozenset([])
+
+    aliases_map = aliases_map or defaultdict(set)
 
     # Retrieve all facts elements
     additional_subsets = set()
@@ -114,6 +116,8 @@ def get_collector_names(valid_subsets=None,
             exclude = False
 
         if exclude:
+            # include 'devices', 'dmi' etc for '!hardware'
+            exclude_subsets.update(aliases_map.get(subset, set([])))
             exclude_subsets.add(subset)
         else:
             # NOTE: this only considers adding an unknown gather subsetup an error. Asking to
@@ -161,9 +165,16 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     id_collector_map = {}
     # all_collector_classes = cls.FACT_SUBSETS.values()
 
+    # maps alias names like 'hardware' to the list of names that are part of hardware
+    # like 'devices' and 'dmi'
+    aliases_map = defaultdict(set)
     for all_collector_class in all_collector_classes:
+        primary_name = all_collector_class.name
+        id_collector_map[primary_name] = all_collector_class
+
         for fact_id in all_collector_class._fact_ids:
             id_collector_map[fact_id] = all_collector_class
+            aliases_map[primary_name].add(fact_id)
 
     all_fact_subsets = {}
     # all_fact_subsets.update(cls.FACT_SUBSETS)
@@ -180,7 +191,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
     collector_names = get_collector_names(valid_subsets=all_valid_subsets,
                                           minimal_gather_subset=minimal_gather_subset,
-                                          gather_subset=gather_subset)
+                                          gather_subset=gather_subset,
+                                          aliases_map=aliases_map)
 
     # print('collector_names: %s' % collector_names)
     seen_collector_classes = []
