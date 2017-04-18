@@ -29,15 +29,15 @@ class LinuxNetwork(Network):
         '65534': 'tunnel',
     }
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         # FIXME: remove munging of self.facts
         network_facts = {}
         ip_path = self.module.get_bin_path('ip')
         if ip_path is None:
             return network_facts
-        default_ipv4, default_ipv6 = self.get_default_interfaces(ip_path)
+        default_ipv4, default_ipv6 = self.get_default_interfaces(ip_path,
+                                                                 collected_facts=collected_facts)
         interfaces, ips = self.get_interfaces_info(ip_path, default_ipv4, default_ipv6)
-        # self.facts['interfaces'] = interfaces.keys()
         network_facts['interfaces'] = interfaces.keys()
         for iface in interfaces:
             network_facts[iface] = interfaces[iface]
@@ -47,7 +47,8 @@ class LinuxNetwork(Network):
         network_facts['all_ipv6_addresses'] = ips['all_ipv6_addresses']
         return network_facts
 
-    def get_default_interfaces(self, ip_path):
+    def get_default_interfaces(self, ip_path, collected_facts=None):
+        collected_facts = collected_facts or {}
         # Use the commands:
         #     ip -4 route get 8.8.8.8                     -> Google public DNS
         #     ip -6 route get 2404:6800:400a:800::1012    -> ipv6.google.com
@@ -59,9 +60,8 @@ class LinuxNetwork(Network):
         interface = dict(v4={}, v6={})
 
         for v in 'v4', 'v6':
-            # FIXME: eventually update to used collected_facts
-            if (v == 'v6' and self.facts['ansible_os_family'] == 'RedHat' and
-                    self.facts['ansible_distribution_version'].startswith('4.')):
+            if (v == 'v6' and collected_facts.get('ansible_os_family') == 'RedHat' and
+                    collected_facts.get('ansible_distribution_version', '').startswith('4.')):
                 continue
             if v == 'v6' and not socket.has_ipv6:
                 continue
@@ -88,6 +88,9 @@ class LinuxNetwork(Network):
             all_ipv4_addresses=[],
             all_ipv6_addresses=[],
         )
+
+        # FIXME: maybe split into smaller methods?
+        # FIXME: this is pretty much a constructor
 
         for path in glob.glob('/sys/class/net/*'):
             if not os.path.isdir(path):
@@ -145,6 +148,7 @@ class LinuxNetwork(Network):
                 promisc_mode = (data & 0x0100 > 0)
                 interfaces[device]['promisc'] = promisc_mode
 
+            # TODO: determine if this needs to be in a nested scope/closure
             def parse_ip_output(output, secondary=False):
                 for line in output.splitlines():
                     if not line:
@@ -165,6 +169,8 @@ class LinuxNetwork(Network):
                         netmask = socket.inet_ntoa(struct.pack('!L', netmask_bin))
                         network = socket.inet_ntoa(struct.pack('!L', address_bin & netmask_bin))
                         iface = words[-1]
+                        # NOTE: device is ref to outside scope
+                        # NOTE: interfaces is also ref to outside scope
                         if iface != device:
                             interfaces[iface] = {}
                         if not secondary and "ipv4" not in interfaces[iface]:
@@ -193,11 +199,13 @@ class LinuxNetwork(Network):
                                 'network': network,
                             })
 
+                        # NOTE: default_ipv4 is ref to outside scope
                         # If this is the default address, update default_ipv4
                         if 'address' in default_ipv4 and default_ipv4['address'] == address:
                             default_ipv4['broadcast'] = broadcast
                             default_ipv4['netmask'] = netmask
                             default_ipv4['network'] = network
+                            # NOTE: macadress is ref from outside scope
                             default_ipv4['macaddress'] = macaddress
                             default_ipv4['mtu'] = interfaces[device]['mtu']
                             default_ipv4['type'] = interfaces[device].get("type", "unknown")
@@ -244,6 +252,7 @@ class LinuxNetwork(Network):
 
         # replace : by _ in interface name since they are hard to use in template
         new_interfaces = {}
+        # i is a dict key (string) not an index int
         for i in interfaces:
             if ':' in i:
                 new_interfaces[i.replace(':', '_')] = interfaces[i]
@@ -255,9 +264,11 @@ class LinuxNetwork(Network):
 
         data = {}
         ethtool_path = self.module.get_bin_path("ethtool")
+        # FIXME: exit early on falsey ethtool_path and un-indent
         if ethtool_path:
             args = [ethtool_path, '-k', device]
             rc, stdout, stderr = self.module.run_command(args, errors='surrogate_then_replace')
+            # FIXME: exit early on falsey if we can
             if rc == 0:
                 features = {}
                 for line in stdout.strip().splitlines():
