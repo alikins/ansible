@@ -28,7 +28,7 @@ class OpenBSDHardware(Hardware):
     """
     platform = 'OpenBSD'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
         self.sysctl = get_sysctl(self.module, ['hw'])
 

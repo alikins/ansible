@@ -14,7 +14,7 @@ class HurdHardware(LinuxHardware):
 
     platform = 'GNU'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
         uptime_facts = self.get_uptime_facts()
         memory_facts = self.get_memory_facts()

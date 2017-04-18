@@ -57,10 +57,10 @@ class LinuxHardware(Hardware):
     # regex used against mtab content to find entries that are bind mounts
     MTAB_BIND_MOUNT_RE = re.compile(r'.*bind.*"')
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
 
-        cpu_facts = self.get_cpu_facts()
+        cpu_facts = self.get_cpu_facts(collected_facts=collected_facts)
         memory_facts = self.get_memory_facts()
         dmi_facts = self.get_dmi_facts()
         device_facts = self.get_device_facts()
@@ -129,8 +129,9 @@ class LinuxHardware(Hardware):
 
         return memory_facts
 
-    def get_cpu_facts(self):
+    def get_cpu_facts(self, collected_facts=None):
         cpu_facts = {}
+        collected_facts = collected_facts or {}
 
         i = 0
         vendor_id_occurrence = 0
@@ -203,7 +204,7 @@ class LinuxHardware(Hardware):
                 i = vendor_id_occurrence
 
         # FIXME
-        if self.collected_facts['ansible_architecture'] != 's390x':
+        if collected_facts.get('ansible_architecture') != 's390x':
             if xen_paravirt:
                 cpu_facts['processor_count'] = i
                 cpu_facts['processor_cores'] = i

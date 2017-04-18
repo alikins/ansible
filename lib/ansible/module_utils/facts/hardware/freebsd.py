@@ -26,7 +26,7 @@ class FreeBSDHardware(Hardware):
     platform = 'FreeBSD'
     DMESG_BOOT = '/var/run/dmesg.boot'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
 
         cpu_facts = self.get_cpu_facts()

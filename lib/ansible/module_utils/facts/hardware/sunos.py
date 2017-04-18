@@ -18,7 +18,7 @@ class SunOSHardware(Hardware):
     """
     platform = 'SunOS'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
 
         cpu_facts = self.get_cpu_facts()
@@ -42,11 +42,12 @@ class SunOSHardware(Hardware):
 
         return hardware_facts
 
-    def get_cpu_facts(self):
+    def get_cpu_facts(self, collected_facts=None):
         physid = 0
         sockets = {}
 
         cpu_facts = {}
+        collected_facts = collected_facts or {}
 
         rc, out, err = self.module.run_command("/usr/bin/kstat cpu_info")
 
@@ -70,9 +71,9 @@ class SunOSHardware(Hardware):
                 processor = brand or data[1].strip()
                 # Add clock speed to description for SPARC CPU
                 # FIXME
-                if self.collected_facts['ansible_machine'] != 'i86pc':
+                if collected_facts.get('ansible_machine') != 'i86pc':
                     processor += " @ " + clock_mhz + "MHz"
-                if 'ansible_processor' not in self.collected_facts:
+                if 'ansible_processor' not in collected_facts:
                     cpu_facts['processor'] = []
                 cpu_facts['processor'].append(processor)
             elif key == 'chip_id':
