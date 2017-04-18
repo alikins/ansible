@@ -30,7 +30,6 @@ class LinuxNetwork(Network):
     }
 
     def populate(self, collected_facts=None):
-        # FIXME: remove munging of self.facts
         network_facts = {}
         ip_path = self.module.get_bin_path('ip')
         if ip_path is None:
