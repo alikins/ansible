@@ -19,7 +19,7 @@ class AIXHardware(Hardware):
     """
     platform = 'AIX'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
 
         cpu_facts = self.get_cpu_facts()

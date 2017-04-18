@@ -23,10 +23,10 @@ class HPUXHardware(Hardware):
 
     platform = 'HP-UX'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
 
-        cpu_facts = self.get_cpu_facts()
+        cpu_facts = self.get_cpu_facts(collected_facts=collected_facts)
         memory_facts = self.get_memory_facts()
         hw_facts = self.get_hw_facts()
 
@@ -36,22 +36,23 @@ class HPUXHardware(Hardware):
 
         return hardware_facts
 
-    def get_cpu_facts(self):
+    def get_cpu_facts(self, collected_facts=None):
         cpu_facts = {}
+        collected_facts = collected_facts or {}
 
-        if self.collected_facts['ansible_architecture'] == '9000/800':
+        if collected_facts.get('ansible_architecture') == '9000/800':
             rc, out, err = self.module.run_command("ioscan -FkCprocessor | wc -l", use_unsafe_shell=True)
             cpu_facts['processor_count'] = int(out.strip())
         # Working with machinfo mess
-        elif self.collected_facts['ansible_architecture'] == 'ia64':
-            if self.collected_facts['ansible_distribution_version'] == "B.11.23":
+        elif collected_facts.get('ansible_architecture') == 'ia64':
+            if collected_facts.get('ansible_distribution_version') == "B.11.23":
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep 'Number of CPUs'", use_unsafe_shell=True)
                 cpu_facts['processor_count'] = int(out.strip().split('=')[1])
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep 'processor family'", use_unsafe_shell=True)
                 cpu_facts['processor'] = re.search('.*(Intel.*)', out).groups()[0].strip()
                 rc, out, err = self.module.run_command("ioscan -FkCprocessor | wc -l", use_unsafe_shell=True)
                 cpu_facts['processor_cores'] = int(out.strip())
-            if self.collected_facts['ansible_distribution_version'] == "B.11.31":
+            if collected_facts.get('ansible_distribution_version') == "B.11.31":
                 # if machinfo return cores strings release B.11.31 > 1204
                 rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo | grep core | wc -l", use_unsafe_shell=True)
                 if out.strip() == '0':
@@ -85,14 +86,15 @@ class HPUXHardware(Hardware):
 
         return cpu_facts
 
-    def get_memory_facts(self):
+    def get_memory_facts(self, collected_facts=None):
         memory_facts = {}
+        collected_facts = collected_facts or {}
 
         pagesize = 4096
         rc, out, err = self.module.run_command("/usr/bin/vmstat | tail -1", use_unsafe_shell=True)
         data = int(re.sub(' +', ' ', out).split(' ')[5].strip())
         memory_facts['memfree_mb'] = pagesize * data // 1024 // 1024
-        if self.collected_facts['ansible_architecture'] == '9000/800':
+        if collected_facts.get('ansible_architecture') == '9000/800':
             try:
                 rc, out, err = self.module.run_command("grep Physical /var/adm/syslog/syslog.log")
                 data = re.search('.*Physical: ([0-9]*) Kbytes.*', out).groups()[0].strip()
@@ -120,14 +122,15 @@ class HPUXHardware(Hardware):
 
         return memory_facts
 
-    def get_hw_facts(self):
+    def get_hw_facts(self, collected_facts=None):
         hw_facts = {}
+        collected_facts = collected_facts or {}
 
         rc, out, err = self.module.run_command("model")
         hw_facts['model'] = out.strip()
-        if self.collected_facts['ansible_architecture'] == 'ia64':
+        if collected_facts.get('ansible_architecture') == 'ia64':
             separator = ':'
-            if self.collected_facts['ansible_distribution_version'] == "B.11.23":
+            if collected_facts.get('ansible_distribution_version') == "B.11.23":
                 separator = '='
             rc, out, err = self.module.run_command("/usr/contrib/bin/machinfo |grep -i 'Firmware revision' | grep -v BMC", use_unsafe_shell=True)
             hw_facts['firmware_version'] = out.split(separator)[1].strip()

@@ -19,7 +19,7 @@ class DarwinHardware(Hardware):
     """
     platform = 'Darwin'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
         hardware_facts = {}
 
         self.sysctl = get_sysctl(self.module, ['hw', 'machdep', 'kern'])
