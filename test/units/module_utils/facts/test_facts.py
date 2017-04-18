@@ -178,6 +178,7 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
                                 all_collector_classes=default_collectors.collectors,
                                 gather_subset=set(['env', 'unknown_collector']))
 
+
 class BaseTestFactsPlatform(unittest.TestCase):
     platform_id = 'Generic'
     fact_class = hardware.base.Hardware
