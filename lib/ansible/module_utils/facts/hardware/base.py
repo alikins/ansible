@@ -44,8 +44,8 @@ class Hardware(Facts):
         else:
             return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
-    def populate(self):
-        return self.facts
+    def populate(self, collected_facts=None):
+        return {}
 
 
 class HardwareCollector(BaseFactCollector):
@@ -63,21 +63,8 @@ class HardwareCollector(BaseFactCollector):
 
         if not module:
             return {}
-        # Virtual isnt update to not munge self.facts yet, so just pass in the facts it
-        # needs
 
-        # facts from other modules that we need to pass to Hardware
-        # FIXME: this can be removed once Hardware stops return self.facts
-        collected_keys = ('ansible_processor',
-                          'ansible_architecture',
-                          'ansible_machine',
-                          'ansible_distribution_version')
-        filtered_collected_facts = {}
-        for key in collected_keys:
-            if key in collected_facts:
-                filtered_collected_facts[key] = collected_facts[key]
-
-        hardware_facts = Hardware(module, cached_facts=filtered_collected_facts)
+        hardware_facts = Hardware(module)
 
         facts_dict = hardware_facts.populate(collected_facts=collected_facts)
 
