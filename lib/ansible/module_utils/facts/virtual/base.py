@@ -71,8 +71,9 @@ class Virtual(Facts):
 
 
 class VirtualCollector(BaseFactCollector):
-    _fact_ids = set(['virtual',
-                     'virtualization_type', 'virtualization_role'])
+    name = 'virtual'
+    _fact_ids = set(['virtualization_type',
+                     'virtualization_role'])
 
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}

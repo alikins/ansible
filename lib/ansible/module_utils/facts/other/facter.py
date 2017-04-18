@@ -23,6 +23,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 
 class FacterFactCollector(BaseFactCollector):
+    name = 'facter'
     _fact_ids = set(['facter'])
 
     def __init__(self, collectors=None, namespace=None):

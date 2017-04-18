@@ -22,8 +22,8 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 
 class SshPubKeyFactCollector(BaseFactCollector):
-    _fact_ids = set(['ssh_pub_keys',
-                     'ssh_host_pub_keys',
+    name = 'ssh_pub_keys'
+    _fact_ids = set(['ssh_host_pub_keys',
                      'ssh_host_key_dsa_public',
                      'ssh_host_key_rsa_public',
                      'ssh_host_key_ecdsa_public',
