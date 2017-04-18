@@ -13,26 +13,35 @@ class HPUXNetwork(Network):
     """
     platform = 'HP-UX'
 
-    def populate(self):
+    def populate(self, collected_facts=None):
+        network_facts = {}
         netstat_path = self.module.get_bin_path('netstat')
+
         if netstat_path is None:
-            return self.facts
-        self.get_default_interfaces()
+            return network_facts
+
+        default_interfaces_facts = self.get_default_interfaces()
+        network_facts.update(default_interfaces_facts)
+
         interfaces = self.get_interfaces_info()
-        self.facts['interfaces'] = interfaces.keys()
+        network_facts['interfaces'] = interfaces.keys()
         for iface in interfaces:
-            self.facts[iface] = interfaces[iface]
-        return self.facts
+            network_facts[iface] = interfaces[iface]
+
+        return network_facts
 
     def get_default_interfaces(self):
+        default_interfaces = {}
         rc, out, err = self.module.run_command("/usr/bin/netstat -nr")
         lines = out.splitlines()
         for line in lines:
             words = line.split()
             if len(words) > 1:
                 if words[0] == 'default':
-                    self.facts['default_interface'] = words[4]
-                    self.facts['default_gateway'] = words[1]
+                    default_interfaces['default_interface'] = words[4]
+                    default_interfaces['default_gateway'] = words[1]
+
+        return default_interfaces
 
     def get_interfaces_info(self):
         interfaces = {}

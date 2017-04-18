@@ -47,8 +47,9 @@ class Network(Facts):
         else:
             return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
-    def populate(self):
-        return self.facts
+    # TODO: more or less abstract/NotImplemented
+    def populate(self, collected_facts=None):
+        return {}
 
 
 class NetworkCollector(BaseFactCollector):
@@ -66,8 +67,8 @@ class NetworkCollector(BaseFactCollector):
             return {}
 
         # Network munges cached_facts by side effect, so give it a copy
-        network_facts = Network(module, cached_facts=collected_facts.copy())
+        network_facts = Network(module)
 
-        facts_dict = network_facts.populate()
+        facts_dict = network_facts.populate(collected_facts=collected_facts)
 
         return facts_dict
