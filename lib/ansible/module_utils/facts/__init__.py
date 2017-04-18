@@ -38,6 +38,13 @@
 # TODO: replace Facts and subclasses with FactCollector subclasses
 # TODO: empty out this __init__
 # TODO: hook up fact filtering again
+# TODO: mv imports of collectors to a common loader module
+#        - offers a place to use a fact_collector plugin loader
+#        - can be shared by remote client side module and controller side ansiballz builder
+# TODO: mv collectors from system,hardware,network,virtual to collectors/
+#       - one file collectors (say, env.py or cmdline.py) can live in collectors/
+#       - collectors with interdeps (Network or Hardware for ex, may live in collectors/network/)
+#       - or could flatten to collectors/linux_hardware.py, collectors/sunos_hardware.py etc
 # IDEA: gather 'tags' in addition to gather 'ids'
 #       - ids identify _a_ fact collector uniquely
 #       - tags can identify multiple facts collectors
