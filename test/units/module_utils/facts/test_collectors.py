@@ -21,19 +21,24 @@ __metaclass__ = type
 
 from ansible.compat.tests.mock import Mock, patch
 
+from ansible.module_utils.facts.collector import CollectorMetaDataCollector
+
 from . base import BaseFactsTest
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
 from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
 from ansible.module_utils.facts.system.cmdline import CmdLineFactCollector
 from ansible.module_utils.facts.system.distribution import DistributionFactCollector
+from ansible.module_utils.facts.system.dns import DnsFactCollector
 from ansible.module_utils.facts.system.env import EnvFactCollector
 from ansible.module_utils.facts.system.fips import FipsFactCollector
 from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
 from ansible.module_utils.facts.system.platform import PlatformFactCollector
+from ansible.module_utils.facts.system.python import PythonFactCollector
 from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
 from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
 from ansible.module_utils.facts.system.ssh_pub_keys import SshPubKeyFactCollector
+from ansible.module_utils.facts.system.user import UserFactCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 from ansible.module_utils.facts.network.base import NetworkCollector
@@ -77,12 +82,30 @@ class TestCmdLineFacts(BaseFactsTest):
     collector_class = CmdLineFactCollector
 
 
+class TestCollectorMetaDataCollector(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'gather_subset']
+    valid_subsets = ['gather_subset']
+    fact_namespace = 'ansible_gather_subset'
+    collector_class = CollectorMetaDataCollector
+    collected_facts = {'ansible_gather_subset': ['!all', 'gather_subset']}
+
+
 class TestDistributionFacts(BaseFactsTest):
     __test__ = True
     gather_subset = ['!all', 'distribution']
     valid_subsets = ['distribution']
     fact_namespace = 'ansible_distribution'
     collector_class = DistributionFactCollector
+
+
+class TestDnsFacts(BaseFactsTest):
+
+    __test__ = True
+    gather_subset = ['!all', 'dns']
+    valid_subsets = ['dns']
+    fact_namespace = 'ansible_dns'
+    collector_class = DnsFactCollector
 
 
 class TestEnvFacts(BaseFactsTest):
@@ -137,6 +160,14 @@ class TestPlatformFactCollector(BaseFactsTest):
     valid_subsets = ['platform']
     fact_namespace = 'ansible_platform'
     collector_class = PlatformFactCollector
+
+
+class TestPythonFactCollector(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'python']
+    valid_subsets = ['python']
+    fact_namespace = 'ansible_python'
+    collector_class = PythonFactCollector
 
 
 class TestSelinuxFacts(BaseFactsTest):
@@ -252,6 +283,14 @@ class TestSshPubKeyFactCollector(BaseFactsTest):
     valid_subsets = ['ssh_pub_keys']
     fact_namespace = 'ansible_ssh_pub_leys'
     collector_class = SshPubKeyFactCollector
+
+
+class TestUserFactCollector(BaseFactsTest):
+    __test__ = True
+    gather_subset = ['!all', 'user']
+    valid_subsets = ['user']
+    fact_namespace = 'ansible_user'
+    collector_class = UserFactCollector
 
 
 class TestVirtualFacts(BaseFactsTest):
