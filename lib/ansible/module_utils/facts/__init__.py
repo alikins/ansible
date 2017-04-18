@@ -82,6 +82,13 @@ from ansible.module_utils.facts import timeout
 def get_collector_names(valid_subsets=None,
                         minimal_gather_subset=None,
                         gather_subset=None):
+    '''return a set of FactCollector names based on gather_subset spec.
+
+    gather_subset is a spec describing which facts to gather.
+    valid_subsets is a frozenset of potential matches for gather_subset ('all', 'network') etc
+    minimal_gather_subsets is a frozenset of matches to always use, even for gather_subset='!all'
+    '''
+
     # Retrieve module parameters
     gather_subset = gather_subset or ['all']
 
@@ -112,7 +119,8 @@ def get_collector_names(valid_subsets=None,
             # NOTE: this only considers adding an unknown gather subsetup an error. Asking to
             #       exclude an unknown gather subset is ignored.
             if subset not in valid_subsets:
-                raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" % (subset, ", ".join(valid_subsets)))
+                raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" %
+                                (subset, ", ".join(sorted(valid_subsets))))
 
             additional_subsets.add(subset)
 
@@ -130,6 +138,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                                          minimal_gather_subset=None,
                                          gather_subset=None,
                                          gather_timeout=None):
+    '''return a list of collector classes that match the args'''
+
     # use gather_name etc to get the list of collectors
 
     all_collector_classes = all_collector_classes or []
