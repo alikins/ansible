@@ -30,16 +30,11 @@ class Facts:
     # NOTE: load_on_init is changed for ohai/facter classes. Ideally, all facts
     #       would be load_on_init=False and this could be removed. -akl
     # NOTE: cached_facts seems like a misnomer. Seems to be used more like an accumulator -akl
-    def __init__(self, module, load_on_init=True, cached_facts=None):
+    # nothing should be using cached_facts args now, so removing it
+    def __init__(self, module, load_on_init=True):
 
         self.module = module
-        if not cached_facts:
-            self.facts = {}
-        else:
-            self.facts = cached_facts
 
-        # FIXME: tmp workaround
-        self.collected_facts = cached_facts
         # FIXME: This is where Facts() should end, with the rest being left to some
         #        composed fact gathering classes.
 
