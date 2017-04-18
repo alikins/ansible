@@ -126,36 +126,8 @@ from ansible.module_utils import facts
 
 from ansible.module_utils.facts.collector import BaseFactCollector, CollectorMetaDataCollector
 
+from ansible.module_utils.facts import default_collectors
 
-from ansible.module_utils.facts.other.facter import FacterFactCollector
-from ansible.module_utils.facts.other.ohai import OhaiFactCollector
-
-from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
-from ansible.module_utils.facts.system.caps import SystemCapabilitiesFactCollector
-from ansible.module_utils.facts.system.cmdline import CmdLineFactCollector
-from ansible.module_utils.facts.system.distribution import DistributionFactCollector
-from ansible.module_utils.facts.system.date_time import DateTimeFactCollector
-from ansible.module_utils.facts.system.env import EnvFactCollector
-from ansible.module_utils.facts.system.dns import DnsFactCollector
-from ansible.module_utils.facts.system.fips import FipsFactCollector
-from ansible.module_utils.facts.system.local import LocalFactCollector
-from ansible.module_utils.facts.system.lsb import LSBFactCollector
-from ansible.module_utils.facts.system.pkg_mgr import PkgMgrFactCollector
-from ansible.module_utils.facts.system.platform import PlatformFactCollector
-from ansible.module_utils.facts.system.python import PythonFactCollector
-from ansible.module_utils.facts.system.selinux import SelinuxFactCollector
-from ansible.module_utils.facts.system.service_mgr import ServiceMgrFactCollector
-from ansible.module_utils.facts.system.ssh_pub_keys import SshPubKeyFactCollector
-from ansible.module_utils.facts.system.user import UserFactCollector
-
-from ansible.module_utils.facts.hardware.base import HardwareCollector
-
-from ansible.module_utils.facts.network.base import NetworkCollector
-
-from ansible.module_utils.facts.virtual.base import VirtualCollector
-
-
-# TODO: build this up semi dynamically
 
 # This is the main entry point for setup.py facts.py.
 # FIXME: This is coupled to AnsibleModule (it assumes module.params has keys 'gather_subset',
@@ -241,30 +213,7 @@ def main():
                                        'pkg_mgr', 'platform', 'python', 'selinux',
                                        'service_mgr', 'ssh_pub_keys', 'user'])
 
-    # TODO: the ordering here is more or less arbitrary, except that it mimics the
-    #       order facts.py used to collect these in.
-    all_collector_classes = [PlatformFactCollector,
-                             DistributionFactCollector,
-                             SelinuxFactCollector,
-                             ApparmorFactCollector,
-                             SystemCapabilitiesFactCollector,
-                             FipsFactCollector,
-                             PkgMgrFactCollector,
-                             ServiceMgrFactCollector,
-                             LSBFactCollector,
-                             DateTimeFactCollector,
-                             UserFactCollector,
-                             LocalFactCollector,
-                             CmdLineFactCollector,
-                             EnvFactCollector,
-                             DnsFactCollector,
-                             PythonFactCollector,
-                             SshPubKeyFactCollector,
-                             HardwareCollector,
-                             NetworkCollector,
-                             VirtualCollector,
-                             OhaiFactCollector,
-                             FacterFactCollector]
+    all_collector_classes = default_collectors.collectors
 
     collector_classes = \
         facts.collector_classes_from_gather_subset(
