@@ -27,6 +27,7 @@ from ansible.compat.tests.mock import patch
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleUndefinedVariable
 from ansible.module_utils.six import string_types
+from ansible.module_utils._text import to_bytes, to_text, to_native
 from ansible.template import Templar, AnsibleContext, AnsibleEnvironment
 from ansible.vars.unsafe_proxy import AnsibleUnsafe, wrap_var
 #from ansible.unsafe_proxy import AnsibleUnsafe, wrap_var
@@ -243,6 +244,131 @@ class TestTemplarCleanData(BaseTemplar, unittest.TestCase):
         unsafe_obj = wrap_var(some_obj)
         res = self.templar._clean_data(unsafe_obj)
         self.assertIsInstance(res, SomeClass)
+
+
+class TestTemplarIsTemplate(BaseTemplar, unittest.TestCase):
+    def test_is_template(self):
+        obj = u'some string'
+        res = self.templar.is_template(obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
+
+    def test_is_template_template(self):
+        obj = u'{{ some_var }}'
+        res = self.templar.is_template(obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_not_stringtype(self):
+        res = self.templar.is_template(None)
+        # None vs NoneType
+        self.assertFalse(res, 'is_template(None) return should be False')
+
+    def test_is_template_jinja(self):
+        obj = u'1 2 {what} 3 4 {{foo}} 5 6 7'
+        res = self.templar.is_template(obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_block_undefined(self):
+        res = self.templar.is_template(u'1 2 {%what%} 3 4 {{ foo }} 5 6 7')
+        self.assertTrue(res)
+
+    def test_is_template_block(self):
+        res = self.templar.is_template(u'1 2 {%what%} 3 4 {{ some_var }} 5 6 7')
+        self.assertTrue(res)
+
+    def test_is_template_object(self):
+        obj = {'foo': [1, 2, 3, 'bdasdf', '{what}', '{{foo}}', 5]}
+        res = self.templar.is_template(obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_object_text(self):
+        obj = {'foo': [1, 2, 3, 'bdasdf', '{what}', to_text('{{foo}}'), 5]}
+        res = self.templar.is_template(obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_object_bytes(self):
+        obj = {'foo': [1, 2, 3, 'bdasdf', '{what}', to_bytes('{{foo}}'), 5]}
+        res = self.templar.is_template(obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_object_native(self):
+        obj = {'foo': [1, 2, 3, 'bdasdf', '{what}', to_native('{{foo}}'), 5]}
+        res = self.templar.is_template(obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_object_unsafe_text(self):
+        rval = [1, 2, 3, wrap_var(u'bdasdf'), '{what}', wrap_var(to_text('{{unsafe_foo}}')), 5]
+        obj = {'foo': rval}
+        res = self.templar.is_template(obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
+
+    def test_is_template_object_unsafe_bytes(self):
+        rval = [1, 2, 3, wrap_var('bdasdf'), '{what}', wrap_var(to_bytes('{{unsafe_foo}}')), 5]
+        obj = {'foo': rval}
+        res = self.templar.is_template(obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
+
+    def test_is_template_object_unsafe_native(self):
+        rval = [1, 2, 3, wrap_var('bdasdf'), '{what}', wrap_var(to_native('{{unsafe_foo}}')), 5]
+        obj = {'foo': rval}
+        res = self.templar.is_template(obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
+
+    def test_is_template_object_unsafe_and_unsafe_native(self):
+        rval = [1, 2, 3, wrap_var('bdasdf'), '{{ some_var }}', wrap_var(to_native('{{unsafe_foo}}')), 5]
+        obj = {'foo': rval}
+        res = self.templar.is_template(obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_bad_dict(self):
+        res = self.templar.is_template(u'{{bad_dict}}')
+        self.assertTrue(res)
+
+    def test_is_template_unsafe_obj(self):
+        some_obj = SomeClass()
+        unsafe_obj = wrap_var(some_obj)
+        res = self.templar.is_template(unsafe_obj)
+        self.assertFalse(res,
+                         'is_template(%s wrapping %s) return should be False' % (some_obj, unsafe_obj))
+
+    def test_is_template_just_a_dict(self):
+        some_obj = {('foo', 'bar'): [1, 2, 3]}
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % some_obj)
+
+    def test_is_template_just_a_false(self):
+        some_obj = False
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % some_obj)
+
+    def test_is_template_just_a_true(self):
+        some_obj = True
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % some_obj)
+
+    def test_is_template_just_a_tuple(self):
+        some_obj = ('foo', 'bar', 1, 3, 5, None)
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
+
+    def test_is_template_just_a_tuple_with_false(self):
+        some_obj = (False, 'foo', 'bar', 1, 3, 5, None)
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
+
+    def test_is_template_just_a_tuple_with_true(self):
+        some_obj = (True, 'foo', 'bar', 1, 3, 5, None)
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
+
+    def test_is_template_tuple_with_template(self):
+        some_obj = ('foo', 'bar', '{{ some_var }}')
+        res = self.templar.is_template(some_obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % repr(some_obj))
+
+    def test_is_template_tuple_with_unsafe_template(self):
+        some_obj = ('foo', 'bar', wrap_var('{{ some_var }}'))
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
 
 
 class TestTemplarMisc(BaseTemplar, unittest.TestCase):
