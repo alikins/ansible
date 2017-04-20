@@ -222,10 +222,6 @@ class TestTemplarCleanData(BaseTemplar, unittest.TestCase):
         res = self.templar._clean_data(u'1 2 {%what%} 3 4 {{foo}} 5 6 7')
         self.assertEqual(res, u'1 2 {#what#} 3 4 {#foo#} 5 6 7')
 
-#    def test_clean_data_weird(self):
-#        res = self.templar._clean_data(u'1 2 #}huh{# %}ddfg{% }}dfdfg{{  {%what%} {{#foo#}} {%{bar}%} {#%blip%#} {{asdfsd%} 3 4 {{foo}} 5 6 7')
-#        print(res)
-
         self.assertEqual(res, u'1 2 {#what#} 3 4 {#foo#} 5 6 7')
 
     def test_clean_data_object(self):
@@ -288,7 +284,7 @@ class TestTemplarIsTemplate(BaseTemplar, unittest.TestCase):
     def test_is_template_object_with_invalid_jinja(self):
         obj = {'foo': [1, 2, 3, 'bdasdf', '{%what%}', '{{foo}}', 5]}
         res = self.templar.is_template(obj)
-        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % obj)
 
     def test_is_template_object_text(self):
         obj = {'foo': [1, 2, 3, 'bdasdf', '{what}', to_text('{{foo}}'), 5]}
@@ -377,6 +373,26 @@ class TestTemplarIsTemplate(BaseTemplar, unittest.TestCase):
 
     def test_is_template_tuple_with_unsafe_template(self):
         some_obj = ('foo', 'bar', wrap_var('{{ some_var }}'))
+        res = self.templar.is_template(some_obj)
+        self.assertTrue(res, 'is_template(%s) return should be True' % repr(some_obj))
+
+    def test_is_template_tuple_with_a_invalid_jinja(self):
+        some_obj = ('{%what%}',)
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
+
+    def test_is_template_tuple_with_all_invalid_jinja(self):
+        some_obj = ('{%what%}', 'foo {%also_busted%}')
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
+
+    def test_is_template_tuple_with_a_objects(self):
+        some_obj = (SomeClass(),)
+        res = self.templar.is_template(some_obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
+
+    def test_is_template_tuple_with_all_objects(self):
+        some_obj = (SomeClass(), SomeClass())
         res = self.templar.is_template(some_obj)
         self.assertFalse(res, 'is_template(%s) return should be False' % repr(some_obj))
 
