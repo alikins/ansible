@@ -267,18 +267,28 @@ class TestTemplarIsTemplate(BaseTemplar, unittest.TestCase):
         res = self.templar.is_template(obj)
         self.assertTrue(res, 'is_template(%s) return should be True' % obj)
 
-    def test_is_template_block_undefined(self):
-        res = self.templar.is_template(u'1 2 {%what%} 3 4 {{ foo }} 5 6 7')
-        self.assertTrue(res)
+    def test_is_template_block_undefined_with_invalid_jinja(self):
+        # '{%what%}' will cause template syntax errors, so the string is
+        # not something that can be templated
+        obj = u'1 2 {%what%} 3 4 {{ foo }} 5 6 7'
+        res = self.templar.is_template(obj)
+
+        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
 
     def test_is_template_block(self):
-        res = self.templar.is_template(u'1 2 {%what%} 3 4 {{ some_var }} 5 6 7')
-        self.assertTrue(res)
+        obj = u'1 2 {%what%} 3 4 {{ some_var }} 5 6 7'
+        res = self.templar.is_template(obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
 
     def test_is_template_object(self):
         obj = {'foo': [1, 2, 3, 'bdasdf', '{what}', '{{foo}}', 5]}
         res = self.templar.is_template(obj)
         self.assertTrue(res, 'is_template(%s) return should be True' % obj)
+
+    def test_is_template_object_with_invalid_jinja(self):
+        obj = {'foo': [1, 2, 3, 'bdasdf', '{%what%}', '{{foo}}', 5]}
+        res = self.templar.is_template(obj)
+        self.assertFalse(res, 'is_template(%s) return should be False' % obj)
 
     def test_is_template_object_text(self):
         obj = {'foo': [1, 2, 3, 'bdasdf', '{what}', to_text('{{foo}}'), 5]}
