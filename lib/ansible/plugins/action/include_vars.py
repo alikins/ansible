@@ -108,16 +108,11 @@ class ActionModule(ActionBase):
 
         self._mutually_exclusive()
 
-    def run(self, tmp=None, task_vars=None):
-        """ Load yml files recursively from a directory.
-        """
-        if not task_vars:
-            task_vars = dict()
-
-        self.show_content = True
-        self._set_args()
+    def _fail_on_missing_files(self, result=None):
+        err_msg = None
 
         results = dict()
+
         if self.source_dir:
             self._set_dir_defaults()
             self._set_root_dir()
@@ -148,18 +143,32 @@ class ActionModule(ActionBase):
                 failed = True
                 err_msg = to_native(e)
 
+        if err_msg:
+            results['message'] = err_msg
+        results['failed'] = failed
+
+        return results
+
+    def _pre_pre_init(self, result=None):
+        """ Load yml files recursively from a directory.
+        """
+
+        self.show_content = True
+        self._set_args()
+
+        results = self._fail_on_missing_files()
+
         if self.return_results_as_name:
             scope = dict()
             scope[self.return_results_as_name] = results
             results = scope
 
-        result = super(ActionModule, self).run(tmp, task_vars)
+        return results
 
-        if failed:
-            result['failed'] = failed
-            result['message'] = err_msg
+    def _run(self, tmp=None, task_vars=None, result=None):
+        result = result or {}
 
-        result['ansible_facts'] = results
+        result['ansible_facts'] = result
         result['_ansible_no_log'] = not self.show_content
 
         return result

@@ -72,8 +72,14 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         self._supports_check_mode = True
         self._supports_async      = False
 
+        self._run_methods = [self._base_run, self._run]
+
+    def _run(self, tmp=None, task_vars=None, result=None):
+        return result
+        # whatever we do in the post super().run() now
+
     @abstractmethod
-    def run(self, tmp=None, task_vars=None):
+    def run(self, tmp=None, task_vars=None, result=None):
         """ Action Plugins should implement this method to perform their
         tasks.  Everything else in this base class is a helper method for the
         action plugin to do that.
@@ -89,8 +95,15 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
         * Module parameters.  These are stored in self._task.args
         """
+        result = result or {}
+        for method in self._run_methods:
+            result = method(tmp=tmp, task_vars=task_vars, result=result)
+            if result.get('skipped') or result.get('failed'):
+                return result
+        return result
 
-        result = {}
+    def _base_run(self, tmp=None, task_vars=None, result=None):
+        result = result or {}
 
         if self._task.async and not self._supports_async:
             result['msg'] = 'async is not supported for this task.'

@@ -27,15 +27,11 @@ from ansible.plugins.action import ActionBase
 class ActionModule(ActionBase):
     TRANSFERS_FILES = True
 
-    def run(self, tmp=None, task_vars=None):
+    def run(self, tmp=None, task_vars=None, result=None):
         ''' handler for file transfer operations '''
         if task_vars is None:
             task_vars = dict()
-
-        result = super(ActionModule, self).run(tmp, task_vars)
-
-        if result.get('skipped', False) or result.get('failed', False):
-            return result
+        result = result or {}
 
         if not tmp:
             tmp = self._make_tmp_path()

@@ -1,4 +1,5 @@
 # (c) 2012-2014, Michael DeHaan <michael.dehaan@gmail.com>
+
 # Copyright 2012, Seth Vidal <skvidal@fedoraproject.org>
 #
 # This file is part of Ansible
@@ -39,14 +40,15 @@ class ActionModule(ActionBase):
     BYPASS_HOST_LOOP = True
     TRANSFERS_FILES = False
 
-    def run(self, tmp=None, task_vars=None):
-
+    # this is kind of odd and seems like it should be set in __init__ or even as a class attr
+    def _pre_pre_run(self, result=None):
         self._supports_check_mode = True
+        return result
 
-        result = super(ActionModule, self).run(tmp, task_vars)
-
-        if result.get('skipped', False) or result.get('failed', False):
-            return result
+    def _run(self, tmp=None, task_vars=None, result=None):
+        # if we get this far, there is no obvious reason the action should be skipped or failed
+        #  like a check_mode conflict for ex.
+        result = result or {}
 
         # Parse out any hostname:port patterns
         new_name = self._task.args.get('name', self._task.args.get('hostname', None))
