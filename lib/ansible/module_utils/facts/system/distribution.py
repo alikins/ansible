@@ -68,6 +68,9 @@ class DistributionFiles:
         'SMGL': 'Source Mage GNU/Linux',
     }
 
+    def __init__(self, module):
+        self.module = module
+
     def _has_dist_file(self, path, allow_empty=False):
         # not finding the file, exit early
         if not os.path.exists(path):
@@ -437,7 +440,7 @@ class Distribution(object):
             distribution_facts.update(dist_func_facts)
         elif self.system == 'Linux':
 
-            distribution_files = DistributionFiles()
+            distribution_files = DistributionFiles(module=self.module)
 
             dist_file_facts = distribution_files.process_dist_files()
 
@@ -517,7 +520,7 @@ class Distribution(object):
 
     def get_distribution_SunOS(self):
         #import ptpdb; ptpdb.set_trace()
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
 
         sunos_facts = {}
@@ -559,7 +562,7 @@ class Distribution(object):
             distribution_version = data.split()[-1].lstrip('v')
 
         # print('sunos_facts: %s' % sunos_facts)
-        if sunos_facts.get('distribution_release', '') in ('SmartOS', 'OpenIndiana', 'OmniOS', 'Nexenta'):
+        if sunos_facts.get('distribution', '') in ('SmartOS', 'OpenIndiana', 'OmniOS', 'Nexenta'):
             sunos_facts['distribution_release'] = data.strip()
             if distribution_version is not None:
                 sunos_facts['distribution_version'] = distribution_version
