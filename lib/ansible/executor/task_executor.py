@@ -646,7 +646,7 @@ class TaskExecutor:
                         result['_ansible_retry'] = True
                         result['retries'] = retries
 
-                        msg = 'Retrying task, attempt %d of %d' % (attempt, retries)
+                        msg = 'Retrying task, attempt %d of %d'
                         display.debug(msg % (attempt, retries))
                         self.task_log.debug(msg, attempt, retries)
 
