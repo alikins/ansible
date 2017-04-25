@@ -32,6 +32,8 @@ def get_uname_version(module):
         return out
     return None
 
+import pprint
+
 
 class DistributionFiles:
     '''has-a various distro file parsers (os-release, etc) and logic for finding the right one.'''
@@ -125,9 +127,10 @@ class DistributionFiles:
             # print('distfunc: %s' % distfunc)
 
             parsed, dist_file_dict = distfunc(name, dist_file_content, path, collected_facts)
-            # print('name: %s' % name)
-            # print('parsed: %s' % parsed)
-            # print('dist_file_dict: %s' % dist_file_dict)
+            print('name: %s' % name)
+            print('path: %s' % path)
+            print('parsed: %s' % parsed)
+            print('dist_file_dict: %s' % dist_file_dict)
             return parsed, dist_file_dict
         except AttributeError as exc:
             print('exc: %s' % exc)
@@ -158,9 +161,9 @@ class DistributionFiles:
         # self.facts['distribution_debug'] = []
         dist_file_facts = {}
 
-        dist_guest = self._guess_distribution()
-
-        dist_file_facts.update(dist_guest)
+        dist_guess = self._guess_distribution()
+        print('dist_guess: %s' % pprint.pformat(dist_guess))
+        dist_file_facts.update(dist_guess)
 
         for ddict in self.OSDIST_LIST:
             name = ddict['name']
@@ -283,6 +286,7 @@ class DistributionFiles:
 
     def parse_distribution_file_Debian(self, name, data, path, collected_facts):
         debian_facts = {}
+        print('data: %s' % data)
         if 'Debian' in data or 'Raspbian' in data:
             debian_facts['distribution'] = 'Debian'
             release = re.search("PRETTY_NAME=[^(]+ \(?([^)]+?)\)", data)
@@ -330,6 +334,8 @@ class DistributionFiles:
             version = re.search("^VERSION=(.*)", line)
             if version and collected_facts['distribution_version'] == 'NA':
                 na_facts['distribution_version'] = version.group(1).strip('"')
+        print('NA data: %s' % data)
+        print('NA na_facts: %s' % pprint.pformat(na_facts))
         return True, na_facts
 
     def parse_distribution_file_Coreos(self, name, data, path, collected_facts):
