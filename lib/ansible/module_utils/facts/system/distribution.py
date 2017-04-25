@@ -393,9 +393,9 @@ class Distribution(object):
     OS_FAMILY_MAP = {'RedHat': ['RedHat', 'Fedora', 'CentOS', 'Scientific', 'SLC',
                                 'Ascendos', 'CloudLinux', 'PSBM', 'OracleLinux', 'OVS',
                                 'OEL', 'Amazon', 'Virtuozzo', 'XenServer'],
-                     'Debian': ['Debian', 'Ubuntu', 'Raspbian', 'Neon', 'KDE_neon'],
-                     'Suse': ['SuSE', 'SLES', 'SLED', 'openSUSE', 'openSUSE_Tumbleweed',
-                              'SLES_SAP', 'SUSE_LINUX', 'openSUSE_Leap'],
+                     'Debian': ['Debian', 'Ubuntu', 'Raspbian', 'Neon', 'KDE neon'],
+                     'Suse': ['SuSE', 'SLES', 'SLED', 'openSUSE', 'openSUSE Tumbleweed',
+                              'SLES_SAP', 'SUSE_LINUX', 'openSUSE Leap'],
                      'Archlinux': ['Archlinux', 'Manjaro'],
                      'Mandrake': ['Mandrake', 'Mandriva'],
                      'Solaris': ['Solaris', 'Nexenta', 'OmniOS', 'OpenIndiana', 'SmartOS'],
@@ -453,7 +453,7 @@ class Distribution(object):
 
             distribution_facts.update(dist_file_facts)
 
-        distro = distribution_facts['distribution'].replace(' ', '_')
+        distro = distribution_facts['distribution']
 
         # look for a os family alias for the 'distribution', if there isnt one, use 'distribution'
         distribution_facts['os_family'] = self.OS_FAMILY.get(distro, None) or distro
