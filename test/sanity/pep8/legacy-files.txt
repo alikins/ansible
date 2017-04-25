@@ -759,7 +759,6 @@ lib/ansible/modules/system/sefcontext.py
 lib/ansible/modules/system/selinux.py
 lib/ansible/modules/system/seport.py
 lib/ansible/modules/system/service.py
-lib/ansible/modules/system/setup.py
 lib/ansible/modules/system/solaris_zone.py
 lib/ansible/modules/system/svc.py
 lib/ansible/modules/system/sysctl.py
@@ -1027,8 +1026,6 @@ test/units/module_utils/gcp/test_auth.py
 test/units/module_utils/gcp/test_utils.py
 test/units/module_utils/json_utils/test_filter_non_json_lines.py
 test/units/module_utils/test_basic.py
-test/units/module_utils/test_distribution_version.py
-test/units/module_utils/test_facts.py
 test/units/module_utils/test_postgresql.py
 test/units/module_utils/test_text.py
 test/units/modules/cloud/amazon/test_ec2_vpc_nat_gateway.py
