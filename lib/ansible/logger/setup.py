@@ -151,8 +151,11 @@ def log_setup_code(name=None, level=None, fmt=None, log_stdout=None):
     print('ql.start')
     ql.start()
     #logging.getLogger('ansible_handler').setFormatter(logging.Formatter('%(asctime)s -%(name)s - %(process)d - %(message)s'))
-    import logging_tree
-    logging_tree.printout()
+    try:
+        import logging_tree
+        logging_tree.printout()
+    except ImportError:
+        pass
 
     #sys.exit()
     return qh, ql
