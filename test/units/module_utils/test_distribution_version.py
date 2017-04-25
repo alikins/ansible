@@ -838,15 +838,13 @@ def _test_one_distribution(module, testcase):
     def mock_get_uname_version(module):
         return testcase.get('uname_v', None)
 
-    def mock_path_exists(fname):
-        return fname in testcase['input']
+    def mock_file_exists(fname, allow_empty=False):
+        if fname not in testcase['input']:
+            return False
 
-    def mock_path_getsize(fname):
-        if fname in testcase['input']:
-            # the len is not used, but why not be honest if you can be?
-            return len(testcase['input'][fname])
-        else:
-            return 0
+        if allow_empty:
+            return True
+        return bool(len(testcase['input'][fname]))
 
     def mock_platform_system():
         return testcase.get('platform.system', 'Linux')
@@ -859,8 +857,7 @@ def _test_one_distribution(module, testcase):
 
     @patch('ansible.module_utils.facts.system.distribution.get_file_content', mock_get_file_content)
     @patch('ansible.module_utils.facts.system.distribution.get_uname_version', mock_get_uname_version)
-    @patch('os.path.exists', mock_path_exists)
-    @patch('os.path.getsize', mock_path_getsize)
+    @patch('ansible.module_utils.facts.system.distribution._file_exists', mock_file_exists)
     @patch('platform.dist', lambda: testcase['platform.dist'])
     @patch('platform.system', mock_platform_system)
     @patch('platform.release', mock_platform_release)
@@ -869,7 +866,6 @@ def _test_one_distribution(module, testcase):
         distro_collector = DistributionFactCollector()
         res = distro_collector.collect(module)
         return res
-        # return Distribution(module).populate()
 
     generated_facts = get_facts(testcase)
 
