@@ -390,18 +390,29 @@ class Distribution(object):
         'SMGL': 'Source Mage GNU/Linux',
     }
 
-    # A list with OS Family members
-    OS_FAMILY = dict(
-        RedHat='RedHat', Fedora='RedHat', CentOS='RedHat', Scientific='RedHat',
-        SLC='RedHat', Ascendos='RedHat', CloudLinux='RedHat', PSBM='RedHat',
-        OracleLinux='RedHat', OVS='RedHat', OEL='RedHat', Amazon='RedHat', Virtuozzo='RedHat',
-        XenServer='RedHat', Ubuntu='Debian', Debian='Debian', Raspbian='Debian', Slackware='Slackware', SLES='Suse',
-        SLED='Suse', openSUSE='Suse', openSUSE_Tumbleweed='Suse', SuSE='Suse', SLES_SAP='Suse', SUSE_LINUX='Suse', Gentoo='Gentoo',
-        Funtoo='Gentoo', Archlinux='Archlinux', Manjaro='Archlinux', Mandriva='Mandrake', Mandrake='Mandrake', Altlinux='Altlinux', SMGL='SMGL',
-        Solaris='Solaris', Nexenta='Solaris', OmniOS='Solaris', OpenIndiana='Solaris',
-        SmartOS='Solaris', AIX='AIX', Alpine='Alpine', MacOSX='Darwin',
-        FreeBSD='FreeBSD', HPUX='HP-UX', openSUSE_Leap='Suse', Neon='Debian', KDE_neon='Debian',
-    )
+    OS_FAMILY_MAP = {'RedHat': ['RedHat', 'Fedora', 'CentOS', 'Scientific', 'SLC',
+                                'Ascendos', 'CloudLinux', 'PSBM', 'OracleLinux', 'OVS',
+                                'OEL', 'Amazon', 'Virtuozzo', 'XenServer'],
+                     'Debian': ['Debian', 'Ubuntu', 'Raspbian', 'Neon', 'KDE_neon'],
+                     'Suse': ['SuSE', 'SLES', 'SLED', 'openSUSE', 'openSUSE_Tumbleweed',
+                              'SLES_SAP', 'SUSE_LINUX', 'openSUSE_Leap'],
+                     'Archlinux': ['Archlinux', 'Manjaro'],
+                     'Mandrake': ['Mandrake', 'Mandriva'],
+                     'Solaris': ['Solaris', 'Nexenta', 'OmniOS', 'OpenIndiana', 'SmartOS'],
+                     'Slackware': ['Slackware'],
+                     'Altlinux': ['Altlinux'],
+                     'SGML': ['SGML'],
+                     'Gentoo': ['Gentoo', 'Funtoo'],
+                     'Alpine': ['Alpine'],
+                     'AIX': ['AIX'],
+                     'HP-UX': ['HPUX'],
+                     'Darwin': ['MacOSX'],
+                     'FreeBSD': ['FreeBSD']}
+
+    OS_FAMILY = {}
+    for family, names in OS_FAMILY_MAP.items():
+        for name in names:
+            OS_FAMILY[name] = family
 
     def __init__(self, module):
         self.system = platform.system()
