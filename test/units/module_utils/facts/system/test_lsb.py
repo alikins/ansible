@@ -32,7 +32,7 @@ Distributor ID:	Fedora
 Description:	Fedora release 25 (Twenty Five)
 Release:	25
 Codename:	TwentyFive
-''' # noqa
+'''  # noqa
 
 # FIXME: a
 etc_lsb_release_ubuntu14 = '''DISTRIB_ID=Ubuntu
