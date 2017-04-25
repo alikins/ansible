@@ -33,6 +33,23 @@ def get_uname_version(module):
     return None
 
 
+def _file_exists(path, allow_empty=False):
+    # not finding the file, exit early
+    if not os.path.exists(path):
+        return False
+
+    # if just the path needs to exists (ie, it can be empty) we are done
+    if allow_empty:
+        return True
+
+    # file exists but is empty and we dont allow_empty
+    if os.path.getsize(path) == 0:
+        return False
+
+    # file exists with some content
+    return True
+
+
 class DistributionFiles:
     '''has-a various distro file parsers (os-release, etc) and logic for finding the right one.'''
     # every distribution name mentioned here, must have one of
@@ -71,28 +88,12 @@ class DistributionFiles:
     def __init__(self, module):
         self.module = module
 
-    def _has_dist_file(self, path, allow_empty=False):
-        # not finding the file, exit early
-        if not os.path.exists(path):
-            return False
-
-        # if just the path needs to exists (ie, it can be empty) we are done
-        if allow_empty:
-            return True
-
-        # file exists but is empty and we dont allow_empty
-        if os.path.getsize(path) == 0:
-            return False
-
-        # file exists with some content
-        return True
-
     def _get_file_content(self, path):
         return get_file_content(path)
 
     def _get_dist_file_content(self, path, allow_empty=False):
         # cant find that dist file or it is incorrectly empty
-        if not self._has_dist_file(path, allow_empty=allow_empty):
+        if not _file_exists(path, allow_empty=allow_empty):
             return False, None
 
         data = self._get_file_content(path)
@@ -415,16 +416,7 @@ class Distribution(object):
             OS_FAMILY[name] = family
 
     def __init__(self, module):
-        self.system = platform.system()
-        self.facts = {}
         self.module = module
-
-    def populate(self):
-        distribution_facts = self.get_distribution_facts()
-        return distribution_facts
-        # self.facts.update(distribution_facts)
-        # FIXME: just return distribution_facts
-        # return self.facts
 
     def get_distribution_facts(self):
         distribution_facts = {}
@@ -432,20 +424,19 @@ class Distribution(object):
         # The platform module provides information about the running
         # system/distribution. Use this as a baseline and fix buggy systems
         # afterwards
-        distribution_facts['distribution'] = self.system
+        system = platform.system()
+        distribution_facts['distribution'] = system
         distribution_facts['distribution_release'] = platform.release()
         distribution_facts['distribution_version'] = platform.version()
 
         systems_implemented = ('AIX', 'HP-UX', 'Darwin', 'FreeBSD', 'OpenBSD', 'SunOS', 'DragonFly', 'NetBSD')
 
-        # self.facts['distribution'] = self.system
-
-        if self.system in systems_implemented:
-            cleanedname = self.system.replace('-', '')
+        if system in systems_implemented:
+            cleanedname = system.replace('-', '')
             distfunc = getattr(self, 'get_distribution_' + cleanedname)
             dist_func_facts = distfunc()
             distribution_facts.update(dist_func_facts)
-        elif self.system == 'Linux':
+        elif system == 'Linux':
 
             distribution_files = DistributionFiles(module=self.module)
 
@@ -545,7 +536,7 @@ class Distribution(object):
 
         if 'SmartOS' in data:
             sunos_facts['distribution'] = 'SmartOS'
-            if os.path.exists('/etc/product'):
+            if _file_exists('/etc/product'):
                 product_data = dict([l.split(': ', 1) for l in get_file_content('/etc/product').splitlines() if ': ' in l])
                 if 'Image' in product_data:
                     distribution_version = product_data.get('Image').split()[-1]
@@ -632,6 +623,6 @@ class DistributionFactCollector(BaseFactCollector):
             return facts_dict
 
         distribution = Distribution(module=module)
-        distro_facts = distribution.populate()
+        distro_facts = distribution.get_distribution_facts()
 
         return distro_facts
