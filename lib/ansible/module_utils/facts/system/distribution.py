@@ -516,8 +516,12 @@ class Distribution(object):
         return smgl_facts
 
     def get_distribution_SunOS(self):
+        #import ptpdb; ptpdb.set_trace()
+        import pdb; pdb.set_trace()
+
+
         sunos_facts = {}
-        # distribution_release = platform.release()
+        distribution_release = platform.release()
 
         # print('platform.release: %s' % distribution_release)
         data = get_file_content('/etc/release').splitlines()[0]
