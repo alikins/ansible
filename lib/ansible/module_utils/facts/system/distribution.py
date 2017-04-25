@@ -440,6 +440,7 @@ class Distribution(object):
 
             distribution_files = DistributionFiles(module=self.module)
 
+            # linux_distribution_facts = LinuxDistribution(module).get_distribution_facts()
             dist_file_facts = distribution_files.process_dist_files()
 
             distribution_facts.update(dist_file_facts)
@@ -559,55 +560,6 @@ class Distribution(object):
             return sunos_facts
 
         return sunos_facts
-
-    def parse_distribution_file_SuSE(self, name, data, path):
-        suse_facts = {}
-        if 'suse' not in data.lower():
-            return False, suse_facts  # TODO: remove if tested without this
-        if path == '/etc/os-release':
-            for line in data.splitlines():
-                distribution = re.search("^NAME=(.*)", line)
-                if distribution:
-                    suse_facts['distribution'] = distribution.group(1).strip('"')
-                # example pattern are 13.04 13.0 13
-                distribution_version = re.search('^VERSION_ID="?([0-9]+\.?[0-9]*)"?', line)
-                if distribution_version:
-                    suse_facts['distribution_version'] = distribution_version.group(1)
-                if 'open' in data.lower():
-                    release = re.search('^VERSION_ID="?[0-9]+\.?([0-9]*)"?', line)
-                    if release:
-                        suse_facts['distribution_release'] = release.groups()[0]
-                elif 'enterprise' in data.lower() and 'VERSION_ID' in line:
-                    # SLES doesn't got funny release names
-                    release = re.search('^VERSION_ID="?[0-9]+\.?([0-9]*)"?', line)
-                    if release.group(1):
-                        release = release.group(1)
-                    else:
-                        release = "0"  # no minor number, so it is the first release
-                    suse_facts['distribution_release'] = release
-        elif path == '/etc/SuSE-release':
-            if 'open' in data.lower():
-                data = data.splitlines()
-                distdata = get_file_content(path).splitlines()[0]
-                suse_facts['distribution'] = distdata.split()[0]
-                for line in data:
-                    release = re.search('CODENAME *= *([^\n]+)', line)
-                    if release:
-                        suse_facts['distribution_release'] = release.groups()[0].strip()
-            elif 'enterprise' in data.lower():
-                lines = data.splitlines()
-                distribution = lines[0].split()[0]
-                if "Server" in data:
-                    suse_facts['distribution'] = "SLES"
-                elif "Desktop" in data:
-                    suse_facts['distribution'] = "SLED"
-                for line in lines:
-                    release = re.search('PATCHLEVEL = ([0-9]+)', line)  # SLES doesn't got funny release names
-                    if release:
-                        suse_facts['distribution_release'] = release.group(1)
-                        suse_facts['distribution_version'] = suse_facts['distribution_version'] + '.' + release.group(1)
-
-        return True, suse_facts
 
 
 class DistributionFactCollector(BaseFactCollector):
