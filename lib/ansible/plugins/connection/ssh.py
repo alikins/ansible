@@ -232,7 +232,7 @@ def _ssh_retry(func):
                         msg = "ssh_retry: attempt: %d, caught exception(%s) from cmd (%s), pausing for %d seconds" % (attempt, e, cmd_summary, pause)
 
                     display.vv(msg, host=self.host)
-                    logger.log(logger.VV, msg, extra={'hosts': self.host})
+                    log.log(logger.VV, msg, extra={'hosts': self.host})
                     time.sleep(pause)
                     continue
 
@@ -747,7 +747,7 @@ class Connection(ConnectionBase):
 
                 if states[state] == 'awaiting_escalation':
                     if self._flags['become_success']:
-		        # FIXME: add back logging
+                        # FIXME: add back logging
                         display.debug('Escalation succeeded')
                         self._flags['become_success'] = False
                         state += 1
@@ -955,7 +955,7 @@ class Connection(ConnectionBase):
         super(Connection, self).fetch_file(in_path, out_path)
 
         display.vvv(u"FETCH {0} TO {1}".format(in_path, out_path), host=self.host)
-        logger.log(logger.VVV, u"FETCH %s TO %s", in_path, out_path, extra={'host':self.host})
+        log.log(logger.VVV, u"FETCH %s TO %s", in_path, out_path, extra={'host': self.host})
         return self._file_transport_command(in_path, out_path, 'get')
 
     def reset(self):
