@@ -32,8 +32,6 @@ def get_uname_version(module):
         return out
     return None
 
-import pprint
-
 
 class DistributionFiles:
     '''has-a various distro file parsers (os-release, etc) and logic for finding the right one.'''
@@ -127,10 +125,6 @@ class DistributionFiles:
             # print('distfunc: %s' % distfunc)
 
             parsed, dist_file_dict = distfunc(name, dist_file_content, path, collected_facts)
-            print('name: %s' % name)
-            print('path: %s' % path)
-            print('parsed: %s' % parsed)
-            print('dist_file_dict: %s' % dist_file_dict)
             return parsed, dist_file_dict
         except AttributeError as exc:
             print('exc: %s' % exc)
@@ -162,7 +156,6 @@ class DistributionFiles:
         dist_file_facts = {}
 
         dist_guess = self._guess_distribution()
-        print('dist_guess: %s' % pprint.pformat(dist_guess))
         dist_file_facts.update(dist_guess)
 
         for ddict in self.OSDIST_LIST:
@@ -286,7 +279,6 @@ class DistributionFiles:
 
     def parse_distribution_file_Debian(self, name, data, path, collected_facts):
         debian_facts = {}
-        print('data: %s' % data)
         if 'Debian' in data or 'Raspbian' in data:
             debian_facts['distribution'] = 'Debian'
             release = re.search("PRETTY_NAME=[^(]+ \(?([^)]+?)\)", data)
@@ -334,8 +326,6 @@ class DistributionFiles:
             version = re.search("^VERSION=(.*)", line)
             if version and collected_facts['distribution_version'] == 'NA':
                 na_facts['distribution_version'] = version.group(1).strip('"')
-        print('NA data: %s' % data)
-        print('NA na_facts: %s' % pprint.pformat(na_facts))
         return True, na_facts
 
     def parse_distribution_file_Coreos(self, name, data, path, collected_facts):
@@ -410,7 +400,7 @@ class Distribution(object):
         Funtoo='Gentoo', Archlinux='Archlinux', Manjaro='Archlinux', Mandriva='Mandrake', Mandrake='Mandrake', Altlinux='Altlinux', SMGL='SMGL',
         Solaris='Solaris', Nexenta='Solaris', OmniOS='Solaris', OpenIndiana='Solaris',
         SmartOS='Solaris', AIX='AIX', Alpine='Alpine', MacOSX='Darwin',
-        FreeBSD='FreeBSD', HPUX='HP-UX', openSUSE_Leap='Suse', Neon='Debian'
+        FreeBSD='FreeBSD', HPUX='HP-UX', openSUSE_Leap='Suse', Neon='Debian', KDE_neon='Debian',
     )
 
     def __init__(self, module):
@@ -452,16 +442,11 @@ class Distribution(object):
 
             distribution_facts.update(dist_file_facts)
 
-        # FIXME: just return distribution_facts
-        # self.facts.update(distribution_facts)
-
         distro = distribution_facts['distribution'].replace(' ', '_')
-        distribution_facts['distribution'] = distro
 
         # look for a os family alias for the 'distribution', if there isnt one, use 'distribution'
         distribution_facts['os_family'] = self.OS_FAMILY.get(distro, None) or distro
 
-        # FIXME: replace with return distribution_facts once working
         return distribution_facts
 
     def get_distribution_AIX(self):
@@ -525,12 +510,7 @@ class Distribution(object):
         return smgl_facts
 
     def get_distribution_SunOS(self):
-        #import ptpdb; ptpdb.set_trace()
-        #import pdb; pdb.set_trace()
-
-
         sunos_facts = {}
-        distribution_release = platform.release()
 
         # print('platform.release: %s' % distribution_release)
         data = get_file_content('/etc/release').splitlines()[0]
@@ -643,6 +623,4 @@ class DistributionFactCollector(BaseFactCollector):
         distribution = Distribution(module=module)
         distro_facts = distribution.populate()
 
-        # import pprint
-        # print('distro_facts: %s' % pprint.pformat(distro_facts))
         return distro_facts
