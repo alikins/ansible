@@ -458,7 +458,7 @@ VERSION_ID="12.04"
         "name": "KDE neon 16.04",
         "result": {
             "distribution_release": "xenial",
-            "distribution": "Neon",
+            "distribution": "KDE Neon",
             "distribution_major_version": "16",
             "os_family": "Debian",
             "distribution_version": "16.04"
