@@ -79,7 +79,7 @@ class TestAnsibleModuleRunCommand(unittest.TestCase):
         self.module = ansible.module_utils.basic.AnsibleModule(argument_spec=dict())
         self.module.fail_json = MagicMock(side_effect=SystemExit)
 
-        self.os = mocker.patch('ansible.module_utils.basic.os')
+        self.os = mocker.patch('ansible.module_utils.run_command.os')
         self.os.path.expandvars.side_effect = lambda x: x
         self.os.path.expanduser.side_effect = lambda x: x
         self.os.environ = {'PATH': '/bin'}
@@ -89,7 +89,7 @@ class TestAnsibleModuleRunCommand(unittest.TestCase):
         self.os.read.side_effect = mock_os_read
         self.os.path.abspath.side_effect = mock_os_abspath
 
-        self.subprocess = mocker.patch('ansible.module_utils.basic.subprocess')
+        self.subprocess = mocker.patch('ansible.module_utils.run_command.subprocess')
         self.cmd = Mock()
         self.cmd.returncode = 0
         self.cmd.stdin = OpenBytesIO()
@@ -97,7 +97,7 @@ class TestAnsibleModuleRunCommand(unittest.TestCase):
         self.cmd.stderr.fileno.return_value = sentinel.stderr
         self.subprocess.Popen.return_value = self.cmd
 
-        self.select = mocker.patch('ansible.module_utils.basic.select')
+        self.select = mocker.patch('ansible.module_utils.run_command.select')
         self.select.select.side_effect = mock_select
         yield
 
@@ -151,6 +151,8 @@ class TestAnsibleModuleRunCommand(unittest.TestCase):
         self.assertRaises(SystemExit, self.module.run_command, '/bin/ls', cwd='/inaccessible')
         self.assertTrue(self.module.fail_json.called)
         args, kwargs = self.module.fail_json.call_args
+        print('args: %s' % repr(args))
+        print('kwargs: %s' % repr(kwargs))
         self.assertEqual(kwargs['rc'], errno.EPERM)
 
     def test_prompt_bad_regex(self):
@@ -177,6 +179,8 @@ class TestAnsibleModuleRunCommand(unittest.TestCase):
         self.assertRaises(SystemExit, self.module.run_command, '/bin/false', check_rc=True)
         self.assertTrue(self.module.fail_json.called)
         args, kwargs = self.module.fail_json.call_args
+        print('args: %s' % repr(args))
+        print('kwargs: %s' % repr(kwargs))
         self.assertEqual(kwargs['rc'], 1)
 
     def test_text_stdin(self):
