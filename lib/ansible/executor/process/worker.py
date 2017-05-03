@@ -119,12 +119,7 @@ class WorkerProcess(multiprocessing.Process):
             display.debug("done running TaskExecutor() for %s/%s" % (self._host, self._task))
             self._host.vars = dict()
             self._host.groups = []
-            task_result = TaskResult(
-                self._host.name,
-                self._task._uuid,
-                executor_result,
-                task_fields=self._task.dump_attrs(),
-            )
+            task_result = TaskResult(self._host.name, self._task._uuid, executor_result)
 
             # put the result on the result queue
             display.debug("sending task result")
@@ -134,12 +129,7 @@ class WorkerProcess(multiprocessing.Process):
         except AnsibleConnectionFailure:
             self._host.vars = dict()
             self._host.groups = []
-            task_result = TaskResult(
-                self._host.name,
-                self._task._uuid,
-                dict(unreachable=True),
-                task_fields=self._task.dump_attrs(),
-            )
+            task_result = TaskResult(self._host.name, self._task._uuid, dict(unreachable=True))
             self._rslt_q.put(task_result, block=False)
 
         except Exception as e:
@@ -147,12 +137,7 @@ class WorkerProcess(multiprocessing.Process):
                 try:
                     self._host.vars = dict()
                     self._host.groups = []
-                    task_result = TaskResult(
-                        self._host.name,
-                        self._task._uuid,
-                        dict(failed=True, exception=to_text(traceback.format_exc()), stdout=''),
-                        task_fields=self._task.dump_attrs(),
-                    )
+                    task_result = TaskResult(self._host.name, self._task._uuid, dict(failed=True, exception=to_text(traceback.format_exc()), stdout=''))
                     self._rslt_q.put(task_result, block=False)
                 except:
                     display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
