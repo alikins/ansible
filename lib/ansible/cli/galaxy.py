@@ -484,8 +484,12 @@ class GalaxyCLI(CLI):
                 elif not os.path.isdir(role_path):
                     raise AnsibleOptionsError("- %s exists, but it is not a directory. Please specify a valid path with --roles-path" % role_path)
                 path_files = os.listdir(role_path)
+                yaml_specs = []
                 for path_file in path_files:
                     gr = GalaxyRole(self.galaxy, path_file)
+                    yml = True
+                    if yml:
+                        yaml_specs.append(self._format_requirements(gr.spec or {}))
                     if gr.metadata:
                         install_info = gr.install_info
                         version = None
@@ -494,7 +498,19 @@ class GalaxyCLI(CLI):
                         if not version:
                             version = "(unknown version)"
                         display.display("- %s, %s" % (path_file, version))
+                display.display(yaml.dump(yaml_specs, indent=2,
+                                          default_style='"',
+                                          default_flow_style=False,
+                                          allow_unicode=False,
+                                          canonical=False))
         return 0
+
+    def _format_requirements(self, role_spec):
+        if role_spec.get('scm', False) is None:
+            del role_spec['scm']
+        if role_spec.get('version', False) is None:
+            del role_spec['version']
+        return role_spec
 
     def execute_search(self):
         ''' searches for roles on the Ansible Galaxy server'''
