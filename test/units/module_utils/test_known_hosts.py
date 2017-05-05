@@ -71,7 +71,11 @@ class TestAnsibleModuleKnownHosts(unittest.TestCase):
         'ssh://internal.git.server:7999/repos/repo.git':
             {'is_ssh_url': True, 'get_fqdn': 'internal.git.server',
              'add_host_key_cmd': " -t rsa -p 7999 internal.git.server",
-             'port': '7999'}
+             'port': '7999'},
+        'git@cl11003.sunlifecorp.com:7999/dcs/whs-prod-new.git':
+           {'is_ssh_url': True, 'get_fqdn': 'cl11003.sunlifecorp.com',
+             'add_host_key_cmd': ' -t rsa -p 7999 cl11003.sunlifecorp.com',
+             'port': '7999'},
     }
 
     def test_is_ssh_url(self):
