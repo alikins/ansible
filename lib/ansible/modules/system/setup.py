@@ -124,7 +124,7 @@ from ansible.module_utils.basic import AnsibleModule
 # TODO: mv to facts/base.py ?
 from ansible.module_utils import facts
 
-from ansible.module_utils.facts.collector import BaseFactCollector
+from ansible.module_utils.facts import collector
 from ansible.module_utils.facts.namespace import PrefixFactNamespace
 
 from ansible.module_utils.facts import default_collectors
@@ -136,7 +136,7 @@ from ansible.module_utils.facts import default_collectors
 #        module is passed in and self.module.misc_AnsibleModule_methods
 #        are used, so hard to decouple.
 
-class AnsibleFactCollector(BaseFactCollector):
+class AnsibleFactCollector(collector.BaseFactCollector):
     '''A FactCollector that returns results under 'ansible_facts' top level key.
 
        Has a 'from_gather_subset() constructor that populates collectors based on a
@@ -153,7 +153,7 @@ class AnsibleFactCollector(BaseFactCollector):
         facts_dict = {}
         facts_dict['ansible_facts'] = {}
 
-        for collector in self.collectors:
+        for collector_obj in self.collectors:
             info_dict = {}
 
             # shallow copy of the accumulated collected facts to pass to each collector
@@ -163,9 +163,8 @@ class AnsibleFactCollector(BaseFactCollector):
             try:
 
                 # Note: this collects with namespaces, so collected_facts also includes namespaces
-                info_dict = collector.collect_with_namespace(module=module,
-                                                             collected_facts=collected_facts)
-                # print('\nINFO_DICT(%s): %s' % (collector.__class__.__name__, pprint.pformat(info_dict)))
+                info_dict = collector_obj.collect_with_namespace(module=module,
+                                                                 collected_facts=collected_facts)
             except Exception as e:
                 # FIXME: do fact collection exception warning/logging
                 sys.stderr.write(repr(e))
@@ -181,7 +180,7 @@ class AnsibleFactCollector(BaseFactCollector):
         return facts_dict
 
 
-class CollectorMetaDataCollector(BaseFactCollector):
+class CollectorMetaDataCollector(collector.BaseFactCollector):
     '''Collector that provides a facts with the gather_subset metadata.'''
 
     name = 'gather_subset'
@@ -225,7 +224,7 @@ def main():
     all_collector_classes = default_collectors.collectors
 
     collector_classes = \
-        facts.collector_classes_from_gather_subset(
+        collector.collector_classes_from_gather_subset(
             all_collector_classes=all_collector_classes,
             minimal_gather_subset=minimal_gather_subset,
             gather_subset=gather_subset,
