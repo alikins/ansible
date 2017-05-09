@@ -25,7 +25,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 class CmdLineFactCollector(BaseFactCollector):
     name = 'cmdline'
-    _fact_ids = set([])
+    _fact_ids = set()
 
     def collect(self, module=None, collected_facts=None):
         cmdline_facts = {}

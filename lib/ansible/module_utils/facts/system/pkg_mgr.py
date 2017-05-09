@@ -53,7 +53,7 @@ PKG_MGRS = [{'path': '/usr/bin/yum', 'name': 'yum'},
 # the fact ends up being 'pkg_mgr' so stick with that naming/spelling
 class PkgMgrFactCollector(BaseFactCollector):
     name = 'pkg_mgr'
-    _fact_ids = set([])
+    _fact_ids = set()
 
     def collect(self, module=None, collected_facts=None):
         facts_dict = {}

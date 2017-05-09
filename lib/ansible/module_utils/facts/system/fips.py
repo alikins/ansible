@@ -24,7 +24,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 class FipsFactCollector(BaseFactCollector):
     name = 'fips'
-    _fact_ids = set([])
+    _fact_ids = set()
 
     def collect(self, module=None, collected_facts=None):
         # NOTE: this is populated even if it is not set
