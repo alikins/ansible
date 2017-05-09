@@ -66,4 +66,4 @@ class Facts:
         #    self.facts.update(data)
 
     def populate(self):
-        return self.facts
+        return {}
