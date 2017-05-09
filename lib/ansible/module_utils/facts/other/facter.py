@@ -16,7 +16,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from ansible.module_utils.facts import _json
+import json
+
 from ansible.module_utils.facts.namespace import PrefixFactNamespace
 
 from ansible.module_utils.facts.collector import BaseFactCollector
@@ -76,7 +77,7 @@ class FacterFactCollector(BaseFactCollector):
             return facter_dict
 
         try:
-            facter_dict = _json.loads(facter_output)
+            facter_dict = json.loads(facter_output)
         except Exception:
             # FIXME: maybe raise a FactCollectorError with some info attrs?
             pass

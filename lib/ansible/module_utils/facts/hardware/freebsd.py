@@ -2,11 +2,11 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import os
+import json
 import re
 
 from ansible.module_utils.facts.hardware.base import Hardware
 from ansible.module_utils.facts.timeout import TimeoutError, timeout
-from ansible.module_utils.facts import _json
 
 from ansible.module_utils.facts.utils import get_file_content, get_mount_size
 
@@ -164,7 +164,7 @@ class FreeBSDHardware(Hardware):
                     # FIXME: why add the fact and then test if it is json?
                     dmi_facts[k] = ''.join([line for line in out.splitlines() if not line.startswith('#')])
                     try:
-                        _json.dumps(dmi_facts[k])
+                        json.dumps(dmi_facts[k])
                     except UnicodeDecodeError:
                         dmi_facts[k] = 'NA'
                 else:
