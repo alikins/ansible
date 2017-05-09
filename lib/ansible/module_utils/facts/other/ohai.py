@@ -17,7 +17,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from ansible.module_utils.facts import _json
+import json
 
 from ansible.module_utils.facts.namespace import PrefixFactNamespace
 
@@ -65,7 +65,7 @@ class OhaiFactCollector(BaseFactCollector):
             return ohai_facts
 
         try:
-            ohai_facts = _json.loads(ohai_output)
+            ohai_facts = json.loads(ohai_output)
         except Exception:
             # FIXME: useful error, logging, something...
             pass

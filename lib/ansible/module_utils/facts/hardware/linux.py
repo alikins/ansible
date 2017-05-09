@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import errno
+import json
 import os
 import re
 import sys
@@ -9,7 +10,6 @@ import sys
 from ansible.module_utils.basic import bytes_to_human
 
 from ansible.module_utils.facts.hardware.base import Hardware
-from ansible.module_utils.facts import _json
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines, get_mount_size
 
 # import this as a module to ensure we get the same module isntance
@@ -298,7 +298,7 @@ class LinuxHardware(Hardware):
                         # Strip out commented lines (specific dmidecode output)
                         thisvalue = ''.join([line for line in out.splitlines() if not line.startswith('#')])
                         try:
-                            _json.dumps(thisvalue)
+                            json.dumps(thisvalue)
                         except UnicodeDecodeError:
                             thisvalue = "NA"
 

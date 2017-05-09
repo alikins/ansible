@@ -17,6 +17,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import glob
+import json
 import os
 import stat
 
@@ -24,7 +25,6 @@ from ansible.module_utils.six.moves import configparser
 from ansible.module_utils.six.moves import StringIO
 
 from ansible.module_utils.facts.utils import get_file_content
-from ansible.module_utils.facts import _json
 
 from ansible.module_utils.facts.collector import BaseFactCollector
 
@@ -70,7 +70,7 @@ class LocalFactCollector(BaseFactCollector):
             # load raw json
             fact = 'loading %s' % fact_base
             try:
-                fact = _json.loads(out)
+                fact = json.loads(out)
             except ValueError:
                 # load raw ini
                 cp = configparser.ConfigParser()
