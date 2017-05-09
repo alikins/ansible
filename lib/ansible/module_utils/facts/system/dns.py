@@ -24,7 +24,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 class DnsFactCollector(BaseFactCollector):
     name = 'dns'
-    _fact_ids = set([])
+    _fact_ids = set()
 
     def collect(self, module=None, collected_facts=None):
         dns_facts = {}

@@ -38,7 +38,7 @@ if platform.system() != 'SunOS':
 # the fact ends up being 'service_mgr' so stick with that naming
 class ServiceMgrFactCollector(BaseFactCollector):
     name = 'service_mgr'
-    _fact_ids = set([])
+    _fact_ids = set()
 
     def is_systemd_managed(self, module):
         # tools must be installed

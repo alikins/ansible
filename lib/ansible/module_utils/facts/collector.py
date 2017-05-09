@@ -30,7 +30,7 @@ from ansible.module_utils.facts import timeout
 #             matcher to handle semi dynamic names (like networks 'ansible_INTERFACENAME' facts)
 #             so gather could match them
 class BaseFactCollector:
-    _fact_ids = set([])
+    _fact_ids = set()
     name = None
 
     def __init__(self, collectors=None, namespace=None):
@@ -101,9 +101,9 @@ class BaseFactCollector:
         based on what ids already are known. It should be considered read only.
         '''
 
-        id_set = set([])
+        id_set = set()
         for collector in self.collectors:
-            info_set = set([])
+            info_set = set()
             try:
                 info_set = collector.collect_ids(collected_ids=collected_ids)
             except Exception as e:
@@ -138,10 +138,10 @@ def get_collector_names(valid_subsets=None,
     # Retrieve module parameters
     gather_subset = gather_subset or ['all']
 
-    valid_subsets = valid_subsets or frozenset([])
+    valid_subsets = valid_subsets or frozenset()
 
     # if provided, minimal_gather_subset is always added, even after all negations
-    minimal_gather_subset = minimal_gather_subset or frozenset([])
+    minimal_gather_subset = minimal_gather_subset or frozenset()
 
     aliases_map = aliases_map or defaultdict(set)
 
@@ -163,7 +163,7 @@ def get_collector_names(valid_subsets=None,
 
         if exclude:
             # include 'devices', 'dmi' etc for '!hardware'
-            exclude_subsets.update(aliases_map.get(subset, set([])))
+            exclude_subsets.update(aliases_map.get(subset, set()))
             exclude_subsets.add(subset)
         else:
             # NOTE: this only considers adding an unknown gather subsetup an error. Asking to
@@ -194,7 +194,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     all_collector_classes = all_collector_classes or []
 
-    minimal_gather_subset = minimal_gather_subset or frozenset([])
+    minimal_gather_subset = minimal_gather_subset or frozenset()
 
     # FIXME: decorator weirdness rel to timeout module scope
     gather_timeout = gather_timeout or timeout.DEFAULT_GATHER_TIMEOUT
@@ -203,7 +203,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     timeout.GATHER_TIMEOUT = gather_timeout
 
     # valid_subsets = valid_subsets or cls.VALID_SUBSETS
-    valid_subsets = valid_subsets or frozenset([])
+    valid_subsets = valid_subsets or frozenset()
     # import pprint
     # print('valid_subsets: %s' % pprint.pformat(valid_subsets))
 

@@ -25,7 +25,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 
 class LSBFactCollector(BaseFactCollector):
     name = 'lsb'
-    _fact_ids = set([])
+    _fact_ids = set()
 
     def _lsb_release_bin(self, lsb_path, module):
         lsb_facts = {}

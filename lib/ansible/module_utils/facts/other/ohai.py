@@ -27,7 +27,7 @@ from ansible.module_utils.facts.collector import BaseFactCollector
 class OhaiFactCollector(BaseFactCollector):
     '''This is a subclass of Facts for including information gathered from Ohai.'''
     name = 'ohai'
-    _fact_ids = set([])
+    _fact_ids = set()
 
     def __init__(self, collectors=None, namespace=None):
         namespace = PrefixFactNamespace(namespace_name='ohai',
