@@ -18,8 +18,6 @@ __metaclass__ = type
 
 import sys
 
-from ansible.module_utils.facts.namespace import PrefixFactNamespace
-
 
 # TODO: BaseFactCollectors (plural) -> walks over list of collectors
 #       BaseFactCollector (singular) -> returns a dict (collectors 'leaf' node)
@@ -39,8 +37,8 @@ class BaseFactCollector:
 
         # self.namespace is a object with a 'transform' method that transforms
         # the name to indicate the namespace (ie, adds a prefix or suffix).
-        self.namespace = namespace or PrefixFactNamespace(namespace_name='ansible',
-                                                          prefix='ansible_')
+        self.namespace = namespace
+
         self.fact_ids = set([self.name])
         self.fact_ids.update(self._fact_ids)
 
@@ -117,21 +115,3 @@ class BaseFactCollector:
         id_set.update(self.fact_ids)
 
         return id_set
-
-
-class CollectorMetaDataCollector(BaseFactCollector):
-    '''Collector that provides a facts with the gather_subset metadata.'''
-
-    name = 'gather_subset'
-    _fact_ids = set([])
-
-    def __init__(self, collectors=None, namespace=None, gather_subset=None, module_setup=None):
-        super(CollectorMetaDataCollector, self).__init__(collectors, namespace)
-        self.gather_subset = gather_subset
-        self.module_setup = module_setup
-
-    def collect(self, module=None, collected_facts=None):
-        meta_facts = {'gather_subset': self.gather_subset}
-        if self.module_setup:
-            meta_facts['module_setup'] = self.module_setup
-        return meta_facts
