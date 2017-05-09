@@ -4,6 +4,8 @@ __metaclass__ = type
 import os
 import re
 
+from ansible.module_utils.six.moves import reduce
+
 from ansible.module_utils.facts.hardware.base import Hardware
 from ansible.module_utils.facts.timeout import TimeoutError, timeout
 
