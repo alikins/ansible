@@ -139,11 +139,11 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
                  minimal_gather_subset=None,
                  gather_subset=None,
                  gather_timeout=None):
-        return facts.collector_classes_from_gather_subset(all_collector_classes=all_collector_classes,
-                                                          valid_subsets=valid_subsets,
-                                                          minimal_gather_subset=minimal_gather_subset,
-                                                          gather_subset=gather_subset,
-                                                          gather_timeout=gather_timeout)
+        return collector.collector_classes_from_gather_subset(all_collector_classes=all_collector_classes,
+                                                              valid_subsets=valid_subsets,
+                                                              minimal_gather_subset=minimal_gather_subset,
+                                                              gather_subset=gather_subset,
+                                                              gather_timeout=gather_timeout)
 
     def test_no_args(self):
         res = self._classes()
