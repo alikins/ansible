@@ -21,8 +21,6 @@ __metaclass__ = type
 
 from ansible.compat.tests.mock import Mock, patch
 
-from ansible.module_utils.facts.collector import CollectorMetaDataCollector
-
 from . base import BaseFactsTest
 
 from ansible.module_utils.facts.system.apparmor import ApparmorFactCollector
@@ -81,14 +79,6 @@ class TestCmdLineFacts(BaseFactsTest):
     fact_namespace = 'ansible_cmdline'
     collector_class = CmdLineFactCollector
 
-
-class TestCollectorMetaDataCollector(BaseFactsTest):
-    __test__ = True
-    gather_subset = ['!all', 'gather_subset']
-    valid_subsets = ['gather_subset']
-    fact_namespace = 'ansible_gather_subset'
-    collector_class = CollectorMetaDataCollector
-    collected_facts = {'ansible_gather_subset': ['!all', 'gather_subset']}
 
 
 class TestDistributionFacts(BaseFactsTest):

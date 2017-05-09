@@ -124,7 +124,8 @@ from ansible.module_utils.basic import AnsibleModule
 # TODO: mv to facts/base.py ?
 from ansible.module_utils import facts
 
-from ansible.module_utils.facts.collector import BaseFactCollector, CollectorMetaDataCollector
+from ansible.module_utils.facts.collector import BaseFactCollector
+from ansible.module_utils.facts.namespace import PrefixFactNamespace
 
 from ansible.module_utils.facts import default_collectors
 
@@ -142,8 +143,6 @@ class AnsibleFactCollector(BaseFactCollector):
        gather_subset specifier.'''
 
     def __init__(self, collectors=None, namespace=None):
-        # namespace = PrefixFactNamespace(namespace_name='ansible',
-        #                                prefix='ansible_')
 
         super(AnsibleFactCollector, self).__init__(collectors=collectors,
                                                    namespace=namespace)
@@ -182,6 +181,24 @@ class AnsibleFactCollector(BaseFactCollector):
         return facts_dict
 
 
+class CollectorMetaDataCollector(BaseFactCollector):
+    '''Collector that provides a facts with the gather_subset metadata.'''
+
+    name = 'gather_subset'
+    _fact_ids = set([])
+
+    def __init__(self, collectors=None, namespace=None, gather_subset=None, module_setup=None):
+        super(CollectorMetaDataCollector, self).__init__(collectors, namespace)
+        self.gather_subset = gather_subset
+        self.module_setup = module_setup
+
+    def collect(self, module=None, collected_facts=None):
+        meta_facts = {'gather_subset': self.gather_subset}
+        if self.module_setup:
+            meta_facts['module_setup'] = self.module_setup
+        return meta_facts
+
+
 def main():
     module = AnsibleModule(
         argument_spec=dict(
@@ -216,9 +233,12 @@ def main():
 
     # print('collector_classes: %s' % pprint.pformat(collector_classes))
 
+    namespace = PrefixFactNamespace(namespace_name='ansible',
+                                    prefix='ansible_')
+
     collectors = []
     for collector_class in collector_classes:
-        collector_obj = collector_class()
+        collector_obj = collector_class(namespace=namespace)
         collectors.append(collector_obj)
 
     # Add a collector that knows what gather_subset we used so it it can provide a fact
@@ -233,14 +253,6 @@ def main():
         AnsibleFactCollector(collectors=collectors)
 
     facts_dict = fact_collector.collect(module=module)
-
-    # TODO/FIXME: deprecate the non namespaced meta facts?
-    # The meta facts ('gather_setup', 'module_setup') are not namespaced.
-    # TODO: could just make this another collector, but then we need to change how AnsibleFactsCollector
-    #       applies the namespaces
-    meta_facts_dict = collector_meta_data_collector.collect(module=module)
-
-    facts_dict.update(meta_facts_dict)
 
     module.exit_json(**facts_dict)
 
