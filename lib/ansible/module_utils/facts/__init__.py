@@ -45,6 +45,9 @@
 #       - one file collectors (say, env.py or cmdline.py) can live in collectors/
 #       - collectors with interdeps (Network or Hardware for ex, may live in collectors/network/)
 #       - or could flatten to collectors/linux_hardware.py, collectors/sunos_hardware.py etc
+# TODO: mv system/distribution.py to distribution/ and split into modules/classes
+#       - could be tough, since parts of Distribution needs to run several methods/classes to
+#         find the best fit
 # IDEA: gather 'tags' in addition to gather 'ids'
 #       - ids identify _a_ fact collector uniquely
 #       - tags can identify multiple facts collectors

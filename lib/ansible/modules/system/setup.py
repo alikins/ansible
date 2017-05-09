@@ -163,7 +163,6 @@ class AnsibleFactCollector(BaseFactCollector):
 
             try:
 
-                # print('\n about to collect %s for module %s' % (collector.__class__.__name__, module))
                 # Note: this collects with namespaces, so collected_facts also includes namespaces
                 info_dict = collector.collect_with_namespace(module=module,
                                                              collected_facts=collected_facts)
@@ -177,13 +176,6 @@ class AnsibleFactCollector(BaseFactCollector):
 
             # NOTE: If we want complicated fact dict merging, this is where it would hook in
             facts_dict['ansible_facts'].update(info_dict)
-
-        # FIXME: double kluge, seems like 'setup.py' should do this?
-        #        (so we can distinquish facts collected by running setup.py and facts potentially
-        #         collected by invoking a FactsCollector() directly ?)
-        #        also, this fact name doesnt follow namespace
-        # FIXME/TODO: add collector?
-        facts_dict['ansible_facts']['module_setup'] = True
 
         # TODO: this may be best place to apply fact 'filters' as well. They
         #       are currently ignored -akl
@@ -231,7 +223,8 @@ def main():
 
     # Add a collector that knows what gather_subset we used so it it can provide a fact
     collector_meta_data_collector = \
-        CollectorMetaDataCollector(gather_subset=gather_subset)
+        CollectorMetaDataCollector(gather_subset=gather_subset,
+                                   module_setup=True)
     collectors.append(collector_meta_data_collector)
 
     # print('collectors: %s' % pprint.pformat(collectors))
@@ -240,6 +233,14 @@ def main():
         AnsibleFactCollector(collectors=collectors)
 
     facts_dict = fact_collector.collect(module=module)
+
+    # TODO/FIXME: deprecate the non namespaced meta facts?
+    # The meta facts ('gather_setup', 'module_setup') are not namespaced.
+    # TODO: could just make this another collector, but then we need to change how AnsibleFactsCollector
+    #       applies the namespaces
+    meta_facts_dict = collector_meta_data_collector.collect(module=module)
+
+    facts_dict.update(meta_facts_dict)
 
     module.exit_json(**facts_dict)
 
