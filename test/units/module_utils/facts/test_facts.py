@@ -30,35 +30,36 @@ from ansible.module_utils import facts
 from ansible.module_utils.facts import hardware
 from ansible.module_utils.facts import network
 from ansible.module_utils.facts import virtual
+from ansible.module_utils.facts import collector
 
 from ansible.module_utils.facts import default_collectors
 
 
 class TestGetCollectorNames(unittest.TestCase):
     def test_none(self):
-        res = facts.get_collector_names()
+        res = collector.get_collector_names()
         self.assertIsInstance(res, set)
         self.assertEqual(res, set([]))
 
     def test_empty_sets(self):
-        res = facts.get_collector_names(valid_subsets=frozenset([]),
-                                        minimal_gather_subset=frozenset([]),
-                                        gather_subset=set([]))
+        res = collector.get_collector_names(valid_subsets=frozenset([]),
+                                            minimal_gather_subset=frozenset([]),
+                                            gather_subset=set([]))
         self.assertIsInstance(res, set)
         self.assertEqual(res, set([]))
 
     def test_empty_valid_and_min_with_all_gather_subset(self):
-        res = facts.get_collector_names(valid_subsets=frozenset([]),
-                                        minimal_gather_subset=frozenset([]),
-                                        gather_subset=set(['all']))
+        res = collector.get_collector_names(valid_subsets=frozenset([]),
+                                            minimal_gather_subset=frozenset([]),
+                                            gather_subset=set(['all']))
         self.assertIsInstance(res, set)
         self.assertEqual(res, set([]))
 
     def test_one_valid_with_all_gather_subset(self):
         valid_subsets = frozenset(['my_fact'])
-        res = facts.get_collector_names(valid_subsets=valid_subsets,
-                                        minimal_gather_subset=frozenset([]),
-                                        gather_subset=set(['all']))
+        res = collector.get_collector_names(valid_subsets=valid_subsets,
+                                            minimal_gather_subset=frozenset([]),
+                                            gather_subset=set(['all']))
         self.assertIsInstance(res, set)
         self.assertEqual(res, set(['my_fact']))
 
@@ -67,9 +68,9 @@ class TestGetCollectorNames(unittest.TestCase):
         valid_subsets = frozenset([my_fact])
         minimal_gather_subset = valid_subsets
 
-        res = facts.get_collector_names(valid_subsets=valid_subsets,
-                                        minimal_gather_subset=minimal_gather_subset,
-                                        gather_subset=set(['all']))
+        res = collector.get_collector_names(valid_subsets=valid_subsets,
+                                            minimal_gather_subset=minimal_gather_subset,
+                                            gather_subset=set(['all']))
         self.assertIsInstance(res, set)
         self.assertEqual(res, set(['my_fact']))
 
@@ -78,9 +79,9 @@ class TestGetCollectorNames(unittest.TestCase):
         minimal_gather_subset = frozenset(['my_fact'])
 
         # even with '!all', the minimal_gather_subset should be returned
-        res = facts.get_collector_names(valid_subsets=valid_subsets,
-                                        minimal_gather_subset=minimal_gather_subset,
-                                        gather_subset=set(['all']))
+        res = collector.get_collector_names(valid_subsets=valid_subsets,
+                                            minimal_gather_subset=minimal_gather_subset,
+                                            gather_subset=set(['all']))
         self.assertIsInstance(res, set)
         self.assertEqual(res, set(['my_fact', 'something_else', 'whatever']))
 
@@ -89,9 +90,9 @@ class TestGetCollectorNames(unittest.TestCase):
         minimal_gather_subset = frozenset(['my_fact'])
 
         # even with '!all', the minimal_gather_subset should be returned
-        res = facts.get_collector_names(valid_subsets=valid_subsets,
-                                        minimal_gather_subset=minimal_gather_subset,
-                                        gather_subset=set(['!all']))
+        res = collector.get_collector_names(valid_subsets=valid_subsets,
+                                            minimal_gather_subset=minimal_gather_subset,
+                                            gather_subset=set(['!all']))
         self.assertIsInstance(res, set)
         self.assertEqual(res, set(['my_fact']))
 
@@ -100,9 +101,9 @@ class TestGetCollectorNames(unittest.TestCase):
         minimal_gather_subset = frozenset(['my_fact'])
 
         # even with '!all', the minimal_gather_subset should be returned
-        res = facts.get_collector_names(valid_subsets=valid_subsets,
-                                        minimal_gather_subset=minimal_gather_subset,
-                                        gather_subset=set(['all', '!my_fact', '!whatever']))
+        res = collector.get_collector_names(valid_subsets=valid_subsets,
+                                            minimal_gather_subset=minimal_gather_subset,
+                                            gather_subset=set(['all', '!my_fact', '!whatever']))
         self.assertIsInstance(res, set)
         # my_facts is in minimal_gather_subset, so always returned
         self.assertEqual(res, set(['my_fact', 'something_else']))
@@ -111,9 +112,9 @@ class TestGetCollectorNames(unittest.TestCase):
         valid_subsets = frozenset(['my_fact', 'something_else', 'whatever'])
         minimal_gather_subset = frozenset(['my_fact'])
 
-        res = facts.get_collector_names(valid_subsets=valid_subsets,
-                                        minimal_gather_subset=minimal_gather_subset,
-                                        gather_subset=set(['!all', 'whatever']))
+        res = collector.get_collector_names(valid_subsets=valid_subsets,
+                                            minimal_gather_subset=minimal_gather_subset,
+                                            gather_subset=set(['!all', 'whatever']))
         self.assertIsInstance(res, set)
         # excludes are higher precedence than includes, so !all excludes everything
         # and then minimal_gather_subset is added. so '!all', 'other' == '!all'
@@ -125,7 +126,7 @@ class TestGetCollectorNames(unittest.TestCase):
 
         self.assertRaisesRegexp(TypeError,
                                 'Bad subset .* given to Ansible.*allowed\:.*all,.*my_fact.*',
-                                facts.get_collector_names,
+                                collector.get_collector_names,
                                 valid_subsets=valid_subsets,
                                 minimal_gather_subset=minimal_gather_subset,
                                 gather_subset=set(['my_fact', 'not_a_valid_gather_subset']))
@@ -152,7 +153,6 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
     def test(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,
                             gather_subset=set(['!all']))
-        print(res)
         self.assertIsInstance(res, list)
         self.assertEqual(res, [])
 
