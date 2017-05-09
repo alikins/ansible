@@ -76,68 +76,7 @@ __metaclass__ = type
 from collections import defaultdict
 
 from ansible.module_utils.facts import timeout
-
-
-# FIXME: make sure get_collector_names returns a useful ordering
-# TODO: may need some form of AnsibleFactNameResolver
-# NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
-def get_collector_names(valid_subsets=None,
-                        minimal_gather_subset=None,
-                        gather_subset=None,
-                        aliases_map=None):
-    '''return a set of FactCollector names based on gather_subset spec.
-
-    gather_subset is a spec describing which facts to gather.
-    valid_subsets is a frozenset of potential matches for gather_subset ('all', 'network') etc
-    minimal_gather_subsets is a frozenset of matches to always use, even for gather_subset='!all'
-    '''
-
-    # Retrieve module parameters
-    gather_subset = gather_subset or ['all']
-
-    valid_subsets = valid_subsets or frozenset([])
-
-    # if provided, minimal_gather_subset is always added, even after all negations
-    minimal_gather_subset = minimal_gather_subset or frozenset([])
-
-    aliases_map = aliases_map or defaultdict(set)
-
-    # Retrieve all facts elements
-    additional_subsets = set()
-    exclude_subsets = set()
-    for subset in gather_subset:
-        if subset == 'all':
-            additional_subsets.update(valid_subsets)
-            continue
-        if subset.startswith('!'):
-            subset = subset[1:]
-            if subset == 'all':
-                exclude_subsets.update(valid_subsets)
-                continue
-            exclude = True
-        else:
-            exclude = False
-
-        if exclude:
-            # include 'devices', 'dmi' etc for '!hardware'
-            exclude_subsets.update(aliases_map.get(subset, set([])))
-            exclude_subsets.add(subset)
-        else:
-            # NOTE: this only considers adding an unknown gather subsetup an error. Asking to
-            #       exclude an unknown gather subset is ignored.
-            if subset not in valid_subsets:
-                raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" %
-                                (subset, ", ".join(sorted(valid_subsets))))
-
-            additional_subsets.add(subset)
-
-    if not additional_subsets:
-        additional_subsets.update(valid_subsets)
-    additional_subsets.difference_update(exclude_subsets)
-
-    additional_subsets.update(minimal_gather_subset)
-
-    return additional_subsets
+from ansible.module_utils.facts.collector import get_collector_names
 
 
 def collector_classes_from_gather_subset(all_collector_classes=None,
