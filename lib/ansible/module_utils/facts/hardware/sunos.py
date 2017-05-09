@@ -3,6 +3,8 @@ __metaclass__ = type
 
 import re
 
+from ansible.module_utils.six.moves import reduce
+
 from ansible.module_utils.basic import bytes_to_human
 
 from ansible.module_utils.facts.utils import get_file_content, get_mount_size
