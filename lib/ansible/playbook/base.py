@@ -441,11 +441,11 @@ class Base(with_metaclass(BaseMeta, object)):
 
             except (TypeError, ValueError) as e:
                 raise AnsibleParserError("the field '%s' has an invalid value (%s), and could not be converted to an %s."
-                        " Error was: %s" % (name, value, attribute.isa, e), obj=self.get_ds())
+                        " Error was: %s" % (name, value, attribute.isa, e), obj=self.get_ds(), orig_exc=e)
             except (AnsibleUndefinedVariable, UndefinedError) as e:
                 if templar._fail_on_undefined_errors and name != 'name':
                     raise AnsibleParserError("the field '%s' has an invalid value, which appears to include a variable that is undefined."
-                            " The error was: %s" % (name,e), obj=self.get_ds())
+                            " The error was: %s" % (name,e), obj=self.get_ds(), orig_exc=e)
 
         self._finalized = True
 
@@ -477,10 +477,11 @@ class Base(with_metaclass(BaseMeta, object)):
                 return {}
             else:
                 raise ValueError
-        except ValueError:
-            raise AnsibleParserError("Vars in a %s must be specified as a dictionary, or a list of dictionaries" % self.__class__.__name__, obj=ds)
+        except ValueError as e:
+            raise AnsibleParserError("Vars in a %s must be specified as a dictionary, or a list of dictionaries" % self.__class__.__name__,
+                                     obj=ds, orig_exc=e)
         except TypeError as e:
-            raise AnsibleParserError("Invalid variable name in vars specified for %s: %s" % (self.__class__.__name__, e), obj=ds)
+            raise AnsibleParserError("Invalid variable name in vars specified for %s: %s" % (self.__class__.__name__, e), obj=ds, orig_exc=e)
 
     def _extend_value(self, value, new_value, prepend=False):
         '''

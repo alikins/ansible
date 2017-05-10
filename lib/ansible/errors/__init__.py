@@ -51,8 +51,6 @@ class AnsibleError(Exception):
         # since the objects code also imports ansible.errors
         from ansible.parsing.yaml.objects import AnsibleBaseYAMLObject
 
-        print('obj=%s' % obj)
-        print('type(obj)=%s' % type(obj))
         self._obj = obj
         self._show_content = show_content
         if obj and isinstance(obj, AnsibleBaseYAMLObject):
@@ -65,9 +63,8 @@ class AnsibleError(Exception):
             self.message = '%s' % to_native(message)
         if orig_exc:
             self.orig_exc = orig_exc
-            self.message += '\nexception: %s' % to_native(orig_exc)
             self.message += '\nexception type: %s' % to_native(type(orig_exc))
-        print(self.message)
+            self.message += '\nexception: %s' % to_native(orig_exc)
 
     def __str__(self):
         return self.message
