@@ -19,6 +19,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+from yaml import YAMLError
+
 from ansible.errors.yaml_strings import ( YAML_POSITION_DETAILS,
         YAML_COMMON_UNQUOTED_VARIABLE_ERROR,
         YAML_COMMON_DICT_ERROR,
@@ -44,11 +46,13 @@ class AnsibleError(Exception):
     which should be returned by the DataLoader() class.
     '''
 
-    def __init__(self, message="", obj=None, show_content=True, suppress_extended_error=False):
+    def __init__(self, message="", obj=None, show_content=True, suppress_extended_error=False, orig_exc=None):
         # we import this here to prevent an import loop problem,
         # since the objects code also imports ansible.errors
         from ansible.parsing.yaml.objects import AnsibleBaseYAMLObject
 
+        print('obj=%s' % obj)
+        print('type(obj)=%s' % type(obj))
         self._obj = obj
         self._show_content = show_content
         if obj and isinstance(obj, AnsibleBaseYAMLObject):
@@ -59,6 +63,11 @@ class AnsibleError(Exception):
                 self.message = '%s' % to_native(message)
         else:
             self.message = '%s' % to_native(message)
+        if orig_exc:
+            self.orig_exc = orig_exc
+            self.message += '\nexception: %s' % to_native(orig_exc)
+            self.message += '\nexception type: %s' % to_native(type(orig_exc))
+        print(self.message)
 
     def __str__(self):
         return self.message

@@ -191,14 +191,21 @@ class DataLoader:
         to display the syntax exception information.
         '''
 
+        #raise yaml_exc
+        print(show_content)
+        print(yaml_exc)
+        print(type(yaml_exc))
+        print(dir(yaml_exc))
         # if the YAML exception contains a problem mark, use it to construct
         # an object the error class can use to display the faulty line
         err_obj = None
         if hasattr(yaml_exc, 'problem_mark'):
             err_obj = AnsibleBaseYAMLObject()
             err_obj.ansible_pos = (file_name, yaml_exc.problem_mark.line + 1, yaml_exc.problem_mark.column + 1)
+        else:
+            err_obj = yaml_exc
 
-        raise AnsibleParserError(YAML_SYNTAX_ERROR, obj=err_obj, show_content=show_content)
+        raise AnsibleParserError(YAML_SYNTAX_ERROR, obj=err_obj, show_content=show_content, orig_exc=yaml_exc)
 
     def get_basedir(self):
         ''' returns the current basedir '''
