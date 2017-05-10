@@ -19,8 +19,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from yaml import YAMLError
-
 from ansible.errors.yaml_strings import ( YAML_POSITION_DETAILS,
         YAML_COMMON_UNQUOTED_VARIABLE_ERROR,
         YAML_COMMON_DICT_ERROR,
