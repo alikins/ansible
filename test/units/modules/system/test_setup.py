@@ -20,14 +20,11 @@
 from __future__ import (absolute_import, division)
 __metaclass__ = type
 
-import re
-
 # for testing
 from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import Mock
 
-from ansible.module_utils import facts
-from ansible.module_utils.facts.collector import CollectorMetaDataCollector
+from ansible.module_utils.facts import collector
 
 from ansible.module_utils.facts.other.facter import FacterFactCollector
 from ansible.module_utils.facts.other.ohai import OhaiFactCollector
@@ -101,9 +98,9 @@ def _collectors(module,
         minimal_gather_subset = frozenset([])
 
     collector_classes = \
-        facts.collector_classes_from_gather_subset(all_collector_classes=all_collector_classes,
-                                                   minimal_gather_subset=minimal_gather_subset,
-                                                   gather_subset=gather_subset)
+        collector.collector_classes_from_gather_subset(all_collector_classes=all_collector_classes,
+                                                       minimal_gather_subset=minimal_gather_subset,
+                                                       gather_subset=gather_subset)
 
     collectors = []
     for collector_class in collector_classes:
@@ -112,7 +109,8 @@ def _collectors(module,
 
     # Add a collector that knows what gather_subset we used so it it can provide a fact
     collector_meta_data_collector = \
-        CollectorMetaDataCollector(gather_subset=gather_subset)
+        setup.CollectorMetaDataCollector(gather_subset=gather_subset,
+                                         module_setup=True)
     collectors.append(collector_meta_data_collector)
 
     return collectors
@@ -143,12 +141,10 @@ class TestInPlace(unittest.TestCase):
         res = fact_collector.collect(module=mock_module)
         self.assertIsInstance(res, dict)
         self.assertIn('ansible_facts', res)
-        import pprint
-        pprint.pprint(res)
         self.assertIsInstance(res['ansible_facts'], dict)
-        self.assertIn('ansible_env', res['ansible_facts'])
-        self.assertIn('ansible_gather_subset', res['ansible_facts'])
-        self.assertEqual(res['ansible_facts']['ansible_gather_subset'], ['all'])
+        self.assertIn('env', res['ansible_facts'])
+        self.assertIn('gather_subset', res['ansible_facts'])
+        self.assertEqual(res['ansible_facts']['gather_subset'], ['all'])
 
     def test1(self):
         gather_subset = ['all']
@@ -223,10 +219,10 @@ class TestCollectedFacts(unittest.TestCase):
     max_fact_count = 1000
 
     # TODO: add ansible_cmdline, ansible_*_pubkey* back when TempFactCollector goes away
-    expected_facts = ['ansible_date_time',
-                      'ansible_user_id', 'ansible_distribution',
-                      'ansible_gather_subset', 'module_setup',
-                      'ansible_env']
+    expected_facts = ['date_time',
+                      'user_id', 'distribution',
+                      'gather_subset', 'module_setup',
+                      'env']
     not_expected_facts = ['facter', 'ohai']
 
     def _mock_module(self, gather_subset=None):
@@ -256,12 +252,6 @@ class TestCollectedFacts(unittest.TestCase):
     def test_not_expected_facts(self):
         self._assert_not_expected_facts(self.facts)
 
-    def test_has_ansible_namespace(self):
-        self._assert_ansible_namespace(self.facts)
-
-    def test_no_ansible_dupe_in_key(self):
-        self._assert_no_ansible_dupe(self.facts)
-
     def _assert_basics(self, facts):
         self.assertIsInstance(facts, dict)
         self.assertIn('ansible_facts', facts)
@@ -276,31 +266,17 @@ class TestCollectedFacts(unittest.TestCase):
 
         # FIXME: kluge for non-namespace fact
         subfacts.pop('module_setup', None)
+        subfacts.pop('gather_subset', None)
 
         for fact_key in subfacts:
             self.assertTrue(fact_key.startswith('ansible_'),
                             'The fact name "%s" does not startwith "ansible_"' % fact_key)
 
-    # verify that we only add one 'ansible_' namespace
-    def _assert_no_ansible_dupe(self, facts):
-        subfacts = facts['ansible_facts']
-        re_ansible = re.compile('ansible')
-        re_ansible_underscore = re.compile('ansible_')
-
-        # FIXME: kluge for non-namespace fact
-        subfacts.pop('module_setup', None)
-
-        for fact_key in subfacts:
-            ansible_count = re_ansible.findall(fact_key)
-            self.assertEqual(len(ansible_count), 1,
-                             'The fact name "%s" should have 1 "ansible" substring in it.' % fact_key)
-            ansible_underscore_count = re_ansible_underscore.findall(fact_key)
-            self.assertEqual(len(ansible_underscore_count), 1,
-                             'The fact name "%s" should have 1 "ansible_" substring in it.' % fact_key)
-
     def _assert_expected_facts(self, facts):
         subfacts = facts['ansible_facts']
 
+        import pprint
+        pprint.pprint(subfacts)
         subfacts_keys = sorted(subfacts.keys())
         for expected_fact in self.expected_facts:
             self.assertIn(expected_fact, subfacts_keys)
@@ -318,13 +294,13 @@ class TestCollectedFacts(unittest.TestCase):
             self.assertNotIn(not_expected_fact, subfacts_keys)
 
     def _assert_ssh_facts(self, subfacts):
-        self.assertIn('ansible_ssh_host_key_rsa_public', subfacts.keys())
+        self.assertIn('ssh_host_key_rsa_public', subfacts.keys())
 
 
 class TestMinimalCollectedFacts(TestCollectedFacts):
     gather_subset = ['!all']
     min_fact_count = 1
     max_fact_count = 10
-    expected_facts = ['ansible_gather_subset',
+    expected_facts = ['gather_subset',
                       'module_setup']
-    not_expected_facts = ['ansible_lsb']
+    not_expected_facts = ['lsb']
