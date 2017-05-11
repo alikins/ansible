@@ -181,7 +181,7 @@ DEFAULT_COW_WHITELIST = ['bud-frogs', 'bunny', 'cheese', 'daemon', 'default', 'd
 PKG_MGR_MODULES = ['yum', 'dnf', 'apt', 'zipper', 'urpmi', 'pacman',
                    'opkg', 'pkgin', 'macports', 'homebrew', 'apk',
                    'pkgng', 'SD-UX', 'portage', 'svr4pkg', 'pkg5', 'xbps',
-                   'swupd', 'sorcery']
+                   'swupd', 'sorcery', 'openbsd_pkg']
 
 # sections in config file
 DEFAULTS='defaults'
