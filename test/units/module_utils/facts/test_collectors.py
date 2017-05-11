@@ -80,7 +80,6 @@ class TestCmdLineFacts(BaseFactsTest):
     collector_class = CmdLineFactCollector
 
 
-
 class TestDistributionFacts(BaseFactsTest):
     __test__ = True
     gather_subset = ['!all', 'distribution']
