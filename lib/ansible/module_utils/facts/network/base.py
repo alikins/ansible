@@ -16,10 +16,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import platform
-
-from ansible.module_utils.basic import get_all_subclasses
-from ansible.module_utils.six import PY3
 
 from ansible.module_utils.facts.facts import Facts
 
@@ -37,6 +33,7 @@ class Network(Facts):
     All subclasses MUST define platform.
     """
     platform = 'Generic'
+    impl = True
 
     IPV6_SCOPE = {'0': 'global',
                   '10': 'host',
@@ -44,23 +41,6 @@ class Network(Facts):
                   '40': 'admin',
                   '50': 'site',
                   '80': 'organization'}
-
-    def __new__(cls, *arguments, **keyword):
-        # When Network is created, it chooses a subclass to create instead.
-        # This check prevents the subclass from then trying to find a subclass
-        # and create that.
-        if cls is not Network:
-            return super(Network, cls).__new__(cls)
-
-        subclass = cls
-
-        for sc in get_all_subclasses(Network):
-            if sc.platform == platform.system():
-                subclass = sc
-        if PY3:
-            return super(cls, subclass).__new__(subclass)
-        else:
-            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
     # TODO: more or less abstract/NotImplemented
     def populate(self, collected_facts=None):

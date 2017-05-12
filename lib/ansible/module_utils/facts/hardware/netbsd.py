@@ -41,6 +41,7 @@ class NetBSDHardware(Hardware):
     - devices
     """
     platform = 'NetBSD'
+
     MEMORY_FACTS = ['MemTotal', 'SwapTotal', 'MemFree', 'SwapFree']
 
     def populate(self, collected_facts=None):

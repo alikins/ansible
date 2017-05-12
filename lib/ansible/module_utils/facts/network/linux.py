@@ -36,6 +36,7 @@ class LinuxNetwork(Network):
     - ipv4_address and ipv6_address: the first non-local address for each family.
     """
     platform = 'Linux'
+
     INTERFACE_TYPE = {
         '1': 'ether',
         '32': 'infiniband',

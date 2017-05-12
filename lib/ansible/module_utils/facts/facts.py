@@ -16,6 +16,11 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import platform
+
+from ansible.module_utils.basic import get_all_subclasses
+from ansible.module_utils.six import PY3
+
 
 class Facts:
     """
@@ -26,6 +31,23 @@ class Facts:
     possible implementation to establish facts for a given topic should
     subclass Facts.
     """
+
+    def __new__(cls, *arguments, **keyword):
+        # When Hardware is created, it chooses a subclass to create instead.
+        # This check prevents the subclass from then trying to find a subclass
+        # and create that.
+        if getattr(cls, 'impl', False):
+            return super(Facts, cls).__new__(cls)
+
+        subclass = cls
+        # for sc in get_all_subclasses(Hardware):
+        for sc in get_all_subclasses(cls):
+            if sc.platform == platform.system():
+                subclass = sc
+        if PY3:
+            return super(cls, subclass).__new__(subclass)
+        else:
+            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
 
     def __init__(self, module, load_on_init=True):
 

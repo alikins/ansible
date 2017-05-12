@@ -35,7 +35,6 @@ class HPUXHardware(Hardware):
     - model
     - firmware
     """
-
     platform = 'HP-UX'
 
     def populate(self, collected_facts=None):

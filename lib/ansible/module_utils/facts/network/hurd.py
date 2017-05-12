@@ -27,6 +27,7 @@ class HurdPfinetNetwork(Network):
     get the ip address and support only pfinet.
     """
     platform = 'GNU'
+
     _socket_dir = '/servers/socket/'
 
     def populate(self, collected_facts=None):

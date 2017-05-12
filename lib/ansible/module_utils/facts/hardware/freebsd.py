@@ -39,6 +39,7 @@ class FreeBSDHardware(Hardware):
     - devices
     """
     platform = 'FreeBSD'
+
     DMESG_BOOT = '/var/run/dmesg.boot'
 
     def populate(self, collected_facts=None):
