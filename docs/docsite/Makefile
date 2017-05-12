@@ -7,6 +7,7 @@ CPUS ?= $(shell sysctl hw.ncpu|awk '{print $$2}')
 else
 CPUS ?= $(shell nproc)
 endif
+MODULES ?=
 
 all: docs
 
@@ -44,7 +45,7 @@ keywords: $(FORMATTER) ../templates/playbooks_keywords.rst.j2
 	PYTHONPATH=../../lib $(DUMPER) --template-dir=../templates --output-dir=rst/ -d ./keyword_desc.yml
 
 modules: $(FORMATTER) ../templates/plugin.rst.j2
-	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../templates --module-dir=../../lib/ansible/modules -o rst/
+	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../templates --module-dir=../../lib/ansible/modules -o rst/  $(MODULES)
 
 staticmin:
 	cat _themes/srtd/static/css/theme.css | sed -e 's/^[ 	]*//g; s/[ 	]*$$//g; s/\([:{;,]\) /\1/g; s/ {/{/g; s/\/\*.*\*\///g; /^$$/d' | sed -e :a -e '$$!N; s/\n\(.\)/\1/; ta' > _themes/srtd/static/css/theme.min.css

@@ -125,22 +125,25 @@ def write_data(text, options, outputname, module):
 #####################################################################################
 
 
-def list_modules(module_dir, depth=0):
+def list_modules(module_dir, depth=0, module_whitelist=None):
     ''' returns a hash of categories, each category being a hash of module names to file paths '''
 
     categories = dict()
     module_info = dict()
     aliases = defaultdict(set)
 
-    # * windows powershell modules have documentation stubs in python docstring
-    #   format (they are not executed) so skip the ps1 format files
-    # * One glob level for every module level that we're going to traverse
-    files = (
-        glob.glob("%s/*.py" % module_dir) +
-        glob.glob("%s/*/*.py" % module_dir) +
-        glob.glob("%s/*/*/*.py" % module_dir) +
-        glob.glob("%s/*/*/*/*.py" % module_dir)
-    )
+    if module_whitelist:
+        files = module_whitelist
+    else:
+        # * windows powershell modules have documentation stubs in python docstring
+        #   format (they are not executed) so skip the ps1 format files
+        # * One glob level for every module level that we're going to traverse
+        files = (
+            glob.glob("%s/*.py" % module_dir) +
+            glob.glob("%s/*/*.py" % module_dir) +
+            glob.glob("%s/*/*/*.py" % module_dir) +
+            glob.glob("%s/*/*/*/*.py" % module_dir)
+        )
 
     for module_path in files:
         if module_path.endswith('__init__.py'):
@@ -447,7 +450,7 @@ def main():
 
     env, template, outputname = jinja2_environment(options.template_dir, options.type)
 
-    mod_info, categories, aliases = list_modules(options.module_dir)
+    mod_info, categories, aliases = list_modules(options.module_dir, module_whitelist=args)
     categories['all'] = mod_info
     categories['_aliases'] = aliases
     category_names = [c for c in categories.keys() if not c.startswith('_')]
