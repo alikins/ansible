@@ -46,13 +46,6 @@ def get_file_lines(path):
     return ret
 
 
-def get_uname_version(module):
-    rc, out, err = module.run_command(['uname', '-v'])
-    if rc == 0:
-        return out
-    return None
-
-
 def get_mount_size(mountpoint):
     size_total = None
     size_available = None

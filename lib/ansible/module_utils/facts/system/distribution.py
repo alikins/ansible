@@ -1,4 +1,3 @@
-#
 # This file is part of Ansible
 #
 # Ansible is free software: you can redistribute it and/or modify
@@ -25,7 +24,6 @@ from ansible.module_utils.facts.utils import get_file_content
 from ansible.module_utils.facts.collector import BaseFactCollector
 
 
-# FIXME: be consitent about wrapped command (and files)
 def get_uname_version(module):
     rc, out, err = module.run_command(['uname', '-v'])
     if rc == 0:
