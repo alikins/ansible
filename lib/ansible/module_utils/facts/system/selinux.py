@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -30,8 +31,6 @@ SELINUX_MODE_DICT = {1: 'enforcing',
                      -1: 'disabled'}
 
 
-# NOTE: the weird module deps required for this is confusing. Likely no good approach though... - akl
-# NOTE: also likely a good candidate for it's own module or class, it barely uses self
 class SelinuxFactCollector(BaseFactCollector):
     name = 'selinux'
     _fact_ids = set()

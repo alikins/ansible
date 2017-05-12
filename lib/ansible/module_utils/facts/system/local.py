@@ -1,4 +1,3 @@
-#
 # This file is part of Ansible
 #
 # Ansible is free software: you can redistribute it and/or modify
@@ -13,6 +12,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -40,11 +40,8 @@ class LocalFactCollector(BaseFactCollector):
         if not module:
             return local_facts
 
-        # NOTE: -> _has_local_facts()
-        #      or better, a local_facts iterator that is empty if there is no fact_path/etc -kl
         fact_path = module.params.get('fact_path', None)
 
-        # NOTE: pretty much any unwrapped os.path.* is a PITA to unittest -akl
         if not fact_path or not os.path.exists(fact_path):
             return local_facts
 
