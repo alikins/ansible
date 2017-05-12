@@ -23,9 +23,6 @@ import sys
 from ansible.module_utils.facts import timeout
 
 
-# TODO: BaseFactCollectors (plural) -> walks over list of collectors
-#       BaseFactCollector (singular) -> returns a dict (collectors 'leaf' node)
-#       and/or BaseFactCollectorNode etc
 # TODO/MAYBE: static/cls method of fact_id/tag matching? Someway for the gather spec
 #             matcher to handle semi dynamic names (like networks 'ansible_INTERFACENAME' facts)
 #             so gather could match them
@@ -54,11 +51,6 @@ class BaseFactCollector:
     def _transform_dict_keys(self, fact_dict):
         '''update a dicts keys to use new names as transformed by self._transform_name'''
 
-        # TODO: instead of changing fact_dict, just create a new dict and copy items into
-        #       it with transformed key name.
-        # TODO: rename... apply? apply_namespace?
-        # TODO: this could also move items into a sub dict from the top level space
-        #       (ie, from {'my_fact: ['sdf'], 'fact2': 1} -> {'ansible_facts': {'my_fact': ['sdf'], 'facts2': 1}}
         for old_key in list(fact_dict.keys()):
             new_key = self._transform_name(old_key)
             # pop the item by old_key and replace it using new_key
@@ -66,8 +58,6 @@ class BaseFactCollector:
         return fact_dict
 
     # TODO/MAYBE: rename to 'collect' and add 'collect_without_namespace'
-    # TODO: this could also add a top level direct with namespace (for ex, 'ansible_facts'
-    #       for normal case, or 'whatever_some_other_facts' for others based on self.namespace
     def collect_with_namespace(self, module=None, collected_facts=None):
         # collect, then transform the key names if needed
         facts_dict = self.collect(module=module, collected_facts=collected_facts)
@@ -85,7 +75,6 @@ class BaseFactCollector:
           Returns a dict of facts.
 
           '''
-        # abc or NotImplemented
         facts_dict = {}
         return facts_dict
 
@@ -121,9 +110,6 @@ class BaseFactCollector:
         return id_set
 
 
-# FIXME: make sure get_collector_names returns a useful ordering
-# TODO: may need some form of AnsibleFactNameResolver
-# NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
 def get_collector_names(valid_subsets=None,
                         minimal_gather_subset=None,
                         gather_subset=None,
@@ -196,20 +182,15 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     minimal_gather_subset = minimal_gather_subset or frozenset()
 
-    # FIXME: decorator weirdness rel to timeout module scope
     gather_timeout = gather_timeout or timeout.DEFAULT_GATHER_TIMEOUT
 
     # tweak the modules GATHER_TIMEOUT
     timeout.GATHER_TIMEOUT = gather_timeout
 
-    # valid_subsets = valid_subsets or cls.VALID_SUBSETS
     valid_subsets = valid_subsets or frozenset()
-    # import pprint
-    # print('valid_subsets: %s' % pprint.pformat(valid_subsets))
 
     # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
     id_collector_map = {}
-    # all_collector_classes = cls.FACT_SUBSETS.values()
 
     # maps alias names like 'hardware' to the list of names that are part of hardware
     # like 'devices' and 'dmi'
@@ -223,16 +204,10 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
             aliases_map[primary_name].add(fact_id)
 
     all_fact_subsets = {}
-    # all_fact_subsets.update(cls.FACT_SUBSETS)
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
     all_fact_subsets.update(id_collector_map)
 
-    # print('all_fact_subsets: %s' % pprint.pformat(all_fact_subsets))
-
-    # TODO: if we want to be picky about ordering, will need to avoid squashing into dicts
     all_valid_subsets = frozenset(all_fact_subsets.keys())
-
-    # print('all_valid_subsets: %s' % pprint.pformat(all_valid_subsets))
 
     # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
     collector_names = get_collector_names(valid_subsets=all_valid_subsets,
@@ -240,16 +215,13 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                                           gather_subset=gather_subset,
                                           aliases_map=aliases_map)
 
-    # print('collector_names: %s' % collector_names)
     seen_collector_classes = []
     selected_collector_classes = []
     for collector_name in collector_names:
-        # TODO: fact_id -> [list, of, classes] instead of fact_id -> class 1:1 map?
         collector_class = all_fact_subsets.get(collector_name, None)
         if not collector_class:
-            # FIXME: remove whens table
+            # FIXME: remove when stable
             raise Exception('collector_name: %s not found' % collector_name)
-            continue
 
         if collector_class not in seen_collector_classes:
             selected_collector_classes.append(collector_class)
