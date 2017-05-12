@@ -1,0 +1,129 @@
+General
+
+# GOALS:
+# - finer grained fact gathering
+# - better tested facts code
+# - more module facts code
+# - pluggable fact gatherers (fact plugins)
+# - test cases
+# - split up this py module into smaller modules
+# - improve the multiplatform support and simplify how Facts implementations are chosen
+# - document model and structure of found facts
+# - try to make classes/methods have less side effects
+
+# TODO: try to increase unit test coverage
+# TODO: general pep8/style clean ups
+# TODO: tiny bit of abstractions for run_command() and get_file_content() use
+#       ie, code like self.module.run_command('some_netinfo_tool
+#                                             --someoption')[1].splitlines[][0].split()[1] ->
+#          netinfo_output = self._netinfo_provider()
+#          netinfo_data = self._netinfo_parse(netinfo_output)
+#       why?
+#          - much much easier to test
+# TODO: replace Facts and subclasses with FactCollector subclasses
+# TODO: empty out this __init__
+# TODO: hook up fact filtering again
+# TODO: mv imports of collectors to a common loader module
+#        - offers a place to use a fact_collector plugin loader
+#        - can be shared by remote client side module and controller side ansiballz builder
+# TODO: mv collectors from system,hardware,network,virtual to collectors/
+#       - one file collectors (say, env.py or cmdline.py) can live in collectors/
+#       - collectors with interdeps (Network or Hardware for ex, may live in collectors/network/)
+#       - or could flatten to collectors/linux_hardware.py, collectors/sunos_hardware.py etc
+# TODO: mv system/distribution.py to distribution/ and split into modules/classes
+#       - could be tough, since parts of Distribution needs to run several methods/classes to
+#         find the best fit
+# IDEA: gather 'tags' in addition to gather 'ids'
+#       - ids identify _a_ fact collector uniquely
+#       - tags can identify multiple facts collectors
+#       - gather tag for 'hardware' for all 'hardware' tagged collectors
+#       - id could be a namespaced tag (ie, 'id:ansible.module_utils.facts.system.env.EnvFactCollector')
+#       - arch/system/dist could also be namespaced tags
+#           - 'system:Linux'
+#           - 'arch: x86_64'
+# IDEA: once Collector api is used, it wouldn't be that hard to add a collect_iter()
+#       that would return a generator that would yield facts
+#       ... top level Collector could 'emit' facts as found (or changed) which would
+#           make it possibly to watch a fact (or attach a callback to be called when changed)
+#            (more useful for controller side _info than client/remote _facts though given the
+#             controler->remote interface is not really async or non-blocking at all)
+# IDEA: parallel/threaded/multiprocess fact collection
+#       ... the collect_iter() approach above would make that easier, but even for blocking
+#           fact collection, a given Collector could choose to run its sub collectors concurrently.
+#           Might improve latency/total time to collect facts, since fact collection is currently very
+#           serial with lots of things that block and can be slow (more or less every run_command() for
+#           ex). In theory fact collection should be entirely 'read-only' (and with Collector api, with
+#           very few side effects) so might be a reasonable place for some concurency.
+# TODO: possibly rename FooCollector to just FooFacts, esp once the existing Facts() class is barebones/unneeded
+
+Stuff about the old Facts() class (and Hardare() and other metaclass stuff)
+
+facts/facts.py
+
+# almost gone now...
+
+
+# NOTE: This Facts class is mostly facts gathering implementation.
+#       A FactsModel data structure class would be useful, especially
+#       if we ever plan on documenting what various facts mean. This would
+#       also be a good place to map fact label to fact class -akl
+# NOTE: And a class similar to this one that composites a set or tree of
+#       other fact gathering classes. Potentially driven by run time passing
+#       of a list of the fact gather classes to include (finer grained gather_facts)
+#       Or, possibly even a list or dict of fact labels 'ansible_lvm' for ex, that
+#       the driver class would use to determine which fact gathering classes to load
+
+__init__
+    # NOTE: load_on_init is changed for ohai/facter classes. Ideally, all facts
+    #       would be load_on_init=False and this could be removed. -akl
+    # NOTE: cached_facts seems like a misnomer. Seems to be used more like an accumulator -akl
+    # nothing should be using cached_facts args now, so removing it
+
+        # FIXME: This is where Facts() should end, with the rest being left to some
+        #        composed fact gathering classes.
+
+        # TODO: Eventually, these should all get moved to populate().  But
+        # some of the values are currently being used by other subclasses (for
+        # instance, os_family and distribution).  Have to sort out what to do
+        # about those first.
+        # NOTE: if the various gathering methods take a arg that is the 'accumulated' facts
+        #       then this wouldn't need to happen on init. There would still be some ordering required
+        #       though. If the gather methods return a dict of the new facts, then the accumulated facts
+        #       can be read-only to avoid manipulating it by side effect. -akl
+
+        # TODO: to avoid hard coding this, something like
+        # list so we can imply some order suggestions
+        # fact_providers is a map or lookup of fact label -> fact gather class/inst that provides it
+        #  - likely will also involve a fact plugin lookup
+        #    ( could fact providing modules include the list of fact labels in their metadata? so we could determine
+        #      with plugin to load before we actually load and inst it?)
+        # fact_gatherers = []
+        # for requested_fact in requested_facts:
+        #    fact_gatherer = self.fact_providers.get('requested_fact', None)
+        #    if not fact_gatherer:
+        #        continue
+        #    fact_gatherers.append(fact_gatherer)
+
+        # TODO: de-dup fact_gatherers
+        # for gatherer in fact_gatherers:
+        #    data = gatherer.gather()
+        #    self.facts.update(data)
+
+facts/collector.py
+# TODO: BaseFactCollectors (plural) -> walks over list of collectors
+#       BaseFactCollector (singular) -> returns a dict (collectors 'leaf' node)
+#       and/or BaseFactCollectorNode etc
+
+transform_dict_keys()
+        # TODO: instead of changing fact_dict, just create a new dict and copy items into
+        #       it with transformed key name.
+        # TODO: rename... apply? apply_namespace?
+        # TODO: this could also move items into a sub dict from the top level space
+        #       (ie, from {'my_fact: ['sdf'], 'fact2': 1} -> {'ansible_facts': {'my_fact': ['sdf'], 'facts2': 1}}
+
+
+collect_with_namespace()
+    # TODO: this could also add a top level direct with namespace (for ex, 'ansible_facts'
+    #       for normal case, or 'whatever_some_other_facts' for others based on self.namespace
+
+        # Collector could be abc or NotImplemented
