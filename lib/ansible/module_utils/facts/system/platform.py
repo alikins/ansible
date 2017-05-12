@@ -1,4 +1,3 @@
-#
 # This file is part of Ansible
 #
 # Ansible is free software: you can redistribute it and/or modify
@@ -13,6 +12,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -39,29 +39,21 @@ class PlatformFactCollector(BaseFactCollector):
 
     def collect(self, module=None, collected_facts=None):
         platform_facts = {}
-        # Platform
         # platform.system() can be Linux, Darwin, Java, or Windows
-        # NOTE: pretty much every method should create a new dict (or whatever the FactsModel ds is)
-        #       and return it and let main Facts() class combine them. -akl
-        # NOTE: a facts.Platform() class that wraps all of this would make mocking/testing easier -akl
         platform_facts['system'] = platform.system()
         platform_facts['kernel'] = platform.release()
         platform_facts['machine'] = platform.machine()
 
-        # move to system/python.py?
         platform_facts['python_version'] = platform.python_version()
 
-        # NOTE: not platform at all... -akl
         platform_facts['fqdn'] = socket.getfqdn()
         platform_facts['hostname'] = platform.node().split('.')[0]
         platform_facts['nodename'] = platform.node()
 
-        # NOTE: not platform -akl
         platform_facts['domain'] = '.'.join(platform_facts['fqdn'].split('.')[1:])
 
         arch_bits = platform.architecture()[0]
 
-        # NOTE: this could be split into arch and/or system specific classes/methods -akl
         platform_facts['userspace_bits'] = arch_bits.replace('bit', '')
         if platform_facts['machine'] == 'x86_64':
             platform_facts['architecture'] = platform_facts['machine']
@@ -78,14 +70,9 @@ class PlatformFactCollector(BaseFactCollector):
         else:
             platform_facts['architecture'] = platform_facts['machine']
 
-        # FIXME: as much as possible, avoid arch/platform bits here
-        # NOTE: -> aix_platform = AixPlatform(); facts_dict.update(aix_platform) -akl
         if platform_facts['system'] == 'AIX':
             # Attempt to use getconf to figure out architecture
             # fall back to bootinfo if needed
-            # NOTE: in general, the various 'get_bin_path(); data=run_command()' could be split to methods/classes for providing info
-            #        one to get the raw data, another to parse it into useful chunks
-            #        then both are easy to mock for testing -akl
             getconf_bin = module.get_bin_path('getconf')
             if getconf_bin:
                 rc, out, err = module.run_command([getconf_bin, 'MACHINE_ARCHITECTURE'])
@@ -99,8 +86,6 @@ class PlatformFactCollector(BaseFactCollector):
         elif platform_facts['system'] == 'OpenBSD':
             platform_facts['architecture'] = platform.uname()[5]
 
-        # NOTE: the same comment about get_bin_path() above also applies to fetching file content
-        #       attempting to mock a file open and read is a PITA, but mocking read_dbus_machine_id() is easy to mock -akl
         machine_id = get_file_content("/var/lib/dbus/machine-id") or get_file_content("/etc/machine-id")
         if machine_id:
             machine_id = machine_id.splitlines()[0]

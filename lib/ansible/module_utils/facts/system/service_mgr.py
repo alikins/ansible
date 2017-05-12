@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -26,7 +27,6 @@ from ansible.module_utils._text import to_native
 from ansible.module_utils.facts.utils import get_file_content
 from ansible.module_utils.facts.collector import BaseFactCollector
 
-# FIXME: compat module, if still needed
 # The distutils module is not shipped with SUNWPython on Solaris.
 # It's in the SUNWPython-devel package which also contains development files
 # that don't belong on production boxes.  Since our Solaris code doesn't
@@ -35,7 +35,6 @@ if platform.system() != 'SunOS':
     from distutils.version import LooseVersion
 
 
-# the fact ends up being 'service_mgr' so stick with that naming
 class ServiceMgrFactCollector(BaseFactCollector):
     name = 'service_mgr'
     _fact_ids = set()

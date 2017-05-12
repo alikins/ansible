@@ -127,3 +127,31 @@ collect_with_namespace()
     #       for normal case, or 'whatever_some_other_facts' for others based on self.namespace
 
         # Collector could be abc or NotImplemented
+
+get_collector_names
+# FIXME: make sure get_collector_names returns a useful ordering
+# TODO: may need some form of AnsibleFactNameResolver
+# NOTE: This maps the gather_subset module param to a list of classes that provide them -akl
+        # TODO: fact_id -> [list, of, classes] instead of fact_id -> class 1:1 map?
+
+
+system/platform.py
+        # NOTE: pretty much every method should create a new dict (or whatever the FactsModel ds is)
+        #       and return it and let main Facts() class combine them. -akl
+        # NOTE: a facts.Platform() class that wraps all of this would make mocking/testing easier -akl
+
+        # move (python_version) to system/python.py?
+
+        # NOTE: not platform at all... (about socket/hostname/nodename/domain)
+
+        # NOTE: this (userspace_bits stuff) could be split into arch and/or system specific classes/methods -akl
+
+        # FIXME: as much as possible, avoid arch/platform bits here
+        # NOTE: -> aix_platform = AixPlatform(); facts_dict.update(aix_platform) -akl
+
+            # NOTE: in general, the various 'get_bin_path(); data=run_command()' could be split to methods/classes for providing info
+            #        one to get the raw data, another to parse it into useful chunks
+            #        then both are easy to mock for testing -akl
+
+        # NOTE: the same comment about get_bin_path() above also applies to fetching file content
+        #       attempting to mock a file open and read is a PITA, but mocking read_dbus_machine_id() is easy to mock -akl
