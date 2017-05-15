@@ -18,6 +18,7 @@ __metaclass__ = type
 
 from collections import defaultdict
 
+import platform
 import sys
 
 from ansible.module_utils.facts import timeout
@@ -28,6 +29,7 @@ from ansible.module_utils.facts import timeout
 #             so gather could match them
 class BaseFactCollector:
     _fact_ids = set()
+    _platform_ids = set()
     name = None
 
     def __init__(self, collectors=None, namespace=None):
@@ -110,10 +112,22 @@ class BaseFactCollector:
         return id_set
 
 
+import pprint
+
+
+def pp(obj, msg=None):
+    if msg:
+        sys.stderr.write('%s: ' % msg)
+    sys.stderr.write('%s\n' % pprint.pformat(obj))
+    return
+
+
+
 def get_collector_names(valid_subsets=None,
                         minimal_gather_subset=None,
                         gather_subset=None,
-                        aliases_map=None):
+                        aliases_map=None,
+                        platform_info=None):
     '''return a set of FactCollector names based on gather_subset spec.
 
     gather_subset is a spec describing which facts to gather.
@@ -131,14 +145,28 @@ def get_collector_names(valid_subsets=None,
 
     aliases_map = aliases_map or defaultdict(set)
 
+
+#    pp(platform_info, msg='platform_info:')
+
     # Retrieve all facts elements
     additional_subsets = set()
     exclude_subsets = set()
+
+    pp(valid_subsets, msg='get names valid_subsets:')
+
+    #subset_ids = [x[0] for x in valid_subsets]
+
+    #pp(subset_ids, msg='subset_ids')
+
     for subset in gather_subset:
-        if subset == 'all':
+        subset_id = subset
+
+        pp(subset, msg='subset name match:')
+        pp(subset_id, msg='subset_id')
+        if subset_id == 'all':
             additional_subsets.update(valid_subsets)
             continue
-        if subset.startswith('!'):
+        if subset_id.startswith('!'):
             subset = subset[1:]
             if subset == 'all':
                 exclude_subsets.update(valid_subsets)
@@ -154,18 +182,24 @@ def get_collector_names(valid_subsets=None,
         else:
             # NOTE: this only considers adding an unknown gather subsetup an error. Asking to
             #       exclude an unknown gather subset is ignored.
-            if subset not in valid_subsets:
+            if subset_id not in valid_subsets:
                 raise TypeError("Bad subset '%s' given to Ansible. gather_subset options allowed: all, %s" %
                                 (subset, ", ".join(sorted(valid_subsets))))
 
             additional_subsets.add(subset)
 
+#            platform_subset = find_platform_subset(valid_subsets, platform_info)
+#            additional_subsets.add(platform_subset)
+
+    pp(exclude_subsets, msg='exclude_subset:')
+    pp(additional_subsets, msg='additional_subsets:')
     if not additional_subsets:
         additional_subsets.update(valid_subsets)
     additional_subsets.difference_update(exclude_subsets)
 
     additional_subsets.update(minimal_gather_subset)
 
+    pp(additional_subsets, msg='additional_subsets:')
     return additional_subsets
 
 
@@ -173,7 +207,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                                          valid_subsets=None,
                                          minimal_gather_subset=None,
                                          gather_subset=None,
-                                         gather_timeout=None):
+                                         gather_timeout=None,
+                                         platform_info=None):
     '''return a list of collector classes that match the args'''
 
     # use gather_name etc to get the list of collectors
@@ -181,6 +216,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     all_collector_classes = all_collector_classes or []
 
     minimal_gather_subset = minimal_gather_subset or frozenset()
+
+    platform_info = platform_info or {'system': platform.system()}
 
     gather_timeout = gather_timeout or timeout.DEFAULT_GATHER_TIMEOUT
 
@@ -190,22 +227,64 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     valid_subsets = valid_subsets or frozenset()
 
     # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
-    id_collector_map = {}
+    id_collector_map = defaultdict(list)
+
+    pp(platform_info, msg='c_g_f_gs platform_info:')
+
+    this_platform = (platform_info.get('system', 'Generic'),)
 
     # maps alias names like 'hardware' to the list of names that are part of hardware
     # like 'devices' and 'dmi'
     aliases_map = defaultdict(set)
     for all_collector_class in all_collector_classes:
-        primary_name = all_collector_class.name
-        id_collector_map[primary_name] = all_collector_class
 
-        for fact_id in all_collector_class._fact_ids:
-            id_collector_map[fact_id] = all_collector_class
-            aliases_map[primary_name].add(fact_id)
+        pp(all_collector_class._platform_ids, msg='collector class platform_ids:')
+
+        # Map platform_info to collector fact info, if either isnt specified they are 'Generic'.
+        # if neither is specified, both are generic and should match all
+        platform_matchers = set()
+
+        # FIXME: PlatformMatch class
+        platform_matchers.add(('Generic',))
+        platform_matchers.update(all_collector_class._platform_ids)
+
+        pp(platform_matchers, msg='platform_matchers:')
+
+        this_platform_matchers = set()
+        this_platform_matchers.add(('Generic',))
+        this_platform_matchers.add(this_platform)
+
+        # pp(platform_match, msg='platform_match:')
+
+        # pp(this_platform, msg='this_platform:')
+        pp(this_platform_matchers, msg='this_platform_matchers:')
+
+        # FIXME: PlatformMatcher or at least a method
+        matches = this_platform_matchers.intersection(platform_matchers)
+
+        pp(matches, msg='matches:')
+
+        for platform_match in matches:
+            primary_name = all_collector_class.name
+            # id_collector_map[(primary_name, platform_match)] = all_collector_class
+            id_collector_map[primary_name].append(all_collector_class)
+
+            for fact_id in all_collector_class._fact_ids:
+
+                # id_collector_map[(fact_id, platform_match)] = all_collector_class
+                id_collector_map[fact_id].append(all_collector_class)
+                aliases_map[primary_name].add((fact_id, platform_match))
+
+    # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
+    # TODO: should it map to the plural classes that provide it?
+
+    pp(id_collector_map, msg='id_collector_map:')
 
     all_fact_subsets = {}
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
     all_fact_subsets.update(id_collector_map)
+
+    pp(all_fact_subsets, msg='all_fact_subsets:')
 
     all_valid_subsets = frozenset(all_fact_subsets.keys())
 
@@ -213,18 +292,28 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     collector_names = get_collector_names(valid_subsets=all_valid_subsets,
                                           minimal_gather_subset=minimal_gather_subset,
                                           gather_subset=gather_subset,
-                                          aliases_map=aliases_map)
+                                          aliases_map=aliases_map,
+                                          platform_info=platform_info)
 
+#    platform_collectors = get_platform_collector_names()
+
+    # TODO: can be a set()
     seen_collector_classes = []
-    selected_collector_classes = []
-    for collector_name in collector_names:
-        collector_class = all_fact_subsets.get(collector_name, None)
-        if not collector_class:
-            # FIXME: remove when stable
-            raise Exception('collector_name: %s not found' % collector_name)
 
-        if collector_class not in seen_collector_classes:
-            selected_collector_classes.append(collector_class)
-            seen_collector_classes.append(collector_class)
+    selected_collector_classes = []
+
+    pp(all_fact_subsets, msg='all_facts_subsets:')
+    pp(collector_names, msg='collector_names:')
+
+    for collector_name in collector_names:
+        collector_classes = all_fact_subsets.get(collector_name, None)
+        if not collector_classes:
+            # FIXME: remove when stable
+            raise Exception('collector_name: %s  not found' % repr((collector_name, this_platform)))
+
+        for collector_class in collector_classes:
+            if collector_class not in seen_collector_classes:
+                selected_collector_classes.append(collector_class)
+                seen_collector_classes.append(collector_class)
 
     return selected_collector_classes
