@@ -24,7 +24,7 @@ import sys
 
 from ansible.module_utils.basic import bytes_to_human
 
-from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines, get_mount_size
 
 # import this as a module to ensure we get the same module isntance
@@ -656,3 +656,19 @@ class LinuxHardware(Hardware):
             lvm_facts['lvm'] = {'lvs': lvs, 'vgs': vgs, 'pvs': pvs}
 
         return lvm_facts
+
+
+class LinuxHardwareCollector(HardwareCollector):
+    _platform_ids = [('Linux',)]
+
+    def collect(self, module=None, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        if not module:
+            return {}
+
+        hardware_facts = LinuxHardware(module)
+
+        facts_dict = hardware_facts.populate(collected_facts=collected_facts)
+
+        return facts_dict

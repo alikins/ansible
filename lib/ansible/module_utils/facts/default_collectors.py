@@ -40,6 +40,7 @@ from ansible.module_utils.facts.system.ssh_pub_keys import SshPubKeyFactCollecto
 from ansible.module_utils.facts.system.user import UserFactCollector
 
 from ansible.module_utils.facts.hardware.base import HardwareCollector
+from ansible.module_utils.facts.hardware.linux import LinuxHardwareCollector
 
 from ansible.module_utils.facts.network.base import NetworkCollector
 
@@ -54,6 +55,7 @@ collectors = [ApparmorFactCollector,
               EnvFactCollector,
               FipsFactCollector,
               HardwareCollector,
+              LinuxHardwareCollector,
               LocalFactCollector,
               LSBFactCollector,
               NetworkCollector,

@@ -232,11 +232,13 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     pp(platform_info, msg='c_g_f_gs platform_info:')
 
     this_platform = (platform_info.get('system', 'Generic'),)
+    pp(this_platform, msg='this_platform:')
 
     # maps alias names like 'hardware' to the list of names that are part of hardware
     # like 'devices' and 'dmi'
     aliases_map = defaultdict(set)
     for all_collector_class in all_collector_classes:
+        pp(all_collector_class, msg='\n all_collector_class')
 
         pp(all_collector_class._platform_ids, msg='collector class platform_ids:')
 
@@ -245,13 +247,18 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
         platform_matchers = set()
 
         # FIXME: PlatformMatch class
-        platform_matchers.add(('Generic',))
-        platform_matchers.update(all_collector_class._platform_ids)
+        #platform_matchers.update(all_collector_class._platform_ids)
+
+        # if we defined platform_ids, then we are not generic...
+        if not all_collector_class._platform_ids:
+            platform_matchers.add(('Generic',))
+        else:
+            # FIXME: PlatformMatch class
+            platform_matchers.update(all_collector_class._platform_ids)
 
         pp(platform_matchers, msg='platform_matchers:')
 
         this_platform_matchers = set()
-        this_platform_matchers.add(('Generic',))
         this_platform_matchers.add(this_platform)
 
         # pp(platform_match, msg='platform_match:')
@@ -262,9 +269,19 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
         # FIXME: PlatformMatcher or at least a method
         matches = this_platform_matchers.intersection(platform_matchers)
 
-        pp(matches, msg='matches:')
+        pp(matches, msg='platform specific matches:')
+        if not matches:
+            this_platform_matchers.add(('Generic',))
+            # pp(this_platform, msg='this_platform:')
+            pp(this_platform_matchers, msg='this_platform_matchers with generic:')
+
+            # FIXME: PlatformMatcher or at least a method
+            matches = this_platform_matchers.intersection(platform_matchers)
+
+        pp(matches, 'post matches:')
 
         for platform_match in matches:
+            pp(platform_match, msg='platform_match (all_collector_class=%s): ' % all_collector_class)
             primary_name = all_collector_class.name
             # id_collector_map[(primary_name, platform_match)] = all_collector_class
             id_collector_map[primary_name].append(all_collector_class)
