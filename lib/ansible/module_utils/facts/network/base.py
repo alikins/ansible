@@ -16,13 +16,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import platform
-
-from ansible.module_utils.basic import get_all_subclasses
-from ansible.module_utils.six import PY3
-
-from ansible.module_utils.facts.facts import Facts
-
 from ansible.module_utils.facts.collector import BaseFactCollector
 
 
@@ -47,6 +40,7 @@ class Network:
 class NetworkCollector(BaseFactCollector):
     # MAYBE: we could try to build this based on the arch specific implemementation of Network() or its kin
     name = 'network'
+    _fact_class = Network
     _fact_ids = set(['interfaces',
                      'default_ipv4',
                      'default_ipv6',
@@ -66,8 +60,8 @@ class NetworkCollector(BaseFactCollector):
             return {}
 
         # Network munges cached_facts by side effect, so give it a copy
-        network_facts = Network(module)
+        facts_obj = self._fact_class(module)
 
-        facts_dict = network_facts.populate(collected_facts=collected_facts)
+        facts_dict = facts_obj.populate(collected_facts=collected_facts)
 
         return facts_dict

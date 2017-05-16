@@ -44,7 +44,6 @@ class LinuxNetwork(Network):
         '65534': 'tunnel',
     }
 
-
     def populate(self, collected_facts=None):
         network_facts = {}
         ip_path = self.module.get_bin_path('ip')
@@ -309,14 +308,4 @@ class LinuxNetwork(Network):
 
 class LinuxNetworkCollector(NetworkCollector):
     _platform = 'Linux'
-
-    def collect(self, module=None, collected_facts=None):
-        collected_facts = collected_facts or {}
-
-        if not module:
-            return {}
-
-        network = LinuxNetwork(module)
-        facts_dict = network.populate(collected_facts=collected_facts)
-
-        return facts_dict
+    _fact_class = LinuxNetwork

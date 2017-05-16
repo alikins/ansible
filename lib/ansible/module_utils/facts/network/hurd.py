@@ -18,7 +18,7 @@ __metaclass__ = type
 
 import os
 
-from ansible.module_utils.facts.network.base import Network
+from ansible.module_utils.facts.network.base import Network, NetworkCollector
 
 
 class HurdPfinetNetwork(Network):
@@ -79,3 +79,8 @@ class HurdPfinetNetwork(Network):
                         })
 
         return network_facts
+
+
+class HurdNetworkCollector(NetworkCollector):
+    _platform = 'GNU'
+    _fact_class = HurdPfinetNetwork

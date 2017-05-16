@@ -46,6 +46,7 @@ from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.linux import LinuxNetworkCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
+from ansible.module_utils.facts.virtual.linux import LinuxVirtualCollector
 
 # TODO: make config driven
 collectors = [ApparmorFactCollector,
@@ -69,7 +70,8 @@ collectors = [ApparmorFactCollector,
               SshPubKeyFactCollector,
               SystemCapabilitiesFactCollector,
               UserFactCollector,
-              VirtualCollector]
+              VirtualCollector,
+              LinuxVirtualCollector]
 
 external_collectors = [FacterFactCollector,
                        OhaiFactCollector]

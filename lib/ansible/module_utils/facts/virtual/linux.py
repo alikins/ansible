@@ -20,7 +20,7 @@ import glob
 import os
 import re
 
-from ansible.module_utils.facts.virtual.base import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual, VirtualCollector
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines
 
 
@@ -221,3 +221,8 @@ class LinuxVirtual(Virtual):
         virtual_facts['virtualization_role'] = 'NA'
 
         return virtual_facts
+
+
+class LinuxVirtualCollector(VirtualCollector):
+    _fact_class = LinuxVirtual
+    _platform = 'Linux'
