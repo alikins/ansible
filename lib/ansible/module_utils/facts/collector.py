@@ -243,6 +243,43 @@ def find_platform_match(collector_class, this_platform):
     return bool(matches)
 
 
+def find_collectors_for_platform(all_collector_classes, compat_platforms):
+    found_collectors = set()
+    found_collectors_names = set()
+
+    # start from specific platform, then try generic
+    for compat_platform in compat_platforms:
+        platform_match = None
+        for all_collector_class in all_collector_classes:
+
+            platform_match = find_platform_match(collector_class=all_collector_class,
+                                                 this_platform=compat_platform)
+            if not platform_match:
+                continue
+
+            #            for platform_match in matches:
+            primary_name = all_collector_class.name
+
+            if primary_name not in found_collectors_names:
+                found_collectors.add(all_collector_class)
+                found_collectors_names.add(all_collector_class.name)
+
+    return found_collectors
+
+
+def build_fact_id_to_collector_map(collectors_for_platform):
+    fact_id_to_collector_map = defaultdict(list)
+    aliases_map = defaultdict(set)
+
+    for collector_class in collectors_for_platform:
+        primary_name = collector_class.name
+        for fact_id in collector_class._fact_ids:
+            fact_id_to_collector_map[fact_id].append(collector_class)
+            aliases_map[primary_name].add(fact_id)
+
+    return fact_id_to_collector_map, aliases_map
+
+
 def collector_classes_from_gather_subset(all_collector_classes=None,
                                          valid_subsets=None,
                                          minimal_gather_subset=None,
@@ -281,6 +318,13 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     compat_platforms = [this_platform, 'Generic']
 
+    collectors_for_platform = find_collectors_for_platform(all_collector_classes, compat_platforms)
+
+    pp(collectors_for_platform, msg='collectors_for_platform')
+
+    fact_id_collector_map = {}
+    fact_id_collector_map, aliases_map = build_fact_id_to_collector_map(collectors_for_platform)
+
     # start from specific platform, then try generic
     for compat_platform in compat_platforms:
         platform_match = None
@@ -293,6 +337,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                 #            for platform_match in matches:
                 pp(platform_match, msg='platform_match (all_collector_class=%s): ' % all_collector_class)
                 primary_name = all_collector_class.name
+
                 if primary_name not in id_collector_map:
                     # id_collector_map[(primary_name, platform_match)] = all_collector_class
                     id_collector_map[primary_name].append(all_collector_class)
@@ -311,13 +356,15 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
     # TODO: should it map to the plural classes that provide it?
 
-    pp(id_collector_map, msg='id_collector_map:')
+    pp(dict(id_collector_map), msg='id_collector_map:')
+    pp(dict(fact_id_collector_map), msg='fact_id_collector_map:')
+    #pp(id_collector_map, msg='id_collector_map:')
 
     all_fact_subsets = {}
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
     all_fact_subsets.update(id_collector_map)
 
-    pp(all_fact_subsets, msg='all_fact_subsets:')
+    #pp(all_fact_subsets, msg='all_fact_subsets:')
 
     all_valid_subsets = frozenset(all_fact_subsets.keys())
 
@@ -335,8 +382,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     selected_collector_classes = []
 
-    pp(all_fact_subsets, msg='all_facts_subsets:')
-    pp(collector_names, msg='collector_names:')
+    #pp(all_fact_subsets, msg='all_facts_subsets:')
+    #pp(collector_names, msg='collector_names:')
 
     for collector_name in collector_names:
         collector_classes = all_fact_subsets.get(collector_name, None)
