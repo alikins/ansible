@@ -273,6 +273,9 @@ def build_fact_id_to_collector_map(collectors_for_platform):
 
     for collector_class in collectors_for_platform:
         primary_name = collector_class.name
+
+        fact_id_to_collector_map[primary_name].append(collector_class)
+
         for fact_id in collector_class._fact_ids:
             fact_id_to_collector_map[fact_id].append(collector_class)
             aliases_map[primary_name].add(fact_id)
@@ -303,9 +306,6 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     valid_subsets = valid_subsets or frozenset()
 
-    # build up the set of names we can use to identify facts collection subsets (a fact name, or a gather_subset name)
-    id_collector_map = defaultdict(list)
-
     pp(platform_info, msg='c_g_f_gs platform_info:')
 
     this_platform = platform_info.get('system', 'Generic')
@@ -325,46 +325,17 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     fact_id_collector_map = {}
     fact_id_collector_map, aliases_map = build_fact_id_to_collector_map(collectors_for_platform)
 
-    # start from specific platform, then try generic
-    for compat_platform in compat_platforms:
-        platform_match = None
-        for all_collector_class in all_collector_classes:
-
-            platform_match = find_platform_match(collector_class=all_collector_class,
-                                                 this_platform=compat_platform)
-
-            if platform_match:
-                #            for platform_match in matches:
-                pp(platform_match, msg='platform_match (all_collector_class=%s): ' % all_collector_class)
-                primary_name = all_collector_class.name
-
-                if primary_name not in id_collector_map:
-                    # id_collector_map[(primary_name, platform_match)] = all_collector_class
-                    id_collector_map[primary_name].append(all_collector_class)
-
-                    for fact_id in all_collector_class._fact_ids:
-
-                        # id_collector_map[(fact_id, platform_match)] = all_collector_class
-                        id_collector_map[fact_id].append(all_collector_class)
-                        aliases_map[primary_name].add((fact_id, platform_match))
-
-        if platform_match:
-            pp(platform_match, msg='\nFOUND: compat collector=%s platform=%s' % (all_collector_class,
-                                                                                 compat_platform))
-            break
-
     # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
     # TODO: should it map to the plural classes that provide it?
 
-    pp(dict(id_collector_map), msg='id_collector_map:')
-    pp(dict(fact_id_collector_map), msg='fact_id_collector_map:')
-    #pp(id_collector_map, msg='id_collector_map:')
+    # pp(dict(fact_id_collector_map), msg='fact_id_collector_map:')
 
+    # pp(dict(aliases_map), msg='aliases_map:')
     all_fact_subsets = {}
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
-    all_fact_subsets.update(id_collector_map)
+    all_fact_subsets.update(fact_id_collector_map)
 
-    #pp(all_fact_subsets, msg='all_fact_subsets:')
+    # pp(all_fact_subsets, msg='all_fact_subsets:')
 
     all_valid_subsets = frozenset(all_fact_subsets.keys())
 
@@ -382,7 +353,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     selected_collector_classes = []
 
-    #pp(all_fact_subsets, msg='all_facts_subsets:')
+    # pp(all_fact_subsets, msg='all_facts_subsets:')
     #pp(collector_names, msg='collector_names:')
 
     for collector_name in collector_names:
