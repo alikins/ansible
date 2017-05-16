@@ -237,6 +237,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     # maps alias names like 'hardware' to the list of names that are part of hardware
     # like 'devices' and 'dmi'
     aliases_map = defaultdict(set)
+    # FIXME:  check all the platform specific classes first, then try the generic ones
+
     for all_collector_class in all_collector_classes:
         pp(all_collector_class, msg='\n all_collector_class')
 
@@ -271,6 +273,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
         pp(matches, msg='platform specific matches:')
         if not matches:
+
             this_platform_matchers.add(('Generic',))
             # pp(this_platform, msg='this_platform:')
             pp(this_platform_matchers, msg='this_platform_matchers with generic:')
