@@ -274,17 +274,13 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     compat_platforms = [this_platform, 'Generic']
 
-    for all_collector_class in all_collector_classes:
-        matches = []
+    # start from specific platform, then try generic
+    for compat_platform in compat_platforms:
+        for all_collector_class in all_collector_classes:
+            matches = []
 
-        # start from specific platform, then try generic
-        for compat_platform in compat_platforms:
             matches = find_platform_matches(collector_class=all_collector_class,
                                             this_platform=compat_platform)
-            if matches:
-                pp(matches, msg='\n Found compat collector=%s platform=%s' % (all_collector_class,
-                                                                              compat_platform))
-                break
 
         for platform_match in matches:
             pp(platform_match, msg='platform_match (all_collector_class=%s): ' % all_collector_class)
@@ -297,6 +293,11 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                 # id_collector_map[(fact_id, platform_match)] = all_collector_class
                 id_collector_map[fact_id].append(all_collector_class)
                 aliases_map[primary_name].add((fact_id, platform_match))
+
+        if matches:
+            pp(matches, msg='\n Found compat collector=%s platform=%s' % (all_collector_class,
+                                                                          compat_platform))
+            break
 
     # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
     # TODO: should it map to the plural classes that provide it?
