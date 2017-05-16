@@ -95,7 +95,15 @@ class CallbackBase:
         if 'exception' in abridged_result:
             del abridged_result['exception']
 
-        return json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
+
+        import pprint
+        self._display.vvv(pprint.pformat(result))
+        try:
+            ret = json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
+        except Exception as e:
+            self._display.vvv('exception %s json.dumps on %s' % (e, result))
+            return json.dumps({})
+        return ret
 
     def _handle_warnings(self, res):
         ''' display warnings, if enabled and any exist in the result '''

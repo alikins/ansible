@@ -68,6 +68,20 @@ class AnsibleError(Exception):
     def __repr__(self):
         return self.message
 
+    def __getstadte__(self):
+        exc_data = {}
+        #return exc_data
+        exc_data['obj'] = self._obj
+        exc_data['show_content'] = self._show_content
+
+        exc_data['message'] = to_text(self.message)
+
+        #exc_data['type'] = '%s' % type(self)
+        #exc_data['type'] = type(self)
+        exc_data['repr'] = repr(self)
+        return exc_data
+
+
     def _get_error_lines_from_file(self, file_name, line_number):
         '''
         Returns the line in the file which corresponds to the reported error

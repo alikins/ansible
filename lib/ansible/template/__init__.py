@@ -695,11 +695,18 @@ class Templar:
                 if data_newlines > res_newlines:
                     res += self.environment.newline_sequence * (data_newlines - res_newlines)
             return res
-        except (UndefinedError, AnsibleUndefinedVariable) as e:
+
+        except AnsibleUndefinedVariable as e:
             if fail_on_undefined:
-                raise AnsibleUndefinedVariable(e)
+                raise
+            return data
+        except UndefinedError as e:
+            if fail_on_undefined:
+                raise
+                #raise AnsibleUndefinedVariable(e)
+
             else:
-                #TODO: return warning about undefined var
+                # TODO: return warning about undefined var
                 return data
 
     # for backwards compatibility in case anyone is using old private method directly

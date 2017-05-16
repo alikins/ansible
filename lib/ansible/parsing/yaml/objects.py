@@ -55,7 +55,6 @@ class AnsibleBaseYAMLObject(object):
 
 class AnsibleMapping(AnsibleBaseYAMLObject, dict):
     ''' sub class for dictionaries '''
-    pass
 
 
 class AnsibleUnicode(AnsibleBaseYAMLObject, text_type):

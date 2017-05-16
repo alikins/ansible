@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import base64
+import os
 import time
 import traceback
 
@@ -45,6 +46,29 @@ except ImportError:
 
 
 __all__ = ['TaskExecutor']
+
+import multiprocessing.util
+
+log = multiprocessing.util.get_logger()
+
+
+def task_exception_data(exc):
+    exc_data = {}
+    if isinstance(exc, AnsibleError):
+        # TODO: verify it is serializable
+        exc_data['obj'] = dict(exc._obj)
+        exc_data['show_content'] = exc._show_content
+
+    if hasattr(exc, 'message'):
+        exc_data['message'] = to_text(exc.message)
+
+    log.debug('type(obj) %s', type(exc._obj))
+    log.debug('exc _obj: %s', exc_data['obj'])
+    exc_data['type'] = '%s' % type(exc)
+    # exc_data['type'] = type(exc)
+    # exc_data['repr'] = repr(exc)
+
+    return exc_data
 
 
 class TaskExecutor:
@@ -84,6 +108,7 @@ class TaskExecutor:
 
         display.debug("in run()")
 
+        log.debug('te run() start')
         try:
             try:
                 items = self._get_loop_items()
@@ -122,6 +147,7 @@ class TaskExecutor:
                     res = dict(changed=False, skipped=True, skipped_reason='No items in the list', results=[])
             else:
                 display.debug("calling self._execute()")
+                log.debug('te pre self._execute')
                 res = self._execute()
                 display.debug("_execute() done")
 
@@ -157,8 +183,13 @@ class TaskExecutor:
             display.debug("done dumping result, returning")
             return res
         except AnsibleError as e:
-            return dict(failed=True, msg=to_text(e, nonstring='simplerepr'))
+            #log.debug('caught AnsibleError %s', e)
+            #log.exception(e)
+            task_exception = task_exception_data(e)
+            return dict(failed=True, msg=to_text(e, nonstring='simplerepr'),
+                        pid=os.getpid(), task_exception_data=task_exception)
         except Exception as e:
+            log.debug('caugt exception e: %s', e)
             return dict(failed=True, msg='Unexpected failure during module execution.', exception=to_text(traceback.format_exc()), stdout='')
         finally:
             try:

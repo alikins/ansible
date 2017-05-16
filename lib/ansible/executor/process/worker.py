@@ -47,6 +47,10 @@ except ImportError:
 
 __all__ = ['WorkerProcess']
 
+import multiprocessing.util
+
+log = multiprocessing.util.get_logger()
+
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -105,6 +109,7 @@ class WorkerProcess(multiprocessing.Process):
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
+            log.debug('mp Before')
             executor_result = TaskExecutor(
                 self._host,
                 self._task,
@@ -115,6 +120,7 @@ class WorkerProcess(multiprocessing.Process):
                 self._shared_loader_obj,
                 self._rslt_q
             ).run()
+            log.debug('mp after')
 
             display.debug("done running TaskExecutor() for %s/%s" % (self._host, self._task))
             self._host.vars = dict()
@@ -130,7 +136,6 @@ class WorkerProcess(multiprocessing.Process):
             display.debug("sending task result")
             self._rslt_q.put(task_result)
             display.debug("done sending task result")
-
         except AnsibleConnectionFailure:
             self._host.vars = dict()
             self._host.groups = []
