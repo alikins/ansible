@@ -203,11 +203,18 @@ def get_collector_names(valid_subsets=None,
     return additional_subsets
 
 
-def find_platform_matches(collector_class, this_platform):
+def find_platform_match(collector_class, this_platform):
     matches = []
     pp(collector_class, msg='\n collector_class')
 
     pp(collector_class._platform, msg='collector class platform_ids:')
+    pp(this_platform, msg='this_platform:')
+
+    if this_platform == collector_class._platform:
+        pp(True, msg='find_platform_match: ')
+        return collector_class
+
+    return None
 
     # Map platform_info to collector fact info, if either isnt specified they are 'Generic'.
     # if neither is specified, both are generic and should match all
@@ -233,7 +240,7 @@ def find_platform_matches(collector_class, this_platform):
     matches = this_platform_matchers.intersection(platform_matchers)
 
     pp(matches, msg='platform specific matches:')
-    return matches
+    return bool(matches)
 
 
 def collector_classes_from_gather_subset(all_collector_classes=None,
@@ -276,27 +283,29 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     # start from specific platform, then try generic
     for compat_platform in compat_platforms:
+        platform_match = None
         for all_collector_class in all_collector_classes:
-            matches = []
 
-            matches = find_platform_matches(collector_class=all_collector_class,
-                                            this_platform=compat_platform)
+            platform_match = find_platform_match(collector_class=all_collector_class,
+                                                 this_platform=compat_platform)
 
-        for platform_match in matches:
-            pp(platform_match, msg='platform_match (all_collector_class=%s): ' % all_collector_class)
-            primary_name = all_collector_class.name
-            # id_collector_map[(primary_name, platform_match)] = all_collector_class
-            id_collector_map[primary_name].append(all_collector_class)
+            if platform_match:
+                #            for platform_match in matches:
+                pp(platform_match, msg='platform_match (all_collector_class=%s): ' % all_collector_class)
+                primary_name = all_collector_class.name
+                if primary_name not in id_collector_map:
+                    # id_collector_map[(primary_name, platform_match)] = all_collector_class
+                    id_collector_map[primary_name].append(all_collector_class)
 
-            for fact_id in all_collector_class._fact_ids:
+                    for fact_id in all_collector_class._fact_ids:
 
-                # id_collector_map[(fact_id, platform_match)] = all_collector_class
-                id_collector_map[fact_id].append(all_collector_class)
-                aliases_map[primary_name].add((fact_id, platform_match))
+                        # id_collector_map[(fact_id, platform_match)] = all_collector_class
+                        id_collector_map[fact_id].append(all_collector_class)
+                        aliases_map[primary_name].add((fact_id, platform_match))
 
-        if matches:
-            pp(matches, msg='\n Found compat collector=%s platform=%s' % (all_collector_class,
-                                                                          compat_platform))
+        if platform_match:
+            pp(platform_match, msg='\nFOUND: compat collector=%s platform=%s' % (all_collector_class,
+                                                                                 compat_platform))
             break
 
     # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
