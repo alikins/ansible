@@ -659,7 +659,7 @@ class LinuxHardware(Hardware):
 
 
 class LinuxHardwareCollector(HardwareCollector):
-    _platform_ids = [('Linux',)]
+    _platform = 'Linux'
 
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}

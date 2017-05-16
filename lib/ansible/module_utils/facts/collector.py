@@ -29,7 +29,7 @@ from ansible.module_utils.facts import timeout
 #             so gather could match them
 class BaseFactCollector:
     _fact_ids = set()
-    _platform_ids = set()
+    _platform = 'Generic'
     name = None
 
     def __init__(self, collectors=None, namespace=None):
@@ -152,7 +152,7 @@ def get_collector_names(valid_subsets=None,
     additional_subsets = set()
     exclude_subsets = set()
 
-    pp(valid_subsets, msg='get names valid_subsets:')
+#    pp(valid_subsets, msg='get names valid_subsets:')
 
     #subset_ids = [x[0] for x in valid_subsets]
 
@@ -161,8 +161,8 @@ def get_collector_names(valid_subsets=None,
     for subset in gather_subset:
         subset_id = subset
 
-        pp(subset, msg='subset name match:')
-        pp(subset_id, msg='subset_id')
+#        pp(subset, msg='subset name match:')
+#        pp(subset_id, msg='subset_id')
         if subset_id == 'all':
             additional_subsets.update(valid_subsets)
             continue
@@ -191,16 +191,49 @@ def get_collector_names(valid_subsets=None,
 #            platform_subset = find_platform_subset(valid_subsets, platform_info)
 #            additional_subsets.add(platform_subset)
 
-    pp(exclude_subsets, msg='exclude_subset:')
-    pp(additional_subsets, msg='additional_subsets:')
+#    pp(exclude_subsets, msg='exclude_subset:')
+#    pp(additional_subsets, msg='additional_subsets:')
     if not additional_subsets:
         additional_subsets.update(valid_subsets)
     additional_subsets.difference_update(exclude_subsets)
 
     additional_subsets.update(minimal_gather_subset)
 
-    pp(additional_subsets, msg='additional_subsets:')
+#    pp(additional_subsets, msg='additional_subsets:')
     return additional_subsets
+
+
+def find_platform_matches(collector_class, this_platform):
+    matches = []
+    pp(collector_class, msg='\n collector_class')
+
+    pp(collector_class._platform, msg='collector class platform_ids:')
+
+    # Map platform_info to collector fact info, if either isnt specified they are 'Generic'.
+    # if neither is specified, both are generic and should match all
+    platform_matchers = set()
+
+    # FIXME: PlatformMatch class
+    # platform_matchers.update(collector_class._platform_ids)
+
+    # FIXME: PlatformMatch class
+    platform_matchers.add(collector_class._platform)
+
+    pp(platform_matchers, msg='platform_matchers:')
+
+    this_platform_matchers = set()
+    this_platform_matchers.add(this_platform)
+
+    # pp(platform_match, msg='platform_match:')
+
+    # pp(this_platform, msg='this_platform:')
+    pp(this_platform_matchers, msg='this_platform_matchers:')
+
+    # FIXME: PlatformMatcher or at least a method
+    matches = this_platform_matchers.intersection(platform_matchers)
+
+    pp(matches, msg='platform specific matches:')
+    return matches
 
 
 def collector_classes_from_gather_subset(all_collector_classes=None,
@@ -231,7 +264,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     pp(platform_info, msg='c_g_f_gs platform_info:')
 
-    this_platform = (platform_info.get('system', 'Generic'),)
+    this_platform = platform_info.get('system', 'Generic')
     pp(this_platform, msg='this_platform:')
 
     # maps alias names like 'hardware' to the list of names that are part of hardware
@@ -239,49 +272,19 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     aliases_map = defaultdict(set)
     # FIXME:  check all the platform specific classes first, then try the generic ones
 
+    compat_platforms = [this_platform, 'Generic']
+
     for all_collector_class in all_collector_classes:
-        pp(all_collector_class, msg='\n all_collector_class')
+        matches = []
 
-        pp(all_collector_class._platform_ids, msg='collector class platform_ids:')
-
-        # Map platform_info to collector fact info, if either isnt specified they are 'Generic'.
-        # if neither is specified, both are generic and should match all
-        platform_matchers = set()
-
-        # FIXME: PlatformMatch class
-        #platform_matchers.update(all_collector_class._platform_ids)
-
-        # if we defined platform_ids, then we are not generic...
-        if not all_collector_class._platform_ids:
-            platform_matchers.add(('Generic',))
-        else:
-            # FIXME: PlatformMatch class
-            platform_matchers.update(all_collector_class._platform_ids)
-
-        pp(platform_matchers, msg='platform_matchers:')
-
-        this_platform_matchers = set()
-        this_platform_matchers.add(this_platform)
-
-        # pp(platform_match, msg='platform_match:')
-
-        # pp(this_platform, msg='this_platform:')
-        pp(this_platform_matchers, msg='this_platform_matchers:')
-
-        # FIXME: PlatformMatcher or at least a method
-        matches = this_platform_matchers.intersection(platform_matchers)
-
-        pp(matches, msg='platform specific matches:')
-        if not matches:
-
-            this_platform_matchers.add(('Generic',))
-            # pp(this_platform, msg='this_platform:')
-            pp(this_platform_matchers, msg='this_platform_matchers with generic:')
-
-            # FIXME: PlatformMatcher or at least a method
-            matches = this_platform_matchers.intersection(platform_matchers)
-
-        pp(matches, 'post matches:')
+        # start from specific platform, then try generic
+        for compat_platform in compat_platforms:
+            matches = find_platform_matches(collector_class=all_collector_class,
+                                            this_platform=compat_platform)
+            if matches:
+                pp(matches, msg='\n Found compat collector=%s platform=%s' % (all_collector_class,
+                                                                              compat_platform))
+                break
 
         for platform_match in matches:
             pp(platform_match, msg='platform_match (all_collector_class=%s): ' % all_collector_class)

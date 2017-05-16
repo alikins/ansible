@@ -71,8 +71,7 @@ class HardwareCollector(BaseFactCollector):
                      'processor_count',
                      # TODO: mounts isnt exactly hardware
                      'mounts',
-                     'devices',
-                     'virtualization_type', 'virtualization_role'])
+                     'devices'])
 
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
