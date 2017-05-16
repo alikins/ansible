@@ -26,7 +26,7 @@ from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.collector import BaseFactCollector
 
 
-class Network(Facts):
+class Network:
     """
     This is a generic Network subclass of Facts.  This should be further
     subclassed to implement per platform.  If you subclass this,
@@ -36,31 +36,8 @@ class Network(Facts):
 
     All subclasses MUST define platform.
     """
-    platform = 'Generic'
-
-    IPV6_SCOPE = {'0': 'global',
-                  '10': 'host',
-                  '20': 'link',
-                  '40': 'admin',
-                  '50': 'site',
-                  '80': 'organization'}
-
-    def __new__(cls, *arguments, **keyword):
-        # When Network is created, it chooses a subclass to create instead.
-        # This check prevents the subclass from then trying to find a subclass
-        # and create that.
-        if cls is not Network:
-            return super(Network, cls).__new__(cls)
-
-        subclass = cls
-
-        for sc in get_all_subclasses(Network):
-            if sc.platform == platform.system():
-                subclass = sc
-        if PY3:
-            return super(cls, subclass).__new__(subclass)
-        else:
-            return super(cls, subclass).__new__(subclass, *arguments, **keyword)
+    def __init__(self, module):
+        self.module = module
 
     # TODO: more or less abstract/NotImplemented
     def populate(self, collected_facts=None):
@@ -75,6 +52,13 @@ class NetworkCollector(BaseFactCollector):
                      'default_ipv6',
                      'all_ipv4_addresses',
                      'all_ipv6_addresses'])
+
+    IPV6_SCOPE = {'0': 'global',
+                  '10': 'host',
+                  '20': 'link',
+                  '40': 'admin',
+                  '50': 'site',
+                  '80': 'organization'}
 
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}

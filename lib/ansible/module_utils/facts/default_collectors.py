@@ -43,6 +43,7 @@ from ansible.module_utils.facts.hardware.base import HardwareCollector
 from ansible.module_utils.facts.hardware.linux import LinuxHardwareCollector
 
 from ansible.module_utils.facts.network.base import NetworkCollector
+from ansible.module_utils.facts.network.linux import LinuxNetworkCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 
@@ -59,6 +60,7 @@ collectors = [ApparmorFactCollector,
               LocalFactCollector,
               LSBFactCollector,
               NetworkCollector,
+              LinuxNetworkCollector,
               PkgMgrFactCollector,
               PlatformFactCollector,
               PythonFactCollector,

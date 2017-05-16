@@ -45,7 +45,7 @@ def get_partition_uuid(partname):
     return None
 
 
-class LinuxHardware(Hardware):
+class LinuxHardware:
     """
     Linux-specific subclass of Hardware.  Defines memory and CPU facts:
     - memfree_mb
@@ -71,6 +71,9 @@ class LinuxHardware(Hardware):
 
     # regex used against mtab content to find entries that are bind mounts
     MTAB_BIND_MOUNT_RE = re.compile(r'.*bind.*"')
+
+    def __init__(self, module):
+        self.module = module
 
     def populate(self, collected_facts=None):
         hardware_facts = {}

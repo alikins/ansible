@@ -22,7 +22,7 @@ import re
 import socket
 import struct
 
-from ansible.module_utils.facts.network.base import Network
+from ansible.module_utils.facts.network.base import Network, NetworkCollector
 
 from ansible.module_utils.facts.utils import get_file_content
 
@@ -35,7 +35,7 @@ class LinuxNetwork(Network):
     - all_ipv4_addresses and all_ipv6_addresses: lists of all configured addresses.
     - ipv4_address and ipv6_address: the first non-local address for each family.
     """
-    platform = 'Linux'
+    _platform = 'Linux'
     INTERFACE_TYPE = {
         '1': 'ether',
         '32': 'infiniband',
@@ -43,6 +43,7 @@ class LinuxNetwork(Network):
         '772': 'loopback',
         '65534': 'tunnel',
     }
+
 
     def populate(self, collected_facts=None):
         network_facts = {}
@@ -304,3 +305,18 @@ class LinuxNetwork(Network):
                     data['phc_index'] = int(m.groups()[0])
 
         return data
+
+
+class LinuxNetworkCollector(NetworkCollector):
+    _platform = 'Linux'
+
+    def collect(self, module=None, collected_facts=None):
+        collected_facts = collected_facts or {}
+
+        if not module:
+            return {}
+
+        network = LinuxNetwork(module)
+        facts_dict = network.populate(collected_facts=collected_facts)
+
+        return facts_dict

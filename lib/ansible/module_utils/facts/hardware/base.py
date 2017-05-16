@@ -27,7 +27,7 @@ from ansible.module_utils.facts.facts import Facts
 from ansible.module_utils.facts.collector import BaseFactCollector
 
 
-class Hardware(Facts):
+class OldHardware(Facts):
     """
     This is a generic Hardware subclass of Facts.  This should be further
     subclassed to implement per platform.  If you subclass this, it
@@ -59,6 +59,14 @@ class Hardware(Facts):
             return super(cls, subclass).__new__(subclass)
         else:
             return super(cls, subclass).__new__(subclass, *arguments, **keyword)
+
+    def populate(self, collected_facts=None):
+        return {}
+
+
+class Hardware:
+    def __init__(self, module):
+        self.module = module
 
     def populate(self, collected_facts=None):
         return {}
