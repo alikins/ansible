@@ -56,6 +56,45 @@ General
 #           very few side effects) so might be a reasonable place for some concurency.
 # TODO: possibly rename FooCollector to just FooFacts, esp once the existing Facts() class is barebones/unneeded
 
+
+# Gather subset descriptions
+
+2.3
+'all' -> hardware, network, virtualization +
+         the 'base' facts like 'distribution', 'user', 'env' +
+         meta facts like 'gather_subset' and 'module_setup'
+         - facter and ohai
+
+'!all'
+
+
+# Collector platform match
+
+facts/collector.py
+# about BaseFactCollector class attr _platform
+
+# TODO: replace with a '_requires' dict like
+# _requires = {'platform': 'Linux', 'arch': 'aarch64'}
+# simplest would be to consider each more specific and require match on all of
+# them. That also implies that the collector finder knows what 'arch' means and can provide
+# that info. That is where a CollectorRequires class/interface could be useful but complicated.
+#
+# Another option would be to make each collector responsible for deciding if it matches based on
+# some provided system info. Perhaps as a staticmethod platform_match(platform_info). That moves any
+# comparision match logic to be tweakable by collector, but it makes it more difficult for the collector
+# finder to choose between multiple matches (a 'Generic' and a more platform-specific impl for ex).
+#
+#
+# The various collector finder bits (get_collector_names etc) are currently based on finding a class that
+# provides for a collector.name ('hardware', 'env', 'pkg_mgr'). So only one class that provides 'hardware'
+# should be chosen.
+#   But it could potentially try to find a collector class for collector.name and a particular fact_id
+#   (ie, ('hardware', 'processors') or ('network', 'interfaces') or ('network', 'something_fact_id_my_custom_collector_gets')
+# so something like hardware could use LinuxHardwareCollector for most fact_ids and S390xLinuxHardwareCollector for
+# ('hardware', 'processors') or ('hardware', 'processor_books'). Though ideally, the fact_ids could get split into
+# specific collector classes, otherwise the more generic collectors need to know to not collect a fact id, or there
+# needs to be a ranking/ordering of collector classes so one can override another predictably.
+
 Stuff about the old Facts() class (and Hardare() and other metaclass stuff)
 
 facts/facts.py
