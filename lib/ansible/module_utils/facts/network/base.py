@@ -29,7 +29,8 @@ class Network:
 
     All subclasses MUST define platform.
     """
-    def __init__(self, module):
+    # FIXME: remove load_on_init when we can
+    def __init__(self, module, load_on_init=False):
         self.module = module
 
     # TODO: more or less abstract/NotImplemented

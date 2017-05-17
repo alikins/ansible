@@ -34,7 +34,8 @@ class Virtual:
     All subclasses MUST define platform.
     """
 
-    def __init__(self, module):
+    # FIXME: remove load_on_init if we can
+    def __init__(self, module, load_on_init=False):
         self.module = module
 
     # FIXME: just here for existing tests cases till they are updated

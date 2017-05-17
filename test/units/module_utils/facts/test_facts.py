@@ -50,7 +50,12 @@ class BaseTestFactsPlatform(unittest.TestCase):
             return
         inst = self.fact_class(module=Mock(), load_on_init=False)
         self.assertIsInstance(inst, self.fact_class)
-        self.assertEqual(inst.platform, self.platform_id)
+#        self.assertEqual(inst.platform, self.platform_id)
+
+    def test_collector(self):
+        inst = self.collector_class(module=Mock())
+        self.assertIsInstance(inst, self.collector_class)
+        self.assertEqual(inst._platform, self.platform_id)
 
 
 class TestLinuxFactsPlatform(BaseTestFactsPlatform):
@@ -171,11 +176,6 @@ class TestLinuxVirtual(BaseTestFactsPlatform):
 class TestFreeBSDVirtual(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
     fact_class = virtual.freebsd.FreeBSDVirtual
-
-
-class TestDragonFlyVirtual(BaseTestFactsPlatform):
-    platform_id = 'DragonFly'
-    fact_class = virtual.dragonfly.DragonFlyVirtual
 
 
 class TestNetBSDVirtual(BaseTestFactsPlatform):
