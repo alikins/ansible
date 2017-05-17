@@ -48,7 +48,6 @@ class BaseFactCollector:
 
     @classmethod
     def platform_match(cls, platform_info):
-        pp(platform_info, msg='platform_match cls=%s cls._platform=%s platform_info:' % (cls, cls._platform))
         if platform_info.get('system', None) == cls._platform:
             return cls
         return None
@@ -120,16 +119,6 @@ class BaseFactCollector:
         return id_set
 
 
-import pprint
-
-
-def pp(obj, msg=None):
-    if msg:
-        sys.stderr.write('%s: ' % msg)
-    sys.stderr.write('%s\n' % pprint.pformat(obj))
-    return
-
-
 def get_collector_names(valid_subsets=None,
                         minimal_gather_subset=None,
                         gather_subset=None,
@@ -153,24 +142,13 @@ def get_collector_names(valid_subsets=None,
 
     aliases_map = aliases_map or defaultdict(set)
 
-
-#    pp(platform_info, msg='platform_info:')
-
     # Retrieve all facts elements
     additional_subsets = set()
     exclude_subsets = set()
 
-#    pp(valid_subsets, msg='get names valid_subsets:')
-
-    # subset_ids = [x[0] for x in valid_subsets]
-
-    # pp(subset_ids, msg='subset_ids')
-
     for subset in gather_subset:
         subset_id = subset
 
-#        pp(subset, msg='subset name match:')
-#        pp(subset_id, msg='subset_id')
         if subset_id == 'all':
             additional_subsets.update(valid_subsets)
             continue
@@ -196,18 +174,13 @@ def get_collector_names(valid_subsets=None,
 
             additional_subsets.add(subset)
 
-#            platform_subset = find_platform_subset(valid_subsets, platform_info)
-#            additional_subsets.add(platform_subset)
-
-#    pp(exclude_subsets, msg='exclude_subset:')
-#    pp(additional_subsets, msg='additional_subsets:')
     if not additional_subsets:
         additional_subsets.update(valid_subsets)
+
     additional_subsets.difference_update(exclude_subsets)
 
     additional_subsets.update(minimal_gather_subset)
 
-#    pp(additional_subsets, msg='additional_subsets:')
     return additional_subsets
 
 
@@ -226,7 +199,6 @@ def find_collectors_for_platform(all_collector_classes, compat_platforms):
             if not platform_match:
                 continue
 
-            #            for platform_match in matches:
             primary_name = all_collector_class.name
 
             if primary_name not in found_collectors_names:
@@ -275,27 +247,18 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     valid_subsets = valid_subsets or frozenset()
 
-    pp(platform_info, msg='c_g_f_gs platform_info:')
-
     # maps alias names like 'hardware' to the list of names that are part of hardware
     # like 'devices' and 'dmi'
     aliases_map = defaultdict(set)
-    # FIXME:  check all the platform specific classes first, then try the generic ones
 
     compat_platforms = [platform_info, {'system': 'Generic'}]
 
     collectors_for_platform = find_collectors_for_platform(all_collector_classes, compat_platforms)
 
-    pp(collectors_for_platform, msg='collectors_for_platform')
-
     # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
-    # TODO: should it map to the plural classes that provide it?
 
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
     all_fact_subsets, aliases_map = build_fact_id_to_collector_map(collectors_for_platform)
-    # pp(dict(aliases_map), msg='aliases_map:')
-
-    pp(dict(all_fact_subsets), msg='all_fact_subsets:')
 
     all_valid_subsets = frozenset(all_fact_subsets.keys())
 
@@ -306,15 +269,10 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                                           aliases_map=aliases_map,
                                           platform_info=platform_info)
 
-#    platform_collectors = get_platform_collector_names()
-
     # TODO: can be a set()
     seen_collector_classes = []
 
     selected_collector_classes = []
-
-    # pp(all_fact_subsets, msg='all_facts_subsets:')
-    # pp(collector_names, msg='collector_names:')
 
     for collector_name in collector_names:
         collector_classes = all_fact_subsets.get(collector_name, None)
