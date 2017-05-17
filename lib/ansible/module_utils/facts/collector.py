@@ -29,6 +29,7 @@ from ansible.module_utils.facts import timeout
 #             so gather could match them
 class BaseFactCollector:
     _fact_ids = set()
+
     _platform = 'Generic'
     name = None
 
@@ -138,6 +139,7 @@ def get_collector_names(valid_subsets=None,
     # Retrieve module parameters
     gather_subset = gather_subset or ['all']
 
+    # the list of everything that 'all' expands to
     valid_subsets = valid_subsets or frozenset()
 
     # if provided, minimal_gather_subset is always added, even after all negations
@@ -204,7 +206,6 @@ def get_collector_names(valid_subsets=None,
 
 
 def find_platform_match(collector_class, this_platform):
-    matches = []
     pp(collector_class, msg='\n collector_class')
 
     pp(collector_class._platform, msg='collector class platform_ids:')
@@ -215,32 +216,6 @@ def find_platform_match(collector_class, this_platform):
         return collector_class
 
     return None
-
-    # Map platform_info to collector fact info, if either isnt specified they are 'Generic'.
-    # if neither is specified, both are generic and should match all
-    platform_matchers = set()
-
-    # FIXME: PlatformMatch class
-    # platform_matchers.update(collector_class._platform_ids)
-
-    # FIXME: PlatformMatch class
-    platform_matchers.add(collector_class._platform)
-
-    pp(platform_matchers, msg='platform_matchers:')
-
-    this_platform_matchers = set()
-    this_platform_matchers.add(this_platform)
-
-    # pp(platform_match, msg='platform_match:')
-
-    # pp(this_platform, msg='this_platform:')
-    pp(this_platform_matchers, msg='this_platform_matchers:')
-
-    # FIXME: PlatformMatcher or at least a method
-    matches = this_platform_matchers.intersection(platform_matchers)
-
-    pp(matches, msg='platform specific matches:')
-    return bool(matches)
 
 
 def find_collectors_for_platform(all_collector_classes, compat_platforms):
@@ -322,20 +297,14 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     pp(collectors_for_platform, msg='collectors_for_platform')
 
-    fact_id_collector_map = {}
-    fact_id_collector_map, aliases_map = build_fact_id_to_collector_map(collectors_for_platform)
-
     # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
     # TODO: should it map to the plural classes that provide it?
 
-    # pp(dict(fact_id_collector_map), msg='fact_id_collector_map:')
-
-    # pp(dict(aliases_map), msg='aliases_map:')
-    all_fact_subsets = {}
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
-    all_fact_subsets.update(fact_id_collector_map)
+    all_fact_subsets, aliases_map = build_fact_id_to_collector_map(collectors_for_platform)
+    # pp(dict(aliases_map), msg='aliases_map:')
 
-    # pp(all_fact_subsets, msg='all_fact_subsets:')
+    pp(dict(all_fact_subsets), msg='all_fact_subsets:')
 
     all_valid_subsets = frozenset(all_fact_subsets.keys())
 
