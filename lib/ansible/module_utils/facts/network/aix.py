@@ -18,6 +18,7 @@ __metaclass__ = type
 
 import re
 
+from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.generic_bsd import GenericBsdIfconfigNetwork
 
 
@@ -136,3 +137,8 @@ class AIXNetwork(GenericBsdIfconfigNetwork):
         current_if['flags'] = self.get_options(words[1])
         current_if['macaddress'] = 'unknown'    # will be overwritten later
         return current_if
+
+
+class AIXNetworkCollector(NetworkCollector):
+    _fact_class = AIXNetwork
+    _platform = 'AIX'

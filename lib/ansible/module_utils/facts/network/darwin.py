@@ -16,6 +16,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.generic_bsd import GenericBsdIfconfigNetwork
 
 
@@ -41,3 +42,8 @@ class DarwinNetwork(GenericBsdIfconfigNetwork):
                 current_if['media_type'] = words[2][1:-1]
         if len(words) > 3:
             current_if['media_options'] = self.get_options(words[3])
+
+
+class DarwinNetworkCollector(NetworkCollector):
+    _fact_class = DarwinNetwork
+    _platform = 'Darwin'

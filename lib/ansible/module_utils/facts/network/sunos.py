@@ -18,6 +18,7 @@ __metaclass__ = type
 
 import re
 
+from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.generic_bsd import GenericBsdIfconfigNetwork
 
 
@@ -108,3 +109,8 @@ class SunOSNetwork(GenericBsdIfconfigNetwork):
             octet = ('0' + octet)[-2:None]
             macaddress += (octet + ':')
         current_if['macaddress'] = macaddress[0:-1]
+
+
+class SunOSNetworkCollector(NetworkCollector):
+    _fact_class = SunOSNetwork
+    _platform = 'SunOS'

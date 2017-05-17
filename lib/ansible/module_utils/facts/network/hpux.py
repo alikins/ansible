@@ -16,7 +16,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from ansible.module_utils.facts.network.base import Network
+from ansible.module_utils.facts.network.base import Network, NetworkCollector
 
 
 class HPUXNetwork(Network):
@@ -75,3 +75,8 @@ class HPUXNetwork(Network):
                                                   'interface': device,
                                                   'address': address}
         return interfaces
+
+
+class HPUXNetworkCollector(NetworkCollector):
+    _fact_class = HPUXNetwork
+    _platform = 'HP-UX'

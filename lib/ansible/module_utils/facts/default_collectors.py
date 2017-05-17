@@ -52,7 +52,16 @@ from ansible.module_utils.facts.hardware.openbsd import OpenBSDHardwareCollector
 from ansible.module_utils.facts.hardware.sunos import SunOSHardwareCollector
 
 from ansible.module_utils.facts.network.base import NetworkCollector
+from ansible.module_utils.facts.network.aix import AIXNetworkCollector
+from ansible.module_utils.facts.network.darwin import DarwinNetworkCollector
+from ansible.module_utils.facts.network.dragonfly import DragonFlyNetworkCollector
+from ansible.module_utils.facts.network.freebsd import FreeBSDNetworkCollector
+from ansible.module_utils.facts.network.hpux import HPUXNetworkCollector
+from ansible.module_utils.facts.network.hurd import HurdNetworkCollector
 from ansible.module_utils.facts.network.linux import LinuxNetworkCollector
+from ansible.module_utils.facts.network.netbsd import NetBSDNetworkCollector
+from ansible.module_utils.facts.network.openbsd import OpenBSDNetworkCollector
+from ansible.module_utils.facts.network.sunos import SunOSNetworkCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 from ansible.module_utils.facts.virtual.dragonfly import DragonFlyVirtualCollector
@@ -71,6 +80,7 @@ collectors = [ApparmorFactCollector,
               DnsFactCollector,
               EnvFactCollector,
               FipsFactCollector,
+
               HardwareCollector,
               AIXHardwareCollector,
               DarwinHardwareCollector,
@@ -84,8 +94,19 @@ collectors = [ApparmorFactCollector,
               SunOSHardwareCollector,
               LocalFactCollector,
               LSBFactCollector,
+
               NetworkCollector,
+              AIXNetworkCollector,
+              DarwinNetworkCollector,
+              DragonFlyNetworkCollector,
+              FreeBSDNetworkCollector,
+              HPUXNetworkCollector,
+              HurdNetworkCollector,
               LinuxNetworkCollector,
+              NetBSDNetworkCollector,
+              OpenBSDNetworkCollector,
+              SunOSNetworkCollector,
+
               PkgMgrFactCollector,
               PlatformFactCollector,
               PythonFactCollector,
@@ -94,6 +115,7 @@ collectors = [ApparmorFactCollector,
               SshPubKeyFactCollector,
               SystemCapabilitiesFactCollector,
               UserFactCollector,
+
               VirtualCollector,
               DragonFlyVirtualCollector,
               FreeBSDVirtualCollector,

@@ -13,6 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
+from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.generic_bsd import GenericBsdIfconfigNetwork
 
 
@@ -31,3 +35,8 @@ class OpenBSDNetwork(GenericBsdIfconfigNetwork):
     def parse_lladdr_line(self, words, current_if, ips):
         current_if['macaddress'] = words[1]
         current_if['type'] = 'ether'
+
+
+class OpenBSDNetworkCollector(NetworkCollector):
+    _fact_class = OpenBSDNetwork
+    _platform = 'OpenBSD'

@@ -135,86 +135,103 @@ class TestGenericNetwork(BaseTestFactsPlatform):
 class TestHurdPfinetNetwork(BaseTestFactsPlatform):
     platform_id = 'GNU'
     fact_class = network.hurd.HurdPfinetNetwork
+    collector_class = network.hurd.HurdNetworkCollector
 
 
 class TestLinuxNetwork(BaseTestFactsPlatform):
     platform_id = 'Linux'
     fact_class = network.linux.LinuxNetwork
+    collector_class = network.linux.LinuxNetworkCollector
 
 
 class TestGenericBsdIfconfigNetwork(BaseTestFactsPlatform):
     platform_id = 'Generic_BSD_Ifconfig'
     fact_class = network.generic_bsd.GenericBsdIfconfigNetwork
+    collector_class = None
 
 
 class TestHPUXNetwork(BaseTestFactsPlatform):
     platform_id = 'HP-UX'
     fact_class = network.hpux.HPUXNetwork
+    collector_class = network.hpux.HPUXNetworkCollector
 
 
 class TestDarwinNetwork(BaseTestFactsPlatform):
     platform_id = 'Darwin'
     fact_class = network.darwin.DarwinNetwork
+    collector_class = network.darwin.DarwinNetworkCollector
 
 
 class TestFreeBSDNetwork(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
     fact_class = network.freebsd.FreeBSDNetwork
+    collector_class = network.freebsd.FreeBSDNetworkCollector
 
 
 class TestDragonFlyNetwork(BaseTestFactsPlatform):
     platform_id = 'DragonFly'
     fact_class = network.dragonfly.DragonFlyNetwork
+    collector_class = network.dragonfly.DragonFlyNetworkCollector
 
 
 class TestAIXNetwork(BaseTestFactsPlatform):
     platform_id = 'AIX'
     fact_class = network.aix.AIXNetwork
+    collector_class = network.aix.AIXNetworkCollector
 
 
 class TestNetBSDNetwork(BaseTestFactsPlatform):
     platform_id = 'NetBSD'
     fact_class = network.netbsd.NetBSDNetwork
+    collector_class = network.netbsd.NetBSDNetworkCollector
 
 
 class TestOpenBSDNetwork(BaseTestFactsPlatform):
     platform_id = 'OpenBSD'
     fact_class = network.openbsd.OpenBSDNetwork
+    collector_class = network.openbsd.OpenBSDNetworkCollector
 
 
 class TestSunOSNetwork(BaseTestFactsPlatform):
     platform_id = 'SunOS'
     fact_class = network.sunos.SunOSNetwork
+    collector_class = network.sunos.SunOSNetworkCollector
 
 
 class TestLinuxVirtual(BaseTestFactsPlatform):
     platform_id = 'Linux'
     fact_class = virtual.linux.LinuxVirtual
+    collector_class = virtual.linux.LinuxVirtualCollector
 
 
 class TestFreeBSDVirtual(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
     fact_class = virtual.freebsd.FreeBSDVirtual
+    collector_class = virtual.freebsd.FreeBSDVirtualCollector
 
 
 class TestNetBSDVirtual(BaseTestFactsPlatform):
     platform_id = 'NetBSD'
     fact_class = virtual.netbsd.NetBSDVirtual
+    collector_class = virtual.netbsd.NetBSDVirtualCollector
 
 
 class TestOpenBSDVirtual(BaseTestFactsPlatform):
     platform_id = 'OpenBSD'
     fact_class = virtual.openbsd.OpenBSDVirtual
+    collector_class = virtual.openbsd.OpenBSDVirtualCollector
 
 
 class TestHPUXVirtual(BaseTestFactsPlatform):
     platform_id = 'HP-UX'
     fact_class = virtual.hpux.HPUXVirtual
+    collector_class = virtual.hpux.HPUXVirtualCollector
 
 
 class TestSunOSVirtual(BaseTestFactsPlatform):
     platform_id = 'SunOS'
     fact_class = virtual.sunos.SunOSVirtual
+    collector_class = virtual.sunos.SunOSVirtualCollector
 
 
 LSBLK_OUTPUT = b"""

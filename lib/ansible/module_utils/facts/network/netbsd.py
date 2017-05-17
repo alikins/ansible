@@ -13,6 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
+
+from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.generic_bsd import GenericBsdIfconfigNetwork
 
 
@@ -37,3 +41,8 @@ class NetBSDNetwork(GenericBsdIfconfigNetwork):
             current_if['media_type'] = words[2]
         if len(words) > 3:
             current_if['media_options'] = words[3].split(',')
+
+
+class NetBSDNetworkCollector(NetworkCollector):
+    _fact_class = NetBSDNetwork
+    _platform = 'NetBSD'
