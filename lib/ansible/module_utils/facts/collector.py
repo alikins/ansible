@@ -87,37 +87,6 @@ class BaseFactCollector:
         facts_dict = {}
         return facts_dict
 
-    def collect_ids(self, collected_ids=None):
-        '''Return a list of the fact ids this collector can collector.
-
-        Used to allow gather_subset to address a single fact, potentially.
-
-        atm, the ids are based on the final fact name sans 'ansible_' prefix.
-        ie, 'env' for the 'ansible_env' fact.
-
-        'collected_ids' is passed so a collector could alter the ids it returns
-        based on what ids already are known. It should be considered read only.
-        '''
-
-        id_set = set()
-        for collector in self.collectors:
-            info_set = set()
-            try:
-                info_set = collector.collect_ids(collected_ids=collected_ids)
-            except Exception as e:
-                # FIXME: do fact collection exception warning/logging
-                sys.stderr.write(repr(e))
-                sys.stderr.write('\n')
-
-                raise
-
-            # NOTE: If we want complicated fact id merging (custom set ops?) this is where
-            id_set.update(info_set)
-
-        id_set.update(self.fact_ids)
-
-        return id_set
-
 
 def get_collector_names(valid_subsets=None,
                         minimal_gather_subset=None,

@@ -177,32 +177,6 @@ class TestInPlace(unittest.TestCase):
         # just assert it's not almost empty
         self.assertLess(len(res['ansible_facts']), 3)
 
-    def test_collect_ids(self):
-        mock_module = self._mock_module()
-        collectors = self._collectors(mock_module)
-
-        fact_collector = \
-            setup.AnsibleFactCollector(collectors=collectors)
-
-        res = fact_collector.collect_ids()
-
-        self.assertIsInstance(res, set)
-
-    def test_collect_ids_minimal(self):
-        mock_module = self._mock_module(gather_subset=['!all'])
-
-        collectors = self._collectors(mock_module)
-
-        fact_collector = \
-            setup.AnsibleFactCollector(collectors=collectors)
-
-        res = fact_collector.collect_ids()
-
-        self.assertIsInstance(res, set)
-        not_expected_facts = ['facter', 'lsb', 'virtual']
-        for not_expected_fact in not_expected_facts:
-            self.assertNotIn(not_expected_fact, res)
-
 #    def test_facts_class(self):
 #        mock_module = self._mock_module()
 #        Facts(mock_module)
