@@ -26,23 +26,24 @@ from ansible.playbook import Playbook
 from ansible.vars.manager import VariableManager
 from ansible.vars import VariableManager
 from ansible.parsing.yaml.dumper import AnsibleDumper, AnsibleUnsafeDumper
-from ansible.parsing.yaml.loader import AnsibleLoader
+# from ansible.parsing.yaml.loader import AnsibleLoader
 
 from units.mock.loader import DictDataLoader
 
 import yaml
 
+
 class TestPlaybook(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self._debug = True
 
     def tearDown(self):
         pass
 
     def test_empty_playbook(self):
         fake_loader = DictDataLoader({})
-        p = Playbook(loader=fake_loader)
+        Playbook(loader=fake_loader)
 
     def test_basic_playbook(self):
         fake_loader = DictDataLoader({
@@ -51,70 +52,94 @@ class TestPlaybook(unittest.TestCase):
             """,
         })
         p = Playbook.load("test_file.yml", loader=fake_loader)
-        plays = p.get_plays()
+        p.get_plays()
 
-    def test_playbook_yaml_dump(self):
-        fake_loader = DictDataLoader({
-            "test_file.yml":"""
-            - hosts: all
-              gather_facts: true
-              vars:
-                string_foo: foo
-                int_5: 5
-                float_6_7: 6.7
-                string_list:
-                  - string_list_1
-                  - string_list_2
-                  - string_list_3
-              tasks:
-                - name: task number 1
-                  debug: var=string_list
-                  no_log: true
-                  when: false
+    def _playbook(self):
+        fake_loader_yaml = """
+        - hosts: all
+            gather_facts: true
+            vars:
+            string_foo: foo
+            int_5: 5
+            float_6_7: 6.7
+            string_list:
+                - string_list_1
+                - string_list_2
+                - string_list_3
+            tasks:
+            - name: task number 1
+                debug: var=string_list
+                no_log: true
+                when: false
 
-                - name: the second task
-                  ping:
+            - name: the second task
+                ping:
 
-                - block:
-                    - name: block_head 1
-                #     - include: some_yaml.yml
-                      debug: msg="block head 1"
-                #  rescue:
-                #    - name: a block_head rescue debug
-                #      debug: msg="block_head_rescue 1"
-                #  always:
-                #    - name: a block_head 1 always debug
-                #      debug: msg="block_head_always 1"
+            - block:
+                - name: block_head 1
+            #     - include: some_yaml.yml
+                    debug: msg="block head 1"
+            #  rescue:
+            #    - name: a block_head rescue debug
+            #      debug: msg="block_head_rescue 1"
+            #  always:
+            #    - name: a block_head 1 always debug
+            #      debug: msg="block_head_always 1"
 
-                - name: set a fact task
-                  set_fact:
-                     a_random_fact: The only member of zztop without a beard is Frank Beard.
-                  port: 99999
+            - name: set a fact task
+                set_fact:
+                    a_random_fact: The only member of zztop without a beard is Frank Beard.
+                port: 99999
 
-            - name: The second play in the playbook
-              hosts: localhost
-              gather_facts: true
-              no_log: true
-              vars:
-               some_empty_list: []
-              tasks:
-                - name: second play, first task
-                  no_log: false
-                  when: true
-                  debug: msg="second play, first task"
-            """,
-        })
-        p = Playbook.load("test_file.yml", loader=fake_loader)
-        print(p)
-#        for play in plays:
-#            print(yaml.safe_dump(play))
-        dumper = AnsibleUnsafeDumper
-        print('\n\nyaml repr of playbook follows\n\n')
+        - name: The second play in the playbook
+            hosts: localhost
+            gather_facts: true
+            no_log: true
+            vars:
+            some_empty_list: []
+            tasks:
+            - name: second play, first task
+                no_log: false
+                when: true
+                debug: msg="second play, first task"
+        """
+
+        fake_loader_data = {'test_file_playbook1.yml': fake_loader_yaml}
+        return self._fake_load_playbook(fake_loader_data)
+
+    def test_playbook_yaml_dump_unsafe(self):
+        p = self._playbook()
+        # print(p)
+        # for play in plays:
+        #     print(yaml.safe_dump(play))
+        print('\n\nyaml repr of playbook (AnsibleUnsafeDumper) follows\n\n')
         print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
                         indent=4, default_flow_style=False))
-        #print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
+        # print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
 
-    def test_playbook_yaml_dump_2(self):
+    def test_playbook_yaml_dump(self):
+        p = self._playbook()
+        # print(p)
+        # for play in plays:
+        #     print(yaml.safe_dump(play))
+        print('\n\nyaml repr of playbook (AnsibleDumper) follows\n\n')
+        print(yaml.dump(p, Dumper=AnsibleDumper,
+                        indent=4, default_flow_style=False))
+
+    def _fake_load_playbook(self, fake_loader_data):
+        fake_loader = DictDataLoader(fake_loader_data)
+
+        if self._debug:
+            for name, content in fake_loader_data.items():
+                print("Filename: %s" % name)
+                print("Content:")
+                print(content)
+                print()
+
+        p = Playbook.load("test_file.yml", loader=fake_loader)
+        return p
+
+    def _playbook2(self):
         fake_loader_data = {
             "test_file.yml": """
             - hosts: localhost
@@ -138,24 +163,24 @@ class TestPlaybook(unittest.TestCase):
 
             """,
         }
-        fake_loader = DictDataLoader(fake_loader_data)
 
-        p = Playbook.load("test_file.yml", loader=fake_loader)
-        #print(p)
+        return self._fake_load_playbook(fake_loader_data)
+
+    def test_playbook_yaml_dump_2(self):
+        p = self._playbook2()
+        # print(p)
 #        for play in plays:
 #            print(yaml.safe_dump(play))
-        dumper = AnsibleUnsafeDumper
         print()
-        for name, content in fake_loader_data.items():
-            print("Filename: %s" % name)
-            print("Content:")
-            print(content)
-            print()
+
+        print('\n\nyaml repr of playbook with AnsibleDumper\n\n')
+        print(yaml.dump(p, Dumper=AnsibleDumper,
+                        indent=4, default_flow_style=False, canonical=True))
 
         print('\n\nyaml repr of playbook followsi canonical\n\n')
         print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
                         indent=4, default_flow_style=False, canonical=True))
-        #print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
+        # print(yaml.dump(p, Dumper=AnsibleDumper, indent=4, default_flow_style=False))
         print('\n\nyaml repr of playbook followsi default_flow_style=False\n\n')
         print(yaml.dump(p, Dumper=AnsibleUnsafeDumper,
                         indent=4, default_flow_style=False))
