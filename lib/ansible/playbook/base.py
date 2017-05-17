@@ -603,10 +603,9 @@ class Base(with_metaclass(BaseMeta, object)):
         as field attributes.
         '''
 
-        repr = self.dump_attrs()
+        repr_ds = self.dump_attrs()
         # This will clearly break other stuff atm since it changes what serialized means
         changed = self._changed_attrs()
-        repr_ds = dict()
 
         #for name in self._valid_attrs.keys():
         #    repr[name] = getattr(self, name)

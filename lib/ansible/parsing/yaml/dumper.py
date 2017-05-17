@@ -25,7 +25,6 @@ from ansible.module_utils.six import PY3
 from ansible.parsing.yaml.objects import AnsibleUnicode, AnsibleSequence, AnsibleMapping, AnsibleVaultEncryptedUnicode
 from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 from ansible.vars.hostvars import HostVars
-from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 from ansible.playbook import Playbook
 from ansible.playbook.play import Play
 from ansible.playbook.block import Block
