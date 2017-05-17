@@ -404,7 +404,8 @@ class VaultEditor:
 
     def _real_path(self, filename):
         # '-' is special to VaultEditor, dont expand it.
-        if filename == '-':
+        # /dev/stdin is special to bash/python, dont expand it
+        if filename in ['-', '/dev/stdin']:
             return filename
 
         real_path = os.path.realpath(filename)
@@ -426,7 +427,6 @@ class VaultEditor:
 
         # follow the symlink
         filename = self._real_path(filename)
-
         b_plaintext = self.read_data(filename)
         b_ciphertext = self.vault.encrypt(b_plaintext)
         self.write_data(b_ciphertext, output_file or filename)
@@ -527,7 +527,7 @@ class VaultEditor:
                 with open(filename, "rb") as fh:
                     data = fh.read()
         except Exception as e:
-            raise AnsibleError(str(e))
+            raise AnsibleError('Unable to read data from (%s) %s' % (filename, str(e)))
 
         return data
 
