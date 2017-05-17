@@ -46,7 +46,13 @@ from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.linux import LinuxNetworkCollector
 
 from ansible.module_utils.facts.virtual.base import VirtualCollector
+from ansible.module_utils.facts.virtual.dragonfly import DragonFlyVirtualCollector
+from ansible.module_utils.facts.virtual.freebsd import FreeBSDVirtualCollector
 from ansible.module_utils.facts.virtual.linux import LinuxVirtualCollector
+from ansible.module_utils.facts.virtual.netbsd import NetBSDVirtualCollector
+from ansible.module_utils.facts.virtual.openbsd import OpenBSDVirtualCollector
+from ansible.module_utils.facts.virtual.sunos import SunOSVirtualCollector
+from ansible.module_utils.facts.virtual.hpux import HPUXVirtualCollector
 
 # TODO: make config driven
 collectors = [ApparmorFactCollector,
@@ -71,7 +77,13 @@ collectors = [ApparmorFactCollector,
               SystemCapabilitiesFactCollector,
               UserFactCollector,
               VirtualCollector,
-              LinuxVirtualCollector]
+              DragonFlyVirtualCollector,
+              FreeBSDVirtualCollector,
+              LinuxVirtualCollector,
+              OpenBSDVirtualCollector,
+              NetBSDVirtualCollector,
+              SunOSVirtualCollector,
+              HPUXVirtualCollector]
 
 external_collectors = [FacterFactCollector,
                        OhaiFactCollector]

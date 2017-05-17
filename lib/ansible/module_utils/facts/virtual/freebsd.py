@@ -18,7 +18,7 @@ __metaclass__ = type
 
 import os
 
-from ansible.module_utils.facts.virtual.base import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual, VirtualCollector
 
 
 class FreeBSDVirtual(Virtual):
@@ -40,3 +40,8 @@ class FreeBSDVirtual(Virtual):
             virtual_facts['virtualization_role'] = 'guest'
 
         return virtual_facts
+
+
+class FreeBSDVirtualCollector(VirtualCollector):
+    _fact_class = FreeBSDVirtual
+    _platform = 'FreeBSD'

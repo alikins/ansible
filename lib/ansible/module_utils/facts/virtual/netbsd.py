@@ -18,7 +18,7 @@ __metaclass__ = type
 
 import os
 
-from ansible.module_utils.facts.virtual.base import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual, VirtualCollector
 from ansible.module_utils.facts.virtual.sysctl import VirtualSysctlDetectionMixin
 
 
@@ -43,3 +43,8 @@ class NetBSDVirtual(Virtual, VirtualSysctlDetectionMixin):
             virtual_facts['virtualization_role'] = 'guest'
 
         return virtual_facts
+
+
+class NetBSDVirtualCollector(VirtualCollector):
+    _fact_class = NetBSDVirtual
+    _platform = 'NetBSD'

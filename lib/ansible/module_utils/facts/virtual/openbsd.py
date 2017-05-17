@@ -18,7 +18,7 @@ __metaclass__ = type
 
 import re
 
-from ansible.module_utils.facts.virtual.base import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual, VirtualCollector
 from ansible.module_utils.facts.virtual.sysctl import VirtualSysctlDetectionMixin
 
 from ansible.module_utils.facts.utils import get_file_content
@@ -57,3 +57,8 @@ class OpenBSDVirtual(Virtual, VirtualSysctlDetectionMixin):
                 virtual_facts['virtualization_role'] = 'host'
 
         return virtual_facts
+
+
+class OpenBSDVirtualCollector(VirtualCollector):
+    _fact_class = OpenBSDVirtual
+    _platform = 'OpenBSD'

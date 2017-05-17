@@ -18,7 +18,7 @@ __metaclass__ = type
 
 import os
 
-from ansible.module_utils.facts.virtual.base import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual, VirtualCollector
 
 
 class SunOSVirtual(Virtual):
@@ -113,3 +113,8 @@ class SunOSVirtual(Virtual):
                         virtual_facts['virtualization_role'] = 'guest'
 
         return virtual_facts
+
+
+class SunOSVirtualCollector(VirtualCollector):
+    _fact_class = SunOSVirtual
+    _platform = 'SunOS'

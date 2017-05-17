@@ -48,6 +48,7 @@ class BaseFactCollector:
 
     @classmethod
     def platform_match(cls, platform_info):
+        pp(platform_info, msg='platform_match cls._platform=%s platform_info:' % cls._platform)
         if platform_info.get('system', None) == cls._platform:
             return cls
         return None

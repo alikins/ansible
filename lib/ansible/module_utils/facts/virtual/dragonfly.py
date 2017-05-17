@@ -16,8 +16,10 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from ansible.module_utils.facts.virtual.freebsd import FreeBSDVirtual
+from ansible.module_utils.facts.virtual.freebsd import FreeBSDVirtual, VirtualCollector
 
 
-class DragonFlyVirtual(FreeBSDVirtual):
-    platform = 'DragonFly'
+class DragonFlyVirtualCollector(VirtualCollector):
+    # Note the _fact_class impl is actually the FreeBSDVirtual impl
+    _fact_class = FreeBSDVirtual
+    _platform = 'DragonFly'

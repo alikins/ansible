@@ -19,7 +19,7 @@ __metaclass__ = type
 import os
 import re
 
-from ansible.module_utils.facts.virtual.base import Virtual
+from ansible.module_utils.facts.virtual.base import Virtual, VirtualCollector
 
 
 class HPUXVirtual(Virtual):
@@ -55,3 +55,8 @@ class HPUXVirtual(Virtual):
                 virtual_facts['virtualization_role'] = 'HP nPar'
 
         return virtual_facts
+
+
+class HPUXVirtualCollector(VirtualCollector):
+    _fact_class = HPUXVirtual
+    _platform = 'HP-UX'
