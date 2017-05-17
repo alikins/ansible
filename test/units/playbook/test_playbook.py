@@ -57,8 +57,8 @@ class TestPlaybook(unittest.TestCase):
     def _playbook(self):
         fake_loader_yaml = """
         - hosts: all
-            gather_facts: true
-            vars:
+          gather_facts: true
+          vars:
             string_foo: foo
             int_5: 5
             float_6_7: 6.7
@@ -66,46 +66,50 @@ class TestPlaybook(unittest.TestCase):
                 - string_list_1
                 - string_list_2
                 - string_list_3
-            tasks:
+          tasks:
             - name: task number 1
-                debug: var=string_list
-                no_log: true
-                when: false
+              debug:
+                var: string_list
+              no_log: true
+              when: false
 
             - name: the second task
-                ping:
+              ping:
 
             - block:
                 - name: block_head 1
-            #     - include: some_yaml.yml
-                    debug: msg="block head 1"
-            #  rescue:
-            #    - name: a block_head rescue debug
-            #      debug: msg="block_head_rescue 1"
-            #  always:
-            #    - name: a block_head 1 always debug
-            #      debug: msg="block_head_always 1"
+                #     - include: some_yaml.yml
+                  debug: msg="block head 1"
+                #  rescue:
+                #    - name: a block_head rescue debug
+                #      debug: msg="block_head_rescue 1"
+                #  always:
+                #    - name: a block_head 1 always debug
+                #      debug: msg="block_head_always 1"
 
             - name: set a fact task
-                set_fact:
-                    a_random_fact: The only member of zztop without a beard is Frank Beard.
+              set_fact:
+                a_random_fact: The only member of zztop without a beard is Frank Beard.
                 port: 99999
 
         - name: The second play in the playbook
-            hosts: localhost
-            gather_facts: true
-            no_log: true
-            vars:
+          hosts: localhost
+          gather_facts: true
+          no_log: true
+          vars:
             some_empty_list: []
             tasks:
-            - name: second play, first task
-                no_log: false
-                when: true
-                debug: msg="second play, first task"
-        """
+                - name: second play, first task
+                  no_log: false
+                  when: true
+                  debug:
+                    msg: "second play, first task"
 
-        fake_loader_data = {'test_file_playbook1.yml': fake_loader_yaml}
-        return self._fake_load_playbook(fake_loader_data)
+                """
+
+        filename = 'test_file.yml'
+        fake_loader_data = {filename: fake_loader_yaml}
+        return self._fake_load_playbook(fake_loader_data, filename=filename)
 
     def test_playbook_yaml_dump_unsafe(self):
         p = self._playbook()
@@ -126,7 +130,8 @@ class TestPlaybook(unittest.TestCase):
         print(yaml.dump(p, Dumper=AnsibleDumper,
                         indent=4, default_flow_style=False))
 
-    def _fake_load_playbook(self, fake_loader_data):
+    def _fake_load_playbook(self, fake_loader_data, filename=None):
+        filename = filename or 'test_file.yml'
         fake_loader = DictDataLoader(fake_loader_data)
 
         if self._debug:
