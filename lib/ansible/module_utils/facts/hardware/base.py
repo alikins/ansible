@@ -35,15 +35,16 @@ class HardwareCollector(BaseFactCollector):
                      # TODO: mounts isnt exactly hardware
                      'mounts',
                      'devices'])
+    _fact_class = Hardware
 
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
-
         if not module:
             return {}
 
-        hardware_facts = Hardware(module)
+        # Network munges cached_facts by side effect, so give it a copy
+        facts_obj = self._fact_class(module)
 
-        facts_dict = hardware_facts.populate(collected_facts=collected_facts)
+        facts_dict = facts_obj.populate(collected_facts=collected_facts)
 
         return facts_dict

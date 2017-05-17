@@ -663,15 +663,4 @@ class LinuxHardware:
 
 class LinuxHardwareCollector(HardwareCollector):
     _platform = 'Linux'
-
-    def collect(self, module=None, collected_facts=None):
-        collected_facts = collected_facts or {}
-
-        if not module:
-            return {}
-
-        hardware_facts = LinuxHardware(module)
-
-        facts_dict = hardware_facts.populate(collected_facts=collected_facts)
-
-        return facts_dict
+    _fact_class = LinuxHardware
