@@ -35,7 +35,7 @@ class LinuxNetwork(Network):
     - all_ipv4_addresses and all_ipv6_addresses: lists of all configured addresses.
     - ipv4_address and ipv6_address: the first non-local address for each family.
     """
-    _platform = 'Linux'
+    platform = 'Linux'
     INTERFACE_TYPE = {
         '1': 'ether',
         '32': 'infiniband',

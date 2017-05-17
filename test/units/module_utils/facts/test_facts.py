@@ -22,6 +22,8 @@ __metaclass__ = type
 
 import os
 
+import pytest
+
 # for testing
 from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import Mock, patch
@@ -35,6 +37,7 @@ from ansible.module_utils.facts import virtual
 class BaseTestFactsPlatform(unittest.TestCase):
     platform_id = 'Generic'
     fact_class = hardware.base.Hardware
+    collector_class = None
 
     """Verify that the automagic in Hardware.__new__ selects the right subclass."""
     @patch('platform.system')
@@ -50,9 +53,11 @@ class BaseTestFactsPlatform(unittest.TestCase):
             return
         inst = self.fact_class(module=Mock(), load_on_init=False)
         self.assertIsInstance(inst, self.fact_class)
-#        self.assertEqual(inst.platform, self.platform_id)
+        self.assertEqual(inst.platform, self.platform_id)
 
     def test_collector(self):
+        if not self.collector_class:
+            pytest.skip('This test class needs to be updated to specify collector_class')
         inst = self.collector_class(module=Mock())
         self.assertIsInstance(inst, self.collector_class)
         self.assertEqual(inst._platform, self.platform_id)

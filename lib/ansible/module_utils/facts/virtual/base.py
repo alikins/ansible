@@ -33,6 +33,7 @@ class Virtual:
 
     All subclasses MUST define platform.
     """
+    platform = 'Generic'
 
     # FIXME: remove load_on_init if we can
     def __init__(self, module, load_on_init=False):

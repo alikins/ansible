@@ -227,6 +227,14 @@ def runtest(modfile, argspath, modname, module_style, interpreters):
     print("PARSED OUTPUT")
     print(jsonify(results,format=True))
 
+    show_stderr = 1
+    if show_stderr:
+        print("*" * 35)
+        print("RAW OUTPUT ERR")
+        print(err)
+
+    if 'ansible_facts' in results:
+        print('Len of ansible_facts: %s' % len(results['ansible_facts']))
 
 def rundebug(debugger, modfile, argspath, modname, module_style):
     """Run interactively with console debugger."""
