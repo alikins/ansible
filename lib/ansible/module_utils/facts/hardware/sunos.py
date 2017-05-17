@@ -24,7 +24,7 @@ from ansible.module_utils.basic import bytes_to_human
 
 from ansible.module_utils.facts.utils import get_file_content, get_mount_size
 
-from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 from ansible.module_utils.facts import timeout
 
 
@@ -255,3 +255,8 @@ class SunOSHardware(Hardware):
         uptime_facts['uptime_seconds'] = int(float(out.split('\t')[1]))
 
         return uptime_facts
+
+
+class SunOSHardwareCollector(HardwareCollector):
+    _fact_class = SunOSHardware
+    _platform = 'SunOS'

@@ -42,12 +42,16 @@ class BaseTestFactsPlatform(unittest.TestCase):
     """Verify that the automagic in Hardware.__new__ selects the right subclass."""
     @patch('platform.system')
     def test_new(self, mock_platform):
+        if not self.fact_class:
+            pytest.skip('This platform (%s) does not have a fact_class.' % self.platform_id)
         mock_platform.return_value = self.platform_id
         inst = self.fact_class(module=Mock(), load_on_init=False)
         self.assertIsInstance(inst, self.fact_class)
         self.assertEqual(inst.platform, self.platform_id)
 
     def test_subclass(self):
+        if not self.fact_class:
+            pytest.skip('This platform (%s) does not have a fact_class.' % self.platform_id)
         # 'Generic' will try to map to platform.system() that we are not mocking here
         if self.platform_id == 'Generic':
             return
@@ -58,7 +62,7 @@ class BaseTestFactsPlatform(unittest.TestCase):
     def test_collector(self):
         if not self.collector_class:
             pytest.skip('This test class needs to be updated to specify collector_class')
-        inst = self.collector_class(module=Mock())
+        inst = self.collector_class()
         self.assertIsInstance(inst, self.collector_class)
         self.assertEqual(inst._platform, self.platform_id)
 
@@ -66,51 +70,61 @@ class BaseTestFactsPlatform(unittest.TestCase):
 class TestLinuxFactsPlatform(BaseTestFactsPlatform):
     platform_id = 'Linux'
     fact_class = hardware.linux.LinuxHardware
+    collector_class = hardware.linux.LinuxHardwareCollector
 
 
 class TestHurdFactsPlatform(BaseTestFactsPlatform):
     platform_id = 'GNU'
     fact_class = hardware.hurd.HurdHardware
+    collector_class = hardware.hurd.HurdHardwareCollector
 
 
 class TestSunOSHardware(BaseTestFactsPlatform):
     platform_id = 'SunOS'
     fact_class = hardware.sunos.SunOSHardware
+    collector_class = hardware.sunos.SunOSHardwareCollector
 
 
 class TestOpenBSDHardware(BaseTestFactsPlatform):
     platform_id = 'OpenBSD'
     fact_class = hardware.openbsd.OpenBSDHardware
+    collector_class = hardware.openbsd.OpenBSDHardwareCollector
 
 
 class TestFreeBSDHardware(BaseTestFactsPlatform):
     platform_id = 'FreeBSD'
     fact_class = hardware.freebsd.FreeBSDHardware
+    collector_class = hardware.freebsd.FreeBSDHardwareCollector
 
 
 class TestDragonFlyHardware(BaseTestFactsPlatform):
     platform_id = 'DragonFly'
-    fact_class = hardware.dragonfly.DragonFlyHardware
+    fact_class = None
+    collector_class = hardware.dragonfly.DragonFlyHardwareCollector
 
 
 class TestNetBSDHardware(BaseTestFactsPlatform):
     platform_id = 'NetBSD'
     fact_class = hardware.netbsd.NetBSDHardware
+    collector_class = hardware.netbsd.NetBSDHardwareCollector
 
 
 class TestAIXHardware(BaseTestFactsPlatform):
     platform_id = 'AIX'
     fact_class = hardware.aix.AIXHardware
+    collector_class = hardware.aix.AIXHardwareCollector
 
 
 class TestHPUXHardware(BaseTestFactsPlatform):
     platform_id = 'HP-UX'
     fact_class = hardware.hpux.HPUXHardware
+    collector_class = hardware.hpux.HPUXHardwareCollector
 
 
 class TestDarwinHardware(BaseTestFactsPlatform):
     platform_id = 'Darwin'
     fact_class = hardware.darwin.DarwinHardware
+    collector_class = hardware.darwin.DarwinHardwareCollector
 
 
 class TestGenericNetwork(BaseTestFactsPlatform):

@@ -19,7 +19,7 @@ __metaclass__ = type
 import os
 import re
 
-from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 
 
 class HPUXHardware(Hardware):
@@ -154,3 +154,8 @@ class HPUXHardware(Hardware):
                 hw_facts['product_serial'] = out.split(separator)[1].strip()
 
         return hw_facts
+
+
+class HPUXHardwareCollector(HardwareCollector):
+    _fact_class = HPUXHardware
+    _platform = 'HP-UX'

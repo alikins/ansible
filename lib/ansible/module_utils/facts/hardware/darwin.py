@@ -17,7 +17,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 
 from ansible.module_utils.facts.sysctl import get_sysctl
 
@@ -92,3 +92,8 @@ class DarwinHardware(Hardware):
             memory_facts['memfree_mb'] = int(out.splitlines()[-1].split()[1]) // 1024 // 1024
 
         return memory_facts
+
+
+class DarwinHardwareCollector(HardwareCollector):
+    _fact_class = DarwinHardware
+    _platform = 'Darwin'

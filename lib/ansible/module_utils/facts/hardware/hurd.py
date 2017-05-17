@@ -17,6 +17,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from ansible.module_utils.facts.timeout import TimeoutError
+from ansible.module_utils.facts.hardware.base import HardwareCollector
 from ansible.module_utils.facts.hardware.linux import LinuxHardware
 
 
@@ -45,3 +46,8 @@ class HurdHardware(LinuxHardware):
         hardware_facts.update(mount_facts)
 
         return hardware_facts
+
+
+class HurdHardwareCollector(HardwareCollector):
+    _fact_class = HurdHardware
+    _platform = 'GNU'

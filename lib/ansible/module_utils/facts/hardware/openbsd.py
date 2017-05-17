@@ -20,7 +20,7 @@ import re
 
 from ansible.module_utils._text import to_text
 
-from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 from ansible.module_utils.facts import timeout
 
 from ansible.module_utils.facts.utils import get_file_content, get_mount_size
@@ -165,3 +165,8 @@ class OpenBSDHardware(Hardware):
                 dmi_facts[sysctl_to_dmi[mib]] = self.sysctl[mib]
 
         return dmi_facts
+
+
+class OpenBSDHardwareCollector(HardwareCollector):
+    _fact_class = OpenBSDHardware
+    _platform = 'OpenBSD'

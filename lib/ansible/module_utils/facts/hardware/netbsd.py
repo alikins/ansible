@@ -21,7 +21,7 @@ import re
 
 from ansible.module_utils.six.moves import reduce
 
-from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 from ansible.module_utils.facts.timeout import TimeoutError, timeout
 
 from ansible.module_utils.facts.utils import get_file_content, get_file_lines, get_mount_size
@@ -157,3 +157,8 @@ class NetBSDHardware(Hardware):
                 dmi_facts[sysctl_to_dmi[mib]] = self.sysctl[mib]
 
         return dmi_facts
+
+
+class NetBSDHardwareCollector(HardwareCollector):
+    _fact_class = NetBSDHardware
+    _platform = 'NetBSD'

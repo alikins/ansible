@@ -16,8 +16,11 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+from ansible.module_utils.facts.hardware.base import HardwareCollector
 from ansible.module_utils.facts.hardware.freebsd import FreeBSDHardware
 
 
-class DragonFlyHardware(FreeBSDHardware):
-    platform = 'DragonFly'
+class DragonFlyHardwareCollector(HardwareCollector):
+    # Note: This uses the freebsd fact class, there is no dragonfly hardware fact class
+    _fact_class = FreeBSDHardware
+    _platform = 'DragonFly'

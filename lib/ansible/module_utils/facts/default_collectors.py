@@ -40,7 +40,16 @@ from ansible.module_utils.facts.system.ssh_pub_keys import SshPubKeyFactCollecto
 from ansible.module_utils.facts.system.user import UserFactCollector
 
 from ansible.module_utils.facts.hardware.base import HardwareCollector
+from ansible.module_utils.facts.hardware.aix import AIXHardwareCollector
+from ansible.module_utils.facts.hardware.darwin import DarwinHardwareCollector
+from ansible.module_utils.facts.hardware.dragonfly import DragonFlyHardwareCollector
+from ansible.module_utils.facts.hardware.freebsd import FreeBSDHardwareCollector
+from ansible.module_utils.facts.hardware.hpux import HPUXHardwareCollector
+from ansible.module_utils.facts.hardware.hurd import HurdHardwareCollector
 from ansible.module_utils.facts.hardware.linux import LinuxHardwareCollector
+from ansible.module_utils.facts.hardware.netbsd import NetBSDHardwareCollector
+from ansible.module_utils.facts.hardware.openbsd import OpenBSDHardwareCollector
+from ansible.module_utils.facts.hardware.sunos import SunOSHardwareCollector
 
 from ansible.module_utils.facts.network.base import NetworkCollector
 from ansible.module_utils.facts.network.linux import LinuxNetworkCollector
@@ -48,11 +57,11 @@ from ansible.module_utils.facts.network.linux import LinuxNetworkCollector
 from ansible.module_utils.facts.virtual.base import VirtualCollector
 from ansible.module_utils.facts.virtual.dragonfly import DragonFlyVirtualCollector
 from ansible.module_utils.facts.virtual.freebsd import FreeBSDVirtualCollector
+from ansible.module_utils.facts.virtual.hpux import HPUXVirtualCollector
 from ansible.module_utils.facts.virtual.linux import LinuxVirtualCollector
 from ansible.module_utils.facts.virtual.netbsd import NetBSDVirtualCollector
 from ansible.module_utils.facts.virtual.openbsd import OpenBSDVirtualCollector
 from ansible.module_utils.facts.virtual.sunos import SunOSVirtualCollector
-from ansible.module_utils.facts.virtual.hpux import HPUXVirtualCollector
 
 # TODO: make config driven
 collectors = [ApparmorFactCollector,
@@ -63,7 +72,16 @@ collectors = [ApparmorFactCollector,
               EnvFactCollector,
               FipsFactCollector,
               HardwareCollector,
+              AIXHardwareCollector,
+              DarwinHardwareCollector,
+              DragonFlyHardwareCollector,
+              FreeBSDHardwareCollector,
+              HPUXHardwareCollector,
+              HurdHardwareCollector,
               LinuxHardwareCollector,
+              NetBSDHardwareCollector,
+              OpenBSDHardwareCollector,
+              SunOSHardwareCollector,
               LocalFactCollector,
               LSBFactCollector,
               NetworkCollector,

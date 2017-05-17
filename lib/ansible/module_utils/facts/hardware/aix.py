@@ -18,7 +18,7 @@ __metaclass__ = type
 
 import re
 
-from ansible.module_utils.facts.hardware.base import Hardware
+from ansible.module_utils.facts.hardware.base import Hardware, HardwareCollector
 
 
 class AIXHardware(Hardware):
@@ -201,3 +201,8 @@ class AIXHardware(Hardware):
                                                       'options': fields[7],
                                                       'time': '%s %s %s' % (fields[4], fields[5], fields[6])})
         return mount_facts
+
+
+class AIXHardwareCollector(HardwareCollector):
+    _platform = 'AIX'
+    _fact_class = AIXHardware
