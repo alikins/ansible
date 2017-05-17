@@ -60,7 +60,7 @@ class Playbook:
         #    print('%s %s %s' % (i, type(i), repr(i)))
         data['basedir'] = self._basedir
         data['file_name'] = self._file_name
-        data['loader'] = self._loader
+        # data['loader'] = self._loader
         data['includes'] = self._includes
         data['imports'] = self._imports
         data['class_name'] = self.__class__.__name__
@@ -114,7 +114,8 @@ class Playbook:
         if not isinstance(ds, list):
             # restore the basedir in case this error is caught and handled
             self._loader.set_basedir(cur_basedir)
-            raise AnsibleParserError("playbooks must be a list of plays", obj=ds)
+            raise AnsibleParserError("playbooks must be a list of plays but the playbook in %s is a %s" % (file_name, type(ds)),
+                                     obj=ds)
 
         print('PLAYS DS ds=%s type(ds)=%s repr=%s' % (ds, type(ds), repr(ds)))
         # Parse the playbook entries. For plays, we simply parse them

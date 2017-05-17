@@ -214,9 +214,9 @@ class Block(Base, Become, Conditional, Taggable):
 
         data = dict()
         changed = self._changed_attrs()
-        #for name, value, attribute in changed:
+        # data = changed
+        # for name, value, attribute in changed:
         #    data[name] = value
-
 
         for attr in self._valid_attrs:
             data[attr] = getattr(self, attr)
@@ -235,6 +235,8 @@ class Block(Base, Become, Conditional, Taggable):
             data['parent'] = self._parent.copy(exclude_tasks=True).serialize()
             data['parent_type'] = self._parent.__class__.__name__
 
+        print('DATA')
+        print(data)
         return data
 
     def deserialize(self, data):
