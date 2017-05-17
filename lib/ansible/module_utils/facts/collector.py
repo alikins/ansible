@@ -46,6 +46,12 @@ class BaseFactCollector:
         self.fact_ids = set([self.name])
         self.fact_ids.update(self._fact_ids)
 
+    @classmethod
+    def platform_match(cls, platform_info):
+        if platform_info.get('system', None) == cls._platform:
+            return cls
+        return None
+
     def _transform_name(self, key_name):
         if self.namespace:
             return self.namespace.transform(key_name)
@@ -123,7 +129,6 @@ def pp(obj, msg=None):
     return
 
 
-
 def get_collector_names(valid_subsets=None,
                         minimal_gather_subset=None,
                         gather_subset=None,
@@ -156,9 +161,9 @@ def get_collector_names(valid_subsets=None,
 
 #    pp(valid_subsets, msg='get names valid_subsets:')
 
-    #subset_ids = [x[0] for x in valid_subsets]
+    # subset_ids = [x[0] for x in valid_subsets]
 
-    #pp(subset_ids, msg='subset_ids')
+    # pp(subset_ids, msg='subset_ids')
 
     for subset in gather_subset:
         subset_id = subset
@@ -205,19 +210,6 @@ def get_collector_names(valid_subsets=None,
     return additional_subsets
 
 
-def find_platform_match(collector_class, this_platform):
-    pp(collector_class, msg='\n collector_class')
-
-    pp(collector_class._platform, msg='collector class platform_ids:')
-    pp(this_platform, msg='this_platform:')
-
-    if this_platform == collector_class._platform:
-        pp(True, msg='find_platform_match: ')
-        return collector_class
-
-    return None
-
-
 def find_collectors_for_platform(all_collector_classes, compat_platforms):
     found_collectors = set()
     found_collectors_names = set()
@@ -227,8 +219,9 @@ def find_collectors_for_platform(all_collector_classes, compat_platforms):
         platform_match = None
         for all_collector_class in all_collector_classes:
 
-            platform_match = find_platform_match(collector_class=all_collector_class,
-                                                 this_platform=compat_platform)
+            # ask the class if it is compatible with the platform info
+            platform_match = all_collector_class.platform_match(compat_platform)
+
             if not platform_match:
                 continue
 
@@ -283,15 +276,12 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     pp(platform_info, msg='c_g_f_gs platform_info:')
 
-    this_platform = platform_info.get('system', 'Generic')
-    pp(this_platform, msg='this_platform:')
-
     # maps alias names like 'hardware' to the list of names that are part of hardware
     # like 'devices' and 'dmi'
     aliases_map = defaultdict(set)
     # FIXME:  check all the platform specific classes first, then try the generic ones
 
-    compat_platforms = [this_platform, 'Generic']
+    compat_platforms = [platform_info, {'system': 'Generic'}]
 
     collectors_for_platform = find_collectors_for_platform(all_collector_classes, compat_platforms)
 
@@ -323,13 +313,13 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     selected_collector_classes = []
 
     # pp(all_fact_subsets, msg='all_facts_subsets:')
-    #pp(collector_names, msg='collector_names:')
+    # pp(collector_names, msg='collector_names:')
 
     for collector_name in collector_names:
         collector_classes = all_fact_subsets.get(collector_name, None)
         if not collector_classes:
             # FIXME: remove when stable
-            raise Exception('collector_name: %s  not found' % repr((collector_name, this_platform)))
+            raise Exception('collector_name: %s  not found' % repr((collector_name, platform_info)))
 
         for collector_class in collector_classes:
             if collector_class not in seen_collector_classes:
