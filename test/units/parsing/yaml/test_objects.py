@@ -90,8 +90,11 @@ class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
         self.assertTrue(avu.vault is self.vault)
         self.assertIsInstance(avu.vault, vault.VaultLib)
 
-    def _from_plaintext(self, seq):
-        return objects.AnsibleVaultEncryptedUnicode.from_plaintext(seq, vault=self.vault)
+    def _from_plaintext(self, plaintext):
+        ciphertext = self.vault.encrypt(plaintext)
+        avu = objects.AnsibleVaultEncryptedUnicode(ciphertext)
+        avu.vault = self.vault
+        return avu
 
     def _from_ciphertext(self, ciphertext):
         avu = objects.AnsibleVaultEncryptedUnicode(ciphertext)
@@ -104,22 +107,22 @@ class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
     def test_empty_string_init_from_plaintext(self):
         seq = ''
         avu = self._from_plaintext(seq)
-        self.assert_values(avu,seq)
+        self.assert_values(avu, seq)
 
     def test_empty_unicode_init_from_plaintext(self):
         seq = u''
         avu = self._from_plaintext(seq)
-        self.assert_values(avu,seq)
+        self.assert_values(avu, seq)
 
     def test_string_from_plaintext(self):
         seq = 'some letters'
         avu = self._from_plaintext(seq)
-        self.assert_values(avu,seq)
+        self.assert_values(avu, seq)
 
     def test_unicode_from_plaintext(self):
         seq = u'some letters'
         avu = self._from_plaintext(seq)
-        self.assert_values(avu,seq)
+        self.assert_values(avu, seq)
 
     def test_unicode_from_plaintext_encode(self):
         seq = u'some text here'
