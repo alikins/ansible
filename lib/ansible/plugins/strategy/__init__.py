@@ -75,19 +75,37 @@ class SharedPluginLoaderObj:
 
 
 _sentinel = StrategySentinel()
-def results_thread_main(strategy, event_handlers):
+def results_thread_main(strategy, event_callbacks):
     while True:
         try:
             # This could become the event->handler dispatcher
             result = strategy._final_q.get()
 
-            def default_handler(*args, **kwargs):
-                pass
+            def default_callback(*args, **kwargs):
+                print('SOME OTHER EVENT: args: %s kwargs: %s' % (repr(args), repr(kwargs)))
+                # could also communicate 'unknown event callback' and raise errors
+
+            def append_results(event_id, event, event_callback_id, *args, **kwargs):
+                print('append_results event_id=%s event=%s event_callback_id=%s args=%s kwargs=%s' %
+                      (event_id, event, event_callback_id, repr(args), repr(kwargs)))
+                strategy._results_lock.acquire()
+                strategy._results.append(event)
+                strategy._results_lock.release()
+
+            # register callbacks/callbacks
+            # could be some sort of callback container object, or a 'context', or
+            # some attribute on 'strategy' though that is more stuff happening in this thread.
+            event_callbacks['task_result_loop_callback'] = append_results
+            event_callbacks['task_result_callback'] = append_results
+            event_callbacks['task_result_exception_callback'] = append_results
+            event_callbacks['task_result_conn_fail_callback'] = append_results
+            event_callbacks['task_result_worker_callback'] = append_results
+
             # If we knew the event type, we could ditch the isinstance
             # something like a tuple of (event_id, event_or_result)
             # event_id could just be a string or could be an enum
             #
-            # if the tuple also included an id for the approriate handler/callback, we
+            # if the tuple also included an id for the approriate callback/callback, we
             # could dispatch it.
             #
             # That potentially also means the queue reading thread just needs the queue and would
@@ -95,14 +113,13 @@ def results_thread_main(strategy, event_handlers):
             if isinstance(result, StrategySentinel):
                 break
             else:
-                event_id, event, event_handler_id = result
-                event_handler = event_handlers.get(event_handler_id, default_handler)
-                if event_id == 'task_result':
-                    strategy._results_lock.acquire()
-                    strategy._results.append(event)
-                    strategy._results_lock.release()
-                else:
-                    print('SOME OTHER EVENT: event_id=%s event_handler=%s event=%s' % (event_id, event, event_handler))
+                event_id, event, event_callback_id = result
+                event_callback = event_callbacks.get(event_callback_id, default_callback)
+                # nothing is returned
+
+                # TODO? we could include a set of args in the data tuple that gets queued (assumes they are
+                #       serializable...)
+                event_callback(event_id, event, event_callback_id)
         except (IOError, EOFError):
             break
         except Queue.Empty:
@@ -450,6 +467,9 @@ class StrategyBase:
                 else:
                     result_items = [ task_result._result ]
 
+                # This is more or less signal propagation (ala gobject) where signals/events on object propagate up
+                # a hiearchy (for gui widgets, this would be up to a container widget etc)
+                # 'dep chain' == widget hiearchy
                 for result_item in result_items:
                     if '_ansible_notify' in result_item:
                         if task_result.is_changed():
@@ -469,6 +489,8 @@ class StrategyBase:
                                     if original_host not in self._notified_handlers[target_handler._uuid]:
                                         self._notified_handlers[target_handler._uuid].append(original_host)
                                         # FIXME: should this be a callback?
+                                        #       (or a display/print 'handler' and this would re-'notify' the print handler, which
+                                        #        could well be in a callback plugin)
                                         display.vv("NOTIFIED HANDLER %s" % (handler_name,))
                                 else:
                                     # As there may be more than one handler with the notified name as the
@@ -481,6 +503,8 @@ class StrategyBase:
                                                 self._notified_handlers[target_handler._uuid].append(original_host)
                                                 display.vv("NOTIFIED HANDLER %s" % (target_handler.get_name(),))
 
+                                # more resolving notify (event/signal) -> handler
+                                # listening_handlers are (gobject) 'registered' callbacks or handlers
                                 if handler_name in self._listening_handlers:
                                     for listening_handler_uuid in self._listening_handlers[handler_name]:
                                         listening_handler = search_handler_blocks_by_uuid(listening_handler_uuid, iterator._play.handlers)

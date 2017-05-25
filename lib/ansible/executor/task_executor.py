@@ -316,7 +316,7 @@ class TaskExecutor:
                                          self._task._uuid,
                                          res,
                                          task_fields=self._task.dump_attrs()),
-                              'task_result_loop_handler'),
+                              'task_result_loop_callback'),
                              block=False,
                              )
             results.append(res)
@@ -455,7 +455,7 @@ class TaskExecutor:
         # self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result, task_fields=self._task.dump_attrs()), block=False)
         self._rslt_q.put(('test_task_event',
                           TaskEvent(self._host.name, self._task._uuid),
-                          'test_task_event_handler'),
+                          'test_task_event_callback'),
                          block=False)
         # if this task is a TaskInclude, we just return now with a success code so the
         # main thread can expand the task list for the given host

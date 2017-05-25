@@ -130,7 +130,7 @@ class WorkerProcess(multiprocessing.Process):
             display.debug("sending task result")
             self._rslt_q.put(('task_result',
                               task_result,
-                              'task_result_worker_handler'))
+                              'task_result_worker_callback'))
             display.debug("done sending task result")
 
         except AnsibleConnectionFailure:
@@ -144,7 +144,7 @@ class WorkerProcess(multiprocessing.Process):
             )
             self._rslt_q.put(('task_result',
                               task_result,
-                              'task_result_conn_fail_handler'),
+                              'task_result_conn_fail_callback'),
                              block=False)
 
         except Exception as e:
@@ -160,7 +160,7 @@ class WorkerProcess(multiprocessing.Process):
                     )
                     self._rslt_q.put(('task_result',
                                       task_result,
-                                      'task_result_exception_handler'),
+                                      'task_result_exception_callback'),
                                      block=False)
                 except:
                     display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
