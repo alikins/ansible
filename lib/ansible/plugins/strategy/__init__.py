@@ -262,6 +262,11 @@ class StrategyBase:
                 elif self._cur_worker == starting_worker:
                     time.sleep(0.0001)
 
+            # use a queue and add a Unfinished/Incomplete/Future/etc empty task result. strategy would pop the IncompleteTaskResult,
+            # see it is incomplete, and requeue it...
+
+            # then request_q_processor would wait for a no_more_tasks sentinel
+            # if rslt_q is empty, but no sentinel yet, there are still tasks to queue (waiting on workers to be available)
             self._pending_results += 1
         except (EOFError, IOError, AssertionError) as e:
             # most likely an abort
@@ -470,6 +475,7 @@ class StrategyBase:
                 # This is more or less signal propagation (ala gobject) where signals/events on object propagate up
                 # a hiearchy (for gui widgets, this would be up to a container widget etc)
                 # 'dep chain' == widget hiearchy
+                # self._notified_handlers is more or less a event/signal queue (though hmm, not a queue...)
                 for result_item in result_items:
                     if '_ansible_notify' in result_item:
                         if task_result.is_changed():
@@ -524,6 +530,8 @@ class StrategyBase:
                                         raise AnsibleError(msg)
                                     else:
                                         display.warning(msg)
+
+                    # vaguely analogs to gobject/gtk 'properties'
 
                     if 'add_host' in result_item:
                         # this task added a new host (add_host module)
@@ -583,6 +591,7 @@ class StrategyBase:
                 # finally, send the ok for this task
                 self._tqm.send_callback('v2_runner_on_ok', task_result)
 
+            # use a deque?
             self._pending_results -= 1
             if original_host.name in self._blocked_hosts:
                 del self._blocked_hosts[original_host.name]
@@ -605,6 +614,9 @@ class StrategyBase:
 
         return ret_results
 
+    # while(events_pending):
+    #     main_loop.iterate()
+    # this blocks...
     def _wait_on_pending_results(self, iterator):
         '''
         Wait for the shared counter to drop to zero, using a short sleep
