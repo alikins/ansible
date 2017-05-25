@@ -128,7 +128,9 @@ class WorkerProcess(multiprocessing.Process):
 
             # put the result on the result queue
             display.debug("sending task result")
-            self._rslt_q.put(task_result)
+            self._rslt_q.put(('task_result',
+                              task_result,
+                              'task_result_worker_handler'))
             display.debug("done sending task result")
 
         except AnsibleConnectionFailure:
@@ -140,7 +142,10 @@ class WorkerProcess(multiprocessing.Process):
                 dict(unreachable=True),
                 task_fields=self._task.dump_attrs(),
             )
-            self._rslt_q.put(task_result, block=False)
+            self._rslt_q.put(('task_result',
+                              task_result,
+                              'task_result_conn_fail_handler'),
+                             block=False)
 
         except Exception as e:
             if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
@@ -153,7 +158,10 @@ class WorkerProcess(multiprocessing.Process):
                         dict(failed=True, exception=to_text(traceback.format_exc()), stdout=''),
                         task_fields=self._task.dump_attrs(),
                     )
-                    self._rslt_q.put(task_result, block=False)
+                    self._rslt_q.put(('task_result',
+                                      task_result,
+                                      'task_result_exception_handler'),
+                                     block=False)
                 except:
                     display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
                     display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))

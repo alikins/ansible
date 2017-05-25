@@ -47,6 +47,15 @@ except ImportError:
 __all__ = ['TaskExecutor']
 
 
+class TaskEvent:
+    def __init__(self, host, task, task_fields=None):
+        self._host = host
+        self._task = task
+        self._result = []
+        self._task_fields = task_fields or {}
+        self._data = {'foo': 'BAR'}
+
+
 class TaskExecutor:
 
     '''
@@ -302,15 +311,14 @@ class TaskExecutor:
                 templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=self._job_vars)
                 res['_ansible_item_label'] = templar.template(label)
 
-            self._rslt_q.put(
-                TaskResult(
-                    self._host.name,
-                    self._task._uuid,
-                    res,
-                    task_fields=self._task.dump_attrs(),
-                ),
-                block=False,
-            )
+            self._rslt_q.put(('task_result',
+                              TaskResult(self._host.name,
+                                         self._task._uuid,
+                                         res,
+                                         task_fields=self._task.dump_attrs()),
+                              'task_result_loop_handler'),
+                             block=False,
+                             )
             results.append(res)
             del task_vars[loop_var]
 
@@ -444,6 +452,11 @@ class TaskExecutor:
         if context_validation_error is not None:
             raise context_validation_error
 
+        # self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result, task_fields=self._task.dump_attrs()), block=False)
+        self._rslt_q.put(('test_task_event',
+                          TaskEvent(self._host.name, self._task._uuid),
+                          'test_task_event_handler'),
+                         block=False)
         # if this task is a TaskInclude, we just return now with a success code so the
         # main thread can expand the task list for the given host
         if self._task.action == 'include':
@@ -594,7 +607,10 @@ class TaskExecutor:
                         result['_ansible_retry'] = True
                         result['retries'] = retries
                         display.debug('Retrying task, attempt %d of %d' % (attempt, retries))
-                        self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result, task_fields=self._task.dump_attrs()), block=False)
+                        self._rslt_q.put(('task_result',
+                                          TaskResult(self._host.name, self._task._uuid, result, task_fields=self._task.dump_attrs()),
+                                          'task_result_handler'),
+                                         block=False)
                         time.sleep(delay)
         else:
             if retries > 1:

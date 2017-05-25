@@ -44,7 +44,7 @@ from ansible.plugins import action_loader, connection_loader, filter_loader, loo
 from ansible.template import Templar
 from ansible.utils.vars import combine_vars
 from ansible.vars.manager import strip_internal_keys
-
+from ansible.executor.task_executor import TaskEvent
 
 try:
     from __main__ import display
@@ -75,16 +75,34 @@ class SharedPluginLoaderObj:
 
 
 _sentinel = StrategySentinel()
-def results_thread_main(strategy):
+def results_thread_main(strategy, event_handlers):
     while True:
         try:
+            # This could become the event->handler dispatcher
             result = strategy._final_q.get()
+
+            def default_handler(*args, **kwargs):
+                pass
+            # If we knew the event type, we could ditch the isinstance
+            # something like a tuple of (event_id, event_or_result)
+            # event_id could just be a string or could be an enum
+            #
+            # if the tuple also included an id for the approriate handler/callback, we
+            # could dispatch it.
+            #
+            # That potentially also means the queue reading thread just needs the queue and would
+            # not need the strategy instance
             if isinstance(result, StrategySentinel):
                 break
             else:
-                strategy._results_lock.acquire()
-                strategy._results.append(result)
-                strategy._results_lock.release()
+                event_id, event, event_handler_id = result
+                event_handler = event_handlers.get(event_handler_id, default_handler)
+                if event_id == 'task_result':
+                    strategy._results_lock.acquire()
+                    strategy._results.append(event)
+                    strategy._results_lock.release()
+                else:
+                    print('SOME OTHER EVENT: event_id=%s event_handler=%s event=%s' % (event_id, event, event_handler))
         except (IOError, EOFError):
             break
         except Queue.Empty:
@@ -123,8 +141,9 @@ class StrategyBase:
         self._results = deque()
         self._results_lock = threading.Condition(threading.Lock())
 
+        self._event_handlers = {}
         # create the result processing thread for reading results in the background
-        self._results_thread = threading.Thread(target=results_thread_main, args=(self,))
+        self._results_thread = threading.Thread(target=results_thread_main, args=(self,self._event_handlers))
         self._results_thread.daemon = True
         self._results_thread.start()
 
