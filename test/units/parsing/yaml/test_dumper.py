@@ -19,12 +19,6 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import io
-import yaml
-
-try:
-    from _yaml import ParserError
-except ImportError:
-    from yaml.parser import ParserError
 
 from ansible.parsing.yaml import dumper
 from ansible.parsing.yaml.loader import AnsibleLoader
@@ -35,6 +29,7 @@ from ansible.parsing import vault
 
 from units.mock.yaml_helper import YamlTestUtils
 
+
 class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
@@ -43,7 +38,7 @@ class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
         self.stream = self._build_stream()
         self.dumper = dumper.AnsibleDumper
 
-    def _build_stream(self,yaml_text=None):
+    def _build_stream(self, yaml_text=None):
         text = yaml_text or u''
         stream = io.StringIO(text)
         return stream
