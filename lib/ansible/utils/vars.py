@@ -20,18 +20,29 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import ast
+import os
 import random
 import uuid
 
 from collections import MutableMapping
 from json import dumps
 
+from deepdiff import DeepDiff
+import pprint
+
+# import traceback
 
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.module_utils.six import iteritems, string_types
 from ansible.module_utils._text import to_native, to_text
 from ansible.parsing.splitter import parse_kv
+
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
 
 
 _MAXSIZE = 2 ** 32
@@ -76,7 +87,85 @@ def _validate_mutable_mappings(a, b):
         )
 
 
-def combine_vars(a, b):
+class Unset(object):
+    pass
+
+
+class ObservableDict(dict):
+    def __init__(self, *args, **kw):
+        self.observers = []
+        super(ObservableDict, self).__init__(*args, **kw)
+        self._name = None
+        self._update_name = None
+
+    def observe(self, observer):
+        self.observers.append(observer)
+
+    def __setitem__(self, key, value):
+        for o in self.observers:
+            # pprint.pprint(locals())
+            # traceback.print_stack()
+            # print('\n')
+            o.notify(observable=self,
+                     key=key,
+                     old=self.get(key, Unset),
+                     new=value)
+        super(ObservableDict, self).__setitem__(key, value)
+
+    def update(self, anotherDict, update_name=None):
+        # self._update_name = blip_update_name
+        for k in anotherDict:
+            if k == 'update_name':
+                continue
+            self._update_name = update_name
+            self[k] = anotherDict[k]
+
+    def copy(self):
+        d = ObservableDict(super(ObservableDict, self).copy())
+        d._name = self._name
+        d.observe(Watcher())
+        return d
+
+
+class Watcher(object):
+    def notify(self, observable, key, old, new):
+        pid = os.getpid()
+#        if key == 'ansible_connection':
+#            print('\npid: %s' % pid)
+#            traceback.print_stack()
+        if old is Unset:
+            return
+        if old != new:
+            dd = DeepDiff(old, new, ignore_order=True,
+                          verbose_level=2, view='tree')
+            # print('value of key=%s changed from %s to %s' % (key, old, new))
+            display.vvv('\npid=%s name=%s update_name=%s key=%s changed.\ndiff:\n%s' % (pid, observable._name,
+                                                                                        observable._update_name,
+                                                                                        key, pprint.pformat(dd)))
+            # print('\nvalue of key=%s changed.\ndiff:\n%s' % (key, self.show(dd)))
+
+
+def show_changes(old, new, old_object_label=None, new_object_label=None, update_label=None):
+    if old is new:
+        return
+
+    if old == new:
+        return
+
+    pid = os.getpid()
+    exclude_paths = {"root['hostvars']"}
+    dd = DeepDiff(old, new, ignore_order=True,
+                  verbose_level=2)
+    #               exclude_paths=exclude_paths)
+    #print('old: %s' % pprint.pformat(old))
+    #print('new: %s' % pprint.pformat(new))
+    display.vvv('\npid=%s old_label=%s new_lable=%s update_label=%s changed.\ndiff:\n%s' % (pid, old_object_label,
+                                                                                            new_object_label,
+                                                                                            update_label,
+                                                                                            pprint.pformat(dd)))
+
+
+def combine_vars(a, b, name_b=None):
     """
     Return a copy of dictionaries of variables based on configured hash behavior
     """
@@ -87,8 +176,15 @@ def combine_vars(a, b):
         # HASH_BEHAVIOUR == 'replace'
         _validate_mutable_mappings(a, b)
         result = a.copy()
-        result.update(b)
-        return result
+        # print(type(result))
+        # _result = ObservableDict(result)
+        _result = result
+        # w = Watcher()
+        # _result.observe(w)
+        # setattr(_result, '_update_name', name_b)
+        _result.update(b)
+        show_changes(a, _result, old_object_label='all_vars', new_object_label='b', update_label=name_b)
+        return _result
 
 
 def merge_hash(a, b):
