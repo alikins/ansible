@@ -352,7 +352,7 @@ class VariableManager:
             for entry in C.VARIABLE_PRECEDENCE:
                 if entry in self._ALLOWED:
                     display.debug('Calling %s to load vars for %s' % (entry, host.name))
-                    all_vars = combine_vars(all_vars, locals()[entry](), name_b=entry)
+                    all_vars = combine_vars(all_vars, locals()[entry](), name_b='precedence_config_%s' % entry)
                 else:
                     display.warning('Ignoring unknown variable precedence entry: %s' % (entry))
 
@@ -373,7 +373,6 @@ class VariableManager:
         if play:
             all_vars = combine_vars(all_vars, play.get_vars(), name_b='play_get_vars')
 
-<<<<<<< c3564096cdc64ec34b9c522deda6c2bee0e40aaa
             vars_files = play.get_vars_files()
             try:
                 for vars_file_item in vars_files:
