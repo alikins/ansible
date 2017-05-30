@@ -41,6 +41,8 @@ from ansible.module_utils._text import to_bytes, to_text
 from ansible.parsing.dataloader import DataLoader
 from ansible.release import __version__
 from ansible.utils.path import unfrackpath
+from ansible.utils.vars import load_extra_vars, load_options_vars
+from ansible.vars.manager import VariableManager
 from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets, \
     PromptNewVaultSecrets
 
@@ -650,46 +652,17 @@ class CLI(with_metaclass(ABCMeta, object)):
         return t
 
     @staticmethod
-    def read_vault_password_file(vault_password_file, loader):
-        """
-        Read a vault password from a file or if executable, execute the script and
-        retrieve password from STDOUT
-        """
-
-        this_path = os.path.realpath(os.path.expanduser(vault_password_file))
-        if not os.path.exists(this_path):
-            raise AnsibleError("The vault password file %s was not found" % this_path)
-
-        if loader.is_executable(this_path):
-            try:
-                # STDERR not captured to make it easier for users to prompt for input in their scripts
-                p = subprocess.Popen(this_path, stdout=subprocess.PIPE)
-            except OSError as e:
-                raise AnsibleError("Problem running vault password script %s (%s). If this is not a script, "
-                                   "remove the executable bit from the file." % (' '.join(this_path), e))
-            stdout, stderr = p.communicate()
-            if p.returncode != 0:
-                raise AnsibleError("Vault password script %s returned non-zero (%s): %s" % (this_path, p.returncode, p.stderr))
-            vault_pass = stdout.strip(b'\r\n')
-        else:
-            try:
-                f = open(this_path, "rb")
-                vault_pass = f.read().strip()
-                f.close()
-            except (OSError, IOError) as e:
-                raise AnsibleError("Could not read vault password file %s: %s" % (this_path, e))
-
-        return vault_pass
-
-    @staticmethod
     def _play_prereqs(options):
 
         # all needs loader
         loader = DataLoader()
 
+        vault_secrets = CLI.setup_vault_secrets(loader,
+                                                vault_id=options.vault_id,
+                                                vault_password_file=options.vault_password_file,
+                                                ask_vault_pass=options.ask_vault_pass)
+        loader.set_vault_secrets(vault_secrets)
 
-        # FIXME
-        vault_secrets = self._setup_vault_secrets()
         # create the inventory, and filter it based on the subset specified (if any)
         inventory = InventoryManager(loader=loader, sources=options.inventory)
 

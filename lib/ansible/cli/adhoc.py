@@ -106,17 +106,6 @@ class AdHocCLI(CLI):
         passwords = {'conn_pass': sshpass, 'become_pass': becomepass}
 
         loader, inventory, variable_manager = self._play_prereqs(self.options)
-		# FIXME
-		
-		
-
-        vault_secrets = self.setup_vault_secrets(loader,
-                                                 vault_id=self.options.vault_id,
-                                                 vault_password_file=self.options.vault_password_file,
-                                                 ask_vault_pass=self.options.ask_vault_pass)
-        loader.set_vault_secrets(vault_secrets)
-
-
 
         no_hosts = False
         if len(inventory.list_hosts()) == 0:

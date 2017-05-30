@@ -105,25 +105,6 @@ class PlaybookCLI(CLI):
             passwords = {'conn_pass': sshpass,
                          'become_pass': becomepass}
 
-        loader = DataLoader()
-
-        vault_secrets = self.setup_vault_secrets(loader,
-                                                 vault_id=self.options.vault_id,
-                                                 vault_password_file=self.options.vault_password_file,
-                                                 ask_vault_pass=self.options.ask_vault_pass)
-        loader.set_vault_secrets(vault_secrets)
-
-        # create the variable manager, which will be shared throughout
-        # the code, ensuring a consistent view of global variables
-        variable_manager = VariableManager()
-        variable_manager.extra_vars = load_extra_vars(loader=loader, options=self.options)
-
-        variable_manager.options_vars = load_options_vars(self.options)
-
-        # create the inventory, and filter it based on the subset specified (if any)
-        inventory = Inventory(loader=loader, variable_manager=variable_manager, host_list=self.options.inventory)
-        variable_manager.set_inventory(inventory)
-
         # (which is not returned in list_hosts()) is taken into account for
         # warning if inventory is empty.  But it can't be taken into account for
         # checking if limit doesn't match any hosts.  Instead we don't worry about
