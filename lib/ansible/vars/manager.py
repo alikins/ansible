@@ -302,7 +302,7 @@ class VariableManager:
             for entry in C.VARIABLE_PRECEDENCE:
                 if entry in self._ALLOWED:
                     display.debug('Calling %s to load vars for %s' % (entry, host.name))
-                    all_vars = combine_vars(all_vars, locals()[entry](), name_b=entry)
+                    all_vars = combine_vars(all_vars, locals()[entry](), name_b='precedence_config_%s' % entry)
                 else:
                     display.warning('Ignoring unknown variable precedence entry: %s' % (entry))
 
