@@ -113,8 +113,8 @@ class TaskQueueManager:
 
         for i in range(num):
             #rslt_q = multiprocessing.Queue()
-            queue_filename = '/home/adrian/.ansible.queue'
-            persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp/')
+            queue_filename = '/home/adrian/.ansible.pqueue'
+            #persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp/')
             self._workers.append([None, queue_filename])
 
     def _initialize_notified_handlers(self, play):

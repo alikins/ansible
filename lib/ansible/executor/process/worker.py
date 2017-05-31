@@ -49,6 +49,7 @@ except ImportError:
 
 __all__ = ['WorkerProcess']
 
+import persistqueue
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -57,11 +58,13 @@ class WorkerProcess(multiprocessing.Process):
     for reading later.
     '''
 
-    def __init__(self, rslt_q, task_vars, host, task, play_context, loader, variable_manager, shared_loader_obj):
+    def __init__(self, rslt_q, task_vars, host, task, play_context, loader, variable_manager, shared_loader_obj, queue_filename=None):
 
         super(WorkerProcess, self).__init__()
         # takes a task queue manager as the sole param:
         self._rslt_q = rslt_q
+        self.queue_filename = queue_filename
+        self._task_q = persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp/')
         self._task_vars = task_vars
         self._host = host
         self._task = task
@@ -104,14 +107,33 @@ class WorkerProcess(multiprocessing.Process):
         if HAS_PYCRYPTO_ATFORK:
             atfork()
 
+        pqueue = persistqueue.Queue('/home/adrian/.ansible.pqueue', tempdir='/home/adrian/.ansible/tmp/')
+        print('pqueue worker(%s): %s' % (os.getpid(), pqueue))
+
+        task_obj = None
+        try:
+            task_obj = pqueue.get(timeout=10)
+        except persistqueue.Empty as e:
+            print('pqueue empty')
+            pass
+
+        task_obj[0]._loader = self._loader
+        print('task_obj: %s' % repr(dir(task_obj)))
+        print('type(task_obj): %s' % type(task_obj))
+        print('task_obj2: %s' % repr(task_obj[0]))
+
+        task, task_vars, host, play_context = task_obj
+
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
+            display.debug("running TaskExecutor() for %s/%s" % (host, task))
             executor_result = TaskExecutor(
-                self._host,
-                self._task,
-                self._task_vars,
-                self._play_context,
+                #self._host,
+                host,
+                task,
+                task_vars,
+                play_context,
                 self._new_stdin,
                 self._loader,
                 self._shared_loader_obj,
@@ -119,13 +141,13 @@ class WorkerProcess(multiprocessing.Process):
             ).run()
 
             display.debug("done running TaskExecutor() for %s/%s" % (self._host, self._task))
-            self._host.vars = dict()
-            self._host.groups = []
+            host.vars = dict()
+            host.groups = []
             task_result = TaskResult(
-                self._host.name,
-                self._task._uuid,
+                host.name,
+                task._uuid,
                 executor_result,
-                task_fields=self._task.dump_attrs(),
+                task_fields=task.dump_attrs(),
             )
 
             # put the result on the result queue
