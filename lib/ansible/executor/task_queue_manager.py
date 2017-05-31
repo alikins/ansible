@@ -23,6 +23,8 @@ import multiprocessing
 import os
 import tempfile
 
+import persistqueue
+
 from ansible import constants as C
 from ansible.errors import AnsibleError
 from ansible.executor.play_iterator import PlayIterator
@@ -110,8 +112,10 @@ class TaskQueueManager:
         self._workers = []
 
         for i in range(num):
-            rslt_q = multiprocessing.Queue()
-            self._workers.append([None, rslt_q])
+            #rslt_q = multiprocessing.Queue()
+            queue_filename = '/home/adrian/.ansible.queue'
+            persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp/')
+            self._workers.append([None, queue_filename])
 
     def _initialize_notified_handlers(self, play):
         '''
@@ -301,7 +305,7 @@ class TaskQueueManager:
     def _cleanup_processes(self):
         if hasattr(self, '_workers'):
             for (worker_prc, rslt_q) in self._workers:
-                rslt_q.close()
+                #rslt_q.close()
                 if worker_prc and worker_prc.is_alive():
                     try:
                         worker_prc.terminate()

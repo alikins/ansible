@@ -45,6 +45,7 @@ from ansible.template import Templar
 from ansible.utils.vars import combine_vars
 from ansible.vars.manager import strip_internal_keys
 
+import persistqueue
 
 try:
     from __main__ import display
@@ -212,11 +213,16 @@ class StrategyBase:
             # way to share them with the forked processes
             shared_loader_obj = SharedPluginLoaderObj()
 
+            pqueue = persistqueue.Queue('/home/adrian/.ansible.pqueue', tempdir='/home/adrian/.ansible/tmp')
+
             queued = False
             starting_worker = self._cur_worker
             while True:
-                (worker_prc, rslt_q) = self._workers[self._cur_worker]
+                #(worker_prc, rslt_q) = self._workers[self._cur_worker]
+                (worker_prc, queue_filename) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
+                    task_obj = (task, task_vars, host, play_context)
+                    pqueue.put(task_obj)
                     worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
