@@ -19,7 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import multiprocessing
+import multiprocessing.dummy as multiprocessing
 import os
 import tempfile
 
@@ -295,13 +295,13 @@ class TaskQueueManager:
     def cleanup(self):
         display.debug("RUNNING CLEANUP")
         self.terminate()
-        self._final_q.close()
+        # self._final_q.close()
         self._cleanup_processes()
 
     def _cleanup_processes(self):
         if hasattr(self, '_workers'):
             for (worker_prc, rslt_q) in self._workers:
-                rslt_q.close()
+                # rslt_q.close()
                 if worker_prc and worker_prc.is_alive():
                     try:
                         worker_prc.terminate()

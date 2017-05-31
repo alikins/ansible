@@ -19,7 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-from multiprocessing import Lock
+from multiprocessing.dummy import Lock
 from ansible.module_utils.facts import Facts
 
 if 'action_write_locks' not in globals():

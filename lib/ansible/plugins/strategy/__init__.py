@@ -24,7 +24,7 @@ import threading
 import time
 
 from collections import deque
-from multiprocessing import Lock
+from multiprocessing.dummy import Lock
 from jinja2.exceptions import UndefinedError
 
 from ansible import constants as C

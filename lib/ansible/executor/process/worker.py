@@ -19,7 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import multiprocessing
+import multiprocessing.dummy as multiprocessing
 import os
 import sys
 import traceback
@@ -47,6 +47,7 @@ except ImportError:
 
 __all__ = ['WorkerProcess']
 
+print('mp: %s' % multiprocessing)
 
 class WorkerProcess(multiprocessing.Process):
     '''
