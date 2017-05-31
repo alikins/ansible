@@ -146,5 +146,5 @@ class Host:
         return results
 
     def get_vars(self):
-        return combine_vars(self.vars, self.get_magic_vars(), name_b='Host_get_vars')
+        return combine_vars(self.vars, self.get_magic_vars(), scope_name='Host_get_vars')
 

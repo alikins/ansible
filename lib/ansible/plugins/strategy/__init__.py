@@ -373,7 +373,7 @@ class StrategyBase:
                     del clean_copy['invocation']
 
                 for target_host in host_list:
-                    self._variable_manager.set_nonpersistent_facts(target_host, {original_task.register: clean_copy})
+                    self._variable_manager.set_nonpersistent_facts(target_host, {original_task.register: clean_copy}, scope_info=original_task.get_name())
 
             # all host status messages contain 2 entries: (msg, task_result)
             role_ran = False
@@ -410,6 +410,7 @@ class StrategyBase:
                                 ansible_failed_task=original_task.serialize(),
                                 ansible_failed_result=task_result._result,
                             ),
+                            scope_info=original_task.get_name(),
                         )
                 else:
                     self._tqm._stats.increment('ok', original_host.name)
@@ -517,7 +518,8 @@ class StrategyBase:
                                     self._variable_manager.set_host_facts(target_host, result_item['ansible_facts'].copy())
 
                                 # If we are setting a fact, it should populate non_persistent_facts as well
-                                self._variable_manager.set_nonpersistent_facts(target_host, result_item['ansible_facts'].copy())
+                                self._variable_manager.set_nonpersistent_facts(target_host, result_item['ansible_facts'].copy(),
+                                                                               scope_info=original_task.get_name())
 
                     if 'ansible_stats' in result_item and 'data' in result_item['ansible_stats'] and result_item['ansible_stats']['data']:
 
@@ -606,7 +608,7 @@ class StrategyBase:
             new_host = self._inventory.hosts.get(host_name)
 
             # Set/update the vars for this host
-            new_host.vars = combine_vars(new_host.get_vars(), host_info.get('host_vars', dict()), name_b='strategy_add_host')
+            new_host.vars = combine_vars(new_host.get_vars(), host_info.get('host_vars', dict()), scope_name='strategy_add_host')
 
             new_groups = host_info.get('groups', [])
             for group_name in new_groups:
