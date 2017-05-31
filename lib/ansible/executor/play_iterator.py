@@ -527,8 +527,8 @@ class PlayIterator:
         else:
             the_uuid = task
 
-        print('the_uuid: %s' % the_uuid)
-        print('uuid_cache: %s' % self._task_uuid_cache)
+        #print('the_uuid: %s' % the_uuid)
+        #print('uuid_cache: %s' % self._task_uuid_cache)
         return self._task_uuid_cache.get(the_uuid, None)
 
     def _insert_tasks_into_state(self, state, task_list):

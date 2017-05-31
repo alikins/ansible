@@ -225,7 +225,7 @@ class StrategyBase:
                     task_obj = (task, task_vars, host, play_context)
                     print('pre pqueue.put task.uuid: %s' % task._uuid)
                     pqueue.put(task_obj)
-                    worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader,
+                    worker_prc = WorkerProcess(self._final_q, self._loader,
                                                self._variable_manager, shared_loader_obj, queue_filename=queue_filename)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()

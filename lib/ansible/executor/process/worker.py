@@ -50,6 +50,7 @@ except ImportError:
 __all__ = ['WorkerProcess']
 
 import persistqueue
+import time
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -58,17 +59,17 @@ class WorkerProcess(multiprocessing.Process):
     for reading later.
     '''
 
-    def __init__(self, rslt_q, task_vars, host, task, play_context, loader, variable_manager, shared_loader_obj, queue_filename=None):
+    def __init__(self, rslt_q, loader, variable_manager, shared_loader_obj, queue_filename=None):
 
         super(WorkerProcess, self).__init__()
         # takes a task queue manager as the sole param:
         self._rslt_q = rslt_q
         self.queue_filename = queue_filename
-        self._task_q = persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp/')
-        self._task_vars = task_vars
-        self._host = host
-        self._task = task
-        self._play_context = play_context
+        self._task_queue = persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp/')
+        # self._task_vars = task_vars
+        # self._host = host
+        # self._task = task
+        # self._play_context = play_context
         self._loader = loader
         self._variable_manager = variable_manager
         self._shared_loader_obj = shared_loader_obj
@@ -107,80 +108,95 @@ class WorkerProcess(multiprocessing.Process):
         if HAS_PYCRYPTO_ATFORK:
             atfork()
 
-        pqueue = persistqueue.Queue('/home/adrian/.ansible.pqueue', tempdir='/home/adrian/.ansible/tmp/')
-        print('pqueue worker(%s): %s' % (os.getpid(), pqueue))
+        pqueue = self._task_queue
+        #pqueue = persistqueue.Queue(self.queue_filename, tempdir='/home/adrian/.ansible/tmp/')
+        display.v('pqueue worker(%s): %s' % (os.getpid(), pqueue))
 
-        task_obj = None
-        try:
-            task_obj = pqueue.get(timeout=10)
-        except persistqueue.Empty as e:
-            print('pqueue empty')
-            pass
+        self.running = True
 
-        task_obj[0]._loader = self._loader
-        print('task_obj: %s' % repr(dir(task_obj)))
-        print('type(task_obj): %s' % type(task_obj))
-        print('task_obj2: %s' % repr(task_obj[0]))
+        sleep = 1
+        while self.running:
+            task_obj = None
+            try:
+                task_obj = pqueue.get(timeout=10)
+            except persistqueue.Empty as e:
+                display.v('pqueue empty')
+                display.v('sleeping for %s' % sleep)
+                time.sleep(sleep)
+                continue
+            except Exception as e:
+                display.v('Exception: %s' % to_text(e))
+                display.v('Traceback: %s' % to_text(traceback.format_exc()))
+                display.v('sleeping for %s' % sleep)
+                time.sleep(sleep)
+                continue
 
-        task, task_vars, host, play_context = task_obj
+            display.v('task_obj: %s' % repr(dir(task_obj)))
+            display.v('type(task_obj): %s' % type(task_obj))
+            display.v('task_obj2: %s' % repr(task_obj[0]))
+            task_obj[0]._loader = self._loader
 
-        try:
-            # execute the task and build a TaskResult from the result
-            display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
-            display.debug("running TaskExecutor() for %s/%s" % (host, task))
-            executor_result = TaskExecutor(
-                #self._host,
-                host,
-                task,
-                task_vars,
-                play_context,
-                self._new_stdin,
-                self._loader,
-                self._shared_loader_obj,
-                self._rslt_q
-            ).run()
+            task, task_vars, host, play_context = task_obj
 
-            display.debug("done running TaskExecutor() for %s/%s" % (self._host, self._task))
-            host.vars = dict()
-            host.groups = []
-            task_result = TaskResult(
-                host.name,
-                task._uuid,
-                executor_result,
-                task_fields=task.dump_attrs(),
-            )
+            display.v('CCCCCCCCC')
+            try:
+                # execute the task and build a TaskResult from the result
+                # display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))
+                display.debug("running TaskExecutor() for %s/%s" % (host, task))
+                executor_result = TaskExecutor(
+                    host,
+                    task,
+                    task_vars,
+                    play_context,
+                    self._new_stdin,
+                    self._loader,
+                    self._shared_loader_obj,
+                    self._rslt_q
+                ).run()
 
-            # put the result on the result queue
-            display.debug("sending task result")
-            self._rslt_q.put(task_result)
-            display.debug("done sending task result")
+                display.debug("done running TaskExecutor() for %s/%s" % (host, task))
+                host.vars = dict()
+                host.groups = []
+                task_result = TaskResult(
+                    host.name,
+                    task._uuid,
+                    executor_result,
+                    task_fields=task.dump_attrs(),
+                )
 
-        except AnsibleConnectionFailure:
-            self._host.vars = dict()
-            self._host.groups = []
-            task_result = TaskResult(
-                self._host.name,
-                self._task._uuid,
-                dict(unreachable=True),
-                task_fields=self._task.dump_attrs(),
-            )
-            self._rslt_q.put(task_result, block=False)
+                # put the result on the result queue
+                display.debug("sending task result")
+                self._rslt_q.put(task_result)
+                display.debug("done sending task result")
 
-        except Exception as e:
-            if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
-                try:
-                    self._host.vars = dict()
-                    self._host.groups = []
-                    task_result = TaskResult(
-                        self._host.name,
-                        self._task._uuid,
-                        dict(failed=True, exception=to_text(traceback.format_exc()), stdout=''),
-                        task_fields=self._task.dump_attrs(),
-                    )
-                    self._rslt_q.put(task_result, block=False)
-                except:
-                    display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
-                    display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
+            except AnsibleConnectionFailure:
+                host.vars = dict()
+                host.groups = []
+                task_result = TaskResult(
+                    host.name,
+                    task._uuid,
+                    dict(unreachable=True),
+                    task_fields=task.dump_attrs(),
+                )
+                self._rslt_q.put(task_result, block=False)
+
+            except Exception as e:
+                if not isinstance(e, (IOError, EOFError, KeyboardInterrupt, SystemExit)) or isinstance(e, TemplateNotFound):
+                    try:
+                        host.vars = dict()
+                        host.groups = []
+                        task_result = TaskResult(
+                            host.name,
+                            task._uuid,
+                            dict(failed=True, exception=to_text(traceback.format_exc()), stdout=''),
+                            task_fields=task.dump_attrs(),
+                        )
+                        self._rslt_q.put(task_result, block=False)
+                    except:
+                        display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
+                        display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
+
+            pqueue.task_done()
 
         display.debug("WORKER PROCESS EXITING")
 
