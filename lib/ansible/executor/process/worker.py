@@ -51,6 +51,12 @@ __all__ = ['WorkerProcess']
 
 import persistqueue
 import time
+import pickle
+
+
+class Sentinel(object):
+    pass
+
 
 class WorkerProcess(multiprocessing.Process):
     '''
@@ -65,7 +71,6 @@ class WorkerProcess(multiprocessing.Process):
         # takes a task queue manager as the sole param:
         self._rslt_q = rslt_q
         self.queue_filename = queue_filename
-        self._task_queue = persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp/')
         # self._task_vars = task_vars
         # self._host = host
         # self._task = task
@@ -73,6 +78,7 @@ class WorkerProcess(multiprocessing.Process):
         self._loader = loader
         self._variable_manager = variable_manager
         self._shared_loader_obj = shared_loader_obj
+        self._task_queue = persistqueue.Queue(self.queue_filename, tempdir='/home/adrian/.ansible/tmp/')
 
         if sys.stdin.isatty():
             # dupe stdin, if we have one
@@ -93,6 +99,14 @@ class WorkerProcess(multiprocessing.Process):
         else:
             # set to /dev/null
             self._new_stdin = os.devnull
+
+    def terminate(self):
+        print('TERMINATE')
+        self.running = False
+        return super(WorkerProcess, self).terminate()
+
+    def stop(self):
+        self._task_queue.put(Sentinel)
 
     def run(self):
         '''
@@ -118,7 +132,14 @@ class WorkerProcess(multiprocessing.Process):
         while self.running:
             task_obj = None
             try:
-                task_obj = pqueue.get(timeout=10)
+                task_obj = pqueue.get(block=True, timeout=10)
+            except pickle.PickleError as e:
+                display.v('Exception: %s' % to_text(e))
+                display.v('Traceback: %s' % to_text(traceback.format_exc()))
+                display.v('sleeping for %s' % sleep)
+                #pqueue.task_done()
+                #time.sleep(sleep)
+                raise
             except persistqueue.Empty as e:
                 display.v('pqueue empty')
                 display.v('sleeping for %s' % sleep)
@@ -128,8 +149,14 @@ class WorkerProcess(multiprocessing.Process):
                 display.v('Exception: %s' % to_text(e))
                 display.v('Traceback: %s' % to_text(traceback.format_exc()))
                 display.v('sleeping for %s' % sleep)
+                #pqueue.task_done()
                 time.sleep(sleep)
                 continue
+
+            pqueue.task_done()
+
+            if task_obj is Sentinel:
+                self.terminate()
 
             display.v('task_obj: %s' % repr(dir(task_obj)))
             display.v('type(task_obj): %s' % type(task_obj))
@@ -196,7 +223,6 @@ class WorkerProcess(multiprocessing.Process):
                         display.debug(u"WORKER EXCEPTION: %s" % to_text(e))
                         display.debug(u"WORKER TRACEBACK: %s" % to_text(traceback.format_exc()))
 
-            pqueue.task_done()
 
         display.debug("WORKER PROCESS EXITING")
 

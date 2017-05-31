@@ -125,6 +125,9 @@ class StrategyBase:
         # outstanding tasks still in queue
         self._blocked_hosts = dict()
 
+        queue_filename = '/home/adrian/.ansible.pqueue'
+        self._pqueue = persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp')
+
         self._results = deque()
         self._results_lock = threading.Condition(threading.Lock())
 
@@ -136,6 +139,8 @@ class StrategyBase:
     def cleanup(self):
         self._final_q.put(_sentinel)
         self._results_thread.join()
+        # wrong sentinel
+        self._pqueue.put(_sentinel)
 
     def run(self, iterator, play_context, result=0):
         # execute one more pass through the iterator without peeking, to
@@ -206,6 +211,8 @@ class StrategyBase:
             display.debug('Creating lock for %s' % task.action)
             action_write_locks.action_write_locks[task.action] = Lock()
 
+
+        display.v('_queue_task host=%s task=%s' % (host, task))
         # and then queue the new task
         try:
 
@@ -213,28 +220,27 @@ class StrategyBase:
             # way to share them with the forked processes
             shared_loader_obj = SharedPluginLoaderObj()
 
-            queue_filename = '/home/adrian/.ansible.pqueue'
-            pqueue = persistqueue.Queue(queue_filename, tempdir='/home/adrian/.ansible/tmp')
+            task_obj = (task, task_vars, host, play_context)
+            print('pre pqueue.put task.uuid: %s' % task._uuid)
+            self._pqueue.put(task_obj)
 
             queued = False
+            worker_started = False
             starting_worker = self._cur_worker
             while True:
                 #(worker_prc, rslt_q) = self._workers[self._cur_worker]
                 (worker_prc, queue_filename) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
-                    task_obj = (task, task_vars, host, play_context)
-                    print('pre pqueue.put task.uuid: %s' % task._uuid)
-                    pqueue.put(task_obj)
                     worker_prc = WorkerProcess(self._final_q, self._loader,
                                                self._variable_manager, shared_loader_obj, queue_filename=queue_filename)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
                     display.debug("worker is %d (out of %d available)" % (self._cur_worker + 1, len(self._workers)))
-                    queued = True
+                    worker_started = True
                 self._cur_worker += 1
                 if self._cur_worker >= len(self._workers):
                     self._cur_worker = 0
-                if queued:
+                if worker_started:
                     break
                 elif self._cur_worker == starting_worker:
                     time.sleep(0.0001)
