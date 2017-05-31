@@ -245,8 +245,11 @@ class StrategyModule(StrategyBase):
                                 break
 
                         display.debug("getting variables")
+                        display.debug('pre get_vars host=%s' % host)
                         task_vars = self._variable_manager.get_vars(play=iterator._play, host=host, task=task)
+                        display.debug('post get_vars host=%s' % host)
                         self.add_tqm_variables(task_vars, play=iterator._play)
+                        display.debug('post add_tqm_variables host=%s' % host)
                         templar = Templar(loader=self._loader, variables=task_vars)
                         display.debug("done getting variables")
 

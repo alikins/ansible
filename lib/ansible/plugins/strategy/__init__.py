@@ -191,6 +191,36 @@ class StrategyBase:
         vars['ansible_current_hosts'] = [h.name for h in self.get_hosts_remaining(play)]
         vars['ansible_failed_hosts'] = [h.name for h in self.get_failed_hosts(play)]
 
+    def _start_workers(self):
+        # create a dummy object with plugin loaders set as an easier
+        # way to share them with the forked processes
+        shared_loader_obj = SharedPluginLoaderObj()
+
+        queued = False
+        worker_started = False
+        starting_worker = self._cur_worker
+        while True:
+            display.debug('_queue_task worker loop')
+            # (worker_prc, rslt_q) = self._workers[self._cur_worker]
+            (worker_prc, queue_filename) = self._workers[self._cur_worker]
+            if worker_prc is None or not worker_prc.is_alive():
+                worker_prc = WorkerProcess(self._final_q, self._loader,
+                                           self._variable_manager, shared_loader_obj, queue_filename=queue_filename)
+                self._workers[self._cur_worker][0] = worker_prc
+                worker_prc.start()
+                display.debug("worker is %d (out of %d available)" % (self._cur_worker + 1, len(self._workers)))
+                worker_started = True
+            self._cur_worker += 1
+            if self._cur_worker >= len(self._workers):
+                self._cur_worker = 0
+            if worker_started:
+                break
+            elif self._cur_worker == starting_worker:
+                time.sleep(0.0001)
+
+        display.debug('end of _queue_task worker loop')
+        self._pending_results += 1
+
     def _queue_task(self, host, task, task_vars, play_context):
         ''' handles queueing the task up to be sent to a worker '''
 
@@ -211,41 +241,16 @@ class StrategyBase:
             display.debug('Creating lock for %s' % task.action)
             action_write_locks.action_write_locks[task.action] = Lock()
 
+        self._start_workers()
 
-        display.v('_queue_task host=%s task=%s' % (host, task))
+        display.debug('_queue_task host=%s task=%s' % (host, task))
         # and then queue the new task
         try:
-
-            # create a dummy object with plugin loaders set as an easier
-            # way to share them with the forked processes
-            shared_loader_obj = SharedPluginLoaderObj()
-
             task_obj = (task, task_vars, host, play_context)
-            print('pre pqueue.put task.uuid: %s' % task._uuid)
-            self._pqueue.put(task_obj)
+            display.debug('pre pqueue.put task: %s' % task)
+            self._pqueue.put(task_obj, block=False)
+            display.debug('post pqueue.put task: %s' % task)
 
-            queued = False
-            worker_started = False
-            starting_worker = self._cur_worker
-            while True:
-                #(worker_prc, rslt_q) = self._workers[self._cur_worker]
-                (worker_prc, queue_filename) = self._workers[self._cur_worker]
-                if worker_prc is None or not worker_prc.is_alive():
-                    worker_prc = WorkerProcess(self._final_q, self._loader,
-                                               self._variable_manager, shared_loader_obj, queue_filename=queue_filename)
-                    self._workers[self._cur_worker][0] = worker_prc
-                    worker_prc.start()
-                    display.debug("worker is %d (out of %d available)" % (self._cur_worker + 1, len(self._workers)))
-                    worker_started = True
-                self._cur_worker += 1
-                if self._cur_worker >= len(self._workers):
-                    self._cur_worker = 0
-                if worker_started:
-                    break
-                elif self._cur_worker == starting_worker:
-                    time.sleep(0.0001)
-
-            self._pending_results += 1
         except (EOFError, IOError, AssertionError) as e:
             # most likely an abort
             display.debug("got an error while queuing: %s" % e)
@@ -777,8 +782,11 @@ class StrategyBase:
         host_results = []
         for host in notified_hosts:
             if not handler.has_triggered(host) and (not iterator.is_failed(host) or play_context.force_handlers):
+                display.debug('pre get_vars host=%s' % host)
                 task_vars = self._variable_manager.get_vars(play=iterator._play, host=host, task=handler)
+                display.debug('post get_vars host=%s' % host)
                 self.add_tqm_variables(task_vars, play=iterator._play)
+                display.debug('post add_tqm_variables host=%s' % host)
                 self._queue_task(host, handler, task_vars, play_context)
                 if run_once:
                     break
