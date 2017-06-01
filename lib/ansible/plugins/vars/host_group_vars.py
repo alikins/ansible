@@ -57,15 +57,19 @@ FOUND = {}
 
 class VarsModule(BaseVarsPlugin):
 
-    def get_vars(self, loader, path, entities, cache=True):
+    def get_vars(self, loader, path, entities, cache=True, vars_dict_class=None):
         ''' parses the inventory file '''
+
+        if vars_dict_class is None:
+            vars_dict_class = dict
 
         if not isinstance(entities, list):
             entities = [entities]
 
         super(VarsModule, self).get_vars(loader, path, entities)
 
-        data = {}
+        data = vars_dict_class()
+        print('data: %s' % type(data))
         for entity in entities:
             if isinstance(entity, Host):
                 subdir = 'host_vars'
@@ -95,7 +99,13 @@ class VarsModule(BaseVarsPlugin):
                 for found in found_files:
                     new_data = loader.load_from_file(found, cache=True, unsafe=True)
                     if new_data:  # ignore empty files
-                        data = combine_vars(data, new_data, scope_name='_host_group_vars_new_data')
+                        if vars_dict_class is not None:
+                            newer_data = vars_dict_class()
+                            print('vars_dict_class %s' % vars_dict_class)
+                            newer_data.update(new_data, update_name='host_group_vars_newer_data', scope_info=found)
+                            new_data = newer_data
+                        data = combine_vars(data, new_data, scope_name='host_group_vars_new_data', scope_info=found)
+                        print('data.meta: %s' % data.meta)
 
             except Exception as e:
                 raise AnsibleParserError(to_native(e))

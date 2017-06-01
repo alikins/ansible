@@ -130,6 +130,7 @@ class VariableManager:
             # fallback to a dict as in memory cache
             self._fact_cache = {}
 
+
         # At high verbosity, use TrackingDict for all_vars so we keep track of where
         # the items come from
         if display.verbosity > 4:
@@ -300,7 +301,10 @@ class VariableManager:
                         inventory_dir = os.path.dirname(inventory_dir)
 
                     for plugin in vars_loader.all():
-                        data = combine_vars(data, _get_plugin_vars(plugin, inventory_dir, entities), scope_name='inventory_plugin_dir_%s_%s' % (plugin, inventory_dir), scope_info=inventory_dir)
+                        scope_info = {'original_path': plugin._original_path,
+                                      'inventory_dir': inventory_dir}
+                        data = combine_vars(data, _get_plugin_vars(plugin, inventory_dir, entities), scope_name='inventory_plugin_dir_%s_%s' % (plugin, inventory_dir), scope_info=scope_info)
+
                 return data
 
             def _plugins_play(entities):
@@ -309,7 +313,8 @@ class VariableManager:
                 for plugin in vars_loader.all():
                     for path in basedirs:
                         # TODO: include path in name_b?
-                        data = combine_vars(data, _get_plugin_vars(plugin, path, entities), scope_name='plugins_play_%s' % plugin, scope_info=plugin._original_path)
+                        data = combine_vars(data, _get_plugin_vars(plugin, path, entities),
+                                            scope_name='plugins_play_%s' % plugin, scope_info=plugin._original_path)
                 return data
 
             # configurable functions that are sortable via config, rememer to add to _ALLOWED if expanding this list
