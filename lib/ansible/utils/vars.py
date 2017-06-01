@@ -88,9 +88,10 @@ class TrackingDict(dict):
     def update(self, other, update_name=None, scope_info=None):
         # If we are updating where other is a TrackingDict, try to merge its meta
         # info into ours so we preserve the origin update_name/scope_info
-        #other_meta = getattr(other, 'meta', None)
-        #if other_meta:
-        #    self.meta.update(other_meta)
+        other_meta = getattr(other, 'meta', None)
+        if other_meta:
+            print('other_meta: %s update_name=%s' % (other_meta, update_name))
+            self.meta.update(other_meta)
 
         for key in other:
             if key == 'update_name' or key == 'scope_info':
