@@ -430,19 +430,28 @@ class PluginLoader:
         #    all_matches.extend(glob.glob(os.path.join(i, "*.py")))
 
         #print('all_matches: %s' % all_matches)
+        matched_objs = []
+        matched_paths = []
+
         for path in sorted(self._path_and_name(), key=lambda match: os.path.basename(match)):
             name, _ = os.path.splitext(path)
             #if '__init__' in name:
             #    continue
 #            print('name: %s' % name)
 
+            # FIXME: the generator is nicer here for the ~1000 ansible modules case, but it also
+            #        means we cant find multiple and compare. (find_first vs find_best)
             if path_only:
-                yield path
+                matched_paths.append(path)
                 continue
 
             if path not in self._module_cache:
-                self._module_cache[path] = self._load_module_source(name, path)
-                found_in_cache = False
+                try:
+                    self._module_cache[path] = self._load_module_source(name, path)
+                    found_in_cache = False
+                except ImportError as e:
+                    display.warning("Skipping plugin (%s) as it failed to import: %s" % (path, to_text(e)))
+                    continue
 
             try:
                 obj = getattr(self._module_cache[path], self.class_name)
@@ -473,11 +482,23 @@ class PluginLoader:
                     obj = obj(*args, **kwargs)
                 except TypeError as e:
                     display.warning("Skipping plugin (%s) as it seems to be incomplete: %s" % (path, to_text(e)))
+                    continue
 
             # set extra info on the module, in case we want it later
             setattr(obj, '_original_path', path)
             setattr(obj, '_load_name', name)
-            yield obj
+            print('obj %s type(obj) %s' % (obj, type(obj)))
+            matched_objs.append(obj)
+
+        if path_only:
+            return matched_paths
+
+        # return the best fits, this impl just sorts them and pops the first one. Could
+        # do the same with a different sort key, based on some fitness comparison
+        match = sorted(matched_objs)
+        #print('match %s type(match) %s' % (match, type(match)))
+        return match
+
 
 action_loader = PluginLoader(
     'ActionModule',
