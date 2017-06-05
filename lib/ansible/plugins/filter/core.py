@@ -15,12 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-# Make coding more python3-ish
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
 
 import base64
-import crypt
 import glob
 import hashlib
 import itertools
@@ -28,7 +24,7 @@ import json
 import ntpath
 import os.path
 import re
-import string
+# import string
 import sys
 import time
 import uuid
@@ -41,11 +37,6 @@ from random import Random, SystemRandom, shuffle
 
 from jinja2.filters import environmentfilter, do_groupby as _do_groupby
 
-try:
-    import passlib.hash
-    HAS_PASSLIB = True
-except:
-    HAS_PASSLIB = False
 
 from ansible import errors
 from ansible.module_utils.six import iteritems, string_types, integer_types
@@ -264,44 +255,6 @@ def get_hash(data, hashtype='sha1'):
 
     h.update(to_bytes(data, errors='surrogate_then_strict'))
     return h.hexdigest()
-
-
-def get_encrypted_password(password, hashtype='sha512', salt=None):
-
-    # TODO: find a way to construct dynamically from system
-    cryptmethod = {
-        'md5': '1',
-        'blowfish': '2a',
-        'sha256': '5',
-        'sha512': '6',
-    }
-
-    if hashtype in cryptmethod:
-        if salt is None:
-            r = SystemRandom()
-            if hashtype in ['md5']:
-                saltsize = 8
-            else:
-                saltsize = 16
-            saltcharset = string.ascii_letters + string.digits + '/.'
-            salt = ''.join([r.choice(saltcharset) for _ in range(saltsize)])
-
-        if not HAS_PASSLIB:
-            if sys.platform.startswith('darwin'):
-                raise errors.AnsibleFilterError('|password_hash requires the passlib python module to generate password hashes on Mac OS X/Darwin')
-            saltstring = "$%s$%s" % (cryptmethod[hashtype], salt)
-            encrypted = crypt.crypt(password, saltstring)
-        else:
-            if hashtype == 'blowfish':
-                cls = passlib.hash.bcrypt
-            else:
-                cls = getattr(passlib.hash, '%s_crypt' % hashtype)
-
-            encrypted = cls.encrypt(password, salt=salt)
-
-        return encrypted
-
-    return None
 
 
 def to_uuid(string):
@@ -562,7 +515,6 @@ class FilterModule(object):
             # checksum of string as used by ansible for checksuming files
             'checksum': checksum_s,
             # generic hashing
-            'password_hash': get_encrypted_password,
             'hash': get_hash,
 
             # file glob
