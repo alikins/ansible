@@ -42,7 +42,9 @@ except ImportError:
     # using API w/o cli
     cli = False
 
-__all__ = ["CallbackBase"]
+_base_module = True
+
+__all__ = ["CallbackBase", "_base_module"]
 
 
 class CallbackBase:

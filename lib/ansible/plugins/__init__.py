@@ -367,7 +367,8 @@ class PluginLoader:
                 return None
 
         self._display_plugin_load(self.class_name, name, self._searched_paths, path,
-                                  found_in_cache=found_in_cache, class_only=class_only)
+                                  found_in_cache=found_in_cache, class_only=class_only,
+                                  method='get')
         if not class_only:
             try:
                 obj = obj(*args, **kwargs)
@@ -383,8 +384,12 @@ class PluginLoader:
         setattr(obj, '_load_name', name)
         return obj
 
-    def _display_plugin_load(self, class_name, name, searched_paths, path, found_in_cache=None, class_only=None):
-        msg = 'Loading %s \'%s\' from %s' % (class_name, os.path.basename(name), path)
+    def _display_plugin_load(self, class_name, name, searched_paths, path, found_in_cache=None, class_only=None, method=None):
+        if method:
+            method = "(%s)" % method
+        else:
+            method = ""
+        msg = 'Loading %s %s \'%s\' from %s' % (method, class_name, os.path.basename(name), path)
 
         if len(searched_paths) > 1:
             msg = '%s (searched paths: %s)' % (msg, self.format_paths(searched_paths))
@@ -392,7 +397,26 @@ class PluginLoader:
         if found_in_cache or class_only:
             msg = '%s (found_in_cache=%s, class_only=%s)' % (msg, found_in_cache, class_only)
 
-        display.debug(msg)
+        #display.debug(msg)
+        display.vvvvv(msg)
+
+    def _path_and_name(self):
+        import pprint
+
+        base_plugin_paths = self._get_paths()
+#        print('\nget_paths:')
+        pprint.pprint(base_plugin_paths)
+
+        for base_plugin_path in base_plugin_paths:
+
+            plugin_paths = glob.glob(os.path.join(base_plugin_path, "*.py"))
+
+#            print('\nbase_plugin_path: %s' % base_plugin_path)
+            # print('plugin_paths: %s' % pprint.format(plugin_paths))
+            for plugin_path in plugin_paths:
+#                print('basename: %s' % os.path.basename(plugin_path))
+#                print('plugin_path: %s' % plugin_path)
+                yield plugin_path
 
     def all(self, *args, **kwargs):
         ''' instantiates all plugins with the same arguments '''
@@ -402,13 +426,15 @@ class PluginLoader:
         all_matches = []
         found_in_cache = True
 
-        for i in self._get_paths():
-            all_matches.extend(glob.glob(os.path.join(i, "*.py")))
+        #for i in self._get_paths():
+        #    all_matches.extend(glob.glob(os.path.join(i, "*.py")))
 
-        for path in sorted(all_matches, key=lambda match: os.path.basename(match)):
+        #print('all_matches: %s' % all_matches)
+        for path in sorted(self._path_and_name(), key=lambda match: os.path.basename(match)):
             name, _ = os.path.splitext(path)
-            if '__init__' in name:
-                continue
+            #if '__init__' in name:
+            #    continue
+#            print('name: %s' % name)
 
             if path_only:
                 yield path
@@ -421,7 +447,10 @@ class PluginLoader:
             try:
                 obj = getattr(self._module_cache[path], self.class_name)
             except AttributeError as e:
-                display.warning("Skipping plugin (%s) as it seems to be invalid: %s" % (path, to_text(e)))
+                # If a base class in a base module (ie, ShellBase in shell/__init__.py) we dont
+                # expect to be able to load the base class
+                if not getattr(self._module_cache[path], '_base_module', False):
+                    display.warning("Skipping plugin (%s) since it doesnt have a '%s' class: %s" % (path, self.class_name, to_text(e)))
                 continue
 
             if self.base_class:
@@ -436,7 +465,9 @@ class PluginLoader:
                 if not issubclass(obj, plugin_class):
                     continue
 
-            self._display_plugin_load(self.class_name, name, self._searched_paths, path, found_in_cache=found_in_cache, class_only=class_only)
+            self._display_plugin_load(self.class_name, name, self._searched_paths, path,
+                                      found_in_cache=found_in_cache, class_only=class_only,
+                                      method='all')
             if not class_only:
                 try:
                     obj = obj(*args, **kwargs)

@@ -28,6 +28,8 @@ from ansible.module_utils.six.moves import shlex_quote
 
 _USER_HOME_PATH_RE = re.compile(r'^~[_.A-Za-z0-9][-_.A-Za-z0-9]*$')
 
+_base_module = True
+
 
 class ShellBase(object):
 

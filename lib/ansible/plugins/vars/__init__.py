@@ -26,6 +26,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+_base_module = True
+
 
 class BaseVarsPlugin(object):
 
