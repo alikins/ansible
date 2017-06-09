@@ -289,6 +289,7 @@ class _AnsibleActionDone(AnsibleAction):
     ''' an action runtime early exit'''
     pass
 
+
 class AnsibleConditionalError(AnsibleError):
     ''' an error while evaluating a conditional'''
     pass
