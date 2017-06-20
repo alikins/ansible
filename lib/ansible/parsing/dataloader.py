@@ -74,7 +74,7 @@ class DataLoader:
         self._b_vault_password = b_vault_password
         self._vault = VaultLib(b_password=b_vault_password)
 
-    def load(self, data, file_name='<string>', show_content=True):
+    def load(self, data, file_name='<string>', uri=None, content_type=None, show_content=True):
         '''
         Creates a python datastructure from the given data, which can be either
         a JSON or YAML string.
@@ -94,6 +94,7 @@ class DataLoader:
         try:
             # we first try to load this data as JSON
             new_data = json.loads(data)
+            content_type = content_type or 'JSON'
         except:
             # must not be JSON, let the rest try
             if isinstance(data, AnsibleUnicode):
@@ -106,12 +107,23 @@ class DataLoader:
                 in_data = data
             try:
                 new_data = self._safe_load(in_data, file_name=file_name)
+                content_type = content_type or 'YAML'
             except YAMLError as yaml_exc:
                 self._handle_error(yaml_exc, file_name, show_content)
 
             if isinstance(data, AnsibleUnicode):
                 new_data = AnsibleUnicode(new_data)
                 new_data.ansible_pos = data.ansible_pos
+
+        if file_name and not uri:
+            uri = 'file:///%s' % file_name
+
+        try:
+            new_data._uri = uri
+            new_data._content_type = content_type
+        except AttributeError as e:
+            display.v(to_text(e))
+            pass
 
         return new_data
 
