@@ -31,6 +31,8 @@ from ansible.playbook.task_include import TaskInclude
 from ansible.plugins.callback import CallbackBase
 from ansible.utils.color import colorize, hostcolor
 
+import pprint
+
 
 class CallbackModule(CallbackBase):
 
@@ -139,6 +141,9 @@ class CallbackModule(CallbackBase):
 
     def v2_playbook_on_task_start(self, task, is_conditional):
 
+        import pprint
+        print('%s' % type(task))
+        pprint.pprint(task.__dict__)
         if self._play.strategy != 'free':
             self._print_task_banner(task)
 
@@ -171,6 +176,8 @@ class CallbackModule(CallbackBase):
         self._display.banner("RUNNING HANDLER [%s]" % task.get_name().strip())
 
     def v2_playbook_on_play_start(self, play):
+        print('%s' % type(play))
+        pprint.pprint(play.__dict__)
         name = play.get_name().strip()
         if not name:
             msg = u"PLAY"
@@ -284,6 +291,8 @@ class CallbackModule(CallbackBase):
             self._display.display("", screen_only=True)
 
     def v2_playbook_on_start(self, playbook):
+        print('%s' % type(playbook))
+        pprint.pprint(playbook.__dict__)
         if self._display.verbosity > 1:
             from os.path import basename
             self._display.banner("PLAYBOOK: %s" % basename(playbook._file_name))

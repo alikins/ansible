@@ -81,6 +81,9 @@ class DataLoader:
         '''
         new_data = None
 
+        print('URI: %s' % uri)
+        print('CONTENT_TYPE: %s' % content_type)
+
         # YAML parser will take JSON as it is a subset.
         if isinstance(data, AnsibleUnicode):
             # The PyYAML's libyaml bindings use PyUnicode_CheckExact so
@@ -116,9 +119,15 @@ class DataLoader:
                 new_data.ansible_pos = data.ansible_pos
 
         if file_name and not uri:
-            uri = 'file:///%s' % file_name
+            uri = 'file://%s' % file_name
+
+        # show_content == False means 'this was from vault'
+        if not show_content:
+            uri = 'vault-%s' % uri
 
         try:
+            print('URI2: %s' % uri)
+            print('CONTENT_TYPE2: %s' % content_type)
             new_data._uri = uri
             new_data._content_type = content_type
         except AttributeError as e:

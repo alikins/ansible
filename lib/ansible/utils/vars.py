@@ -119,9 +119,30 @@ def merge_hash(a, b):
     return result
 
 
+# ick, this is ugly
+def copy_data_info(data, new_data):
+    uri = getattr(data, '_uri', None)
+    ctype = getattr(data, '_content_type', None)
+
+    print('copy_data_info: uri: %s ctype: %s' % (uri, ctype))
+    if uri:
+        try:
+            new_data.uri = uri
+        except AttributeError:
+            pass
+
+    if ctype:
+        try:
+            new_data.ctype = ctype
+        except AttributeError:
+            pass
+
+    return new_data
+
+
 def load_extra_vars(loader, options):
     extra_vars = {}
-    for extra_vars_opt in options.extra_vars:
+    for index, extra_vars_opt in enumerate(options.extra_vars):
         data = None
         extra_vars_opt = to_text(extra_vars_opt, errors='surrogate_or_strict')
         if extra_vars_opt.startswith(u"@"):
@@ -129,13 +150,15 @@ def load_extra_vars(loader, options):
             data = loader.load_from_file(extra_vars_opt[1:])
         elif extra_vars_opt and extra_vars_opt[0] in u'[{':
             # Arguments as YAML
-            data = loader.load(extra_vars_opt)
+            data = loader.load(extra_vars_opt, uri='extra_vars://%s' % index, content_type='YAML')
         else:
             # Arguments as Key-value
             data = parse_kv(extra_vars_opt)
 
         if isinstance(data, MutableMapping):
             extra_vars = combine_vars(extra_vars, data)
+            # maybe this could also be combine_vars job?
+            extra_vars = copy_data_info(data, extra_vars)
         else:
             raise AnsibleOptionsError("Invalid extra vars data supplied. '%s' could not be made into a dictionary" % extra_vars_opt)
 

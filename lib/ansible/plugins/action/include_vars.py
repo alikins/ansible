@@ -124,7 +124,8 @@ class ActionModule(ActionBase):
                     self._load_files(self.source_file)
                 )
                 if not failed:
-                    results.update(updated_results)
+                    # results.update(updated_results)
+                    results = updated_results
 
             except AnsibleError as e:
                 failed = True
@@ -230,14 +231,12 @@ class ActionModule(ActionBase):
             data = to_text(b_data, errors='surrogate_or_strict')
 
             self.show_content = show_content
-            data = self._loader.load(data, show_content)
-            if not data:
-                data = dict()
-            if not isinstance(data, dict):
+            results = self._loader.load(data, file_name=filename, show_content=show_content)
+            if not results:
+                results = dict()
+            if not isinstance(results, dict):
                 failed = True
                 err_msg = ('{0} must be stored as a dictionary/hash' .format(filename))
-            else:
-                results.update(data)
 
         return failed, err_msg, results
 

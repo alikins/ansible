@@ -1000,7 +1000,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         result = self._loader.path_dwim_relative_stack(b_candidate_paths, needle)
 
         if result is None:
-            paths_msg = os.path.pathsep.join([to_native(b_path) for b_path in b_candidate_paths])
+            paths_msg = ','.join([to_native(b_path) for b_path in b_candidate_paths])
             raise AnsibleError("%s unable to find '%s' in expected locations %s" %
                                (self._name_slug('Action'), to_native(needle), paths_msg))
 
