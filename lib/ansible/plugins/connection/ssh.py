@@ -260,6 +260,7 @@ class Connection(ConnectionBase):
         controlpersist = False
         controlpath = False
 
+        print('b_command: %s' % b_command)
         for b_arg in (a.lower() for a in b_command):
             if b'controlpersist' in b_arg:
                 controlpersist = True
@@ -281,8 +282,13 @@ class Connection(ConnectionBase):
             were added.  It will be displayed with a high enough verbosity.
         .. note:: This function does its work via side-effect.  The b_command list has the new arguments appended.
         """
-        display.vvvvv(u'SSH: %s: (%s)' % (explanation, ')('.join(to_text(a) for a in b_args)), host=self._play_context.remote_addr)
-        b_command += b_args
+        display.vvvvv(u'SSH: %s: (%s)' % (explanation,
+                                          ')('.join(to_text(a) for a in b_args)),
+                      host=self._play_context.remote_addr)
+        # b_command += b_args
+        for b_arg in b_args:
+            #b_command.append((b_arg, explanation))
+            b_command.append(b_arg)
 
     def _build_command(self, binary, *other_args):
         '''
@@ -304,13 +310,22 @@ class Connection(ConnectionBase):
                 raise AnsibleError("to use the 'ssh' connection type with passwords, you must install the sshpass program")
 
             self.sshpass_pipe = os.pipe()
-            b_command += [b'sshpass', b'-d' + to_bytes(self.sshpass_pipe[0], nonstring='simplerepr', errors='surrogate_or_strict')]
+            b_sshpass_args = [b'sshpass',
+                              b'-d' + to_bytes(self.sshpass_pipe[0],
+                                               nonstring='simplerepr',
+                                               errors='surrogate_or_strict')]
+            self._add_args(b_command, b_sshpass_args, 'Use sshpass for password auth because of play_context.password is set')
 
         if binary == 'ssh':
-            b_command += [to_bytes(self._play_context.ssh_executable, errors='surrogate_or_strict')]
+            b_default_ssh_exe_args = [to_bytes(self._play_context.ssh_executable, errors='surrogate_or_strict')]
+            self._add_args(b_command,
+                           b_default_ssh_exe_args,
+                           "Using default 'ssh' binary for ssh_executable")
         else:
-            b_command += [to_bytes(binary, errors='surrogate_or_strict')]
-
+            b_ssh_exe_args = [to_bytes(binary, errors='surrogate_or_strict')]
+            self._add_args(b_command,
+                           b_ssh_exe_args,
+                           "Using '%s' binary for ssh_executable" % binary)
         #
         # Next, additional arguments based on the configuration.
         #
@@ -322,11 +337,15 @@ class Connection(ConnectionBase):
         if binary == 'sftp' and C.DEFAULT_SFTP_BATCH_MODE:
             if self._play_context.password:
                 b_args = [b'-o', b'BatchMode=no']
-                self._add_args(b_command, b_args, u'disable batch mode for sshpass')
-            b_command += [b'-b', b'-']
+                self._add_args(b_command, b_args, u'disabling sftp batch mode because a password was provided and we are using sshpass')
+            b_batch_args = [b'-b', b'-']
+            self._add_args(b_command, b_batch_args, 'Using sftp batch mode since we are using sftp, batch mode is enabled, and we are not using passwords')
 
         if self._play_context.verbosity > 3:
+            b_ssh_verbose_args = [b'-vvv']
             b_command.append(b'-vvv')
+            self._add_args(b_command, b_ssh_verbose_args,
+                           'Increasing ssh verbosity because ansible verbosity is at -vvv or higher')
 
         #
         # Next, we add [ssh_connection]ssh_args from ansible.cfg.
@@ -355,26 +374,26 @@ class Connection(ConnectionBase):
             self._add_args(b_command, b_args, u"ANSIBLE_PRIVATE_KEY_FILE/private_key_file/ansible_ssh_private_key_file set")
 
         if not self._play_context.password:
-            self._add_args(
-                b_command, (
-                    b"-o", b"KbdInteractiveAuthentication=no",
-                    b"-o", b"PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey",
-                    b"-o", b"PasswordAuthentication=no"
-                ),
-                u"ansible_password/ansible_ssh_pass not set"
-            )
+            b_no_password_auth_args = (b"-o", b"KbdInteractiveAuthentication=no",
+                                       b"-o", b"PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey",
+                                       b"-o", b"PasswordAuthentication=no")
+            self._add_args(b_command,
+                           b_no_password_auth_args,
+                           u"ansible_password/ansible_ssh_pass not set so disabling password/keyboard auth and using non-interactive auth")
 
         user = self._play_context.remote_user
         if user:
-            self._add_args(
-                b_command,
-                (b"-o", b"User=" + to_bytes(self._play_context.remote_user, errors='surrogate_or_strict')),
-                u"ANSIBLE_REMOTE_USER/remote_user/ansible_user/user/-u set"
-            )
+            b_user_args = (b"-o", b"User=" + to_bytes(self._play_context.remote_user, errors='surrogate_or_strict'))
+            self._add_args(b_command,
+                           b_user_args,
+                           u"ANSIBLE_REMOTE_USER/remote_user/ansible_user/user/-u set")
 
+        b_timeout_args = (b"-o",
+                          b"ConnectTimeout=" + to_bytes(self._play_context.timeout, errors='surrogate_or_strict',
+                                                        nonstring='simplerepr'))
         self._add_args(
             b_command,
-            (b"-o", b"ConnectTimeout=" + to_bytes(self._play_context.timeout, errors='surrogate_or_strict', nonstring='simplerepr')),
+            b_timeout_args,
             u"ANSIBLE_TIMEOUT/timeout set"
         )
 
@@ -493,14 +512,16 @@ class Connection(ConnectionBase):
 
         return b''.join(output), remainder
 
+    def _display_cmd(self, cmd):
+        display_cmd = list(map(shlex_quote, map(to_text, cmd)))
+        display.vvv(u'SSH: EXEC {0}'.format(u' '.join(display_cmd)), host=self.host)
+
     @_ssh_retry
     def _run(self, cmd, in_data, sudoable=True, checkrc=True):
         '''
         Starts the command and communicates with it until it ends.
         '''
-
-        display_cmd = list(map(shlex_quote, map(to_text, cmd)))
-        display.vvv(u'SSH: EXEC {0}'.format(u' '.join(display_cmd)), host=self.host)
+        self._display_cmd(cmd)
 
         # Start the given command. If we don't need to pipeline data, we can try
         # to use a pseudo-tty (ssh will have been invoked with -tt). If we are
