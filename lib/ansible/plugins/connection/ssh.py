@@ -260,7 +260,7 @@ class Connection(ConnectionBase):
         controlpersist = False
         controlpath = False
 
-        print('b_command: %s' % b_command)
+        #print('b_command: %s' % b_command)
         for b_arg in (a.lower() for a in b_command):
             if b'controlpersist' in b_arg:
                 controlpersist = True
@@ -268,6 +268,14 @@ class Connection(ConnectionBase):
                 controlpath = True
 
         return controlpersist, controlpath
+
+    # for '-o SomeOption=value'
+    def _add_option(self, b_command, option, value):
+        pass
+
+    # -C -tt
+    def _add_arg(self, b_command, arg):
+        pass
 
     def _add_args(self, b_command, b_args, explanation):
         """
@@ -282,14 +290,25 @@ class Connection(ConnectionBase):
             were added.  It will be displayed with a high enough verbosity.
         .. note:: This function does its work via side-effect.  The b_command list has the new arguments appended.
         """
-        display.vvvvv(u'SSH: %s: (%s)' % (explanation,
-                                          ')('.join(to_text(a) for a in b_args)),
+        #display.vvvvv(u'SSH: %s: %s' % (explanation,
+        #                                ' '.join(to_text(a) for a in b_args)),
+        #              host=self._play_context.remote_addr)
+        display.vvvvv(u"SSH:    %s    # %s" % (' '.join(to_text(a) for a in b_args),
+                                               explanation),
+
                       host=self._play_context.remote_addr)
+        #display.vvvvv(u'SSH: %s: (%s)' % (explanation,
+        #                                  ')('.join(to_text(a) for a in b_args)),
+        #              host=self._play_context.remote_addr)
         # b_command += b_args
         for b_arg in b_args:
+            #display.vvvvv(u'SSH: %s: (%s)' % (explanation,
+            #                                  to_text(b_arg)),
+            #              host=self._play_context.remote_addr)
             #b_command.append((b_arg, explanation))
             b_command.append(b_arg)
 
+    # TODO: take kwargs? Maybe allow deduping of args?
     def _build_command(self, binary, *other_args):
         '''
         Takes a binary (ssh, scp, sftp) and optional extra arguments and returns
@@ -305,6 +324,8 @@ class Connection(ConnectionBase):
         # If we want to use password authentication, we have to set up a pipe to
         # write the password to sshpass.
 
+        display.vvvvv(u"SSH: Building ssh command line options:",
+                      host=self._play_context.remote_addr)
         if self._play_context.password:
             if not self._sshpass_available():
                 raise AnsibleError("to use the 'ssh' connection type with passwords, you must install the sshpass program")
@@ -374,12 +395,13 @@ class Connection(ConnectionBase):
             self._add_args(b_command, b_args, u"ANSIBLE_PRIVATE_KEY_FILE/private_key_file/ansible_ssh_private_key_file set")
 
         if not self._play_context.password:
-            b_no_password_auth_args = (b"-o", b"KbdInteractiveAuthentication=no",
-                                       b"-o", b"PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey",
-                                       b"-o", b"PasswordAuthentication=no")
-            self._add_args(b_command,
-                           b_no_password_auth_args,
-                           u"ansible_password/ansible_ssh_pass not set so disabling password/keyboard auth and using non-interactive auth")
+            b_no_password_auth_args_list = [(b"-o", b"KbdInteractiveAuthentication=no"),
+                                            (b"-o", b"PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey"),
+                                            (b"-o", b"PasswordAuthentication=no")]
+            for b_args in b_no_password_auth_args_list:
+                self._add_args(b_command,
+                               b_args,
+                               u"Adding default auth options; ansible_password/ansible_ssh_pass not set")
 
         user = self._play_context.remote_user
         if user:
@@ -400,17 +422,32 @@ class Connection(ConnectionBase):
         # Add in any common or binary-specific arguments from the PlayContext
         # (i.e. inventory or task settings or overrides on the command line).
 
-        for opt in (u'ssh_common_args', u'{0}_extra_args'.format(binary)):
-            attr = getattr(self._play_context, opt, None)
-            if attr is not None:
-                b_args = [to_bytes(a, errors='surrogate_or_strict') for a in self._split_ssh_args(attr)]
-                self._add_args(b_command, b_args, u"PlayContext set %s" % opt)
+        # Making these explicit for now
+        common_args = getattr(self._play_context, u'ssh_common_args', None)
+        if common_args:
+            b_args = [to_bytes(a, errors='surrogate_or_strict') for a in self._split_ssh_args(common_args)]
+            self._add_args(b_command,
+                           b_args,
+                           # TODO: would be useful to pull out where the value was set specifically (playbook file:lineno, etc)
+                           u"Using ssh_common_args from PlayContext")
 
+        ssh_binary_extra_args_option = u'{0}_extra_args'.format(binary)
+        ssh_binary_extra_args = getattr(self._play_context, ssh_binary_extra_args_option, None)
+        if ssh_binary_extra_args:
+            b_args = [to_bytes(a, errors='surrogate_or_strict') for a in self._split_ssh_args(ssh_binary_extra_args)]
+            self._add_args(b_command,
+                           b_args,
+                           u"Using %s from PlayContext" % ssh_binary_extra_args_option)
+
+        # TODO: config/var for 'use_control_persist'? ie, instead of relying on it
+        #       being in or out of ssh_args
         # Check if ControlPersist is enabled and add a ControlPath if one hasn't
         # already been set.
 
         controlpersist, controlpath = self._persistence_controls(b_command)
 
+        # move it its own method? _ensure_control_path()
+        # split checking/creating the dir from formatting/setting the command option?
         if controlpersist:
             self._persistent = True
 
@@ -421,7 +458,7 @@ class Connection(ConnectionBase):
                 # The directory must exist and be writable.
                 makedirs_safe(b_cpdir, 0o700)
                 if not os.access(b_cpdir, os.W_OK):
-                    raise AnsibleError("Cannot write to ControlPath %s" % to_native(cpdir))
+                    raise AnsibleError("Cannot write to 'ControlPath' %s" % to_native(cpdir))
 
                 if not self.control_path:
                     self.control_path = self._create_control_path(
@@ -429,12 +466,17 @@ class Connection(ConnectionBase):
                         self.port,
                         self.user
                     )
-                b_args = (b"-o", b"ControlPath=" + to_bytes(self.control_path % dict(directory=cpdir), errors='surrogate_or_strict'))
-                self._add_args(b_command, b_args, u"found only ControlPersist; added ControlPath")
+                control_path = self.control_path % dict(directory=cpdir)
+                b_args = (b"-o", b"ControlPath=" + to_bytes(control_path, errors='surrogate_or_strict'))
+                self._add_args(b_command,
+                               b_args,
+                               u"Found a 'ControlPersist' option but 'ControlPath' was missing, so adding 'ControlPath' option")
 
-        # Finally, we add any caller-supplied extras.
         if other_args:
-            b_command += [to_bytes(a) for a in other_args]
+            b_other_args = [to_bytes(a) for a in other_args]
+            self._add_args(b_command,
+                           b_other_args,
+                           u"Adding the other_args")
 
         return b_command
 
@@ -832,9 +874,13 @@ class Connection(ConnectionBase):
                 (returncode, stdout, stderr) = self._run(cmd, in_data, checkrc=False)
             elif method == 'scp':
                 if sftp_action == 'get':
-                    cmd = self._build_command('scp', u'{0}:{1}'.format(host, shlex_quote(in_path)), out_path)
+                    cmd = self._build_command('scp',
+                                              u'{0}:{1}'.format(host, shlex_quote(in_path)),
+                                              out_path)
                 else:
-                    cmd = self._build_command('scp', in_path, u'{0}:{1}'.format(host, shlex_quote(out_path)))
+                    cmd = self._build_command('scp',
+                                              in_path,
+                                              u'{0}:{1}'.format(host, shlex_quote(out_path)))
                 in_data = None
                 (returncode, stdout, stderr) = self._run(cmd, in_data, checkrc=False)
             elif method == 'piped':
@@ -883,13 +929,23 @@ class Connection(ConnectionBase):
 
         ssh_executable = self._play_context.ssh_executable
 
-        if not in_data and sudoable:
-            args = (ssh_executable, '-tt', self.host, cmd)
-        else:
-            args = (ssh_executable, self.host, cmd)
+        b_command = self._build_command(ssh_executable)
 
-        cmd = self._build_command(*args)
-        (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=sudoable)
+        if not in_data and sudoable:
+            self._add_args(b_command,
+                           [to_bytes('-tt')],
+                           u'Using a tty since we are not pipelining')
+
+        self._add_args(b_command,
+                       [to_bytes(self.host)],
+                       u'The host we are connectiong to.')
+
+        # TODO: pass in cmd as a list of tuples of (cmd_string, explanation)
+        self._add_args(b_command,
+                       [to_bytes(cmd)],
+                       u'The command to be invoked on the remote system')
+
+        (returncode, stdout, stderr) = self._run(b_command, in_data, sudoable=sudoable)
 
         return (returncode, stdout, stderr)
 
