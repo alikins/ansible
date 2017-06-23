@@ -260,7 +260,6 @@ class Connection(ConnectionBase):
         controlpersist = False
         controlpath = False
 
-        #print('b_command: %s' % b_command)
         for b_arg in (a.lower() for a in b_command):
             if b'controlpersist' in b_arg:
                 controlpersist = True
@@ -277,6 +276,7 @@ class Connection(ConnectionBase):
     def _add_arg(self, b_command, arg):
         pass
 
+    # TODO: remove side effect and just return new b_command
     def _add_args(self, b_command, b_args, explanation):
         """
         Adds arguments to the ssh command and displays a caller-supplied explanation of why.
@@ -290,22 +290,11 @@ class Connection(ConnectionBase):
             were added.  It will be displayed with a high enough verbosity.
         .. note:: This function does its work via side-effect.  The b_command list has the new arguments appended.
         """
-        #display.vvvvv(u'SSH: %s: %s' % (explanation,
-        #                                ' '.join(to_text(a) for a in b_args)),
-        #              host=self._play_context.remote_addr)
         display.vvvvv(u"SSH:    %s    # %s" % (' '.join(to_text(a) for a in b_args),
                                                explanation),
 
                       host=self._play_context.remote_addr)
-        #display.vvvvv(u'SSH: %s: (%s)' % (explanation,
-        #                                  ')('.join(to_text(a) for a in b_args)),
-        #              host=self._play_context.remote_addr)
-        # b_command += b_args
         for b_arg in b_args:
-            #display.vvvvv(u'SSH: %s: (%s)' % (explanation,
-            #                                  to_text(b_arg)),
-            #              host=self._play_context.remote_addr)
-            #b_command.append((b_arg, explanation))
             b_command.append(b_arg)
 
     # TODO: take kwargs? Maybe allow deduping of args?
@@ -338,14 +327,14 @@ class Connection(ConnectionBase):
             self._add_args(b_command, b_sshpass_args, 'Use sshpass for password auth because of play_context.password is set')
 
         if binary == 'ssh':
-            b_default_ssh_exe_args = [to_bytes(self._play_context.ssh_executable, errors='surrogate_or_strict')]
+            b_args_default_ssh_exe = [to_bytes(self._play_context.ssh_executable, errors='surrogate_or_strict')]
             self._add_args(b_command,
-                           b_default_ssh_exe_args,
+                           b_args_default_ssh_exe,
                            "Using default 'ssh' binary for ssh_executable")
         else:
-            b_ssh_exe_args = [to_bytes(binary, errors='surrogate_or_strict')]
+            b_args_ssh_exe = [to_bytes(binary, errors='surrogate_or_strict')]
             self._add_args(b_command,
-                           b_ssh_exe_args,
+                           b_args_ssh_exe,
                            "Using '%s' binary for ssh_executable" % binary)
         #
         # Next, additional arguments based on the configuration.
@@ -357,47 +346,60 @@ class Connection(ConnectionBase):
         # if not using controlpersist and using sshpass
         if binary == 'sftp' and C.DEFAULT_SFTP_BATCH_MODE:
             if self._play_context.password:
-                b_args = [b'-o', b'BatchMode=no']
-                self._add_args(b_command, b_args, u'disabling sftp batch mode because a password was provided and we are using sshpass')
-            b_batch_args = [b'-b', b'-']
-            self._add_args(b_command, b_batch_args, 'Using sftp batch mode since we are using sftp, batch mode is enabled, and we are not using passwords')
+                b_args_no_batch = [b'-o', b'BatchMode=no']
+                self._add_args(b_command,
+                               b_args_no_batch,
+                               u'disabling sftp batch mode because a password was provided and we are using sshpass')
+            else:
+                b_args_batch = [b'-b', b'-']
+                self._add_args(b_command,
+                               b_args_batch,
+                               'Using sftp batch mode since we are using sftp, batch mode is enabled, and we are not using passwords')
 
         if self._play_context.verbosity > 3:
-            b_ssh_verbose_args = [b'-vvv']
-            b_command.append(b'-vvv')
-            self._add_args(b_command, b_ssh_verbose_args,
+            b_args_ssh_verbosity = [b'-vvv']
+            self._add_args(b_command,
+                           b_args_ssh_verbosity,
                            'Increasing ssh verbosity because ansible verbosity is at -vvv or higher')
 
         #
         # Next, we add [ssh_connection]ssh_args from ansible.cfg.
         #
-
         if self._play_context.ssh_args:
-            b_args = [to_bytes(a, errors='surrogate_or_strict') for a in
-                      self._split_ssh_args(self._play_context.ssh_args)]
-            self._add_args(b_command, b_args, u"ansible.cfg set ssh_args")
+            b_args_play_context = [to_bytes(a, errors='surrogate_or_strict') for a in
+                                   self._split_ssh_args(self._play_context.ssh_args)]
+            self._add_args(b_command,
+                           b_args_play_context,
+                           u"ansible.cfg set ssh_args")
 
         # Now we add various arguments controlled by configuration file settings
         # (e.g. host_key_checking) or inventory variables (ansible_ssh_port) or
         # a combination thereof.
 
         if not C.HOST_KEY_CHECKING:
-            b_args = (b"-o", b"StrictHostKeyChecking=no")
-            self._add_args(b_command, b_args, u"ANSIBLE_HOST_KEY_CHECKING/host_key_checking disabled")
+            b_args_host_key_checking = (b"-o", b"StrictHostKeyChecking=no")
+            self._add_args(b_command,
+                           b_args_host_key_checking,
+                           u"ANSIBLE_HOST_KEY_CHECKING/host_key_checking disabled")
 
         if self._play_context.port is not None:
-            b_args = (b"-o", b"Port=" + to_bytes(self._play_context.port, nonstring='simplerepr', errors='surrogate_or_strict'))
-            self._add_args(b_command, b_args, u"ANSIBLE_REMOTE_PORT/remote_port/ansible_port set")
+            b_args_port = (b"-o", b"Port=" + to_bytes(self._play_context.port, nonstring='simplerepr', errors='surrogate_or_strict'))
+            self._add_args(b_command,
+                           b_args_port,
+                           u"ANSIBLE_REMOTE_PORT/remote_port/ansible_port set")
 
         key = self._play_context.private_key_file
         if key:
-            b_args = (b"-o", b'IdentityFile="' + to_bytes(os.path.expanduser(key), errors='surrogate_or_strict') + b'"')
-            self._add_args(b_command, b_args, u"ANSIBLE_PRIVATE_KEY_FILE/private_key_file/ansible_ssh_private_key_file set")
+            b_args_private_key = (b"-o", b'IdentityFile="' + to_bytes(os.path.expanduser(key), errors='surrogate_or_strict') + b'"')
+            self._add_args(b_command,
+                           b_args_private_key,
+                           u"ANSIBLE_PRIVATE_KEY_FILE/private_key_file/ansible_ssh_private_key_file set")
 
         if not self._play_context.password:
             b_no_password_auth_args_list = [(b"-o", b"KbdInteractiveAuthentication=no"),
                                             (b"-o", b"PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey"),
                                             (b"-o", b"PasswordAuthentication=no")]
+            # Add one at a time for better formatting
             for b_args in b_no_password_auth_args_list:
                 self._add_args(b_command,
                                b_args,
@@ -425,9 +427,9 @@ class Connection(ConnectionBase):
         # Making these explicit for now
         common_args = getattr(self._play_context, u'ssh_common_args', None)
         if common_args:
-            b_args = [to_bytes(a, errors='surrogate_or_strict') for a in self._split_ssh_args(common_args)]
+            b_args_ssh_common = [to_bytes(a, errors='surrogate_or_strict') for a in self._split_ssh_args(common_args)]
             self._add_args(b_command,
-                           b_args,
+                           b_args_ssh_common,
                            # TODO: would be useful to pull out where the value was set specifically (playbook file:lineno, etc)
                            u"Using ssh_common_args from PlayContext")
 
@@ -940,7 +942,6 @@ class Connection(ConnectionBase):
                        [to_bytes(self.host)],
                        u'The host we are connectiong to.')
 
-        # TODO: pass in cmd as a list of tuples of (cmd_string, explanation)
         self._add_args(b_command,
                        [to_bytes(cmd)],
                        u'The command to be invoked on the remote system')
