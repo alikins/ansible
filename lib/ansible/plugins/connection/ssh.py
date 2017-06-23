@@ -268,14 +268,6 @@ class Connection(ConnectionBase):
 
         return controlpersist, controlpath
 
-    # for '-o SomeOption=value'
-    def _add_option(self, b_command, option, value):
-        pass
-
-    # -C -tt
-    def _add_arg(self, b_command, arg):
-        pass
-
     # TODO: remove side effect and just return new b_command
     def _add_args(self, b_command, b_args, explanation):
         """
@@ -354,7 +346,7 @@ class Connection(ConnectionBase):
                 b_args_batch = [b'-b', b'-']
                 self._add_args(b_command,
                                b_args_batch,
-                               'Using sftp batch mode since we are using sftp, batch mode is enabled, and we are not using passwords')
+                               'Using sftp batch mode with input from stdin, batch mode is enabled, and we are not using passwords')
 
         if self._play_context.verbosity > 3:
             b_args_ssh_verbosity = [b'-vvv']
@@ -870,19 +862,31 @@ class Connection(ConnectionBase):
         for method in methods:
             returncode = stdout = stderr = None
             if method == 'sftp':
-                cmd = self._build_command('sftp', to_bytes(host))
+                cmd = self._build_command('sftp')
+                self._add_args(cmd,
+                               [to_bytes(host)],
+                               u'The host we are connectiong to.')
                 in_data = u"{0} {1} {2}\n".format(sftp_action, shlex_quote(in_path), shlex_quote(out_path))
                 in_data = to_bytes(in_data, nonstring='passthru')
                 (returncode, stdout, stderr) = self._run(cmd, in_data, checkrc=False)
             elif method == 'scp':
                 if sftp_action == 'get':
-                    cmd = self._build_command('scp',
-                                              u'{0}:{1}'.format(host, shlex_quote(in_path)),
-                                              out_path)
+                    # cmd = self._build_command('scp',
+                    cmd = self._build_command('scp')
+                    self._add_args(cmd,
+                                   [to_bytes(u'{0}:{1}'.format(host, shlex_quote(in_path)))],
+                                   u'The file to get with scp')
+                    self._add_args(cmd,
+                                   [to_bytes(out_path)],
+                                   u'The path to save the file to')
                 else:
-                    cmd = self._build_command('scp',
-                                              in_path,
-                                              u'{0}:{1}'.format(host, shlex_quote(out_path)))
+                    cmd = self._build_command('scp')
+                    self._add_args(cmd,
+                                   [to_bytes(in_path)],
+                                   u'The local file path of the file to put remotely with scp')
+                    self._add_args(cmd,
+                                   [to_bytes(u'{0}:{1}'.format(host, shlex_quote(out_path)))],
+                                   u'The remote file path of the file to put remotely with scp')
                 in_data = None
                 (returncode, stdout, stderr) = self._run(cmd, in_data, checkrc=False)
             elif method == 'piped':
