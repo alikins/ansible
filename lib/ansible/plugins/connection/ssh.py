@@ -336,17 +336,23 @@ class Connection(ConnectionBase):
         # be disabled if the client side doesn't support the option. However,
         # sftp batch mode does not prompt for passwords so it must be disabled
         # if not using controlpersist and using sshpass
-        if binary == 'sftp' and C.DEFAULT_SFTP_BATCH_MODE:
-            if self._play_context.password:
-                b_args_no_batch = [b'-o', b'BatchMode=no']
+        if binary == 'sftp':
+            if not C.DEFAULT_SFTP_BATCH_MODE:
+                b_args_batch_disabled = [b'-o', b'BatchMode=no']
                 self._add_args(b_command,
-                               b_args_no_batch,
-                               u'disabling sftp batch mode because a password was provided and we are using sshpass')
+                               b_args_batch_disabled,
+                               u'disabling sftp batch mode sftp_batch_mode config is False')
             else:
-                b_args_batch = [b'-b', b'-']
-                self._add_args(b_command,
-                               b_args_batch,
-                               'Using sftp batch mode with input from stdin, batch mode is enabled, and we are not using passwords')
+                if self._play_context.password:
+                    b_args_no_batch = [b'-o', b'BatchMode=no']
+                    self._add_args(b_command,
+                                   b_args_no_batch,
+                                   u'disabling sftp batch mode because a password was provided and we are using sshpass')
+                else:
+                    b_args_batch = [b'-b', b'-']
+                    self._add_args(b_command,
+                                   b_args_batch,
+                                   'Using sftp batch mode with input from stdin, batch mode is enabled, and we are not using passwords')
 
         if self._play_context.verbosity > 3:
             b_args_ssh_verbosity = [b'-vvv']
@@ -867,6 +873,8 @@ class Connection(ConnectionBase):
                                [to_bytes(host)],
                                u'The host we are connectiong to.')
                 in_data = u"{0} {1} {2}\n".format(sftp_action, shlex_quote(in_path), shlex_quote(out_path))
+                display.vvvvv('SSH: sftp command: %s' % in_data,
+                              host=self._play_context.remote_addr)
                 in_data = to_bytes(in_data, nonstring='passthru')
                 (returncode, stdout, stderr) = self._run(cmd, in_data, checkrc=False)
             elif method == 'scp':
