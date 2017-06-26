@@ -155,6 +155,25 @@ from ansible.module_utils.facts.ansible_collector import get_ansible_collector
 from ansible.module_utils.facts.collector import BaseFactCollector
 
 
+# the FactsBase classes dont need to know anything about the ansible facts impls (sorta...)
+class FactsBase(object):
+
+    COMMANDS = list()
+
+    def __init__(self, module):
+        self.module = module
+        self.facts = dict()
+        self.responses = None
+
+    # collected_facts is a dict of the already collected facts, if a collector
+    # needs to reference once
+    def populate(self, collected_facts=None):
+        self.responses = run_commands(self.module, self.COMMANDS, check_rc=False)
+
+    def run(self, cmd):
+        return run_commands(self.module, cmd, check_rc=False)
+
+
 class IosCollector(BaseFactCollector):
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
@@ -168,29 +187,12 @@ class IosCollector(BaseFactCollector):
         return facts_dict
 
 
-# the FactsBase classes dont need to know anything about the ansible facts impls (sorta...)
-class FactsBase(object):
-
-    COMMANDS = list()
-
-    def __init__(self, module):
-        self.module = module
-        self.facts = dict()
-        self.responses = None
-
-    def populate(self):
-        self.responses = run_commands(self.module, self.COMMANDS, check_rc=False)
-
-    def run(self, cmd):
-        return run_commands(self.module, cmd, check_rc=False)
-
-
 class Default(FactsBase):
 
     COMMANDS = ['show version']
 
-    def populate(self):
-        super(Default, self).populate()
+    def populate(self, collected_facts=None):
+        super(Default, self).populate(collected_facts=collected_facts)
         data = self.responses[0]
         if data:
             self.facts['version'] = self.parse_version(data)
@@ -239,8 +241,8 @@ class Hardware(FactsBase):
         'show memory statistics'
     ]
 
-    def populate(self):
-        super(Hardware, self).populate()
+    def populate(self, collected_facts=None):
+        super(Hardware, self).populate(collected_facts=collected_facts)
         data = self.responses[0]
         if data:
             self.facts['filesystems'] = self.parse_filesystems(data)
@@ -268,8 +270,8 @@ class Config(FactsBase):
 
     COMMANDS = ['show running-config']
 
-    def populate(self):
-        super(Config, self).populate()
+    def populate(self, collected_facts=None):
+        super(Config, self).populate(collected_facts=collected_facts)
         data = self.responses[0]
         if data:
             self.facts['config'] = data
@@ -289,8 +291,8 @@ class Interfaces(FactsBase):
         'show lldp'
     ]
 
-    def populate(self):
-        super(Interfaces, self).populate()
+    def populate(self, collected_facts=None):
+        super(Interfaces, self).populate(collected_facts=collected_facts)
 
         self.facts['all_ipv4_addresses'] = list()
         self.facts['all_ipv6_addresses'] = list()
