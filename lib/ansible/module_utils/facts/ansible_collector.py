@@ -56,14 +56,17 @@ class AnsibleFactCollector(collector.BaseFactCollector):
         collected_facts = collected_facts or {}
 
         facts_dict = {}
-        facts_dict['ansible_facts'] = {}
+        # namespace_root?
+        # facts_dict[self.namespace.namespace_name] = {}
+        root_key = self.namespace.namespace_name
+        facts_dict[root_key] = {}
 
         for collector_obj in self.collectors:
             info_dict = {}
 
             # shallow copy of the accumulated collected facts to pass to each collector
             # for reference.
-            collected_facts.update(facts_dict['ansible_facts'].copy())
+            collected_facts.update(facts_dict[root_key].copy())
 
             try:
 
@@ -75,7 +78,7 @@ class AnsibleFactCollector(collector.BaseFactCollector):
                 sys.stderr.write('\n')
 
             # NOTE: If we want complicated fact dict merging, this is where it would hook in
-            facts_dict['ansible_facts'].update(self._filter(info_dict, self.filter_spec))
+            facts_dict[root_key].update(self._filter(info_dict, self.filter_spec))
 
         return facts_dict
 
@@ -131,6 +134,7 @@ def get_ansible_collector(all_collector_classes,
 
     fact_collector = \
         AnsibleFactCollector(collectors=collectors,
-                             filter_spec=filter_spec)
+                             filter_spec=filter_spec,
+                             namespace=namespace)
 
     return fact_collector

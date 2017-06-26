@@ -152,7 +152,8 @@ def main():
 
     all_collector_classes = default_collectors.collectors
 
-    namespace = PrefixFactNamespace(namespace_name='ansible',
+    # rename namespace_name to root_key?
+    namespace = PrefixFactNamespace(namespace_name='ansible_facts',
                                     prefix='ansible_')
 
     fact_collector = \
