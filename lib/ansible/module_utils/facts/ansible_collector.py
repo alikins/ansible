@@ -55,18 +55,24 @@ class AnsibleFactCollector(collector.BaseFactCollector):
     def collect(self, module=None, collected_facts=None):
         collected_facts = collected_facts or {}
 
-        facts_dict = {}
+        root_facts_dict = {}
         # namespace_root?
         # facts_dict[self.namespace.namespace_name] = {}
         root_key = self.namespace.namespace_name
-        facts_dict[root_key] = {}
+        if root_key:
+            root_facts_dict[root_key] = {}
+            facts_dict = root_facts_dict[root_key]
+        else:
+            # no top level root key, returned facts will be top level in the data
+            # for ex, {'ansible_some_fact': 'foobar'} vs {'the_root_key': {'ansible_some_facts': 'foobar'}}
+            facts_dict = root_facts_dict
 
         for collector_obj in self.collectors:
             info_dict = {}
 
             # shallow copy of the accumulated collected facts to pass to each collector
             # for reference.
-            collected_facts.update(facts_dict[root_key].copy())
+            collected_facts.update(facts_dict.copy())
 
             try:
 
@@ -78,9 +84,9 @@ class AnsibleFactCollector(collector.BaseFactCollector):
                 sys.stderr.write('\n')
 
             # NOTE: If we want complicated fact dict merging, this is where it would hook in
-            facts_dict[root_key].update(self._filter(info_dict, self.filter_spec))
+            facts_dict.update(self._filter(info_dict, self.filter_spec))
 
-        return facts_dict
+        return root_facts_dict
 
 
 class CollectorMetaDataCollector(collector.BaseFactCollector):
