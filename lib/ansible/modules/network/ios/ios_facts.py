@@ -150,6 +150,9 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import iteritems
 from ansible.module_utils.six.moves import zip
 
+from ansible.module_utils.facts.namespace import PrefixFactNamespace
+from ansible.module_utils.facts.ansible_collector import get_ansible_collector
+
 
 class FactsBase(object):
 
@@ -160,12 +163,12 @@ class FactsBase(object):
         self.facts = dict()
         self.responses = None
 
-
     def populate(self):
         self.responses = run_commands(self.module, self.COMMANDS, check_rc=False)
 
     def run(self, cmd):
         return run_commands(self.module, cmd, check_rc=False)
+
 
 class Default(FactsBase):
 
@@ -422,7 +425,9 @@ def main():
     """main entry point for module execution
     """
     argument_spec = dict(
-        gather_subset=dict(default=['!config'], type='list')
+        gather_subset=dict(default=['!config'], type='list'),
+        gather_timeout=dict(default=10, required=False, type='int'),
+        filter=dict(default="*", required=False),
     )
 
     argument_spec.update(ios_argument_spec)
@@ -431,58 +436,30 @@ def main():
                            supports_check_mode=True)
 
     gather_subset = module.params['gather_subset']
+    gather_timeout = module.params['gather_timeout']
+    filter_spec = module.params['filter']
 
-    runable_subsets = set()
-    exclude_subsets = set()
+    minimal_gather_subset = frozenset(['default'])
 
-    for subset in gather_subset:
-        if subset == 'all':
-            runable_subsets.update(VALID_SUBSETS)
-            continue
-
-        if subset.startswith('!'):
-            subset = subset[1:]
-            if subset == 'all':
-                exclude_subsets.update(VALID_SUBSETS)
-                continue
-            exclude = True
-        else:
-            exclude = False
-
-        if subset not in VALID_SUBSETS:
-            module.fail_json(msg='Bad subset')
-
-        if exclude:
-            exclude_subsets.add(subset)
-        else:
-            runable_subsets.add(subset)
-
-    if not runable_subsets:
-        runable_subsets.update(VALID_SUBSETS)
-
-    runable_subsets.difference_update(exclude_subsets)
-    runable_subsets.add('default')
-
-    facts = dict()
-    facts['gather_subset'] = list(runable_subsets)
-
-    instances = list()
-    for key in runable_subsets:
-        instances.append(FACT_SUBSETS[key](module))
-
-    for inst in instances:
-        inst.populate()
-        facts.update(inst.facts)
-
-    ansible_facts = dict()
-    for key, value in iteritems(facts):
-        key = 'ansible_net_%s' % key
-        ansible_facts[key] = value
+    namespace = PrefixFactNamespace(namespace_name='ansible_net',
+                                    prefix='ansible_net_')
 
     warnings = list()
     check_args(module, warnings)
+    fact_collector = get_ansible_collector(all_collector_classes=all_collector_classes,
+                                           namespace=namespace,
+                                           filter_spec=filter_spec,
+                                           gather_subset=gather_subset,
+                                           gather_timeout=gather_timeout,
+                                           minimal_gather_subset=minimal_gather_subset)
 
-    module.exit_json(ansible_facts=ansible_facts, warnings=warnings)
+    # an ansible_fact_collector returns
+    # {'ansible_facts': {'ansible_net_foo': 123123}}
+    facts_dict = fact_collector.collect(module=module)
+    results_dict['warnings'] = warnings
+
+
+    module.exit_json(ansible_facts=facts_dict['ansible_facts'], warnings=warnings)
 
 
 if __name__ == '__main__':
