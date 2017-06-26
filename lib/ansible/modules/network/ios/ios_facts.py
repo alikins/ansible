@@ -152,8 +152,23 @@ from ansible.module_utils.six.moves import zip
 
 from ansible.module_utils.facts.namespace import PrefixFactNamespace
 from ansible.module_utils.facts.ansible_collector import get_ansible_collector
+from ansible.module_utils.facts.collector import BaseFactCollector
 
 
+class IosCollector(BaseFactCollector):
+    def collect(self, module=None, collected_facts=None):
+        collected_facts = collected_facts or {}
+        if not module:
+            return {}
+
+        facts_obj = self._fact_class(module)
+
+        facts_dict = facts_obj.populate(collected_facts=collected_facts)
+
+        return facts_dict
+
+
+# the FactsBase classes dont need to know anything about the ansible facts impls (sorta...)
 class FactsBase(object):
 
     COMMANDS = list()
@@ -210,6 +225,13 @@ class Default(FactsBase):
             return match.group(1)
 
 
+class DefaultCollector(IosCollector):
+    name = 'ios_default'
+    _fact_ids = set(['version', 'serialnum', 'model',
+                     'image', 'hostname'])
+    _fact_class = Default
+
+
 class Hardware(FactsBase):
 
     COMMANDS = [
@@ -236,6 +258,12 @@ class Hardware(FactsBase):
         return re.findall(r'^Directory of (\S+)/', data, re.M)
 
 
+class HardwareCollector(IosCollector):
+    name = 'ios_hardware'
+    _fact_ids = set(['memtotal_mb', 'memfree_mb'])
+    _fact_class = Hardware
+
+
 class Config(FactsBase):
 
     COMMANDS = ['show running-config']
@@ -245,6 +273,12 @@ class Config(FactsBase):
         data = self.responses[0]
         if data:
             self.facts['config'] = data
+
+
+class ConfigCollector(IosCollector):
+    name = 'ios_config'
+    _fact_ids = set(['config'])
+    _fact_class = Hardware
 
 
 class Interfaces(FactsBase):
@@ -412,14 +446,12 @@ class Interfaces(FactsBase):
             return match.group(1)
 
 
-FACT_SUBSETS = dict(
-    default=Default,
-    hardware=Hardware,
-    interfaces=Interfaces,
-    config=Config,
-)
+class InterfacesCollector(IosCollector):
+    name = 'ios_interfaces'
+    _fact_ids = set(['all_ipv4_addresses', 'all_ipv6_addresses',
+                     'interfaces', 'neighbors'])
+    _fact_class = Hardware
 
-VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
 def main():
     """main entry point for module execution
@@ -441,7 +473,12 @@ def main():
 
     minimal_gather_subset = frozenset(['default'])
 
-    namespace = PrefixFactNamespace(namespace_name='ansible_net',
+    all_collector_classes = [DefaultCollector,
+                             HardwareCollector,
+                             InterfacesCollector,
+                             ConfigCollector]
+
+    namespace = PrefixFactNamespace(namespace_name=None,
                                     prefix='ansible_net_')
 
     warnings = list()
@@ -453,13 +490,12 @@ def main():
                                            gather_timeout=gather_timeout,
                                            minimal_gather_subset=minimal_gather_subset)
 
-    # an ansible_fact_collector returns
+    # an ansible_fact_collector.collect() return includes the top level 'ansible_facts'
+    # dict key but not
     # {'ansible_facts': {'ansible_net_foo': 123123}}
     facts_dict = fact_collector.collect(module=module)
-    results_dict['warnings'] = warnings
 
-
-    module.exit_json(ansible_facts=facts_dict['ansible_facts'], warnings=warnings)
+    module.exit_json(ansible_facts=facts_dict, warnings=warnings)
 
 
 if __name__ == '__main__':
