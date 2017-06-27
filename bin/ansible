@@ -38,7 +38,6 @@ import sys
 import traceback
 
 # for debug
-from multiprocessing import Lock
 import logging
 
 import ansible.constants as C
@@ -58,9 +57,6 @@ class LastResort(object):
         print(msg, file=sys.stderr)
 
 
-
-########################################
-
 if __name__ == '__main__':
     display = LastResort()
     cli = None
@@ -71,7 +67,6 @@ if __name__ == '__main__':
 
     try:
         from ansible.logger import setup
-        import logging
         # or 'ansible.cli' etc
         log = logging.getLogger('ansible')
         _, ql = setup.log_setup_code()
@@ -83,7 +78,6 @@ if __name__ == '__main__':
     log.info('ansible startup argv=%s', sys.argv[:])
 
     try:
-        #display = Display()
         display.debug("starting run3")
         log.debug("starting run")
 
