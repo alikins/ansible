@@ -415,8 +415,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
 
         self.loader, self.inventory, self.variable_manager = self._play_prereqs(self.options)
 
-
-		# FIXME
+        # FIXME
         vault_secrets = self.setup_vault_secrets(self.loader,
                                                  vault_id=self.options.vault_id,
                                                  vault_password_file=self.options.vault_password_file,
