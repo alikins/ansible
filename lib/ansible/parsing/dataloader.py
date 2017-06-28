@@ -76,7 +76,7 @@ class DataLoader:
         # initialize the vault stuff with an empty password
         # TODO: replace with a ref to something that can get the password
         #       a creds/auth provider
-        #self.set_vault_password(None)
+        # self.set_vault_password(None)
         self._vaults = {}
         self._vault = VaultLib()
         self.set_vault_secrets(None)
@@ -424,7 +424,7 @@ class DataLoader:
 
         # FIXME: once we have a way to determine what vault id a file is encrypted with, then plug it
         #        in here. Whatever has the multiple vault secrets
-        #if not self._vaults.get('default', None):
+        # if not self._vaults.get('default', None):
         #    _vault = VaultLib(secrets=self._vault.secrets)
 
         real_path = self.path_dwim(file_path)
