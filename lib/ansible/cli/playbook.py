@@ -28,9 +28,6 @@ from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.playbook.block import Block
 from ansible.playbook.play_context import PlayContext
-from ansible.utils.vars import load_extra_vars
-from ansible.utils.vars import load_options_vars
-from ansible.vars import VariableManager
 
 try:
     from __main__ import display
@@ -104,6 +101,8 @@ class PlaybookCLI(CLI):
             (sshpass, becomepass) = self.ask_passwords()
             passwords = {'conn_pass': sshpass,
                          'become_pass': becomepass}
+
+        loader, inventory, variable_manager = self._play_prereqs(self.options)
 
         # (which is not returned in list_hosts()) is taken into account for
         # warning if inventory is empty.  But it can't be taken into account for

@@ -27,8 +27,6 @@ from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.module_utils._text import to_text, to_bytes
 from ansible.parsing.dataloader import DataLoader
 from ansible.parsing.vault import VaultEditor
-from ansible.cli import CLI
-from ansible.module_utils._text import to_text, to_bytes
 
 try:
     from __main__ import display
@@ -155,9 +153,9 @@ class VaultCLI(CLI):
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:
             vault_secrets = self.setup_vault_secrets(loader,
-                                                    vault_id=self.options.vault_id,
-                                                    vault_password_file=self.options.vault_password_file,
-                                                    ask_vault_pass=self.options.ask_vault_pass)
+                                                     vault_id=self.options.vault_id,
+                                                     vault_password_file=self.options.vault_password_file,
+                                                     ask_vault_pass=self.options.ask_vault_pass)
 
         if self.action in ['encrypt', 'encrypt_string', 'create']:
             vault_secrets = None
