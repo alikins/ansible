@@ -229,7 +229,7 @@ class VaultSecrets:
         # secret_name could be None for the default,
         # or a filepath, or a label used for prompting users
         # interactively  (like a ssh key id arg to ssh-add...)
-        #return to_bytes(self._secret)
+        # return to_bytes(self._secret)
         name = name or self.default_name
         secret = self._secrets.get(name, None)
 
@@ -509,7 +509,7 @@ class VaultLib:
         cipher_name = to_text(b_tmpheader[2].strip())
         vault_id = 'default'
         # Only attempt to find key_id if the vault file is version 1.2 or newer
-        #if self.b_version == b'1.2':
+        # if self.b_version == b'1.2':
         if len(b_tmpheader) >= 4:
             vault_id = to_text(b_tmpheader[3].strip())
 
@@ -827,7 +827,7 @@ class VaultAES:
             raise AnsibleError(NEED_CRYPTO_LIBRARY)
 
     @staticmethod
-    def _aes_derive_key_and_iv(secrets, b_salt, key_length, iv_length):
+    def _aes_derive_key_and_iv(b_password, b_salt, key_length, iv_length):
 
         """ Create a key and an initialization vector """
 
@@ -850,9 +850,8 @@ class VaultAES:
         raise AnsibleError("Encryption disabled for deprecated VaultAES class")
 
     @classmethod
-    def _decrypt_cryptography(cls, b_salt, b_ciphertext, secrets, key_length):
+    def _decrypt_cryptography(cls, b_salt, b_ciphertext, b_password, key_length):
 
-        #password = secrets.get_secret()
         bs = algorithms.AES.block_size // 8
         b_key, b_iv = cls._aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
         cipher = C_Cipher(algorithms.AES(b_key), modes.CBC(b_iv), CRYPTOGRAPHY_BACKEND).decryptor()
@@ -886,11 +885,8 @@ class VaultAES:
 
         bs = AES_pycrypto.block_size
 
-        # TODO: default id?
-        b_password = secrets.b_get_secret(name=vault_id)
-
-        b_key, b_iv = cls.aes_derive_key_and_iv(secrets, b_salt, key_length, bs)
-        cipher = AES.new(b_key, AES.MODE_CBC, b_iv)
+        b_key, b_iv = cls.aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
+        cipher = AES_pycrypto.new(b_key, AES_pycrypto.MODE_CBC, b_iv)
         b_next_chunk = b''
         finished = False
 
@@ -925,7 +921,7 @@ class VaultAES:
         return b_plaintext
 
     @classmethod
-    def decrypt(cls, b_vaulttext, b_password, key_length=32):
+    def decrypt(cls, b_vaulttext, secrets, key_length=32, vault_id=None):
 
         """ Decrypt the given data and return it
         :arg b_data: A byte string containing the encrypted data
@@ -942,6 +938,9 @@ class VaultAES:
         b_vaultdata = unhexlify(b_vaulttext)
         b_salt = b_vaultdata[len(b'Salted__'):16]
         b_ciphertext = b_vaultdata[16:]
+
+        # TODO: default id?
+        b_password = secrets.b_get_secret(name=vault_id)
 
         if HAS_CRYPTOGRAPHY:
             b_plaintext = cls._decrypt_cryptography(b_salt, b_ciphertext, b_password, key_length)
@@ -1032,14 +1031,8 @@ class VaultAES256:
         hmac = HMAC(b_key2, hashes.SHA256(), CRYPTOGRAPHY_BACKEND)
         hmac.update(b_ciphertext)
         b_hmac = hmac.finalize()
-        
-    def encrypt(self, b_plaintext, secrets, vault_id=None):
-        b_salt = os.urandom(32)
-        b_password = secrets.b_get_secret(name=vault_id)
-        b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
 
-
-        return hexlify(b_hmac), hexlify(b_ciphertext)
+        return to_bytes(b_hmac.hexdigest(), errors='surrogate_or_strict'), hexlify(b_ciphertext)
 
     @staticmethod
     def _encrypt_pycrypto(b_plaintext, b_salt, b_key1, b_key2, b_iv):
@@ -1069,15 +1062,10 @@ class VaultAES256:
 
         return to_bytes(hmac.hexdigest(), errors='surrogate_or_strict'), hexlify(b_ciphertext)
 
-    def _verify_hmac(self, context, crypted_hmac, crypted_data):
-        hmacDecrypt = HMAC.new(context.key2, crypted_data, SHA256)
-        if not self.is_equal(crypted_hmac, to_bytes(hmacDecrypt.hexdigest())):
-            return None
-
-
     @classmethod
-    def encrypt(cls, b_plaintext, b_password):
+    def encrypt(cls, b_plaintext, secrets, vault_id=None):
         b_salt = os.urandom(32)
+        b_password = secrets.b_get_secret(name=vault_id)
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 
         if HAS_CRYPTOGRAPHY:
@@ -1095,7 +1083,7 @@ class VaultAES256:
 
     @staticmethod
     def _decrypt_cryptography(b_ciphertext, b_crypted_hmac, b_key1, b_key2, b_iv):
-	    # password = secrets.get_secret()
+        # password = secrets.get_secret()
         # b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
         # EXIT EARLY IF DIGEST DOESN'T MATCH
         hmac = HMAC(b_key2, hashes.SHA256(), CRYPTOGRAPHY_BACKEND)
@@ -1162,12 +1150,16 @@ class VaultAES256:
         return b_plaintext
 
     @classmethod
-    def decrypt(cls, b_vaulttext, b_password):
+    def decrypt(cls, b_vaulttext, secrets, vault_id=None):
         # SPLIT SALT, DIGEST, AND DATA
         b_vaulttext = unhexlify(b_vaulttext)
         b_salt, b_crypted_hmac, b_ciphertext = b_vaulttext.split(b"\n", 2)
         b_salt = unhexlify(b_salt)
         b_ciphertext = unhexlify(b_ciphertext)
+
+        # TODO: default id?
+        b_password = secrets.b_get_secret(name=vault_id)
+
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 
         if HAS_CRYPTOGRAPHY:
@@ -1178,6 +1170,7 @@ class VaultAES256:
             raise AnsibleError(NEED_CRYPTO_LIBRARY + '(Detected in decrypt)')
 
         return b_plaintext
+
 
 # Keys could be made bytes later if the code that gets the data is more
 # naturally byte-oriented
