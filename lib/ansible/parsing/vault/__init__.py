@@ -995,7 +995,6 @@ class VaultAES256:
 
     @classmethod
     def _gen_key_initctr(cls, b_password, b_salt):
-        print('aes gh1 b_password=%s b_salt=%s' % (b_password, b_salt))
         # 16 for AES 128, 32 for AES256
         key_length = 32
 
@@ -1032,7 +1031,7 @@ class VaultAES256:
         hmac.update(b_ciphertext)
         b_hmac = hmac.finalize()
 
-        return to_bytes(b_hmac.hexdigest(), errors='surrogate_or_strict'), hexlify(b_ciphertext)
+        return to_bytes(b_hmac, errors='surrogate_or_strict'), hexlify(b_ciphertext)
 
     @staticmethod
     def _encrypt_pycrypto(b_plaintext, b_salt, b_key1, b_key2, b_iv):
@@ -1081,11 +1080,13 @@ class VaultAES256:
         b_vaulttext = hexlify(b_vaulttext)
         return b_vaulttext
 
-    @staticmethod
-    def _decrypt_cryptography(b_ciphertext, b_crypted_hmac, b_key1, b_key2, b_iv):
+    @classmethod
+    def _decrypt_cryptography(cls, b_ciphertext, b_crypted_hmac, b_key1, b_key2, b_iv):
         # password = secrets.get_secret()
         # b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
         # EXIT EARLY IF DIGEST DOESN'T MATCH
+        print('b_ciphertext: %s' % b_ciphertext)
+        print('b_hmac: %s' % b_crypted_hmac)
         hmac = HMAC(b_key2, hashes.SHA256(), CRYPTOGRAPHY_BACKEND)
         hmac.update(b_ciphertext)
         try:
