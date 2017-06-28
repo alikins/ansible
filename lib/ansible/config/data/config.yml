@@ -1041,6 +1041,15 @@ DEFAULT_VAR_COMPRESSION_LEVEL:
   value_type: integer
   vars: []
   yaml: {key: defaults.var_compression_level}
+  # DEFAULT_VAULT_IDENTITY
+DEFAULT_VAULT_IDENTITY:
+  default: default
+  desc: 'TODO: write it'
+  env: [{name: ANSIBLE_VAULT_IDENTITY}]
+  ini:
+  - {key: vault_identity, section: defaults}
+  vars: []
+  yaml: {key: defaults.vault_identity}
 DEFAULT_VAULT_PASSWORD_FILE:
   default: ~
   desc: 'TODO: write it'
@@ -1123,7 +1132,7 @@ GALAXY_IGNORE_CERTS:
   vars: []
   yaml: {key: galaxy.ignore_certs}
 GALAXY_ROLE_SKELETON:
-  default: 
+  default:
   desc: 'TODO: write it'
   env: [{name: ANSIBLE_GALAXY_ROLE_SKELETON}]
   ini:
@@ -1248,7 +1257,7 @@ PARAMIKO_LOOK_FOR_KEYS:
   vars: []
   yaml: {key: paramiko_connection.look_for_keys}
 PARAMIKO_PROXY_COMMAND:
-  default: 
+  default:
   desc: 'TODO: write it'
   env: [{name: ANSIBLE_PARAMIKO_PROXY_COMMAND}]
   ini:
