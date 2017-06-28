@@ -34,7 +34,7 @@ from abc import ABCMeta, abstractmethod
 
 import ansible
 from ansible import constants as C
-from ansible.errors import AnsibleError, AnsibleOptionsError
+from ansible.errors import AnsibleOptionsError
 from ansible.inventory.manager import InventoryManager
 from ansible.module_utils.six import with_metaclass, string_types
 from ansible.module_utils._text import to_bytes, to_text
@@ -173,7 +173,7 @@ class CLI(with_metaclass(ABCMeta, object)):
     @staticmethod
     def setup_vault_secrets(loader, vault_id, vault_password_file=None,
                             ask_vault_pass=None, create_new_password=False):
-        #print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
+        # print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
         #      (vault_id, vault_password_file, ask_vault_pass, create_new_password))
         vault_secrets = None
 
@@ -327,12 +327,12 @@ class CLI(with_metaclass(ABCMeta, object)):
             parser.add_option('--new-vault-password-file', dest='new_vault_password_file',
                               help="new vault password file for rekey", action="callback", callback=CLI.unfrack_path, type='string')
             parser.add_option('--output', default=None, dest='output_file',
-                help='output file name for encrypt or decrypt; use - for stdout',
-                action="callback", callback=CLI.unfrack_path, type='string'),
+                              help='output file name for encrypt or decrypt; use - for stdout',
+                              action="callback", callback=CLI.unfrack_path, type='string'),
             parser.add_option('--vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='vault_id', type='string',
-                help='the vault identity to use')
+                              help='the vault identity to use')
             parser.add_option('--new-vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='new_vault_id', type='string',
-                help='the new vault identity to use for rekey')
+                              help='the new vault identity to use for rekey')
 
         if subset_opts:
             parser.add_option('-t', '--tags', dest='tags', default=[], action='append',
