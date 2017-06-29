@@ -170,7 +170,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             display.v(u"No config file found; using defaults")
 
     @staticmethod
-    def setup_vault_secrets(loader, vault_id, vault_password_files=None,
+    def setup_vault_secrets(loader, vault_ids, vault_password_files=None,
                             ask_vault_pass=None, create_new_password=False):
         # print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
         #      (vault_id, vault_password_file, ask_vault_pass, create_new_password))
@@ -183,12 +183,12 @@ class CLI(with_metaclass(ABCMeta, object)):
             # TODO: seriously, make this better container
             vault_secrets.set_secret(vault_password_file, file_vault_secret)
 
-        prompted_vault_ids = ['default', 'randomsdfsdf']
+        prompted_vault_ids = vault_ids
 
         if not vault_secrets or ask_vault_pass:
             for prompted_vault_id in prompted_vault_ids:
                 if create_new_password:
-                    prompted_vault_secret = PromptNewVaultSecrets(name=vault_id)
+                    prompted_vault_secret = PromptNewVaultSecrets()
                 else:
                     prompted_vault_secret = PromptVaultSecret()
 
@@ -197,10 +197,6 @@ class CLI(with_metaclass(ABCMeta, object)):
                 prompted_vault_secret.ask_vault_passwords(vault_id=prompted_vault_id)
 
                 vault_secrets.set_secret(prompted_vault_id, prompted_vault_secret)
-
-        if not vault_secrets:
-            # Just a placeholder we can extend later
-            vault_secrets = VaultSecrets(name=vault_id)
 
         return vault_secrets
 
@@ -346,7 +342,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             parser.add_option('--output', default=None, dest='output_file',
                               help='output file name for encrypt or decrypt; use - for stdout',
                               action="callback", callback=CLI.unfrack_path, type='string'),
-            parser.add_option('--vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='vault_id', type='string',
+            parser.add_option('--vault-id', default=[C.DEFAULT_VAULT_IDENTITY], dest='vault_id', action='append', type='string',
                               help='the vault identity to use')
             parser.add_option('--new-vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='new_vault_id', type='string',
                               help='the new vault identity to use for rekey')
@@ -675,7 +671,7 @@ class CLI(with_metaclass(ABCMeta, object)):
         loader = DataLoader()
 
         vault_secrets = CLI.setup_vault_secrets(loader,
-                                                vault_id=options.vault_id,
+                                                vault_ids=options.vault_id,
                                                 vault_password_files=options.vault_password_file,
                                                 ask_vault_pass=options.ask_vault_pass)
         loader.set_vault_secrets(vault_secrets)
