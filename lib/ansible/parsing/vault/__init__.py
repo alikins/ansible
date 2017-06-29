@@ -564,31 +564,6 @@ class VaultLib:
 
         return b_plaintext
 
-    def _format_output(self, b_ciphertext, vault_id):
-        """ Add header and format to 80 columns
-
-            :arg b_vaulttext: the encrypted and hexlified data as a byte string
-            :returns: a byte str that should be dumped into a file.  It's
-                formatted to 80 char columns and has the header prepended
-        """
-
-        if not self.cipher_name:
-            raise AnsibleError("the cipher must be set before adding a header")
-
-        header_parts = [b_HEADER, self.b_version,
-                        to_bytes(self.cipher_name, 'utf-8', errors='strict')]
-
-        if self.b_version == b'1.2':
-            header_parts.append(to_bytes(vault_id, 'utf-8', errors='strict'))
-
-        header = b';'.join(header_parts)
-        b_vaulttext = [header]
-        b_vaulttext += [b_ciphertext[i:i + 80] for i in range(0, len(b_ciphertext), 80)]
-        b_vaulttext += [b'']
-        b_vaulttext = b'\n'.join(b_vaulttext)
-
-        return b_vaulttext
-
 
 class VaultEditor:
 
