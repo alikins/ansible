@@ -291,7 +291,7 @@ class TestVaultLib(unittest.TestCase):
         self.assertGreater(len(b_lines), 1, msg="failed to properly add header")
 
         b_header = b_lines[0]
-        #self.assertTrue(b_header.endswith(b';TEST'), msg="header does not end with cipher name")
+        # self.assertTrue(b_header.endswith(b';TEST'), msg="header does not end with cipher name")
 
         b_header_parts = b_header.split(b';')
         self.assertEqual(len(b_header_parts), 4, msg="header has the wrong number of parts")
@@ -301,7 +301,7 @@ class TestVaultLib(unittest.TestCase):
 
     def test_parse_vaulttext_envelope(self):
         b_vaulttext = b"$ANSIBLE_VAULT;9.9;TEST\nansible"
-        b_ciphertext, b_version, cipher_name, vault_id = self.v.parse_vaulttext_envelope(b_vaulttext)
+        b_ciphertext, b_version, cipher_name, vault_id = vault.parse_vaulttext_envelope(b_vaulttext)
         b_lines = b_ciphertext.split(b'\n')
         self.assertEqual(b_lines[0], b"ansible", msg="Payload was not properly split from the header")
         self.assertEqual(cipher_name, u'TEST', msg="cipher name was not properly set")

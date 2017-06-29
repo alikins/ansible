@@ -151,6 +151,38 @@ def is_encrypted_file(file_obj, start_pos=0, count=-1):
         file_obj.seek(current_position)
 
 
+def parse_vaulttext_envelope(b_vaulttext_envelope, default_vault_id=None):
+    """Retrieve information about the Vault and clean the data
+
+    When data is saved, it has a header prepended and is formatted into 80
+    character lines.  This method extracts the information from the header
+    and then removes the header and the inserted newlines.  The string returned
+    is suitable for processing by the Cipher classes.
+
+    :arg b_vaulttext: byte str containing the data from a save file
+    :returns: a byte str suitable for passing to a Cipher class's
+        decrypt() function.
+    """
+    # used by decrypt
+    default_vault_id = default_vault_id or 'default'
+
+    b_tmpdata = b_vaulttext_envelope.split(b'\n')
+    b_tmpheader = b_tmpdata[0].strip().split(b';')
+
+    b_version = b_tmpheader[1].strip()
+    cipher_name = to_text(b_tmpheader[2].strip())
+    vault_id = default_vault_id
+
+    # Only attempt to find vault_id if the vault file is version 1.2 or newer
+    # if self.b_version == b'1.2':
+    if len(b_tmpheader) >= 4:
+        vault_id = to_text(b_tmpheader[3].strip())
+
+    b_ciphertext = b''.join(b_tmpdata[1:])
+
+    return b_ciphertext, b_version, cipher_name, vault_id
+
+
 class VaultSecret:
     '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
     def __init__(self):
@@ -471,7 +503,7 @@ class VaultLib:
         # clean out header
         vault_id = None
         cipher_name = None
-        b_vaulttext, b_version, cipher_name, vault_id = self.parse_vaulttext_envelope(b_vaulttext)
+        b_vaulttext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(b_vaulttext)
         # FIXME: remove if we dont need the state
         self.cipher_name = cipher_name
 
@@ -529,35 +561,6 @@ class VaultLib:
         b_vaulttext = b'\n'.join(b_vaulttext)
 
         return b_vaulttext
-
-    def parse_vaulttext_envelope(self, b_vaulttext_envelope):
-        """Retrieve information about the Vault and clean the data
-
-        When data is saved, it has a header prepended and is formatted into 80
-        character lines.  This method extracts the information from the header
-        and then removes the header and the inserted newlines.  The string returned
-        is suitable for processing by the Cipher classes.
-
-        :arg b_vaulttext: byte str containing the data from a save file
-        :returns: a byte str suitable for passing to a Cipher class's
-            decrypt() function.
-        """
-        # used by decrypt
-
-        b_tmpdata = b_vaulttext_envelope.split(b'\n')
-        b_tmpheader = b_tmpdata[0].strip().split(b';')
-
-        b_version = b_tmpheader[1].strip()
-        cipher_name = to_text(b_tmpheader[2].strip())
-        vault_id = 'default'
-        # Only attempt to find key_id if the vault file is version 1.2 or newer
-        # if self.b_version == b'1.2':
-        if len(b_tmpheader) >= 4:
-            vault_id = to_text(b_tmpheader[3].strip())
-
-        b_ciphertext = b''.join(b_tmpdata[1:])
-
-        return b_ciphertext, b_version, cipher_name, vault_id
 
 
 class VaultEditor:
