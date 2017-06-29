@@ -183,6 +183,32 @@ def parse_vaulttext_envelope(b_vaulttext_envelope, default_vault_id=None):
     return b_ciphertext, b_version, cipher_name, vault_id
 
 
+def format_vaulttext_envelope(b_ciphertext, b_version, cipher_name, vault_id=None):
+    """ Add header and format to 80 columns
+
+        :arg b_vaulttext: the encrypted and hexlified data as a byte string
+        :returns: a byte str that should be dumped into a file.  It's
+            formatted to 80 char columns and has the header prepended
+    """
+
+    if not cipher_name:
+        raise AnsibleError("the cipher must be set before adding a header")
+
+    header_parts = [b_HEADER, b_version,
+                    to_bytes(cipher_name, 'utf-8', errors='strict')]
+
+    if b_version == b'1.2':
+        header_parts.append(to_bytes(vault_id, 'utf-8', errors='strict'))
+
+    header = b';'.join(header_parts)
+    b_vaulttext = [header]
+    b_vaulttext += [b_ciphertext[i:i + 80] for i in range(0, len(b_ciphertext), 80)]
+    b_vaulttext += [b'']
+    b_vaulttext = b'\n'.join(b_vaulttext)
+
+    return b_vaulttext
+
+
 class VaultSecret:
     '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
     def __init__(self):
@@ -475,7 +501,8 @@ class VaultLib:
         b_ciphertext = this_cipher.encrypt(b_plaintext, self.secrets, vault_id=vault_id)
 
         # format the data for output to the file
-        b_vaulttext = self._format_output(b_ciphertext, vault_id=vault_id)
+        b_vaulttext = format_vaulttext_envelope(b_ciphertext, self.b_version,
+                                                self.cipher_name, vault_id=vault_id)
         return b_vaulttext
 
     def decrypt(self, vaulttext, filename=None):
