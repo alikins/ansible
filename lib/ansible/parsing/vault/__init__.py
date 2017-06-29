@@ -302,6 +302,8 @@ class FileVaultSecrets(VaultSecrets):
 
 class PromptVaultSecrets(VaultSecrets):
     default_prompt = "Vault password: "
+    # TODO: nicer format
+    vault_id_prompt = "Vault password for id=%s: "
 
     def __init__(self, name=None, directory=None, loader=None):
         super(PromptVaultSecrets, self).__init__()
@@ -313,8 +315,12 @@ class PromptVaultSecrets(VaultSecrets):
         # TODO: ask for vault id
         vault_pass = None
 
+        prompt = self.default_prompt
+        if self.name != 'default':
+            prompt = self.vault_id_prompt % self.name
+
         try:
-            vault_pass = getpass.getpass(prompt=self.default_prompt)
+            vault_pass = getpass.getpass(prompt=prompt)
         except EOFError:
             pass
 
@@ -329,15 +335,24 @@ class PromptVaultSecrets(VaultSecrets):
 
 
 class PromptNewVaultSecrets(VaultSecrets):
-    default_prompt = "New Vault password:"
+    default_prompt = "New Vault password: "
+    vault_id_prompt = "New Vault password for id=%s: "
     default_confirm_prompt = "Confirm New Vault password: "
+    vault_id_confirm_prompt = "Confirm New Vault password for id=%s: "
 
     def ask_vault_passwords(self):
         vault_pass_1 = vault_pass_2 = None
 
+        prompt = self.default_prompt
+        confirm_prompt = self.default_confirm_prompt
+
+        if self.name != 'default':
+            prompt = self.vault_id_prompt % self.name
+            confirm_prompt = self.vault_id_confirm_prompt % self.name
+
         try:
-            vault_pass_1 = getpass.getpass(prompt=self.default_prompt)
-            vault_pass_2 = getpass.getpass(prompt=self.default_confirm_prompt)
+            vault_pass_1 = getpass.getpass(prompt=prompt)
+            vault_pass_2 = getpass.getpass(prompt=confirm_prompt)
         except EOFError:
             pass
 
