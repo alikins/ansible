@@ -299,9 +299,9 @@ class TestVaultLib(unittest.TestCase):
         self.assertEqual(b_header_parts[1], self.v.b_version, msg="header version is incorrect")
         self.assertEqual(b_header_parts[2], b'TEST', msg="header does not end with cipher name")
 
-    def test_split_header(self):
+    def test_parse_vaulttext_envelope(self):
         b_vaulttext = b"$ANSIBLE_VAULT;9.9;TEST\nansible"
-        b_ciphertext, b_version, cipher_name, vault_id = self.v._split_header(b_vaulttext)
+        b_ciphertext, b_version, cipher_name, vault_id = self.v.parse_vaulttext_envelope(b_vaulttext)
         b_lines = b_ciphertext.split(b'\n')
         self.assertEqual(b_lines[0], b"ansible", msg="Payload was not properly split from the header")
         self.assertEqual(cipher_name, u'TEST', msg="cipher name was not properly set")

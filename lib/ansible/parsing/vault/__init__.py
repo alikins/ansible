@@ -471,7 +471,7 @@ class VaultLib:
         # clean out header
         vault_id = None
         cipher_name = None
-        b_vaulttext, b_version, cipher_name, vault_id = self._split_header(b_vaulttext)
+        b_vaulttext, b_version, cipher_name, vault_id = self.parse_vaulttext_envelope(b_vaulttext)
         # FIXME: remove if we dont need the state
         self.cipher_name = cipher_name
 
@@ -530,7 +530,7 @@ class VaultLib:
 
         return b_vaulttext
 
-    def _split_header(self, b_vaulttext):
+    def parse_vaulttext_envelope(self, b_vaulttext_envelope):
         """Retrieve information about the Vault and clean the data
 
         When data is saved, it has a header prepended and is formatted into 80
@@ -544,7 +544,7 @@ class VaultLib:
         """
         # used by decrypt
 
-        b_tmpdata = b_vaulttext.split(b'\n')
+        b_tmpdata = b_vaulttext_envelope.split(b'\n')
         b_tmpheader = b_tmpdata[0].strip().split(b';')
 
         b_version = b_tmpheader[1].strip()
