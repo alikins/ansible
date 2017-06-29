@@ -418,7 +418,7 @@ class ConsoleCLI(CLI, cmd.Cmd):
         # FIXME
         vault_secrets = self.setup_vault_secrets(self.loader,
                                                  vault_id=self.options.vault_id,
-                                                 vault_password_file=self.options.vault_password_file,
+                                                 vault_password_files=self.options.vault_password_file,
                                                  ask_vault_pass=self.options.ask_vault_pass)
         self.loader.set_vault_secrets(vault_secrets)
 

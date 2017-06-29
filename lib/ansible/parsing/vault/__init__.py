@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import collections
 import getpass
 import os
 import random
@@ -214,9 +215,9 @@ class VaultSecret:
     def __init__(self):
         pass
 
-    def bytes(self):
-        '''return a byte array of the secret'''
-        raise NotImplemented
+    #def bytes(self):
+    #    '''return a byte array of the secret'''
+    #    raise NotImplemented
 
 
 class TextVaultSecret(VaultSecret):
@@ -247,8 +248,72 @@ class TextVaultSecret(VaultSecret):
         return secret
 
 
+# FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
+# TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
+class FileVaultSecret(VaultSecret):
+    def __init__(self, filename=None, encoding=None, loader=None):
+        super(FileVaultSecret, self).__init__()
+        self.filename = filename
+        self.loader = loader
+
+        self.encoding = encoding or 'utf8'
+
+        # We could load from file here, but that is eventually a pain to test
+        self._bytes = None
+        self._text = None
+
+    @property
+    def bytes(self):
+        return self._bytes or self._text.encode(self.encoding)
+
+    @classmethod
+    def from_filename(cls, filename, loader):
+        file_vault_secret = cls(filename, loader)
+        # load secrets from file
+        file_vault_secret._text = cls.read_file(filename, loader)
+        return file_vault_secret
+
+    @staticmethod
+    def read_file(vault_password_file, loader):
+        """
+        Read a vault password from a file or if executable, execute the script and
+        retrieve password from STDOUT
+        """
+
+        this_path = os.path.realpath(os.path.expanduser(vault_password_file))
+
+        if not os.path.exists(this_path):
+            raise AnsibleError("The vault password file %s was not found" % this_path)
+
+        if loader.is_executable(this_path):
+            try:
+                # STDERR not captured to make it easier for users to prompt for input in their scripts
+                p = subprocess.Popen(this_path, stdout=subprocess.PIPE)
+            except OSError as e:
+                msg = "Problem running vault password script %s (%s)."
+                "If this is not a script, remove the executable bit from the file." % (' '.join(this_path), e)
+                raise AnsibleError(msg)
+
+            stdout, stderr = p.communicate()
+
+            if p.returncode != 0:
+                raise AnsibleError("Vault password script %s returned non-zero (%s): %s" % (this_path, p.returncode, p.stderr))
+
+            vault_pass = stdout.strip('\r\n')
+        else:
+            try:
+                f = open(this_path, "rb")
+                vault_pass = f.read().strip()
+                f.close()
+            except (OSError, IOError) as e:
+                raise AnsibleError("Could not read vault password file %s: %s" % (this_path, e))
+
+        return vault_pass
+
+
 class EnvVaultSecret(VaultSecret):
     '''A vault secret from an environment variable.'''
+
 
 
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
@@ -269,7 +334,6 @@ class VaultSecrets:
     def __init__(self, name=None):
         # This maps secret 'name' to a VaultSecret object
         self._secrets = {}
-        self.name = name
 
     @classmethod
     def from_bytes(cls, b_bytes, name=None):
@@ -315,56 +379,6 @@ class VaultSecrets:
 
     def __iter__(self):
         return iter(self._secrets)
-
-
-# FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
-# TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
-class FileVaultSecrets(VaultSecrets):
-    def __init__(self, name=None, filename=None, loader=None):
-        super(FileVaultSecrets, self).__init__()
-        self.filename = filename
-        self.loader = loader
-        self.name = name
-
-        # load secrets from file
-        self._secrets[self.name] = FileVaultSecrets.read_vault_password_file(self.filename, self.loader)
-
-    @staticmethod
-    def read_vault_password_file(vault_password_file, loader):
-        """
-        Read a vault password from a file or if executable, execute the script and
-        retrieve password from STDOUT
-        """
-
-        this_path = os.path.realpath(os.path.expanduser(vault_password_file))
-
-        if not os.path.exists(this_path):
-            raise AnsibleError("The vault password file %s was not found" % this_path)
-
-        if loader.is_executable(this_path):
-            try:
-                # STDERR not captured to make it easier for users to prompt for input in their scripts
-                p = subprocess.Popen(this_path, stdout=subprocess.PIPE)
-            except OSError as e:
-                msg = "Problem running vault password script %s (%s)."
-                "If this is not a script, remove the executable bit from the file." % (' '.join(this_path), e)
-                raise AnsibleError(msg)
-
-            stdout, stderr = p.communicate()
-
-            if p.returncode != 0:
-                raise AnsibleError("Vault password script %s returned non-zero (%s): %s" % (this_path, p.returncode, p.stderr))
-
-            vault_pass = stdout.strip('\r\n')
-        else:
-            try:
-                f = open(this_path, "rb")
-                vault_pass = f.read().strip()
-                f.close()
-            except (OSError, IOError) as e:
-                raise AnsibleError("Could not read vault password file %s: %s" % (this_path, e))
-
-        return vault_pass
 
 
 class PromptVaultSecrets(VaultSecrets):
@@ -441,6 +455,7 @@ class PromptNewVaultSecrets(VaultSecrets):
             raise AnsibleError("Passwords do not match")
 
 
+# VaultLib or some version of VaultLib needs to try multiple secrets for multiple password support
 class VaultLib:
     default_vault_id = 'default'
 
@@ -505,7 +520,7 @@ class VaultLib:
                                                 self.cipher_name, vault_id=vault_id)
         return b_vaulttext
 
-    def decrypt(self, vaulttext, filename=None):
+    def decrypt(self, vaulttext, filename=None, vault_id=None):
         """Decrypt a piece of vault encrypted data.
 
         :arg vaulttext: a string to decrypt.  Since vault encrypted data is an
@@ -530,21 +545,21 @@ class VaultLib:
         b_vaulttext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(b_vaulttext)
 
         # FIXME: remove if we dont need the state
-        self.cipher_name = cipher_name
+        # self.cipher_name = cipher_name
 
         # create the cipher object, note that the cipher used for decrypt can
         # be different than the cipher used for encrypt
-        if self.cipher_name in CIPHER_WHITELIST:
-            this_cipher = CIPHER_MAPPING[self.cipher_name]()
+        if cipher_name in CIPHER_WHITELIST:
+            this_cipher = CIPHER_MAPPING[cipher_name]()
         else:
-            raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
+            raise AnsibleError("{0} cipher could not be found".format(cipher_name))
 
         # If we dont know the needed vault id, raise error before we even try to decrypt
         # Or we could wait... TODO
-        if vault_id not in self.secrets:
-            raise AnsibleVaultError('Vault id "%s" is required, but there is no such vault id in vault secrets (current vault_id is "%s")\n'
-                                    'Try specifying a vault id with --vault-id or config (TODO: details)' %
-                                    (vault_id, self.secrets.name))
+        # if vault_id not in self.secrets:
+        #    raise AnsibleVaultError('Vault id "%s" is required, but there is no such vault id in vault secrets (current vault_id is "%s")\n'
+        #                            'Try specifying a vault id with --vault-id or config (TODO: details)' %
+        #                            (vault_id, self.secrets.name))
         # try to unencrypt data
 
         # The key_id is known at this point from parsing the vault envelope
@@ -552,7 +567,28 @@ class VaultLib:
         # vault_context = VaultContext(self.secrets, self.key_id, this_cipher)
         # b_data = vault_context.decrypt(b_data)
         # vault_context could be an interface to an agent of some sort
-        b_plaintext = this_cipher.decrypt(b_vaulttext, self.secrets, vault_id=vault_id)
+
+        # iterate over all the applicable secrets (all of them by default) until one works...
+        # if we specify a vault_id, only the corresponding vault secret is checked
+        b_plaintext = None
+        import pprint
+        pprint.pprint(self.secrets.__dict__)
+        for vault_secret in self.secrets:
+            print('trying vault_secret: %s' % vault_secret)
+            try:
+                # TODO: this could really stand to be more dict like
+                b_secret = self.secrets.b_get_secret(name=vault_secret)
+                print('b_secret: %s' % b_secret)
+                b_plaintext = this_cipher.decrypt(b_vaulttext, b_secret)
+                if b_plaintext is not None:
+                    print('break vault_secret: %s' % vault_secret)
+                    break
+            except Exception as e:
+                print(e)
+                raise
+                continue
+
+        print('b_plaintext: %s' % b_plaintext)
         if b_plaintext is None:
             msg = "Decryption failed"
             if filename:
@@ -743,7 +779,8 @@ class VaultEditor:
         try:
             plaintext = self.vault.decrypt(ciphertext)
         except AnsibleError as e:
-            raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
+            raise
+            #raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
         return plaintext
 
@@ -905,6 +942,10 @@ class VaultAES:
 
     @classmethod
     def _decrypt_cryptography(cls, b_salt, b_ciphertext, b_password, key_length):
+
+        print('decrypt_cryptography')
+        import traceback
+        traceback.print_stack()
 
         bs = algorithms.AES.block_size // 8
         b_key, b_iv = cls._aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
@@ -1196,16 +1237,23 @@ class VaultAES256:
         return b_plaintext
 
     @classmethod
-    def decrypt(cls, b_vaulttext, secrets, vault_id=None):
+    def decrypt(cls, b_vaulttext, b_secret, vault_id=None):
         # SPLIT SALT, DIGEST, AND DATA
         b_vaulttext = unhexlify(b_vaulttext)
         b_salt, b_crypted_hmac, b_ciphertext = b_vaulttext.split(b"\n", 2)
         b_salt = unhexlify(b_salt)
         b_ciphertext = unhexlify(b_ciphertext)
 
-        # pprint.pprint(locals())
+        import pprint
+        pprint.pprint(locals())
+        import pdb; pdb.set_trace()
         # TODO: default id?
-        b_password = secrets.b_get_secret(name=vault_id)
+        # b_password = secrets.b_get_secret(name=vault_id)
+        # TODO: would be nice if a VaultSecret could be passed directly to _decrypt_*
+        #       (move _gen_key_initctr() to a AES256 VaultSecret or VaultContext impl?)
+        # though, likely needs to be python cryptography specific impl that basically
+        # creates a Cipher() with b_key1, a Mode.CTR() with b_iv, and a HMAC() with sign key b_key2
+        b_password = b_secret.bytes
 
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 
