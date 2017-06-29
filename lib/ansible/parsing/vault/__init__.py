@@ -371,7 +371,8 @@ class VaultSecrets:
 
         secret = self._secrets.get(name, None)
 
-        return to_bytes(secret, errors='strict', encoding='utf-8')
+        return secret
+        #return to_bytes(secret, errors='strict', encoding='utf-8')
 
     def set_secret(self, name, secret):
         self._secrets[name] = secret
@@ -579,6 +580,7 @@ class VaultLib:
                 # TODO: this could really stand to be more dict like
                 b_secret = self.secrets.b_get_secret(name=vault_secret)
                 print('b_secret: %s' % b_secret)
+                print('type(b_secret): %s' % type(b_secret))
                 b_plaintext = this_cipher.decrypt(b_vaulttext, b_secret)
                 if b_plaintext is not None:
                     print('break vault_secret: %s' % vault_secret)
@@ -1246,14 +1248,13 @@ class VaultAES256:
 
         import pprint
         pprint.pprint(locals())
-        import pdb; pdb.set_trace()
         # TODO: default id?
         # b_password = secrets.b_get_secret(name=vault_id)
         # TODO: would be nice if a VaultSecret could be passed directly to _decrypt_*
         #       (move _gen_key_initctr() to a AES256 VaultSecret or VaultContext impl?)
         # though, likely needs to be python cryptography specific impl that basically
         # creates a Cipher() with b_key1, a Mode.CTR() with b_iv, and a HMAC() with sign key b_key2
-        b_password = b_secret.bytes
+        b_password = b_secret._text
 
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 
