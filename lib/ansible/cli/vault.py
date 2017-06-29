@@ -149,8 +149,6 @@ class VaultCLI(CLI):
         if self.options.vault_id:
             vault_id = self.options.vault_id
 
-        import pprint
-        pprint.pprint(self.options.__dict__)
         # TODO: instead of prompting for these before, we could let VaultEditor
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:
