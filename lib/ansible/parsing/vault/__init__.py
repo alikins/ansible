@@ -934,7 +934,7 @@ class VaultAES:
 
         bs = AES_pycrypto.block_size
 
-        b_key, b_iv = cls.aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
+        b_key, b_iv = cls._aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
         cipher = AES_pycrypto.new(b_key, AES_pycrypto.MODE_CBC, b_iv)
         b_next_chunk = b''
         finished = False
