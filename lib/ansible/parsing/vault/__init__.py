@@ -270,7 +270,7 @@ class FileVaultSecret(VaultSecret):
     def from_filename(cls, filename, loader):
         file_vault_secret = cls(filename, loader)
         # load secrets from file
-        file_vault_secret._text = cls.read_file(filename, loader)
+        file_vault_secret._bytes = cls.read_file(filename, loader)
         return file_vault_secret
 
     @staticmethod
@@ -314,8 +314,6 @@ class FileVaultSecret(VaultSecret):
 class EnvVaultSecret(VaultSecret):
     '''A vault secret from an environment variable.'''
 
-
-
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
 # FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
 # FIXME: doesnt use VaultSecret yet
@@ -328,6 +326,8 @@ class EnvVaultSecret(VaultSecret):
 #          or signed vault payload. There is no cryptographic checking/verification/validation of the
 #          vault blobs vault id. It can be tampered with and changed. The vault id is just a nick
 #          name to use to pick the best secret and provide some ux/ui info.
+
+
 class VaultSecrets:
     default_name = 'default'
 
@@ -355,7 +355,7 @@ class VaultSecrets:
     #       and VaultSecrets could potentially do the key stretching and
     #       HMAC checks itself. Or for that matter, the Cipher objects could
     #       be provided by VaultSecrets.
-    def b_get_secret(self, name=None):
+    def get_secret(self, name=None):
         # given some id, provide the right secret
         # secret_name could be None for the default,
         # or a filepath, or a label used for prompting users
@@ -372,7 +372,6 @@ class VaultSecrets:
         secret = self._secrets.get(name, None)
 
         return secret
-        #return to_bytes(secret, errors='strict', encoding='utf-8')
 
     def set_secret(self, name, secret):
         self._secrets[name] = secret
@@ -572,25 +571,20 @@ class VaultLib:
         # iterate over all the applicable secrets (all of them by default) until one works...
         # if we specify a vault_id, only the corresponding vault secret is checked
         b_plaintext = None
-        import pprint
-        pprint.pprint(self.secrets.__dict__)
         for vault_secret in self.secrets:
             print('trying vault_secret: %s' % vault_secret)
             try:
                 # TODO: this could really stand to be more dict like
-                b_secret = self.secrets.b_get_secret(name=vault_secret)
-                print('b_secret: %s' % b_secret)
-                print('type(b_secret): %s' % type(b_secret))
-                b_plaintext = this_cipher.decrypt(b_vaulttext, b_secret)
+                secret = self.secrets.get_secret(name=vault_secret)
+                print('secret: %s' % secret)
+                print('type(secret): %s' % type(secret))
+                b_plaintext = this_cipher.decrypt(b_vaulttext, secret)
                 if b_plaintext is not None:
-                    print('break vault_secret: %s' % vault_secret)
                     break
             except Exception as e:
                 print(e)
-                raise
                 continue
 
-        print('b_plaintext: %s' % b_plaintext)
         if b_plaintext is None:
             msg = "Decryption failed"
             if filename:
@@ -1030,6 +1024,7 @@ class VaultAES:
         b_ciphertext = b_vaultdata[16:]
 
         # TODO: default id?
+        # XXX FIXME TODO: not bytes now
         b_password = secrets.b_get_secret(name=vault_id)
 
         if HAS_CRYPTOGRAPHY:
@@ -1254,7 +1249,7 @@ class VaultAES256:
         #       (move _gen_key_initctr() to a AES256 VaultSecret or VaultContext impl?)
         # though, likely needs to be python cryptography specific impl that basically
         # creates a Cipher() with b_key1, a Mode.CTR() with b_iv, and a HMAC() with sign key b_key2
-        b_password = b_secret._text
+        b_password = b_secret.bytes
 
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 
