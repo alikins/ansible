@@ -149,12 +149,14 @@ class VaultCLI(CLI):
         if self.options.vault_id:
             vault_id = self.options.vault_id
 
+        import pprint
+        pprint.pprint(self.options.__dict__)
         # TODO: instead of prompting for these before, we could let VaultEditor
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:
             vault_secrets = self.setup_vault_secrets(loader,
                                                      vault_id=self.options.vault_id,
-                                                     vault_password_file=self.options.vault_password_file,
+                                                     vault_password_files=self.options.vault_password_file,
                                                      ask_vault_pass=self.options.ask_vault_pass)
 
         if self.action in ['encrypt', 'encrypt_string', 'create']:
@@ -162,7 +164,7 @@ class VaultCLI(CLI):
             vault_secrets = \
                 self.setup_vault_secrets(loader,
                                          vault_id=self.options.vault_id,
-                                         vault_password_file=self.options.vault_password_file,
+                                         vault_password_files=self.options.vault_password_file,
                                          ask_vault_pass=self.options.ask_vault_pass,
                                          create_new_password=True)
 
@@ -173,7 +175,7 @@ class VaultCLI(CLI):
             new_vault_secrets = \
                 self.setup_vault_secrets(loader,
                                          vault_id=new_vault_id,
-                                         vault_password_file=self.options.new_vault_password_file,
+                                         vault_password_files=self.options.new_vault_password_file,
                                          ask_vault_pass=self.options.ask_vault_pass,
                                          create_new_password=True)
 

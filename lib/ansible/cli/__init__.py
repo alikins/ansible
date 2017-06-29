@@ -43,8 +43,7 @@ from ansible.release import __version__
 from ansible.utils.path import unfrackpath
 from ansible.utils.vars import load_extra_vars, load_options_vars
 from ansible.vars.manager import VariableManager
-from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecrets, \
-    PromptNewVaultSecrets
+from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecret, PromptNewVaultSecrets
 
 
 try:
@@ -171,17 +170,19 @@ class CLI(with_metaclass(ABCMeta, object)):
             display.v(u"No config file found; using defaults")
 
     @staticmethod
-    def setup_vault_secrets(loader, vault_id, vault_password_file=None,
+    def setup_vault_secrets(loader, vault_id, vault_password_files=None,
                             ask_vault_pass=None, create_new_password=False):
         # print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
         #      (vault_id, vault_password_file, ask_vault_pass, create_new_password))
-        vault_secrets = None
+        vault_secrets = VaultSecrets()
 
-        if vault_password_file:
+        for vault_password_file in vault_password_files:
             # read vault_pass from a file
-            vault_secrets = FileVaultSecrets(filename=vault_password_file,
-                                             loader=loader,
-                                             name=vault_id)
+            file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
+                                                              loader=loader)
+            # TODO: seriously, make this better container
+            vault_secrets.set_secret(vault_password_file, file_vault_secret)
+
         if not vault_secrets or ask_vault_pass:
             if create_new_password:
                 vault_secrets = PromptNewVaultSecrets(name=vault_id)
@@ -276,12 +277,21 @@ class CLI(with_metaclass(ABCMeta, object)):
 
     @staticmethod
     def unfrack_paths(option, opt, value, parser):
+        import pprint
+        pprint.pprint(locals())
+        pprint.pprint(option.__dict__)
+        pprint.pprint(getattr(parser.values, option.dest))
+        paths = getattr(parser.values, option.dest)
         if isinstance(value, string_types):
-            setattr(parser.values, option.dest, [unfrackpath(x) for x in value.split(os.pathsep)])
+            paths.extend([unfrackpath(x) for x in value.split(os.pathsep)])
+            # setattr(parser.values, option.dest, [unfrackpath(x) for x in value.split(os.pathsep)])
         elif isinstance(value, list):
-            setattr(parser.values, option.dest, [unfrackpath(x) for x in value])
+            paths.extend([unfrackpath(x) for x in value])
+            # setattr(parser.values, option.dest, [unfrackpath(x) for x in value])
         else:
             pass  # FIXME: should we raise options error?
+        print('paths: %s' % paths)
+        setattr(parser.values, option.dest, paths)
 
     @staticmethod
     def unfrack_path(option, opt, value, parser):
@@ -322,8 +332,10 @@ class CLI(with_metaclass(ABCMeta, object)):
         if vault_opts:
             parser.add_option('--ask-vault-pass', default=C.DEFAULT_ASK_VAULT_PASS, dest='ask_vault_pass', action='store_true',
                               help='ask for vault password')
-            parser.add_option('--vault-password-file', default=C.DEFAULT_VAULT_PASSWORD_FILE, dest='vault_password_file',
-                              help="vault password file", action="callback", callback=CLI.unfrack_path, type='string')
+            parser.add_option('--vault-password-file', default=[], dest='vault_password_file',
+                              help="vault password file", action="callback", callback=CLI.unfrack_paths, type='string')
+            #parser.add_option('--vault-password-file', default=[C.DEFAULT_VAULT_PASSWORD_FILE], dest='vault_password_file',
+            #                  help="vault password file", action="callback", callback=CLI.unfrack_paths, type='string')
             parser.add_option('--new-vault-password-file', dest='new_vault_password_file',
                               help="new vault password file for rekey", action="callback", callback=CLI.unfrack_path, type='string')
             parser.add_option('--output', default=None, dest='output_file',
@@ -659,7 +671,7 @@ class CLI(with_metaclass(ABCMeta, object)):
 
         vault_secrets = CLI.setup_vault_secrets(loader,
                                                 vault_id=options.vault_id,
-                                                vault_password_file=options.vault_password_file,
+                                                vault_password_files=options.vault_password_file,
                                                 ask_vault_pass=options.ask_vault_pass)
         loader.set_vault_secrets(vault_secrets)
 

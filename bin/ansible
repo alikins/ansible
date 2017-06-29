@@ -121,6 +121,11 @@ if __name__ == '__main__':
 #        exit_code = 2
     except AnsibleError as e:
         display.error(to_text(e), wrap_text=False)
+
+
+        raise
+
+
         exit_code = 1
     except KeyboardInterrupt:
         display.error("User interrupted execution")

@@ -202,7 +202,12 @@ class DataLoader:
                 data = f.read()
                 if is_encrypted(data):
                     # FIXME: plugin vault selector
+                    import traceback
+                    traceback.print_stack()
+
                     data = self._vault.decrypt(data, filename=b_file_name)
+                    import pprint
+                    pprint.pprint(locals())
                     show_content = False
 
             return (data, show_content)
