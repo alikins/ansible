@@ -227,6 +227,7 @@ class TextVaultSecret(VaultSecret):
         self.encoding = encoding
         self._bytes = _bytes
 
+    @property
     def bytes(self):
         '''The text encoded with encoding, unless we specifically set _bytes.'''
         return self._bytes or self.text.encode(self.encoding)
@@ -246,6 +247,35 @@ class TextVaultSecret(VaultSecret):
         secret = cls(text=text, encoding=encoding)
         secret._bytes = None
         return secret
+
+
+class PromptVaultSecret(TextVaultSecret):
+    default_prompt = "Vault password: "
+    # TODO: nicer format
+    vault_id_prompt = "Vault password for id=%s: "
+
+    def __init__(self):
+        super(PromptVaultSecret, self).__init__()
+
+    def ask_vault_passwords(self, vault_id):
+        ''' prompt for vault password and/or password change '''
+
+        # TODO: ask for vault id
+        vault_pass = None
+
+        prompt = self.default_prompt
+        if vault_id != 'default':
+            prompt = self.vault_id_prompt % vault_id
+
+        try:
+            vault_pass = getpass.getpass(prompt=prompt)
+        except EOFError:
+            pass
+
+        # enforce no newline chars at the end of passwords
+        if vault_pass:
+            b_vault_pass = to_bytes(vault_pass, encoding='utf-8', errors='strict', nonstring='simplerepr').strip()
+        self._bytes = b_vault_pass
 
 
 # FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
@@ -379,40 +409,6 @@ class VaultSecrets:
 
     def __iter__(self):
         return iter(self._secrets)
-
-
-class PromptVaultSecrets(VaultSecrets):
-    default_prompt = "Vault password: "
-    # TODO: nicer format
-    vault_id_prompt = "Vault password for id=%s: "
-
-    def __init__(self, name=None, directory=None, loader=None):
-        super(PromptVaultSecrets, self).__init__()
-        self.name = name
-
-    def ask_vault_passwords(self):
-        ''' prompt for vault password and/or password change '''
-
-        # TODO: ask for vault id
-        vault_pass = None
-
-        prompt = self.default_prompt
-        if self.name != 'default':
-            prompt = self.vault_id_prompt % self.name
-
-        try:
-            vault_pass = getpass.getpass(prompt=prompt)
-        except EOFError:
-            pass
-
-        # enforce no newline chars at the end of passwords
-        if vault_pass:
-            vault_pass = to_bytes(vault_pass, errors='strict', nonstring='simplerepr').strip()
-
-        # we could ask for vault_id as well
-        self.set_secret(self.name, vault_pass)
-
-        return vault_pass
 
 
 class PromptNewVaultSecrets(VaultSecrets):
@@ -576,8 +572,6 @@ class VaultLib:
             try:
                 # TODO: this could really stand to be more dict like
                 secret = self.secrets.get_secret(name=vault_secret)
-                print('secret: %s' % secret)
-                print('type(secret): %s' % type(secret))
                 b_plaintext = this_cipher.decrypt(b_vaulttext, secret)
                 if b_plaintext is not None:
                     break
@@ -1234,22 +1228,20 @@ class VaultAES256:
         return b_plaintext
 
     @classmethod
-    def decrypt(cls, b_vaulttext, b_secret, vault_id=None):
+    def decrypt(cls, b_vaulttext, secret, vault_id=None):
         # SPLIT SALT, DIGEST, AND DATA
         b_vaulttext = unhexlify(b_vaulttext)
         b_salt, b_crypted_hmac, b_ciphertext = b_vaulttext.split(b"\n", 2)
         b_salt = unhexlify(b_salt)
         b_ciphertext = unhexlify(b_ciphertext)
 
-        import pprint
-        pprint.pprint(locals())
         # TODO: default id?
         # b_password = secrets.b_get_secret(name=vault_id)
         # TODO: would be nice if a VaultSecret could be passed directly to _decrypt_*
         #       (move _gen_key_initctr() to a AES256 VaultSecret or VaultContext impl?)
         # though, likely needs to be python cryptography specific impl that basically
         # creates a Cipher() with b_key1, a Mode.CTR() with b_iv, and a HMAC() with sign key b_key2
-        b_password = b_secret.bytes
+        b_password = secret.bytes
 
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 

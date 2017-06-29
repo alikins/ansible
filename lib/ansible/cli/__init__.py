@@ -43,7 +43,7 @@ from ansible.release import __version__
 from ansible.utils.path import unfrackpath
 from ansible.utils.vars import load_extra_vars, load_options_vars
 from ansible.vars.manager import VariableManager
-from ansible.parsing.vault import VaultSecrets, PromptVaultSecrets, FileVaultSecret, PromptNewVaultSecrets
+from ansible.parsing.vault import VaultSecrets, PromptVaultSecret, FileVaultSecret, PromptNewVaultSecrets
 
 
 try:
@@ -183,15 +183,23 @@ class CLI(with_metaclass(ABCMeta, object)):
             # TODO: seriously, make this better container
             vault_secrets.set_secret(vault_password_file, file_vault_secret)
 
-        if not vault_secrets or ask_vault_pass:
-            if create_new_password:
-                vault_secrets = PromptNewVaultSecrets(name=vault_id)
-            else:
-                vault_secrets = PromptVaultSecrets(name=vault_id)
+        prompted_vault_ids = ['default', 'randomsdfsdf']
 
-            # FIXME: we don't need to do this now, we could do it later though
-            #        that would change the cli UXD a bit and may be weird
-            vault_secrets.ask_vault_passwords()
+        if not vault_secrets or ask_vault_pass:
+            for prompted_vault_id in prompted_vault_ids:
+                if create_new_password:
+                    prompted_vault_secret = PromptNewVaultSecrets(name=vault_id)
+                else:
+                    prompted_vault_secret = PromptVaultSecret()
+
+                # FIXME: we don't need to do this now, we could do it later though
+                #        that would change the cli UXD a bit and may be weird
+                prompted_vault_secret.ask_vault_passwords(vault_id=prompted_vault_id)
+
+                vault_secrets.set_secret(prompted_vault_id, prompted_vault_secret)
+
+        import pprint
+        pprint.pprint(vault_secrets)
 
         if not vault_secrets:
             # Just a placeholder we can extend later
