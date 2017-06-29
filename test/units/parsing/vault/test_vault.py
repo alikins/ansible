@@ -283,10 +283,11 @@ class TestVaultLib(unittest.TestCase):
         b_data = b"$ANSIBLE_VAULT;9.9;TEST\n%s" % hexlify(b"ansible")
         self.assertTrue(self.v.is_encrypted(b_data), msg="encryption check on headered text failed")
 
-    def test_format_output(self):
-        self.v.cipher_name = "TEST"
+    def test_format_vaulttext_envelope(self):
+        cipher_name = "TEST"
         b_ciphertext = b"ansible"
-        b_vaulttext = self.v._format_output(b_ciphertext, vault_id='default')
+        b_vaulttext = vault.format_vaulttext_envelope(b_ciphertext, self.v.b_version,
+                                                      cipher_name, vault_id='default')
         b_lines = b_vaulttext.split(b'\n')
         self.assertGreater(len(b_lines), 1, msg="failed to properly add header")
 
@@ -298,6 +299,14 @@ class TestVaultLib(unittest.TestCase):
         self.assertEqual(b_header_parts[0], b'$ANSIBLE_VAULT', msg="header does not start with $ANSIBLE_VAULT")
         self.assertEqual(b_header_parts[1], self.v.b_version, msg="header version is incorrect")
         self.assertEqual(b_header_parts[2], b'TEST', msg="header does not end with cipher name")
+
+        # And just to verify, lets parse the results and compare
+        b_ciphertext2, b_version2, cipher_name2, vault_id2 = \
+            vault.parse_vaulttext_envelope(b_vaulttext)
+        self.assertEqual(b_ciphertext, b_ciphertext2)
+        self.assertEqual(self.v.b_version, b_version2)
+        self.assertEqual(cipher_name, cipher_name2)
+        self.assertEqual('default', vault_id2)
 
     def test_parse_vaulttext_envelope(self):
         b_vaulttext = b"$ANSIBLE_VAULT;9.9;TEST\nansible"
