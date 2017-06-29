@@ -231,6 +231,13 @@ class VaultSecrets:
         # interactively  (like a ssh key id arg to ssh-add...)
         # return to_bytes(self._secret)
         name = name or self.default_name
+
+        # Raise an error if the vault being decrypted uses a vault id that we dont
+        # know about. For ex, if '--vault-id=devs' and the vault object wants id 'admins',
+        # we raise an error here. Calling code that wants to fallback should try/catch.
+        if name not in self._secrets:
+            raise AnsibleVaultError('No vault id found for: %s' % name)
+
         secret = self._secrets.get(name, None)
 
         return to_bytes(secret, errors='strict', encoding='utf-8')
@@ -238,6 +245,9 @@ class VaultSecrets:
     def set_secret(self, name, secret):
         self._secrets[name] = secret
         return secret
+
+    def __iter__(self):
+        return iter(self._secrets)
 
 
 # FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
@@ -441,12 +451,20 @@ class VaultLib:
         # FIXME: remove if we dont need the state
         self.cipher_name = cipher_name
 
+        # print('VaultLib.decrypt')
+        # pprint.pprint(locals())
         # create the cipher object
         if self.cipher_name in CIPHER_WHITELIST:
             this_cipher = CIPHER_MAPPING[self.cipher_name]()
         else:
             raise AnsibleError("{0} cipher could not be found".format(self.cipher_name))
 
+        # If we dont know the needed vault id, raise error before we even try to decrypt
+        # Or we could wait... TODO
+        if vault_id not in self.secrets:
+            raise AnsibleVaultError('Vault id "%s" is required, but there is no such vault id in vault secrets (current vault_id is "%s")\n'
+                                    'Try specifying a vault id with --vault-id or config (TODO: details)' %
+                                    (vault_id, self.secrets.name))
         # try to unencrypt data
 
         # The key_id is known at this point from parsing the vault envelope
@@ -849,6 +867,16 @@ class VaultAES:
 
         raise AnsibleError("Encryption disabled for deprecated VaultAES class")
 
+    @staticmethod
+    def _parse_plaintext_envelope(b_envelope):
+        # split out sha and verify decryption
+        b_split_data = b_envelope.split(b"\n", 1)
+        b_this_sha = b_split_data[0]
+        b_plaintext = b_split_data[1]
+        b_test_sha = to_bytes(sha256(b_plaintext).hexdigest())
+
+        return b_plaintext, b_this_sha, b_test_sha
+
     @classmethod
     def _decrypt_cryptography(cls, b_salt, b_ciphertext, b_password, key_length):
 
@@ -858,7 +886,7 @@ class VaultAES:
         unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
 
         try:
-            b_plaintext = unpadder.update(
+            b_plaintext_envelope = unpadder.update(
                 cipher.update(b_ciphertext) + cipher.finalize()
             ) + unpadder.finalize()
         except ValueError:
@@ -866,11 +894,8 @@ class VaultAES:
             # password was given
             raise AnsibleError("Decryption failed")
 
-        # split out sha and verify decryption
-        b_split_data = b_plaintext.split(b"\n", 1)
-        b_this_sha = b_split_data[0]
-        b_plaintext = b_split_data[1]
-        b_test_sha = to_bytes(sha256(b_plaintext).hexdigest())
+        # print('b_plaintext_envelope: %s' % b_plaintext_envelope)
+        b_plaintext, b_this_sha, b_test_sha = cls._parse_plaintext_envelope(b_plaintext_envelope)
 
         if b_this_sha != b_test_sha:
             raise AnsibleError("Decryption failed")
@@ -906,14 +931,10 @@ class VaultAES:
 
         # reset the stream pointer to the beginning
         out_file.seek(0)
-        b_out_data = out_file.read()
+        b_plaintext_envelope = out_file.read()
         out_file.close()
 
-        # split out sha and verify decryption
-        b_split_data = b_out_data.split(b"\n", 1)
-        b_this_sha = b_split_data[0]
-        b_plaintext = b_split_data[1]
-        b_test_sha = to_bytes(sha256(b_plaintext).hexdigest())
+        b_plaintext, b_this_sha, b_test_sha = cls._parse_plaintext_envelope(b_plaintext_envelope)
 
         if b_this_sha != b_test_sha:
             raise AnsibleError("Decryption failed")
@@ -1089,8 +1110,8 @@ class VaultAES256:
         hmac.update(b_ciphertext)
         try:
             hmac.verify(unhexlify(b_crypted_hmac))
-        except InvalidSignature:
-            return None
+        except InvalidSignature as e:
+            raise AnsibleVaultError('HMAC verification failed: %s' % e)
 
         cipher = C_Cipher(algorithms.AES(b_key1), modes.CTR(b_iv), CRYPTOGRAPHY_BACKEND)
         decryptor = cipher.decryptor()
@@ -1156,6 +1177,7 @@ class VaultAES256:
         b_salt = unhexlify(b_salt)
         b_ciphertext = unhexlify(b_ciphertext)
 
+        # pprint.pprint(locals())
         # TODO: default id?
         b_password = secrets.b_get_secret(name=vault_id)
 
