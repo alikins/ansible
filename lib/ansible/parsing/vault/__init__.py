@@ -527,16 +527,13 @@ class VaultLib:
                 msg += "%s is not a vault encrypted file" % filename
             raise AnsibleError(msg)
 
-        # clean out header
-        vault_id = None
-        cipher_name = None
         b_vaulttext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(b_vaulttext)
+
         # FIXME: remove if we dont need the state
         self.cipher_name = cipher_name
 
-        # print('VaultLib.decrypt')
-        # pprint.pprint(locals())
-        # create the cipher object
+        # create the cipher object, note that the cipher used for decrypt can
+        # be different than the cipher used for encrypt
         if self.cipher_name in CIPHER_WHITELIST:
             this_cipher = CIPHER_MAPPING[self.cipher_name]()
         else:
