@@ -198,9 +198,6 @@ class CLI(with_metaclass(ABCMeta, object)):
 
                 vault_secrets.set_secret(prompted_vault_id, prompted_vault_secret)
 
-        import pprint
-        pprint.pprint(vault_secrets)
-
         if not vault_secrets:
             # Just a placeholder we can extend later
             vault_secrets = VaultSecrets(name=vault_id)
