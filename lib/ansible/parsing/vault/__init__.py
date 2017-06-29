@@ -196,6 +196,15 @@ class EnvVaultSecret(VaultSecret):
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
 # FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
 # FIXME: doesnt use VaultSecret yet
+
+# NOTE: vault id is currently just a label we get from the vault blob and use it to select which
+#       of the multiple secrets we will try to use.
+#
+# WARNING: Currently, the vault id is not required to match the vault id in the vault blob to
+#          decrypt a vault properly. The vault id in the vault blob is not part of the encrypted
+#          or signed vault payload. There is no cryptographic checking/verification/validation of the
+#          vault blobs vault id. It can be tampered with and changed. The vault id is just a nick
+#          name to use to pick the best secret and provide some ux/ui info.
 class VaultSecrets:
     default_name = 'default'
 
