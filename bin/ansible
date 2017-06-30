@@ -104,6 +104,7 @@ if __name__ == '__main__':
             cli = mycli(args)
             cli.parse()
             exit_code = cli.run()
+            print('exit_code: %s' % exit_code)
 
     except AnsibleOptionsError as e:
         cli.parser.print_help()
@@ -121,12 +122,8 @@ if __name__ == '__main__':
 #        exit_code = 2
     except AnsibleError as e:
         display.error(to_text(e), wrap_text=False)
-
-
-        raise
-
-
         exit_code = 1
+        raise
     except KeyboardInterrupt:
         display.error("User interrupted execution")
         exit_code = 99
@@ -144,4 +141,5 @@ if __name__ == '__main__':
         # Remove ansible tempdir
         shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
+    print('exit_code2: %s' % exit_code)
     sys.exit(exit_code)
