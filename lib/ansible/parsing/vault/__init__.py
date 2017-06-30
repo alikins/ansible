@@ -252,7 +252,7 @@ class TextVaultSecret(VaultSecret):
 class PromptVaultSecret(TextVaultSecret):
     default_prompt = "Vault password: "
     # TODO: nicer format
-    vault_id_prompt = "Vault password for id=%s: "
+    vault_id_prompt = "Vault password (%s): "
 
     def __init__(self):
         super(PromptVaultSecret, self).__init__()
@@ -264,8 +264,9 @@ class PromptVaultSecret(TextVaultSecret):
         vault_pass = None
 
         prompt = self.default_prompt
-        if vault_id != 'default':
-            prompt = self.vault_id_prompt % vault_id
+        # if vault_id != 'default':
+        #    prompt = self.vault_id_prompt % vault_id
+        prompt = self.vault_id_prompt % vault_id
 
         try:
             vault_pass = getpass.getpass(prompt=prompt)
