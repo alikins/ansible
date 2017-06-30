@@ -255,8 +255,8 @@ class TestVaultCipherAes256PyCrypto(TestVaultCipherAes256):
 class TestVaultLib(unittest.TestCase):
     def setUp(self):
         self.vault_password = "test-vault-password"
-        self.vault_secrets = vault.VaultSecrets()
-        self.vault_secrets.set_secret('default', self.vault_password)
+        self.vault_secrets = {}
+        self.vault_secrets['default'] = self.vault_password
         self.v = vault.VaultLib(self.vault_secrets)
 
     def test_encrypt(self):
@@ -318,8 +318,8 @@ class TestVaultLib(unittest.TestCase):
 
     def test_encrypt_decrypt_aes(self):
         self.v.cipher_name = u'AES'
-        vault_secrets = vault.VaultSecrets()
-        vault_secrets.set_secret('default', 'ansible')
+        vault_secrets = {}
+        vault_secrets['default'] = 'ansible'
         self.v.secrets = vault_secrets
         # AES encryption code has been removed, so this is old output for
         # AES-encrypted 'foobar' with password 'ansible'.

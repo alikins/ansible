@@ -32,7 +32,6 @@ from ansible import errors
 from ansible.parsing import vault
 from ansible.parsing.vault import VaultLib
 from ansible.parsing.vault import VaultEditor
-from ansible.parsing.vault import VaultSecrets
 from ansible.module_utils._text import to_bytes, to_text
 
 
@@ -56,8 +55,8 @@ class TestVaultEditor(unittest.TestCase):
     def setUp(self):
         self._test_dir = None
         self.vault_password = "test-vault-password"
-        self.vault_secrets = VaultSecrets()
-        self.vault_secrets.set_secret('default', self.vault_password)
+        self.vault_secrets = {}
+        self.vault_secrets['default'] = vault.TextVaultSecret(self.vault_password)
 
     def tearDown(self):
         if self._test_dir:
@@ -66,8 +65,8 @@ class TestVaultEditor(unittest.TestCase):
         self._test_dir = None
 
     def _secrets(self, password):
-        vault_secrets = VaultSecrets()
-        vault_secrets.set_secret('default', password)
+        vault_secrets = {}
+        vault_secrets['default'] = vault.TextVaultSecret(password)
         return vault_secrets
 
     def test_methods_exist(self):
@@ -209,8 +208,8 @@ class TestVaultEditor(unittest.TestCase):
 
         # FIXME: update to just set self._secrets or just a new vault secret id
         new_password = 'password2:electricbugaloo'
-        new_vault_secrets = VaultSecrets()
-        new_vault_secrets.set_secret('default', new_password)
+        new_vault_secrets = {}
+        new_vault_secrets['default'] = new_password
         ve.rekey_file(src_file_path, new_vault_secrets)
 
         # FIXME: can just update self._secrets here

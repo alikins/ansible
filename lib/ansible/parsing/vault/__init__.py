@@ -213,11 +213,16 @@ def format_vaulttext_envelope(b_ciphertext, b_version, cipher_name, vault_id=Non
 class VaultSecret:
     '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
     def __init__(self):
-        pass
+        # FIXME: ? that seems wrong...
+        self._bytes = None
 
-    #def bytes(self):
-    #    '''return a byte array of the secret'''
-    #    raise NotImplemented
+    @property
+    def bytes(self):
+        '''The secret as a bytestring.
+
+        Sub classes that store text types will need to override to encode the text to bytes.
+        '''
+        return self._bytes
 
 
 class TextVaultSecret(VaultSecret):
@@ -281,7 +286,6 @@ class PromptVaultSecret(TextVaultSecret):
         self._bytes = b_vault_pass
 
 
-# FIXME: If VaultSecrets doesn't ever do much, these classes don't really need to subclass
 # TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
 class FileVaultSecret(VaultSecret):
     def __init__(self, filename=None, encoding=None, loader=None):
@@ -344,9 +348,6 @@ class FileVaultSecret(VaultSecret):
         return vault_pass
 
 
-class EnvVaultSecret(VaultSecret):
-    '''A vault secret from an environment variable.'''
-
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
 # FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
 # FIXME: doesnt use VaultSecret yet
@@ -361,60 +362,10 @@ class EnvVaultSecret(VaultSecret):
 #          name to use to pick the best secret and provide some ux/ui info.
 
 
-class VaultSecrets:
-    default_name = 'default'
+# FIXME XXX: make this a VaultSecret subclass like PromptVaultSecret
+# class PromptNewVaultSecrets(VaultSecrets):
+class PromptNewVaultSecret(object):
 
-    def __init__(self, name=None):
-        # This maps secret 'name' to a VaultSecret object
-        self._secrets = {}
-
-    @classmethod
-    def from_bytes(cls, b_bytes, name=None):
-        '''Create a VaultSecrets from a bytes b_bytes.'''
-        obj = cls()
-        obj._secrets[name] = b_bytes
-        return obj
-
-    @classmethod
-    def from_text(cls, text, name=None):
-        '''Create a VaultSecrets from text'''
-        obj = cls()
-        obj._secrets[name] = text
-        return obj
-
-    # TODO: Note this is not really the proposed interface/api
-    #       This is more to sort out where all we pass passwords around.
-    #       A better version would be passed deep into the decrypt/encrypt code
-    #       and VaultSecrets could potentially do the key stretching and
-    #       HMAC checks itself. Or for that matter, the Cipher objects could
-    #       be provided by VaultSecrets.
-    def get_secret(self, name=None):
-        # given some id, provide the right secret
-        # secret_name could be None for the default,
-        # or a filepath, or a label used for prompting users
-        # interactively  (like a ssh key id arg to ssh-add...)
-        # return to_bytes(self._secret)
-        name = name or self.default_name
-
-        # Raise an error if the vault being decrypted uses a vault id that we dont
-        # know about. For ex, if '--vault-id=devs' and the vault object wants id 'admins',
-        # we raise an error here. Calling code that wants to fallback should try/catch.
-        if name not in self._secrets:
-            raise AnsibleVaultError('No vault id found for: %s' % name)
-
-        secret = self._secrets.get(name, None)
-
-        return secret
-
-    def set_secret(self, name, secret):
-        self._secrets[name] = secret
-        return secret
-
-    def __iter__(self):
-        return iter(self._secrets)
-
-
-class PromptNewVaultSecrets(VaultSecrets):
     default_prompt = "New Vault password: "
     vault_id_prompt = "New Vault password for id=%s: "
     default_confirm_prompt = "Confirm New Vault password: "
@@ -505,7 +456,7 @@ class VaultLib:
         # pprint.pprint(self.secrets)
         # print('vl.enc vault_id=%s' % vault_id)
 
-        secret = self.secrets.get_secret(name=vault_id)
+        vault_secret = self.secrets[vault_id]
 
         if is_encrypted(b_plaintext):
             raise AnsibleError("input is already encrypted")
@@ -519,7 +470,7 @@ class VaultLib:
             raise AnsibleError(u"{0} cipher could not be found".format(self.cipher_name))
 
         # encrypt data
-        b_ciphertext = this_cipher.encrypt(b_plaintext, secret, vault_id=vault_id)
+        b_ciphertext = this_cipher.encrypt(b_plaintext, vault_secret, vault_id=vault_id)
 
         # format the data for output to the file
         b_vaulttext = format_vaulttext_envelope(b_ciphertext, self.b_version,
@@ -577,18 +528,18 @@ class VaultLib:
         # iterate over all the applicable secrets (all of them by default) until one works...
         # if we specify a vault_id, only the corresponding vault secret is checked
         b_plaintext = None
-        for vault_secret in self.secrets:
-            display.vvvvv('Trying to use vault secret (%s) to decrypt %s' % (vault_secret, filename))
+        for vault_secret_id in self.secrets:
+            display.vvvvv('Trying to use vault secret (%s) to decrypt %s' % (vault_secret_id, filename))
             try:
                 # TODO: this could really stand to be more dict like
-                secret = self.secrets.get_secret(name=vault_secret)
+                secret = self.secrets[vault_secret_id]
                 b_plaintext = this_cipher.decrypt(b_vaulttext, secret)
                 if b_plaintext is not None:
                     break
             except AnsibleError as e:
                 # print(e)
                 display.vvvv('Tried to use the vault secret (%s) to decrypt but it failed, continuing to other secrets.\nfilename: %s\nvaulttext: %serror: %s' %
-                             (vault_secret, filename, b_vaulttext, e))
+                             (vault_secret_id, filename, b_vaulttext, e))
                 continue
 
         if b_plaintext is None:
@@ -1023,8 +974,6 @@ class VaultAES:
         b_salt = b_vaultdata[len(b'Salted__'):16]
         b_ciphertext = b_vaultdata[16:]
 
-        # TODO: default id?
-        # XXX FIXME TODO: not bytes now
         b_password = secret.bytes
 
         if HAS_CRYPTOGRAPHY:
@@ -1149,7 +1098,6 @@ class VaultAES256:
     @classmethod
     def encrypt(cls, b_plaintext, secret, vault_id=None):
         b_salt = os.urandom(32)
-        # b_password = secrets.b_get_secret(name=vault_id)
         b_password = secret.bytes
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 
@@ -1168,7 +1116,6 @@ class VaultAES256:
 
     @classmethod
     def _decrypt_cryptography(cls, b_ciphertext, b_crypted_hmac, b_key1, b_key2, b_iv):
-        # password = secrets.get_secret()
         # b_key1, b_key2, b_iv = self._gen_key_initctr(b_password, b_salt)
         # EXIT EARLY IF DIGEST DOESN'T MATCH
         hmac = HMAC(b_key2, hashes.SHA256(), CRYPTOGRAPHY_BACKEND)
@@ -1242,8 +1189,6 @@ class VaultAES256:
         b_salt = unhexlify(b_salt)
         b_ciphertext = unhexlify(b_ciphertext)
 
-        # TODO: default id?
-        # b_password = secrets.b_get_secret(name=vault_id)
         # TODO: would be nice if a VaultSecret could be passed directly to _decrypt_*
         #       (move _gen_key_initctr() to a AES256 VaultSecret or VaultContext impl?)
         # though, likely needs to be python cryptography specific impl that basically
