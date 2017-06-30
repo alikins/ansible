@@ -26,7 +26,7 @@ from ansible.cli import CLI
 from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.module_utils._text import to_text, to_bytes
 from ansible.parsing.dataloader import DataLoader
-from ansible.parsing.vault import VaultEditor
+from ansible.parsing.vault import VaultEditor, VaultLib
 
 try:
     from __main__ import display
@@ -170,10 +170,13 @@ class VaultCLI(CLI):
             if not vault_secrets:
                 raise AnsibleOptionsError("A vault password is required to use Ansible's Vault ")
         if self.action in ['rekey']:
-            new_vault_id = self.options.new_vault_id
+            new_vault_ids = []
+            if self.options.vault_id:
+                new_vault_ids.append(self.options.new_vault_id)
+
             new_vault_secrets = \
                 self.setup_vault_secrets(loader,
-                                         vault_ids=new_vault_id,
+                                         vault_ids=new_vault_ids,
                                          vault_password_files=self.options.new_vault_password_file,
                                          ask_vault_pass=self.options.ask_vault_pass,
                                          create_new_password=True)
@@ -182,15 +185,19 @@ class VaultCLI(CLI):
                 raise AnsibleOptionsError("A new vault password is required to use Ansible's Vault rekey")
 
             self.new_vault_secrets = new_vault_secrets
-            self.new_vault_id = new_vault_id
+
+            # There is only one new_vault_id currently
+            self.new_vault_id = new_vault_ids[0]
 
         if not vault_secrets:
             raise AnsibleOptionsError("A password is required to use Ansible's Vault")
 
         loader.set_vault_secrets(vault_secrets)
+        self.secrets = vault_secrets
 
         # FIXME: do we need to create VaultEditor here? its not reused
-        self.editor = VaultEditor(vault_secrets)
+        vault = VaultLib(self.secrets)
+        self.editor = VaultEditor(vault)
 
         self.execute()
 
@@ -204,7 +211,8 @@ class VaultCLI(CLI):
             display.display("Reading plaintext input from stdin", stderr=True)
 
         for f in self.args or ['-']:
-            self.editor.encrypt_file(f, output_file=self.options.output_file)
+            self.editor.encrypt_file(f, self.secrets['default'],
+                                     output_file=self.options.output_file)
 
         if sys.stdout.isatty():
             display.display("Encryption successful", stderr=True)
@@ -249,6 +257,8 @@ class VaultCLI(CLI):
             if name_prompt_response != "":
                 name = name_prompt_response
 
+            # TODO: could prompt for which vault_id to use for each plaintext string
+            #       currently, it will just be the default
             # could use private=True for shadowed input if useful
             prompt_response = display.prompt(msg)
 
@@ -335,7 +345,8 @@ class VaultCLI(CLI):
         for index, b_plaintext_info in enumerate(b_plaintext_list):
             # (the text itself, which input it came from, its name)
             b_plaintext, src, name = b_plaintext_info
-            b_ciphertext = self.editor.encrypt_bytes(b_plaintext)
+            # FIXME: maybe a good place to take a vault_id as param
+            b_ciphertext = self.editor.encrypt_bytes(b_plaintext, self.secrets['default'])
 
             # block formatting
             yaml_text = self.format_ciphertext_yaml(b_ciphertext, name=name)
@@ -395,7 +406,7 @@ class VaultCLI(CLI):
                 raise AnsibleError(f + " does not exist")
 
         for f in self.args:
-            # FIXME: plumb in vault_id
-            self.editor.rekey_file(f, self.new_vault_secrets, self.new_vault_id)
+            # FIXME: plumb in vault_id, use the default new_vault_secret for now
+            self.editor.rekey_file(f, self.new_vault_secrets[self.new_vault_id])
 
         display.display("Rekey successful", stderr=True)
