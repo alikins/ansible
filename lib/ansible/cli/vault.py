@@ -170,8 +170,11 @@ class VaultCLI(CLI):
             if not vault_secrets:
                 raise AnsibleOptionsError("A vault password is required to use Ansible's Vault ")
         if self.action in ['rekey']:
+            import pprint
+            pprint.pprint(self.options)
             new_vault_ids = []
-            if self.options.vault_id:
+            pprint.pprint(locals())
+            if self.options.new_vault_id:
                 new_vault_ids.append(self.options.new_vault_id)
 
             new_vault_secrets = \
