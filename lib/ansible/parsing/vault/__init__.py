@@ -308,8 +308,8 @@ class PromptNewVaultSecret(VaultSecret):
 
 # TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
 class FileVaultSecret(VaultSecret):
-    def __init__(self, name, filename=None, encoding=None, loader=None):
-        super(FileVaultSecret, self).__init__(name)
+    def __init__(self, vault_id, filename=None, encoding=None, loader=None):
+        super(FileVaultSecret, self).__init__(vault_id)
         self.filename = filename
         self.loader = loader
 
@@ -600,7 +600,7 @@ class VaultEditor:
 
         os.remove(tmp_path)
 
-    def _edit_file_helper(self, filename, existing_data=None, force_save=False):
+    def _edit_file_helper(self, filename, secret, existing_data=None, force_save=False):
 
         # Create a tempfile
         fd, tmp_path = tempfile.mkstemp()
@@ -627,7 +627,7 @@ class VaultEditor:
         # encrypt new data and write out to tmp
         # An existing vaultfile will always be UTF-8,
         # so decode to unicode here
-        b_ciphertext = self.vault.encrypt(b_tmpdata)
+        b_ciphertext = self.vault.encrypt(b_tmpdata, secret)
         self.write_data(b_ciphertext, tmp_path)
 
         # shuffle tmp file into place
@@ -659,7 +659,7 @@ class VaultEditor:
         b_ciphertext = self.vault.encrypt(b_plaintext, secret)
         self.write_data(b_ciphertext, output_file or filename)
 
-    def decrypt_file(self, filename, secrets, vault_id=None, output_file=None):
+    def decrypt_file(self, filename, output_file=None):
 
         # follow the symlink
         filename = self._real_path(filename)
@@ -667,7 +667,7 @@ class VaultEditor:
         ciphertext = self.read_data(filename)
 
         try:
-            plaintext = self.vault.decrypt(ciphertext, secrets, vault_id)
+            plaintext = self.vault.decrypt(ciphertext)
         except AnsibleError as e:
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
         self.write_data(plaintext, output_file or filename, shred=False)
@@ -687,40 +687,52 @@ class VaultEditor:
         # follow the symlink
         filename = self._real_path(filename)
 
-        ciphertext = self.read_data(filename)
+        b_vaulttext = self.read_data(filename)
+
+        # vault or yaml files are always utf8
+        vaulttext = to_text(b_vaulttext)
 
         try:
-            plaintext = self.vault.decrypt(ciphertext)
+            # vaulttext gets converted back to bytes, but alas
+            plaintext = self.vault.decrypt(vaulttext)
         except AnsibleError as e:
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
+        # Figure out the vault id from the file, to select the right secret to re-encrypt it
+        # (duplicates parts of decrypt, but alas...)
+        b_ciphertext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(b_vaulttext)
+
+        # if we could decrypt, the vault_id should be in secrets
+        secret = self.vault.secrets[vault_id]
         if self.vault.cipher_name not in CIPHER_WRITE_WHITELIST:
             # we want to get rid of files encrypted with the AES cipher
-            self._edit_file_helper(filename, existing_data=plaintext, force_save=True)
+            self._edit_file_helper(filename, secret, existing_data=plaintext, force_save=True)
         else:
-            self._edit_file_helper(filename, existing_data=plaintext, force_save=False)
+            self._edit_file_helper(filename, secret, existing_data=plaintext, force_save=False)
 
     def plaintext(self, filename):
 
-        ciphertext = self.read_data(filename)
+        b_vaulttext = self.read_data(filename)
+        vaulttext = to_text(b_vaulttext)
 
         try:
-            plaintext = self.vault.decrypt(ciphertext)
+            plaintext = self.vault.decrypt(vaulttext)
             return plaintext
         except AnsibleError as e:
             raise AnsibleVaultError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
     # FIXME/TODO: make this use VaultSecret
-    def rekey_file(self, filename, new_vault_secret, new_vault_id=None):
+    def rekey_file(self, filename, new_vault_secret):
 
         # follow the symlink
         filename = self._real_path(filename)
 
         prev = os.stat(filename)
-        ciphertext = self.read_data(filename)
+        b_vaulttext = self.read_data(filename)
+        vaulttext = to_text(b_vaulttext)
 
         try:
-            plaintext = self.vault.decrypt(ciphertext)
+            plaintext = self.vault.decrypt(vaulttext)
         except AnsibleError as e:
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
@@ -737,9 +749,9 @@ class VaultEditor:
         # the new vault will only be used for encrypting, so it doesn't need the vault secrets
         # (we will pass one in directly to encrypt)
         new_vault = VaultLib(secrets={})
-        new_ciphertext = new_vault.encrypt(plaintext, new_vault_secret)
+        b_new_vaulttext = new_vault.encrypt(plaintext, new_vault_secret)
 
-        self.write_data(new_ciphertext, filename)
+        self.write_data(b_new_vaulttext, filename)
 
         # preserve permissions
         os.chmod(filename, prev.st_mode)
