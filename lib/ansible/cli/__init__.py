@@ -175,18 +175,23 @@ class CLI(with_metaclass(ABCMeta, object)):
         # print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
         #      (vault_id, vault_password_file, ask_vault_pass, create_new_password))
         vault_secrets = VaultSecrets()
+        default_secret = None
 
-        for vault_password_file in vault_password_files:
+        for index, vault_password_file in enumerate(vault_password_files):
             # read vault_pass from a file
             file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
                                                               loader=loader)
             # TODO: seriously, make this better container
             vault_secrets.set_secret(vault_password_file, file_vault_secret)
 
+            # use first password file as default until we find something better
+            if index == 0:
+                default_secret = file_vault_secret
+
         prompted_vault_ids = vault_ids
 
         if not vault_secrets or ask_vault_pass:
-            for prompted_vault_id in prompted_vault_ids:
+            for index, prompted_vault_id in enumerate(prompted_vault_ids):
                 if create_new_password:
                     prompted_vault_secret = PromptNewVaultSecrets()
                 else:
@@ -197,6 +202,16 @@ class CLI(with_metaclass(ABCMeta, object)):
                 prompted_vault_secret.ask_vault_passwords(vault_id=prompted_vault_id)
 
                 vault_secrets.set_secret(prompted_vault_id, prompted_vault_secret)
+
+                # prompted secrets higher prec for 'default' than password
+                if index == 0:
+                    default_secret = prompted_vault_secret
+
+        # set the 'default' based on the secret if one wasnt set explicitly
+        # TODO: dont do this on encrypt?
+
+        if 'default' not in vault_secrets:
+            vault_secrets.set_secret('default', default_secret)
 
         return vault_secrets
 
@@ -278,10 +293,6 @@ class CLI(with_metaclass(ABCMeta, object)):
 
     @staticmethod
     def unfrack_paths(option, opt, value, parser):
-        import pprint
-        pprint.pprint(locals())
-        pprint.pprint(option.__dict__)
-        pprint.pprint(getattr(parser.values, option.dest))
         paths = getattr(parser.values, option.dest)
         if isinstance(value, string_types):
             paths.extend([unfrackpath(x) for x in value.split(os.pathsep)])
@@ -291,7 +302,6 @@ class CLI(with_metaclass(ABCMeta, object)):
             # setattr(parser.values, option.dest, [unfrackpath(x) for x in value])
         else:
             pass  # FIXME: should we raise options error?
-        print('paths: %s' % paths)
         setattr(parser.values, option.dest, paths)
 
     @staticmethod
@@ -342,7 +352,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             parser.add_option('--output', default=None, dest='output_file',
                               help='output file name for encrypt or decrypt; use - for stdout',
                               action="callback", callback=CLI.unfrack_path, type='string'),
-            parser.add_option('--vault-id', default=[C.DEFAULT_VAULT_IDENTITY], dest='vault_id', action='append', type='string',
+            parser.add_option('--vault-id', default=[], dest='vault_id', action='append', type='string',
                               help='the vault identity to use')
             parser.add_option('--new-vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='new_vault_id', type='string',
                               help='the new vault identity to use for rekey')

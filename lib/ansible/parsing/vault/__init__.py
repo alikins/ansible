@@ -500,6 +500,13 @@ class VaultLib:
         vault_id = vault_id or self.vault_id
         b_plaintext = to_bytes(plaintext, errors='surrogate_or_strict')
 
+        # import pprint
+        # print('vl.enc vault_secrets')
+        # pprint.pprint(self.secrets)
+        # print('vl.enc vault_id=%s' % vault_id)
+
+        secret = self.secrets.get_secret(name=vault_id)
+
         if is_encrypted(b_plaintext):
             raise AnsibleError("input is already encrypted")
 
@@ -512,7 +519,7 @@ class VaultLib:
             raise AnsibleError(u"{0} cipher could not be found".format(self.cipher_name))
 
         # encrypt data
-        b_ciphertext = this_cipher.encrypt(b_plaintext, self.secrets, vault_id=vault_id)
+        b_ciphertext = this_cipher.encrypt(b_plaintext, secret, vault_id=vault_id)
 
         # format the data for output to the file
         b_vaulttext = format_vaulttext_envelope(b_ciphertext, self.b_version,
@@ -571,15 +578,17 @@ class VaultLib:
         # if we specify a vault_id, only the corresponding vault secret is checked
         b_plaintext = None
         for vault_secret in self.secrets:
-            print('trying vault_secret: %s' % vault_secret)
+            display.vvvvv('Trying to use vault secret (%s) to decrypt %s' % (vault_secret, filename))
             try:
                 # TODO: this could really stand to be more dict like
                 secret = self.secrets.get_secret(name=vault_secret)
                 b_plaintext = this_cipher.decrypt(b_vaulttext, secret)
                 if b_plaintext is not None:
                     break
-            except Exception as e:
-                print(e)
+            except AnsibleError as e:
+                # print(e)
+                display.vvvv('Tried to use the vault secret (%s) to decrypt but it failed, continuing to other secrets.\nfilename: %s\nvaulttext: %serror: %s' %
+                             (vault_secret, filename, b_vaulttext, e))
                 continue
 
         if b_plaintext is None:
@@ -772,8 +781,7 @@ class VaultEditor:
         try:
             plaintext = self.vault.decrypt(ciphertext)
         except AnsibleError as e:
-            raise
-            #raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
+            raise AnsibleVaultError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
         return plaintext
 
@@ -935,10 +943,6 @@ class VaultAES:
 
     @classmethod
     def _decrypt_cryptography(cls, b_salt, b_ciphertext, b_password, key_length):
-
-        print('decrypt_cryptography')
-        import traceback
-        traceback.print_stack()
 
         bs = algorithms.AES.block_size // 8
         b_key, b_iv = cls._aes_derive_key_and_iv(b_password, b_salt, key_length, bs)
@@ -1144,9 +1148,10 @@ class VaultAES256:
         return to_bytes(hmac.hexdigest(), errors='surrogate_or_strict'), hexlify(b_ciphertext)
 
     @classmethod
-    def encrypt(cls, b_plaintext, secrets, vault_id=None):
+    def encrypt(cls, b_plaintext, secret, vault_id=None):
         b_salt = os.urandom(32)
-        b_password = secrets.b_get_secret(name=vault_id)
+        # b_password = secrets.b_get_secret(name=vault_id)
+        b_password = secret.bytes
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)
 
         if HAS_CRYPTOGRAPHY:

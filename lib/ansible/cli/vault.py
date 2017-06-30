@@ -146,14 +146,15 @@ class VaultCLI(CLI):
         # ask for a new password and confirm it, and 'read/write (rekey) that asks for the
         # old password, then asks for a new one and confirms it.
 
+        vault_ids = []
         if self.options.vault_id:
-            vault_id = self.options.vault_id
+            vault_ids = self.options.vault_id
 
         # TODO: instead of prompting for these before, we could let VaultEditor
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:
             vault_secrets = self.setup_vault_secrets(loader,
-                                                     vault_ids=self.options.vault_id,
+                                                     vault_ids=vault_ids,
                                                      vault_password_files=self.options.vault_password_file,
                                                      ask_vault_pass=self.options.ask_vault_pass)
 
@@ -161,7 +162,7 @@ class VaultCLI(CLI):
             vault_secrets = None
             vault_secrets = \
                 self.setup_vault_secrets(loader,
-                                         vault_ids=self.options.vault_id,
+                                         vault_ids=vault_ids,
                                          vault_password_files=self.options.vault_password_file,
                                          ask_vault_pass=self.options.ask_vault_pass,
                                          create_new_password=True)
@@ -188,7 +189,8 @@ class VaultCLI(CLI):
 
         loader.set_vault_secrets(vault_secrets)
 
-        self.editor = VaultEditor(vault_secrets, vault_id=vault_id)
+        # FIXME: do we need to create VaultEditor here? its not reused
+        self.editor = VaultEditor(vault_secrets)
 
         self.execute()
 
@@ -383,7 +385,13 @@ class VaultCLI(CLI):
             # unicode here because we are displaying it and therefore can make
             # the decision that the display doesn't have to be precisely what
             # the input was (leave that to decrypt instead)
-            self.pager(to_text(self.editor.plaintext(f)))
+            try:
+                plaintext = self.editor.plaintext(f)
+            except AnsibleError as e:
+                display.error(e)
+                continue
+
+            self.pager(to_text(plaintext))
 
     def execute_rekey(self):
         ''' re-encrypt a vaulted file with a new secret, the previous secret is required '''
