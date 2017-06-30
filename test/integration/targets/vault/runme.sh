@@ -41,9 +41,19 @@ ansible-vault view "$@" --vault-password-file vault-password format_1_1_AES256.y
 # encrypt it
 ansible-vault encrypt "$@" --vault-password-file vault-password "${TEST_FILE}"
 
+
 ansible-vault view "$@" --vault-password-file vault-password "${TEST_FILE}"
 
+# view with multiple vault-password files, including a wrong one
+ansible-vault view "$@" --vault-password-file vault-password --vault-password-file vault-password-wrong "${TEST_FILE}"
+
+# And with the password files specified in a different order
+ansible-vault view "$@" --vault-password-file vault-password-wrong --vault-password-file vault-password "${TEST_FILE}"
+
 ansible-vault decrypt "$@" --vault-password-file vault-password "${TEST_FILE}"
+
+# multiple vault passwords (--vault-id)
+ansible-vault view "$@" --vault-password-file vault-password --vault-password-file vault-password-wrong format_1_1_AES256.yml
 
 # new password file for rekeyed file
 NEW_VAULT_PASSWORD="${MYTMPDIR}/new-vault-password"
@@ -54,6 +64,15 @@ ansible-vault encrypt "$@" --vault-password-file vault-password "${TEST_FILE}"
 ansible-vault rekey "$@" --vault-password-file vault-password --new-vault-password-file "${NEW_VAULT_PASSWORD}" "${TEST_FILE}"
 
 ansible-vault view "$@" --vault-password-file "${NEW_VAULT_PASSWORD}" "${TEST_FILE}"
+
+# view with old password file and new password file
+ansible-vault view "$@" --vault-password-file "${NEW_VAULT_PASSWORD}" --vault-password-file vault-password "${TEST_FILE}"
+
+# view with old password file and new password file, different order
+ansible-vault view "$@" --vault-password-file vault-password --vault-password-file "${NEW_VAULT_PASSWORD}" "${TEST_FILE}"
+
+# view with old password file and new password file and another wrong
+ansible-vault view "$@" --vault-password-file "${NEW_VAULT_PASSWORD}" --vault-password-file vault-password-wrong --vault-password-file vault-password "${TEST_FILE}"
 
 ansible-vault decrypt "$@" --vault-password-file "${NEW_VAULT_PASSWORD}" "${TEST_FILE}"
 
