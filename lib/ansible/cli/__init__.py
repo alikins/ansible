@@ -180,7 +180,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
                                                               loader=loader)
             # TODO: seriously, make this better container
-            vault_secrets[vault_password_file] = file_vault_secret
+            vault_secrets[file_vault_secret.vault_id] = file_vault_secret
 
             # use first password file as default until we find something better
             if index == 0:
@@ -191,15 +191,15 @@ class CLI(with_metaclass(ABCMeta, object)):
         if not vault_secrets or ask_vault_pass:
             for index, prompted_vault_id in enumerate(prompted_vault_ids):
                 if create_new_password:
-                    prompted_vault_secret = PromptNewVaultSecret()
+                    prompted_vault_secret = PromptNewVaultSecret(vault_id=prompted_vault_id)
                 else:
-                    prompted_vault_secret = PromptVaultSecret()
+                    prompted_vault_secret = PromptVaultSecret(vault_id=prompted_vault_id)
 
                 # FIXME: we don't need to do this now, we could do it later though
                 #        that would change the cli UXD a bit and may be weird
-                prompted_vault_secret.ask_vault_passwords(vault_id=prompted_vault_id)
+                prompted_vault_secret.ask_vault_passwords()
 
-                vault_secrets[prompted_vault_id] = prompted_vault_secret
+                vault_secrets[prompted_vault_secret.vault_id] = prompted_vault_secret
 
                 # prompted secrets higher prec for 'default' than password
                 if index == 0:
