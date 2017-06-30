@@ -227,9 +227,10 @@ class VaultSecret:
 
 class TextVaultSecret(VaultSecret):
     '''A secret piece of text. ie, a password. Tracks text encoding.'''
-    def __init__(self, text=None, encoding=None, _bytes=None):
+
+    def __init__(self, text, encoding=None, _bytes=None):
         self.text = text
-        self.encoding = encoding
+        self.encoding = encoding or 'utf-8'
         self._bytes = _bytes
 
     @property
