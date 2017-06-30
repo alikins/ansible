@@ -276,6 +276,8 @@ class PromptVaultSecret(TextVaultSecret):
         # enforce no newline chars at the end of passwords
         if vault_pass:
             b_vault_pass = to_bytes(vault_pass, encoding='utf-8', errors='strict', nonstring='simplerepr').strip()
+
+        # detect empty passwords?
         self._bytes = b_vault_pass
 
 
@@ -1000,7 +1002,7 @@ class VaultAES:
         return b_plaintext
 
     @classmethod
-    def decrypt(cls, b_vaulttext, secrets, key_length=32, vault_id=None):
+    def decrypt(cls, b_vaulttext, secret, key_length=32, vault_id=None):
 
         """ Decrypt the given data and return it
         :arg b_data: A byte string containing the encrypted data
@@ -1020,7 +1022,7 @@ class VaultAES:
 
         # TODO: default id?
         # XXX FIXME TODO: not bytes now
-        b_password = secrets.b_get_secret(name=vault_id)
+        b_password = secret.bytes
 
         if HAS_CRYPTOGRAPHY:
             b_plaintext = cls._decrypt_cryptography(b_salt, b_ciphertext, b_password, key_length)
