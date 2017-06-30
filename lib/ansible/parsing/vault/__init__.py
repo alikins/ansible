@@ -782,7 +782,7 @@ class VaultEditor:
             plaintext = self.vault.decrypt(ciphertext)
             return plaintext
         except AnsibleError as e:
-            raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
+            raise AnsibleVaultError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
     # FIXME/TODO: make this use VaultSecret
     def rekey_file(self, filename, new_vault_secrets, new_vault_id=None):
