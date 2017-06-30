@@ -69,14 +69,14 @@ class TestAnsibleVaultUnicodeNoVault(unittest.TestCase, YamlTestUtils):
 class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.good_vault_password = "hunter42"
-        self.good_vault_secrets = vault.VaultSecrets()
-        self.good_vault_secrets._secrets['default'] = self.good_vault_password
+        self.good_vault_secrets = {}
+        self.good_vault_secrets['default'] = vault.TextVaultSecret(self.good_vault_password)
         self.good_vault = vault.VaultLib(self.good_vault_secrets)
 
         # TODO: make this use two vault secret identities instead of two vaultSecrets
         self.wrong_vault_password = 'not-hunter42'
-        self.wrong_vault_secrets = vault.VaultSecrets()
-        self.wrong_vault_secrets._secrets['default'] = self.wrong_vault_password
+        self.wrong_vault_secrets = {}
+        self.wrong_vault_secrets['default'] = vault.TextVaultSecret(self.wrong_vault_password)
         self.wrong_vault = vault.VaultLib(self.wrong_vault_secrets)
 
         self.vault = self.good_vault

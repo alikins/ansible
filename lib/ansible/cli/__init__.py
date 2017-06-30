@@ -43,7 +43,7 @@ from ansible.release import __version__
 from ansible.utils.path import unfrackpath
 from ansible.utils.vars import load_extra_vars, load_options_vars
 from ansible.vars.manager import VariableManager
-from ansible.parsing.vault import VaultSecrets, PromptVaultSecret, FileVaultSecret, PromptNewVaultSecrets
+from ansible.parsing.vault import PromptVaultSecret, FileVaultSecret, PromptNewVaultSecret
 
 
 try:
@@ -172,9 +172,7 @@ class CLI(with_metaclass(ABCMeta, object)):
     @staticmethod
     def setup_vault_secrets(loader, vault_ids, vault_password_files=None,
                             ask_vault_pass=None, create_new_password=False):
-        # print('vault_id=%s vault_password_file=%s ask_vault_pass=%s create_new_password=%s' %
-        #      (vault_id, vault_password_file, ask_vault_pass, create_new_password))
-        vault_secrets = VaultSecrets()
+        vault_secrets = {}
         default_secret = None
 
         for index, vault_password_file in enumerate(vault_password_files):
@@ -182,7 +180,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
                                                               loader=loader)
             # TODO: seriously, make this better container
-            vault_secrets.set_secret(vault_password_file, file_vault_secret)
+            vault_secrets[vault_password_file] = file_vault_secret
 
             # use first password file as default until we find something better
             if index == 0:
@@ -193,7 +191,7 @@ class CLI(with_metaclass(ABCMeta, object)):
         if not vault_secrets or ask_vault_pass:
             for index, prompted_vault_id in enumerate(prompted_vault_ids):
                 if create_new_password:
-                    prompted_vault_secret = PromptNewVaultSecrets()
+                    prompted_vault_secret = PromptNewVaultSecret()
                 else:
                     prompted_vault_secret = PromptVaultSecret()
 
@@ -201,7 +199,7 @@ class CLI(with_metaclass(ABCMeta, object)):
                 #        that would change the cli UXD a bit and may be weird
                 prompted_vault_secret.ask_vault_passwords(vault_id=prompted_vault_id)
 
-                vault_secrets.set_secret(prompted_vault_id, prompted_vault_secret)
+                vault_secrets[prompted_vault_id] = prompted_vault_secret
 
                 # prompted secrets higher prec for 'default' than password
                 if index == 0:
@@ -211,7 +209,7 @@ class CLI(with_metaclass(ABCMeta, object)):
         # TODO: dont do this on encrypt?
 
         if 'default' not in vault_secrets:
-            vault_secrets.set_secret('default', default_secret)
+            vault_secrets['default'] = default_secret
 
         return vault_secrets
 
