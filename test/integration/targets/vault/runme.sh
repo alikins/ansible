@@ -11,6 +11,16 @@ echo "This is a test file" > "${TEST_FILE}"
 
 TEST_FILE_OUTPUT="${MYTMPDIR}/test_file_output"
 
+# test playbooks using vaulted files
+ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --list-tasks
+ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --list-hosts
+ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --syntax-check
+ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password
+ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password --syntax-check
+ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password
+ansible-playbook test_vaulted_inventory.yml -i vaulted.inventory -v "$@" --vault-password-file vault-password
+ansible-playbook test_vaulted_template.yml -i ../../inventory -v "$@" --vault-password-file vault-password
+
 # old format
 ansible-vault view "$@" --vault-password-file vault-password-ansible format_1_0_AES.yml
 
