@@ -345,14 +345,18 @@ class FileVaultSecret(VaultSecret):
         if not os.path.exists(this_path):
             raise AnsibleError("The vault password file %s was not found" % this_path)
 
+        import pprint
+        pprint.pprint(locals())
         if loader.is_executable(this_path):
             try:
                 # STDERR not captured to make it easier for users to prompt for input in their scripts
                 p = subprocess.Popen(this_path, stdout=subprocess.PIPE)
             except OSError as e:
-                msg = "Problem running vault password script %s (%s)."
-                "If this is not a script, remove the executable bit from the file." % (' '.join(this_path), e)
-                raise AnsibleError(msg)
+                msg_format = "Problem running vault password script %s (%s)."
+                "If this is not a script, remove the executable bit from the file."
+                msg = msg_format % (' '.join(this_path), e)
+                raise
+                #raise AnsibleError(msg)
 
             stdout, stderr = p.communicate()
 

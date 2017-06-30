@@ -345,8 +345,8 @@ class CLI(with_metaclass(ABCMeta, object)):
                               help="vault password file", action="callback", callback=CLI.unfrack_paths, type='string')
             #parser.add_option('--vault-password-file', default=[C.DEFAULT_VAULT_PASSWORD_FILE], dest='vault_password_file',
             #                  help="vault password file", action="callback", callback=CLI.unfrack_paths, type='string')
-            parser.add_option('--new-vault-password-file', dest='new_vault_password_file',
-                              help="new vault password file for rekey", action="callback", callback=CLI.unfrack_path, type='string')
+            parser.add_option('--new-vault-password-file', default=[], dest='new_vault_password_file',
+                              help="new vault password file for rekey", action="callback", callback=CLI.unfrack_paths, type='string')
             parser.add_option('--output', default=None, dest='output_file',
                               help='output file name for encrypt or decrypt; use - for stdout',
                               action="callback", callback=CLI.unfrack_path, type='string'),
