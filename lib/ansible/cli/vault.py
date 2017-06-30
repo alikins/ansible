@@ -385,12 +385,7 @@ class VaultCLI(CLI):
             # unicode here because we are displaying it and therefore can make
             # the decision that the display doesn't have to be precisely what
             # the input was (leave that to decrypt instead)
-            try:
-                plaintext = self.editor.plaintext(f)
-            except AnsibleError as e:
-                display.error(e)
-                continue
-
+            plaintext = self.editor.plaintext(f)
             self.pager(to_text(plaintext))
 
     def execute_rekey(self):
