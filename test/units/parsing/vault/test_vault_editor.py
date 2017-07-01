@@ -111,7 +111,7 @@ class TestVaultEditor(unittest.TestCase):
         mock_sp_call.side_effect = self._faux_command
         ve = self._vault_editor()
 
-        b_ciphertext = ve._edit_file_helper(src_file_path)
+        b_ciphertext = ve._edit_file_helper(src_file_path, self.vault_secret)
 
         self.assertNotEqual(src_contents, b_ciphertext)
 
@@ -130,7 +130,8 @@ class TestVaultEditor(unittest.TestCase):
         self.assertRaisesRegexp(errors.AnsibleError,
                                 error_txt,
                                 ve._edit_file_helper,
-                                src_file_path)
+                                src_file_path,
+                                self.vault_secret)
 
     @patch('ansible.parsing.vault.call')
     def test_edit_file_helper_symlink_target(self, mock_sp_call):
@@ -146,7 +147,7 @@ class TestVaultEditor(unittest.TestCase):
         mock_sp_call.side_effect = self._faux_command
         ve = self._vault_editor()
 
-        b_ciphertext = ve._edit_file_helper(src_file_link_path)
+        b_ciphertext = ve._edit_file_helper(src_file_link_path, self.vault_secret)
 
         self.assertNotEqual(src_file_contents, b_ciphertext,
                             'b_ciphertext should be encrypted and not equal to src_contents')
@@ -180,7 +181,7 @@ class TestVaultEditor(unittest.TestCase):
         mock_sp_call.side_effect = faux_editor
         ve = self._vault_editor()
 
-        ve._edit_file_helper(src_file_path, existing_data=src_file_contents)
+        ve._edit_file_helper(src_file_path, self.vault_secret, existing_data=src_file_contents)
 
         new_target_file = open(src_file_path, 'rb')
         new_target_file_contents = new_target_file.read()

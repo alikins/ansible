@@ -676,7 +676,7 @@ class VaultEditor:
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
         self.write_data(plaintext, output_file or filename, shred=False)
 
-    def create_file(self, filename):
+    def create_file(self, filename, secret):
         """ create a new encrypted file """
 
         # FIXME: If we can raise an error here, we can probably just make it
@@ -684,7 +684,7 @@ class VaultEditor:
         if os.path.isfile(filename):
             raise AnsibleError("%s exists, please use 'edit' instead" % filename)
 
-        self._edit_file_helper(filename)
+        self._edit_file_helper(filename, secret)
 
     def edit_file(self, filename):
 
