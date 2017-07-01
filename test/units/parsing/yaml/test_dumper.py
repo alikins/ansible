@@ -32,7 +32,8 @@ class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
         self.vault_secrets = {}
-        self.vault_secrets['default'] = vault.TextVaultSecret(self.vault_password)
+        self.vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
+        self.vault_secrets[self.vault_secret.vault_id] = self.vault_secret
         self.good_vault = vault.VaultLib(self.vault_secrets)
         self.vault = self.good_vault
         self.stream = self._build_stream()

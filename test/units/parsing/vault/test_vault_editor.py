@@ -55,8 +55,10 @@ class TestVaultEditor(unittest.TestCase):
     def setUp(self):
         self._test_dir = None
         self.vault_password = "test-vault-password"
+        self.vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
         self.vault_secrets = {}
-        self.vault_secrets['default'] = vault.TextVaultSecret(self.vault_password)
+        self.vault_secrets[self.vault_secret.vault_id] = self.vault_secret
+        self.vault_secrets['default'] = self.vault_secret
 
     def tearDown(self):
         if self._test_dir:
@@ -66,7 +68,8 @@ class TestVaultEditor(unittest.TestCase):
 
     def _secrets(self, password):
         vault_secrets = {}
-        vault_secrets['default'] = vault.TextVaultSecret(password)
+        vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
+        vault_secrets['default'] = vault_secret
         return vault_secrets
 
     def test_methods_exist(self):
@@ -93,6 +96,11 @@ class TestVaultEditor(unittest.TestCase):
         opened_file.close()
         return file_path
 
+    def _vault_editor(self, vault_secrets=None):
+        if vault_secrets is None:
+            vault_secrets = self._secrets('password')
+        return VaultEditor(VaultLib(vault_secrets))
+
     @patch('ansible.parsing.vault.call')
     def test_edit_file_helper_empty_target(self, mock_sp_call):
         self._test_dir = self._create_test_dir()
@@ -101,7 +109,7 @@ class TestVaultEditor(unittest.TestCase):
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_contents)
 
         mock_sp_call.side_effect = self._faux_command
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
 
         b_ciphertext = ve._edit_file_helper(src_file_path)
 
@@ -117,7 +125,7 @@ class TestVaultEditor(unittest.TestCase):
         error_txt = 'calling editor raised an exception'
         mock_sp_call.side_effect = errors.AnsibleError(error_txt)
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
 
         self.assertRaisesRegexp(errors.AnsibleError,
                                 error_txt,
@@ -136,7 +144,7 @@ class TestVaultEditor(unittest.TestCase):
         os.symlink(src_file_path, src_file_link_path)
 
         mock_sp_call.side_effect = self._faux_command
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
 
         b_ciphertext = ve._edit_file_helper(src_file_link_path)
 
@@ -170,7 +178,7 @@ class TestVaultEditor(unittest.TestCase):
             self._faux_editor(editor_args, src_file_contents)
 
         mock_sp_call.side_effect = faux_editor
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
 
         ve._edit_file_helper(src_file_path, existing_data=src_file_contents)
 
@@ -203,14 +211,15 @@ class TestVaultEditor(unittest.TestCase):
         src_file_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_file_contents)
 
-        ve = VaultEditor(self._secrets("password"))
-        ve.encrypt_file(src_file_path)
+        ve = self._vault_editor()
+        ve.encrypt_file(src_file_path, self.vault_secret)
 
         # FIXME: update to just set self._secrets or just a new vault secret id
         new_password = 'password2:electricbugaloo'
         new_vault_secrets = {}
-        new_vault_secrets['default'] = new_password
-        ve.rekey_file(src_file_path, new_vault_secrets)
+        new_vault_secret = vault.TextVaultSecret('new_vault_secret', new_password)
+        new_vault_secrets['default'] = new_vault_secret
+        ve.rekey_file(src_file_path, new_vault_secret)
 
         # FIXME: can just update self._secrets here
         new_ve = vault.VaultEditor(new_vault_secrets)
@@ -222,8 +231,8 @@ class TestVaultEditor(unittest.TestCase):
         src_file_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_file_contents)
 
-        ve = VaultEditor(self._secrets("password"))
-        ve.encrypt_file(src_file_path)
+        ve = self._vault_editor()
+        ve.encrypt_file(src_file_path, self.vault_secret)
 
         self.assertRaisesRegexp(errors.AnsibleError,
                                 'The value for the new_password to rekey',
@@ -237,7 +246,7 @@ class TestVaultEditor(unittest.TestCase):
         src_file_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_file_contents)
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
 
         new_password = 'password2:electricbugaloo'
         self.assertRaisesRegexp(errors.AnsibleError,
@@ -251,8 +260,8 @@ class TestVaultEditor(unittest.TestCase):
         src_file_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_file_contents)
 
-        ve = VaultEditor(self._secrets("password"))
-        ve.encrypt_file(src_file_path)
+        ve = self._vault_editor()
+        ve.encrypt_file(src_file_path, self.vault_secret)
 
         res = ve.plaintext(src_file_path)
         self.assertEqual(src_file_contents, res)
@@ -263,7 +272,7 @@ class TestVaultEditor(unittest.TestCase):
         src_file_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_file_contents)
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
         self.assertRaisesRegexp(errors.AnsibleError,
                                 'input is not vault encrypted data',
                                 ve.plaintext,
@@ -274,8 +283,8 @@ class TestVaultEditor(unittest.TestCase):
         src_file_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_file_contents)
 
-        ve = VaultEditor(self._secrets("password"))
-        ve.encrypt_file(src_file_path)
+        ve = self._vault_editor()
+        ve.encrypt_file(src_file_path, self.vault_secret)
 
         self._assert_file_is_encrypted(ve, src_file_path, src_file_contents)
 
@@ -288,8 +297,8 @@ class TestVaultEditor(unittest.TestCase):
         src_file_link_path = os.path.join(self._test_dir, 'a_link_to_dest_file')
         os.symlink(src_file_path, src_file_link_path)
 
-        ve = VaultEditor(self._secrets("password"))
-        ve.encrypt_file(src_file_link_path)
+        ve = self._vault_editor()
+        ve.encrypt_file(src_file_link_path, self.vault_secret)
 
         self._assert_file_is_encrypted(ve, src_file_path, src_file_contents)
         self._assert_file_is_encrypted(ve, src_file_link_path, src_file_contents)
@@ -310,9 +319,9 @@ class TestVaultEditor(unittest.TestCase):
 
         mock_sp_call.side_effect = faux_editor
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
 
-        ve.encrypt_file(src_file_path)
+        ve.encrypt_file(src_file_path, self.vault_secret)
         ve.edit_file(src_file_path)
 
         new_src_file = open(src_file_path, 'rb')
@@ -338,9 +347,9 @@ class TestVaultEditor(unittest.TestCase):
 
         mock_sp_call.side_effect = faux_editor
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
 
-        ve.encrypt_file(src_file_path)
+        ve.encrypt_file(src_file_path, self.vault_secret)
 
         src_file_link_path = os.path.join(self._test_dir, 'a_link_to_dest_file')
 
@@ -374,7 +383,7 @@ class TestVaultEditor(unittest.TestCase):
 
         mock_sp_call.side_effect = faux_editor
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
         self.assertRaisesRegexp(errors.AnsibleError,
                                 'input is not vault encrypted data',
                                 ve.edit_file,
@@ -385,7 +394,7 @@ class TestVaultEditor(unittest.TestCase):
         src_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_contents)
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
         self.assertRaisesRegexp(errors.AnsibleError,
                                 'please use .edit. instead',
                                 ve.create_file,
@@ -396,7 +405,7 @@ class TestVaultEditor(unittest.TestCase):
         src_contents = to_bytes("some info in a file\nyup.")
         src_file_path = self._create_file(self._test_dir, 'src_file', content=src_contents)
 
-        ve = VaultEditor(self._secrets("password"))
+        ve = self._vault_editor()
         self.assertRaisesRegexp(errors.AnsibleError,
                                 'input is not vault encrypted data',
                                 ve.decrypt_file,
@@ -412,7 +421,7 @@ class TestVaultEditor(unittest.TestCase):
         tmp_file = tempfile.NamedTemporaryFile()
         os.unlink(tmp_file.name)
 
-        ve = VaultEditor(self._secrets("ansible"))
+        ve = self._vault_editor(self._secrets("ansible"))
         ve.create_file(tmp_file.name)
 
         self.assertTrue(os.path.exists(tmp_file.name))
@@ -423,7 +432,7 @@ class TestVaultEditor(unittest.TestCase):
         with v10_file as f:
             f.write(to_bytes(v10_data))
 
-        ve = VaultEditor(self._secrets("ansible"))
+        ve = self._vault_editor(self._secrets("ansible"))
 
         # make sure the password functions for the cipher
         error_hit = False
@@ -448,7 +457,7 @@ class TestVaultEditor(unittest.TestCase):
         with v11_file as f:
             f.write(to_bytes(v11_data))
 
-        ve = VaultEditor(self._secrets("ansible"))
+        ve = self._vault_editor(self._secrets("ansible"))
 
         # make sure the password functions for the cipher
         error_hit = False
@@ -472,13 +481,13 @@ class TestVaultEditor(unittest.TestCase):
         with v10_file as f:
             f.write(to_bytes(v10_data))
 
-        ve = VaultEditor(self._secrets("ansible"))
+        ve = self._vault_editor(self._secrets("ansible"))
 
         # make sure the password functions for the cipher
         error_hit = False
         new_secrets = self._secrets("ansible2")
         try:
-            ve.rekey_file(v10_file.name, new_secrets)
+            ve.rekey_file(v10_file.name, new_secrets['default'])
         except errors.AnsibleError:
             error_hit = True
 
@@ -506,14 +515,14 @@ class TestVaultEditor(unittest.TestCase):
 
     def test_real_path_dash(self):
         filename = '-'
-        ve = vault.VaultEditor('password')
+        ve = self._vault_editor()
 
         res = ve._real_path(filename)
         self.assertEqual(res, '-')
 
     def test_real_path_dev_null(self):
         filename = '/dev/null'
-        ve = vault.VaultEditor('password')
+        ve = self._vault_editor()
 
         res = ve._real_path(filename)
         self.assertEqual(res, '/dev/null')
@@ -525,7 +534,7 @@ class TestVaultEditor(unittest.TestCase):
 
         os.symlink(file_path, file_link_path)
 
-        ve = vault.VaultEditor('password')
+        ve = self._vault_editor()
 
         res = ve._real_path(file_link_path)
         self.assertEqual(res, file_path)
