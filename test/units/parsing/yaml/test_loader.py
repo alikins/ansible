@@ -177,19 +177,21 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
         self.vault_secrets = {}
-        self.vault_secrets['default'] = vault.TextVaultSecret(self.vault_password)
+        self.vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
+        self.vault_secrets[self.vault_secret.vault_id] = self.vault_secret
         self.vault = vault.VaultLib(self.vault_secrets)
 
     def test_wrong_password(self):
         plaintext = u"Ansible"
         bob_password = "this is a different password"
 
+        bobs_secret = vault.TextVaultSecret('bob_secret', bob_password)
         bobs_secrets = {}
-        bobs_secrets['default'] = vault.TextVaultSecret(bob_password)
+        bobs_secrets['default'] = bobs_secret
 
         bobs_vault = vault.VaultLib(bobs_secrets)
 
-        ciphertext = bobs_vault.encrypt(plaintext)
+        ciphertext = bobs_vault.encrypt(plaintext, bobs_secret)
 
         try:
             self.vault.decrypt(ciphertext)
@@ -199,7 +201,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
 
     def _encrypt_plaintext(self, plaintext):
         # Construct a yaml repr of a vault by hand
-        vaulted_var_bytes = self.vault.encrypt(plaintext)
+        vaulted_var_bytes = self.vault.encrypt(plaintext, self.vault_secrets['default'])
 
         # add yaml tag
         vaulted_var = vaulted_var_bytes.decode()
@@ -229,11 +231,11 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         return data_from_yaml
 
     def test_dump_load_cycle(self):
-        avu = AnsibleVaultEncryptedUnicode.from_plaintext('The plaintext for test_dump_load_cycle.', vault=self.vault)
+        avu = AnsibleVaultEncryptedUnicode.from_plaintext('The plaintext for test_dump_load_cycle.', self.vault, self.vault_secret)
         self._dump_load_cycle(avu)
 
     def test_embedded_vault_from_dump(self):
-        avu = AnsibleVaultEncryptedUnicode.from_plaintext('setec astronomy', vault=self.vault)
+        avu = AnsibleVaultEncryptedUnicode.from_plaintext('setec astronomy', self.vault, self.vault_secret)
         blip = {'stuff1': [{'a dict key': 24},
                            {'shhh-ssh-secrets': avu,
                             'nothing to see here': 'move along'}],
