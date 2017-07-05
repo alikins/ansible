@@ -49,8 +49,8 @@ v11_data = """$ANSIBLE_VAULT;1.1;AES256
 3739"""
 
 
-@pytest.mark.skipif(not vault.HAS_CRYPTOGRAPHY,
-                    reason="Skipping cryptography tests because cryptography is not installed")
+#@pytest.mark.skipif(not vault.HAS_CRYPTOGRAPHY,
+#                    reason="Skipping cryptography tests because cryptography is not installed")
 class TestVaultEditor(unittest.TestCase):
 
     def setUp(self):
@@ -195,6 +195,9 @@ class TestVaultEditor(unittest.TestCase):
         # TODO: assert that it is encrypted
         self.assertTrue(vault.is_encrypted(new_src_file_contents))
 
+        import pprint
+        pprint.pprint(locals())
+        pprint.pprint(vault_editor.vault)
         src_file_plaintext = vault_editor.vault.decrypt(new_src_file_contents)
 
         # the plaintext should not be encrypted
@@ -224,7 +227,7 @@ class TestVaultEditor(unittest.TestCase):
         ve.rekey_file(src_file_path, new_vault_secret)
 
         # FIXME: can just update self._secrets here
-        new_ve = vault.VaultEditor(new_vault_secrets)
+        new_ve = vault.VaultEditor(VaultLib(new_vault_secrets))
         self._assert_file_is_encrypted(new_ve, src_file_path, src_file_contents)
 
     def test_rekey_file_no_new_password(self):
@@ -442,8 +445,10 @@ class TestVaultEditor(unittest.TestCase):
         error_hit = False
         try:
             ve.decrypt_file(v10_file.name)
-        except errors.AnsibleError:
+        except errors.AnsibleError as e:
             error_hit = True
+            print('e: %s' % e)
+            raise
 
         # verify decrypted content
         f = open(v10_file.name, "rb")
@@ -468,6 +473,7 @@ class TestVaultEditor(unittest.TestCase):
         try:
             ve.decrypt_file(v11_file.name)
         except errors.AnsibleError:
+            raise
             error_hit = True
 
         # verify decrypted content
@@ -477,8 +483,8 @@ class TestVaultEditor(unittest.TestCase):
 
         os.unlink(v11_file.name)
 
-        assert error_hit is False, "error decrypting 1.0 file"
-        assert fdata.strip() == "foo", "incorrect decryption of 1.0 file: %s" % fdata.strip()
+        assert error_hit is False, "error decrypting 1.1 file"
+        assert fdata.strip() == "foo", "incorrect decryption of 1.1 file: %s" % fdata.strip()
 
     def test_rekey_migration(self):
         v10_file = tempfile.NamedTemporaryFile(delete=False)
@@ -493,6 +499,7 @@ class TestVaultEditor(unittest.TestCase):
         try:
             ve.rekey_file(v10_file.name, new_secrets['default'])
         except errors.AnsibleError:
+            raise
             error_hit = True
 
         # verify decrypted content
@@ -509,6 +516,7 @@ class TestVaultEditor(unittest.TestCase):
         try:
             dec_data = vl.decrypt(fdata)
         except errors.AnsibleError:
+            raise
             error_hit = True
 
         os.unlink(v10_file.name)
