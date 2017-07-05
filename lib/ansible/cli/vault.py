@@ -61,6 +61,12 @@ class VaultCLI(CLI):
         self.encrypt_string_read_stdin = False
         self.new_vault_secrets = None
         self.new_vault_id = None
+
+        self.encrypt_secret = None
+        self.encrypt_vault_id = None
+        self.new_encrypt_secret = None
+        self.new_encrypt_vault_id = None
+
         super(VaultCLI, self).__init__(args)
 
     def set_action(self):
@@ -149,7 +155,7 @@ class VaultCLI(CLI):
         vault_ids = []
         if self.options.vault_id:
             vault_ids = self.options.vault_id
-
+        print('vault_ids: %s' % vault_ids)
         # TODO: instead of prompting for these before, we could let VaultEditor
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:
@@ -159,6 +165,9 @@ class VaultCLI(CLI):
                                                      ask_vault_pass=self.options.ask_vault_pass)
 
         if self.action in ['encrypt', 'encrypt_string', 'create']:
+            if len(vault_ids) > 1:
+                raise AnsibleOptionsError("Only one --vault-id can be used for encryption")
+
             vault_secrets = None
             vault_secrets = \
                 self.setup_vault_secrets(loader,
@@ -169,6 +178,11 @@ class VaultCLI(CLI):
 
             if not vault_secrets:
                 raise AnsibleOptionsError("A vault password is required to use Ansible's Vault ")
+
+            # only one secret for encrypt for now
+            self.encrypt_vault_id = vault_secrets.keys()[0]
+            self.encrypt_secret = vault_secrets[self.encrypt_vault_id]
+
         if self.action in ['rekey']:
             import pprint
             pprint.pprint(self.options)
@@ -189,8 +203,11 @@ class VaultCLI(CLI):
 
             self.new_vault_secrets = new_vault_secrets
 
-            # There is only one new_vault_id currently
-            self.new_vault_id = new_vault_ids[0]
+            # There is only one new_vault_id currently and one new_vault_secret
+            self.new_vault_id = new_vault_secrets.keys()[0]
+            self.new_encrypt_secret = new_vault_secrets[self.new_vault_id]
+            # FIXME: redundant with self.new_vault_id
+            self.new_encrypt_vault_id = self.new_vault_id
 
         if not vault_secrets:
             raise AnsibleOptionsError("A password is required to use Ansible's Vault")
@@ -214,7 +231,9 @@ class VaultCLI(CLI):
             display.display("Reading plaintext input from stdin", stderr=True)
 
         for f in self.args or ['-']:
-            self.editor.encrypt_file(f, self.secrets['default'],
+            # Fixme: use the correct vau
+            self.editor.encrypt_file(f, self.encrypt_secret,
+                                     vault_id=self.encrypt_vault_id,
                                      output_file=self.options.output_file)
 
         if sys.stdout.isatty():
@@ -318,7 +337,7 @@ class VaultCLI(CLI):
             b_plaintext_list.append((b_plaintext, self.FROM_ARGS, name))
 
         # Format the encrypted strings and any corresponding stderr output
-        outputs = self._format_output_vault_strings(b_plaintext_list)
+        outputs = self._format_output_vault_strings(b_plaintext_list, vault_id=None)
 
         for output in outputs:
             err = output.get('err', None)
@@ -332,7 +351,7 @@ class VaultCLI(CLI):
 
         # TODO: offer block or string ala eyaml
 
-    def _format_output_vault_strings(self, b_plaintext_list):
+    def _format_output_vault_strings(self, b_plaintext_list, vault_id=None):
         # If we are only showing one item in the output, we don't need to included commented
         # delimiters in the text
         show_delimiter = False
@@ -349,7 +368,8 @@ class VaultCLI(CLI):
             # (the text itself, which input it came from, its name)
             b_plaintext, src, name = b_plaintext_info
             # FIXME: maybe a good place to take a vault_id as param
-            b_ciphertext = self.editor.encrypt_bytes(b_plaintext, self.secrets['default'])
+            b_ciphertext = self.editor.encrypt_bytes(b_plaintext, self.secrets['default'],
+                                                     vault_id=vault_id)
 
             # block formatting
             yaml_text = self.format_ciphertext_yaml(b_ciphertext, name=name)
@@ -383,7 +403,8 @@ class VaultCLI(CLI):
         if len(self.args) > 1:
             raise AnsibleOptionsError("ansible-vault create can take only one filename argument")
 
-        self.editor.create_file(self.args[0], self.secrets['default'])
+        self.editor.create_file(self.args[0], self.secrets['default'],
+                                vault_id=self.encrypt_vault_id)
 
     def execute_edit(self):
         ''' open and decrypt an existing vaulted file in an editor, that will be encryped again when closed'''
@@ -410,6 +431,7 @@ class VaultCLI(CLI):
 
         for f in self.args:
             # FIXME: plumb in vault_id, use the default new_vault_secret for now
-            self.editor.rekey_file(f, self.new_vault_secrets[self.new_vault_id])
+            self.editor.rekey_file(f, self.new_encrypt_secret,
+                                   self.new_encrypt_vault_id)
 
         display.display("Rekey successful", stderr=True)

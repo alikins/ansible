@@ -34,6 +34,7 @@ from ansible.parsing.vault import VaultLib
 from ansible.parsing.vault import VaultEditor
 from ansible.module_utils._text import to_bytes, to_text
 
+from units.mock.vault_helper import TextVaultSecret
 
 v10_data = """$ANSIBLE_VAULT;1.0;AES
 53616c7465645f5fd0026926a2d415a28a2622116273fbc90e377225c12a347e1daf4456d36a77f9
@@ -55,7 +56,7 @@ class TestVaultEditor(unittest.TestCase):
     def setUp(self):
         self._test_dir = None
         self.vault_password = "test-vault-password"
-        self.vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
+        self.vault_secret = TextVaultSecret('vault_secret', self.vault_password)
         self.vault_secrets = {}
         self.vault_secrets[self.vault_secret.vault_id] = self.vault_secret
         self.vault_secrets['default'] = self.vault_secret
@@ -68,7 +69,7 @@ class TestVaultEditor(unittest.TestCase):
 
     def _secrets(self, password):
         vault_secrets = {}
-        vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
+        vault_secret = TextVaultSecret('vault_secret', self.vault_password)
         vault_secrets['default'] = vault_secret
         return vault_secrets
 
@@ -218,7 +219,7 @@ class TestVaultEditor(unittest.TestCase):
         # FIXME: update to just set self._secrets or just a new vault secret id
         new_password = 'password2:electricbugaloo'
         new_vault_secrets = {}
-        new_vault_secret = vault.TextVaultSecret('new_vault_secret', new_password)
+        new_vault_secret = TextVaultSecret('new_vault_secret', new_password)
         new_vault_secrets['default'] = new_vault_secret
         ve.rekey_file(src_file_path, new_vault_secret)
 
@@ -399,7 +400,8 @@ class TestVaultEditor(unittest.TestCase):
         self.assertRaisesRegexp(errors.AnsibleError,
                                 'please use .edit. instead',
                                 ve.create_file,
-                                src_file_path)
+                                src_file_path,
+                                self.vault_secret)
 
     def test_decrypt_file_exception(self):
         self._test_dir = self._create_test_dir()
@@ -422,8 +424,9 @@ class TestVaultEditor(unittest.TestCase):
         tmp_file = tempfile.NamedTemporaryFile()
         os.unlink(tmp_file.name)
 
-        ve = self._vault_editor(self._secrets("ansible"))
-        ve.create_file(tmp_file.name)
+        _secrets = self._secrets('ansible')
+        ve = self._vault_editor(_secrets)
+        ve.create_file(tmp_file.name, _secrets['default'])
 
         self.assertTrue(os.path.exists(tmp_file.name))
 

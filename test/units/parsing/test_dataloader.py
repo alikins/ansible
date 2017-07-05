@@ -25,6 +25,7 @@ from ansible.errors import AnsibleParserError, yaml_strings
 from ansible.module_utils.six import PY3
 from ansible.parsing import vault
 
+from units.mock.vault_helper import TextVaultSecret
 from ansible.parsing.dataloader import DataLoader
 
 
@@ -77,7 +78,7 @@ class TestDataLoaderWithVault(unittest.TestCase):
     def setUp(self):
         self._loader = DataLoader()
         vault_secrets = {}
-        vault_secrets['default'] = vault.TextVaultPassword('ansible')
+        vault_secrets['default'] = TextVaultSecret('default', 'ansible')
         self._loader.set_vault_secrets(vault_secrets)
 
     def tearDown(self):

@@ -26,13 +26,14 @@ from ansible.parsing.yaml import dumper, objects
 from ansible.parsing.yaml.loader import AnsibleLoader
 
 from units.mock.yaml_helper import YamlTestUtils
+from units.mock.vault_helper import TextVaultSecret
 
 
 class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
         self.vault_secrets = {}
-        self.vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
+        self.vault_secret = TextVaultSecret('vault_secret', self.vault_password)
         self.vault_secrets[self.vault_secret.vault_id] = self.vault_secret
         self.good_vault = vault.VaultLib(self.vault_secrets)
         self.vault = self.good_vault
