@@ -423,11 +423,6 @@ class DataLoader:
         if not self.path_exists(b_file_path) or not self.is_file(b_file_path):
             raise AnsibleFileNotFound(file_name=file_path)
 
-        # FIXME: once we have a way to determine what vault id a file is encrypted with, then plug it
-        #        in here. Whatever has the multiple vault secrets
-        # if not self._vaults.get('default', None):
-        #    _vault = VaultLib(secrets=self._vault.secrets)
-
         real_path = self.path_dwim(file_path)
 
         try:
@@ -441,8 +436,8 @@ class DataLoader:
                         # the decrypt call would throw an error, but we check first
                         # since the decrypt function doesn't know the file name
                         data = f.read()
-                        if not self._b_vault_password:
-                            raise AnsibleParserError("A vault password must be specified to decrypt %s" % to_native(file_path))
+                        if not self._vault.secrets:
+                            raise AnsibleParserError("A vault password or secret must be specified to decrypt %s" % to_native(file_path))
 
                         data = self._vault.decrypt(data, filename=real_path)
                         # Make a temp file
