@@ -157,7 +157,6 @@ class VaultCLI(CLI):
         else:
             vault_ids = ['default']
 
-
         # TODO: instead of prompting for these before, we could let VaultEditor
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:

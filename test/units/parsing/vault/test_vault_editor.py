@@ -49,8 +49,8 @@ v11_data = """$ANSIBLE_VAULT;1.1;AES256
 3739"""
 
 
-#@pytest.mark.skipif(not vault.HAS_CRYPTOGRAPHY,
-#                    reason="Skipping cryptography tests because cryptography is not installed")
+@pytest.mark.skipif(not vault.HAS_CRYPTOGRAPHY,
+                    reason="Skipping cryptography tests because cryptography is not installed")
 class TestVaultEditor(unittest.TestCase):
 
     def setUp(self):
@@ -440,18 +440,13 @@ class TestVaultEditor(unittest.TestCase):
             f.write(to_bytes(v10_data))
 
         ve = self._vault_editor(self._secrets("ansible"))
-        print('ve.vault: %s' % ve.vault)
-        print('ve.vault.secrets: %s' % ve.vault.secrets)
-        for k, v in ve.vault.secrets.items():
-            print('k: %s v: %s v.bytes: %s' % (k, v, v.bytes))
 
         # make sure the password functions for the cipher
         error_hit = False
         try:
             ve.decrypt_file(v10_file.name)
-        except errors.AnsibleError as e:
+        except errors.AnsibleError:
             error_hit = True
-            print('e: %s' % e)
             raise
 
         # verify decrypted content
@@ -525,9 +520,7 @@ class TestVaultEditor(unittest.TestCase):
 
         os.unlink(v10_file.name)
 
-        # assert vl.cipher_name == "AES256", "wrong cipher name set after rekey: %s" % vl.cipher_name
         self.assertIn('AES256', fdata, 'AES256 was not found in vault file %s' % fdata)
-        #assert vl.cipher_name == "AES256", "wrong cipher name set after rekey: %s" % vl.cipher_name
         assert error_hit is False, "error decrypting migrated 1.0 file"
         assert dec_data.strip() == b"foo", "incorrect decryption of rekeyed/migrated file: %s" % dec_data
 

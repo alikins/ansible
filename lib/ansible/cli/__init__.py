@@ -173,7 +173,6 @@ class CLI(with_metaclass(ABCMeta, object)):
     def setup_vault_secrets(loader, vault_ids, vault_password_files=None,
                             ask_vault_pass=None, create_new_password=False):
         vault_secrets = {}
-        default_secret = None
 
         for index, vault_password_file in enumerate(vault_password_files):
             # read vault_pass from a file
@@ -181,10 +180,6 @@ class CLI(with_metaclass(ABCMeta, object)):
                                                               loader=loader)
             # TODO: seriously, make this better container
             vault_secrets[file_vault_secret.vault_id] = file_vault_secret
-
-            # use first password file as default until we find something better
-            if index == 0:
-                default_secret = file_vault_secret
 
         prompted_vault_ids = vault_ids
 
@@ -200,16 +195,6 @@ class CLI(with_metaclass(ABCMeta, object)):
                 prompted_vault_secret.ask_vault_passwords()
 
                 vault_secrets[prompted_vault_secret.vault_id] = prompted_vault_secret
-
-                # prompted secrets higher prec for 'default' than password
-                if index == 0:
-                    default_secret = prompted_vault_secret
-
-        # set the 'default' based on the secret if one wasnt set explicitly
-        # TODO: dont do this on encrypt?
-
-        #if 'default' not in vault_secrets:
-        #    vault_secrets['default'] = default_secret
 
         return vault_secrets
 
