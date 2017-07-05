@@ -69,7 +69,7 @@ class TestVaultEditor(unittest.TestCase):
 
     def _secrets(self, password):
         vault_secrets = {}
-        vault_secret = TextVaultSecret('vault_secret', self.vault_password)
+        vault_secret = TextVaultSecret('vault_secret', password)
         vault_secrets['default'] = vault_secret
         return vault_secrets
 
@@ -99,7 +99,7 @@ class TestVaultEditor(unittest.TestCase):
 
     def _vault_editor(self, vault_secrets=None):
         if vault_secrets is None:
-            vault_secrets = self._secrets('password')
+            vault_secrets = self._secrets(self.vault_password)
         return VaultEditor(VaultLib(vault_secrets))
 
     @patch('ansible.parsing.vault.call')
@@ -440,6 +440,10 @@ class TestVaultEditor(unittest.TestCase):
             f.write(to_bytes(v10_data))
 
         ve = self._vault_editor(self._secrets("ansible"))
+        print('ve.vault: %s' % ve.vault)
+        print('ve.vault.secrets: %s' % ve.vault.secrets)
+        for k, v in ve.vault.secrets.items():
+            print('k: %s v: %s v.bytes: %s' % (k, v, v.bytes))
 
         # make sure the password functions for the cipher
         error_hit = False
@@ -521,7 +525,9 @@ class TestVaultEditor(unittest.TestCase):
 
         os.unlink(v10_file.name)
 
-        assert vl.cipher_name == "AES256", "wrong cipher name set after rekey: %s" % vl.cipher_name
+        # assert vl.cipher_name == "AES256", "wrong cipher name set after rekey: %s" % vl.cipher_name
+        self.assertIn('AES256', fdata, 'AES256 was not found in vault file %s' % fdata)
+        #assert vl.cipher_name == "AES256", "wrong cipher name set after rekey: %s" % vl.cipher_name
         assert error_hit is False, "error decrypting migrated 1.0 file"
         assert dec_data.strip() == b"foo", "incorrect decryption of rekeyed/migrated file: %s" % dec_data
 
