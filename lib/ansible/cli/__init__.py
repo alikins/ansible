@@ -174,16 +174,9 @@ class CLI(with_metaclass(ABCMeta, object)):
                             ask_vault_pass=None, create_new_password=False):
         vault_secrets = {}
 
-        for index, vault_password_file in enumerate(vault_password_files):
-            # read vault_pass from a file
-            file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
-                                                              loader=loader)
-            # TODO: seriously, make this better container
-            vault_secrets[file_vault_secret.vault_id] = file_vault_secret
-
         prompted_vault_ids = vault_ids
 
-        if not vault_secrets or ask_vault_pass:
+        if ask_vault_pass:
             for index, prompted_vault_id in enumerate(prompted_vault_ids):
                 if create_new_password:
                     prompted_vault_secret = PromptNewVaultSecret(vault_id=prompted_vault_id)
@@ -194,7 +187,24 @@ class CLI(with_metaclass(ABCMeta, object)):
                 #        that would change the cli UXD a bit and may be weird
                 prompted_vault_secret.ask_vault_passwords()
 
-                vault_secrets[prompted_vault_secret.vault_id] = prompted_vault_secret
+                vault_secrets[prompted_vault_id] = prompted_vault_secret
+
+        # should vault-password-file override prompted (ask-vault-pass) ? who
+        # should use 'default' vault id if one isnt provided?
+        for index, vault_password_file in enumerate(vault_password_files):
+            # read vault_pass from a file
+            file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
+                                                              loader=loader)
+            # start with filename as vault id
+            file_vault_id = vault_password_file
+
+            # then consume any remaining vault_ids as ids for password file provided secrets
+            for vault_id in vault_ids:
+                if vault_id not in vault_secrets:
+                    file_vault_id = vault_id
+            vault_secrets[file_vault_id] = file_vault_secret
+            # And set the filename based vault_id as well
+            vault_secrets[vault_password_file] = file_vault_secret
 
         return vault_secrets
 
