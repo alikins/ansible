@@ -50,7 +50,8 @@ class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
 
     def test(self):
         plaintext = 'This is a string we are going to encrypt.'
-        avu = objects.AnsibleVaultEncryptedUnicode.from_plaintext(plaintext, vault=self.vault)
+        avu = objects.AnsibleVaultEncryptedUnicode.from_plaintext(plaintext, vault=self.vault,
+                                                                  secret=self.vault_secrets['vault_secret'])
 
         yaml_out = self._dump_string(avu, dumper=self.dumper)
         stream = self._build_stream(yaml_out)
