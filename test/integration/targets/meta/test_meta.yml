@@ -1,0 +1,8 @@
+---
+- name: Gather all facts on all given hosts
+  hosts: testhost
+  gather_facts: true
+
+  tasks:
+    - name: Clear gathered facts
+      meta: clear_facts
