@@ -26,8 +26,8 @@ class TextVaultSecret(VaultSecret):
     The text encoding of the text may not be the default text encoding so
     we keep track of the encoding so we encode it to the same bytes.'''
 
-    def __init__(self, vault_id, text, encoding=None, errors=None, _bytes=None):
-        super(TextVaultSecret, self).__init__(vault_id)
+    def __init__(self, text, encoding=None, errors=None, _bytes=None):
+        super(TextVaultSecret, self).__init__()
         self.text = text
         self.encoding = encoding or 'utf-8'
         self._bytes = _bytes

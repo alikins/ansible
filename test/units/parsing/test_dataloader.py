@@ -122,7 +122,7 @@ class TestDataLoaderWithVault(unittest.TestCase):
     def setUp(self):
         self._loader = DataLoader()
         vault_secrets = {}
-        vault_secrets['default'] = TextVaultSecret('default', 'ansible')
+        vault_secrets['default'] = TextVaultSecret('ansible')
         self._loader.set_vault_secrets(vault_secrets)
 
     def tearDown(self):

@@ -178,7 +178,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
         self.vault_secrets = {}
-        self.vault_secret = TextVaultSecret('vault_secret', self.vault_password)
+        self.vault_secret = TextVaultSecret(self.vault_password)
         self.vault_secrets['vault_secret'] = self.vault_secret
         self.vault_secrets['default'] = self.vault_secret
         self.vault = vault.VaultLib(self.vault_secrets)
@@ -187,7 +187,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         plaintext = u"Ansible"
         bob_password = "this is a different password"
 
-        bobs_secret = TextVaultSecret('bob_secret', bob_password)
+        bobs_secret = TextVaultSecret(bob_password)
         bobs_secrets = {}
         bobs_secrets['default'] = bobs_secret
 

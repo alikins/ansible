@@ -56,9 +56,9 @@ class TestVaultEditor(unittest.TestCase):
     def setUp(self):
         self._test_dir = None
         self.vault_password = "test-vault-password"
-        self.vault_secret = TextVaultSecret('vault_secret', self.vault_password)
+        self.vault_secret = TextVaultSecret(self.vault_password)
         self.vault_secrets = {}
-        self.vault_secrets[self.vault_secret.vault_id] = self.vault_secret
+        self.vault_secrets['vault_secret'] = self.vault_secret
         self.vault_secrets['default'] = self.vault_secret
 
     def tearDown(self):
@@ -69,7 +69,7 @@ class TestVaultEditor(unittest.TestCase):
 
     def _secrets(self, password):
         vault_secrets = {}
-        vault_secret = TextVaultSecret('vault_secret', password)
+        vault_secret = TextVaultSecret(password)
         vault_secrets['default'] = vault_secret
         return vault_secrets
 
@@ -222,7 +222,7 @@ class TestVaultEditor(unittest.TestCase):
         # FIXME: update to just set self._secrets or just a new vault secret id
         new_password = 'password2:electricbugaloo'
         new_vault_secrets = {}
-        new_vault_secret = TextVaultSecret('new_vault_secret', new_password)
+        new_vault_secret = TextVaultSecret(new_password)
         new_vault_secrets['default'] = new_vault_secret
         ve.rekey_file(src_file_path, new_vault_secret)
 

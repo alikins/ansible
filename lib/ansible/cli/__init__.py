@@ -179,9 +179,9 @@ class CLI(with_metaclass(ABCMeta, object)):
         if ask_vault_pass:
             for index, prompted_vault_id in enumerate(prompted_vault_ids):
                 if create_new_password:
-                    prompted_vault_secret = PromptNewVaultSecret(vault_id=prompted_vault_id)
+                    prompted_vault_secret = PromptNewVaultSecret()
                 else:
-                    prompted_vault_secret = PromptVaultSecret(vault_id=prompted_vault_id)
+                    prompted_vault_secret = PromptVaultSecret()
 
                 # FIXME: we don't need to do this now, we could do it later though
                 #        that would change the cli UXD a bit and may be weird

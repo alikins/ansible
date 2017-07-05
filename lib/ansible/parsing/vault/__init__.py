@@ -211,10 +211,9 @@ def format_vaulttext_envelope(b_ciphertext, b_version, cipher_name, vault_id=Non
 
 class VaultSecret:
     '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
-    def __init__(self, vault_id, _bytes=None):
+    def __init__(self, _bytes=None):
         # FIXME: ? that seems wrong... Unset etc?
         self._bytes = _bytes
-        self.vault_id = vault_id
 
     @property
     def bytes(self):
@@ -293,8 +292,8 @@ class PromptNewVaultSecret(VaultSecret):
 
 # TODO: mv these classes to a seperate file so we don't pollute vault with 'subprocess' etc
 class FileVaultSecret(VaultSecret):
-    def __init__(self, vault_id, filename=None, encoding=None, loader=None):
-        super(FileVaultSecret, self).__init__(vault_id)
+    def __init__(self, filename=None, encoding=None, loader=None):
+        super(FileVaultSecret, self).__init__()
         self.filename = filename
         self.loader = loader
 
@@ -311,8 +310,7 @@ class FileVaultSecret(VaultSecret):
     @classmethod
     def from_filename(cls, filename, loader, vault_id=None):
         vault_id = vault_id or filename
-        file_vault_secret = cls(vault_id=vault_id,
-                                filename=filename,
+        file_vault_secret = cls(filename=filename,
                                 loader=loader)
         # load secrets from file
         file_vault_secret._bytes = cls.read_file(filename, loader)
