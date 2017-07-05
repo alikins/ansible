@@ -497,8 +497,16 @@ class VaultLib:
 
         if not self.secrets:
             raise AnsibleVaultError('Attempting to decrypt but no vault secrets found')
+
+        # TODO: we dont have to enforce this, and enforcing it does not provide any additional
+        #       security.
+        if vault_id not in self.secrets:
+            raise AnsibleVaultError('No secret was provided for vault id (%s) while decrypting filename=%s. For vault ids other than "default", try --vault-id to specify the id' %
+                                    (vault_id, filename))
+
         for vault_secret_id in self.secrets:
             display.vvvvv('Trying to use vault secret (%s) to decrypt %s' % (vault_secret_id, filename))
+
             try:
                 secret = self.secrets[vault_secret_id]
                 b_plaintext = this_cipher.decrypt(b_vaulttext, secret)
