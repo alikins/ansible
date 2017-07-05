@@ -96,7 +96,6 @@ if HAS_SOME_PYCRYPTO:
     NEED_CRYPTO_LIBRARY += " a newer version of"
 NEED_CRYPTO_LIBRARY += " pycrypto in order to function."
 
-#HAS_CRYPTOGRAPHY=False
 
 class VaultData(object):
     vault_data = True
@@ -331,8 +330,6 @@ class FileVaultSecret(VaultSecret):
         if not os.path.exists(this_path):
             raise AnsibleError("The vault password file %s was not found" % this_path)
 
-        import pprint
-        pprint.pprint(locals())
         if loader.is_executable(this_path):
             try:
                 # STDERR not captured to make it easier for users to prompt for input in their scripts
@@ -342,10 +339,7 @@ class FileVaultSecret(VaultSecret):
                 "If this is not a script, remove the executable bit from the file."
                 msg = msg_format % (' '.join(this_path), e)
 
-                raise
-
-
-                #raise AnsibleError(msg)
+                raise AnsibleError(msg)
 
             stdout, stderr = p.communicate()
 
@@ -424,18 +418,11 @@ class VaultLib:
         if secret is None:
             secret = self.secrets['default']
 
-        print('secret: %s' % secret)
-
         # use 'default' id if we dont specify
         if vault_id is None:
             vault_id = 'default'
 
         b_plaintext = to_bytes(plaintext, errors='surrogate_or_strict')
-
-        # import pprint
-        # print('vl.enc vault_secrets')
-        # pprint.pprint(self.secrets)
-        # print('vl.enc vault_id=%s' % vault_id)
 
         if is_encrypted(b_plaintext):
             raise AnsibleError("input is already encrypted")
@@ -508,22 +495,16 @@ class VaultLib:
         # if we specify a vault_id, only the corresponding vault secret is checked
         b_plaintext = None
 
-        print(self.secrets)
         if not self.secrets:
             raise AnsibleVaultError('Attempting to decrypt but no vault secrets found')
         for vault_secret_id in self.secrets:
             display.vvvvv('Trying to use vault secret (%s) to decrypt %s' % (vault_secret_id, filename))
             try:
                 secret = self.secrets[vault_secret_id]
-                print('b_vaulttext: %s b_version: %s cipher_name: %s vault_id: %s' % (b_vaulttext, b_version, cipher_name, vault_id))
-                print('secret: %s' % secret)
-                print('secret.bytes: %s' % secret.bytes)
                 b_plaintext = this_cipher.decrypt(b_vaulttext, secret)
-                print('b_plaintext: %s' % b_plaintext)
                 if b_plaintext is not None:
                     break
             except AnsibleError as e:
-                # print(e)
                 display.vvvv('Tried to use the vault secret (%s) to decrypt but it failed, continuing to other secrets.\nfilename: %s\nvaulttext: %serror: %s' %
                              (vault_secret_id, filename, b_vaulttext, e))
                 continue
@@ -678,17 +659,9 @@ class VaultEditor:
 
         ciphertext = self.read_data(filename)
 
-        print('ciphertext: %s' % ciphertext)
-        print('type(ciphertext: %s' % type(ciphertext))
-
         try:
             plaintext = self.vault.decrypt(ciphertext, filename=filename)
         except AnsibleError as e:
-
-
-            raise
-
-
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
         self.write_data(plaintext, output_file or filename, shred=False)
 
@@ -897,7 +870,6 @@ class VaultAES:
     @staticmethod
     def _parse_plaintext_envelope(b_envelope):
         # split out sha and verify decryption
-        print('b_envelope:\n%s' % b_envelope)
         b_split_data = b_envelope.split(b"\n", 1)
         b_this_sha = b_split_data[0]
         b_plaintext = b_split_data[1]
@@ -920,10 +892,8 @@ class VaultAES:
         except ValueError:
             # In VaultAES, ValueError: invalid padding bytes can mean bad
             # password was given
-            raise
             raise AnsibleError("Decryption failed")
 
-        # print('b_plaintext_envelope: %s' % b_plaintext_envelope)
         b_plaintext, b_this_sha, b_test_sha = cls._parse_plaintext_envelope(b_plaintext_envelope)
 
         if b_this_sha != b_test_sha:

@@ -155,7 +155,6 @@ class VaultCLI(CLI):
         vault_ids = []
         if self.options.vault_id:
             vault_ids = self.options.vault_id
-        print('vault_ids: %s' % vault_ids)
         # TODO: instead of prompting for these before, we could let VaultEditor
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:
@@ -184,10 +183,7 @@ class VaultCLI(CLI):
             self.encrypt_secret = vault_secrets[self.encrypt_vault_id]
 
         if self.action in ['rekey']:
-            import pprint
-            pprint.pprint(self.options)
             new_vault_ids = []
-            pprint.pprint(locals())
             if self.options.new_vault_id:
                 new_vault_ids.append(self.options.new_vault_id)
 
