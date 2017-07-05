@@ -152,9 +152,12 @@ class VaultCLI(CLI):
         # ask for a new password and confirm it, and 'read/write (rekey) that asks for the
         # old password, then asks for a new one and confirms it.
 
-        vault_ids = []
         if self.options.vault_id:
             vault_ids = self.options.vault_id
+        else:
+            vault_ids = ['default']
+
+
         # TODO: instead of prompting for these before, we could let VaultEditor
         #       call a callback when it needs it.
         if self.action in ['decrypt', 'view', 'rekey']:

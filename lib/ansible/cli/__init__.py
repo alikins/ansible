@@ -208,8 +208,8 @@ class CLI(with_metaclass(ABCMeta, object)):
         # set the 'default' based on the secret if one wasnt set explicitly
         # TODO: dont do this on encrypt?
 
-        if 'default' not in vault_secrets:
-            vault_secrets['default'] = default_secret
+        #if 'default' not in vault_secrets:
+        #    vault_secrets['default'] = default_secret
 
         return vault_secrets
 
