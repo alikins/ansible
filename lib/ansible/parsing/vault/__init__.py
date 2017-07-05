@@ -357,6 +357,8 @@ class FileVaultSecret(VaultSecret):
 
         return vault_pass
 
+    def __repr__(self):
+        return "%s(filename='%s')" % (self.__class__.__name__, self.filename)
 
 # TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
 # FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
