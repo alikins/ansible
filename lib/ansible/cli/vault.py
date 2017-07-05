@@ -366,8 +366,8 @@ class VaultCLI(CLI):
             # (the text itself, which input it came from, its name)
             b_plaintext, src, name = b_plaintext_info
             # FIXME: maybe a good place to take a vault_id as param
-            b_ciphertext = self.editor.encrypt_bytes(b_plaintext, self.secrets['default'],
-                                                     vault_id=vault_id)
+            b_ciphertext = self.editor.encrypt_bytes(b_plaintext, self.encrypt_secret,
+                                                     vault_id=self.encrypt_vault_id)
 
             # block formatting
             yaml_text = self.format_ciphertext_yaml(b_ciphertext, name=name)
