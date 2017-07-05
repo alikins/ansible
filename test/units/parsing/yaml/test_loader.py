@@ -34,6 +34,7 @@ from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
 from ansible.parsing.yaml.dumper import AnsibleDumper
 
 from units.mock.yaml_helper import YamlTestUtils
+from units.mock.vault_helper import TextVaultSecret
 
 try:
     from _yaml import ParserError
@@ -177,7 +178,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
         self.vault_secrets = {}
-        self.vault_secret = vault.TextVaultSecret('vault_secret', self.vault_password)
+        self.vault_secret = TextVaultSecret('vault_secret', self.vault_password)
         self.vault_secrets[self.vault_secret.vault_id] = self.vault_secret
         self.vault = vault.VaultLib(self.vault_secrets)
 
@@ -185,7 +186,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         plaintext = u"Ansible"
         bob_password = "this is a different password"
 
-        bobs_secret = vault.TextVaultSecret('bob_secret', bob_password)
+        bobs_secret = TextVaultSecret('bob_secret', bob_password)
         bobs_secrets = {}
         bobs_secrets['default'] = bobs_secret
 

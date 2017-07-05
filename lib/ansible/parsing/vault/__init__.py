@@ -211,9 +211,9 @@ def format_vaulttext_envelope(b_ciphertext, b_version, cipher_name, vault_id=Non
 
 class VaultSecret:
     '''Opaque/abstract objects for a single vault secret. ie, a password or a key.'''
-    def __init__(self, vault_id):
-        # FIXME: ? that seems wrong...
-        self._bytes = None
+    def __init__(self, vault_id, _bytes=None):
+        # FIXME: ? that seems wrong... Unset etc?
+        self._bytes = _bytes
         self.vault_id = vault_id
 
     @property
@@ -223,21 +223,6 @@ class VaultSecret:
         Sub classes that store text types will need to override to encode the text to bytes.
         '''
         return self._bytes
-
-
-class TextVaultSecret(VaultSecret):
-    '''A secret piece of text. ie, a password. Tracks text encoding.'''
-
-    def __init__(self, vault_id, text, encoding=None, _bytes=None):
-        super(TextVaultSecret, self).__init__(vault_id)
-        self.text = text
-        self.encoding = encoding or 'utf-8'
-        self._bytes = _bytes
-
-    @property
-    def bytes(self):
-        '''The text encoded with encoding, unless we specifically set _bytes.'''
-        return self._bytes or self.text.encode(self.encoding)
 
 
 class PromptVaultSecret(VaultSecret):
@@ -419,7 +404,7 @@ class VaultLib:
         display.deprecated(u'vault.VaultLib.is_encrypted_file is deprecated.  Use vault.is_encrypted_file instead', version='2.4')
         return is_encrypted_file(file_obj)
 
-    def encrypt(self, plaintext, secret):
+    def encrypt(self, plaintext, secret=None, vault_id=None):
         """Vault encrypt a piece of data.
 
         :arg plaintext: a text or byte string to encrypt.
@@ -431,6 +416,16 @@ class VaultLib:
         If the string passed in is a text string, it will be encoded to UTF-8
         before encryption.
         """
+
+        if secret is None:
+            secret = self.secrets['default']
+
+        print('secret: %s' % secret)
+
+        # use 'default' id if we dont specify
+        if vault_id is None:
+            vault_id = 'default'
+
         b_plaintext = to_bytes(plaintext, errors='surrogate_or_strict')
 
         # import pprint
@@ -454,7 +449,7 @@ class VaultLib:
 
         # format the data for output to the file
         b_vaulttext = format_vaulttext_envelope(b_ciphertext, self.b_version,
-                                                self.cipher_name, secret.vault_id)
+                                                self.cipher_name, vault_id)
         return b_vaulttext
 
     def decrypt(self, vaulttext, filename=None):
@@ -604,7 +599,8 @@ class VaultEditor:
 
         os.remove(tmp_path)
 
-    def _edit_file_helper(self, filename, secret, existing_data=None, force_save=False):
+    def _edit_file_helper(self, filename, secret,
+                          existing_data=None, force_save=False, vault_id=None):
 
         # Create a tempfile
         fd, tmp_path = tempfile.mkstemp()
@@ -631,7 +627,7 @@ class VaultEditor:
         # encrypt new data and write out to tmp
         # An existing vaultfile will always be UTF-8,
         # so decode to unicode here
-        b_ciphertext = self.vault.encrypt(b_tmpdata, secret)
+        b_ciphertext = self.vault.encrypt(b_tmpdata, secret, vault_id=vault_id)
         self.write_data(b_ciphertext, tmp_path)
 
         # shuffle tmp file into place
@@ -645,13 +641,13 @@ class VaultEditor:
         real_path = os.path.realpath(filename)
         return real_path
 
-    def encrypt_bytes(self, b_plaintext, secret):
+    def encrypt_bytes(self, b_plaintext, secret, vault_id=None):
 
-        b_ciphertext = self.vault.encrypt(b_plaintext, secret)
+        b_ciphertext = self.vault.encrypt(b_plaintext, secret, vault_id=vault_id)
 
         return b_ciphertext
 
-    def encrypt_file(self, filename, secret, output_file=None):
+    def encrypt_file(self, filename, secret, vault_id=None, output_file=None):
 
         # A file to be encrypted into a vaultfile could be any encoding
         # so treat the contents as a byte string.
@@ -660,7 +656,7 @@ class VaultEditor:
         filename = self._real_path(filename)
 
         b_plaintext = self.read_data(filename)
-        b_ciphertext = self.vault.encrypt(b_plaintext, secret)
+        b_ciphertext = self.vault.encrypt(b_plaintext, secret, vault_id=vault_id)
         self.write_data(b_ciphertext, output_file or filename)
 
     def decrypt_file(self, filename, output_file=None):
@@ -676,7 +672,7 @@ class VaultEditor:
             raise AnsibleError("%s for %s" % (to_bytes(e), to_bytes(filename)))
         self.write_data(plaintext, output_file or filename, shred=False)
 
-    def create_file(self, filename, secret):
+    def create_file(self, filename, secret, vault_id=None):
         """ create a new encrypted file """
 
         # FIXME: If we can raise an error here, we can probably just make it
@@ -684,7 +680,7 @@ class VaultEditor:
         if os.path.isfile(filename):
             raise AnsibleError("%s exists, please use 'edit' instead" % filename)
 
-        self._edit_file_helper(filename, secret)
+        self._edit_file_helper(filename, secret, vault_id=vault_id)
 
     def edit_file(self, filename):
 
@@ -726,7 +722,7 @@ class VaultEditor:
             raise AnsibleVaultError("%s for %s" % (to_bytes(e), to_bytes(filename)))
 
     # FIXME/TODO: make this use VaultSecret
-    def rekey_file(self, filename, new_vault_secret):
+    def rekey_file(self, filename, new_vault_secret, new_vault_id=None):
 
         # follow the symlink
         filename = self._real_path(filename)
@@ -753,7 +749,7 @@ class VaultEditor:
         # the new vault will only be used for encrypting, so it doesn't need the vault secrets
         # (we will pass one in directly to encrypt)
         new_vault = VaultLib(secrets={})
-        b_new_vaulttext = new_vault.encrypt(plaintext, new_vault_secret)
+        b_new_vaulttext = new_vault.encrypt(plaintext, new_vault_secret, vault_id=new_vault_id)
 
         self.write_data(b_new_vaulttext, filename)
 

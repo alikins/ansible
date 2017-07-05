@@ -35,6 +35,8 @@ from ansible.module_utils import six
 from ansible.module_utils._text import to_bytes, to_text
 from ansible.parsing import vault
 
+from units.mock.vault_helper import TextVaultSecret
+
 
 class TestVaultIsEncrypted(unittest.TestCase):
     def test_bytes_not_encrypted(self):
@@ -256,7 +258,7 @@ class TestVaultLib(unittest.TestCase):
     def setUp(self):
         self.vault_password = "test-vault-password"
         self.vault_secrets = {}
-        self.vault_secrets['default'] = self.vault_password
+        self.vault_secrets['default'] = TextVaultSecret('default', self.vault_password)
         self.v = vault.VaultLib(self.vault_secrets)
 
     def test_encrypt(self):
@@ -319,7 +321,7 @@ class TestVaultLib(unittest.TestCase):
     def test_encrypt_decrypt_aes(self):
         self.v.cipher_name = u'AES'
         vault_secrets = {}
-        vault_secrets['default'] = 'ansible'
+        vault_secrets['default'] = TextVaultSecret('default', 'ansible')
         self.v.secrets = vault_secrets
         # AES encryption code has been removed, so this is old output for
         # AES-encrypted 'foobar' with password 'ansible'.

@@ -29,6 +29,7 @@ from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.parsing.yaml import objects
 
 from units.mock.yaml_helper import YamlTestUtils
+from units.mock.vault_helper import TextVaultSecret
 
 
 class TestAnsibleVaultUnicodeNoVault(unittest.TestCase, YamlTestUtils):
@@ -70,14 +71,14 @@ class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.good_vault_password = "hunter42"
         self.good_vault_secrets = {}
-        self.good_vault_secret = vault.TextVaultSecret('good_vault_password', self.good_vault_password)
+        self.good_vault_secret = TextVaultSecret('good_vault_password', self.good_vault_password)
         self.good_vault_secrets[self.good_vault_secret.vault_id] = self.good_vault_secret
         self.good_vault = vault.VaultLib(self.good_vault_secrets)
 
         # TODO: make this use two vault secret identities instead of two vaultSecrets
         self.wrong_vault_password = 'not-hunter42'
         self.wrong_vault_secrets = {}
-        self.wrong_vault_secret = vault.TextVaultSecret('wrong_vault_password', self.wrong_vault_password)
+        self.wrong_vault_secret = TextVaultSecret('wrong_vault_password', self.wrong_vault_password)
         self.wrong_vault_secrets[self.wrong_vault_secret.vault_id] = self.wrong_vault_secret
         self.wrong_vault = vault.VaultLib(self.wrong_vault_secrets)
 
