@@ -21,6 +21,7 @@ __metaclass__ = type
 
 from ansible.compat.tests import unittest
 
+from ansible.errors import AnsibleError
 
 from ansible.parsing import vault
 from ansible.parsing.yaml.loader import AnsibleLoader
@@ -144,4 +145,8 @@ class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
         seq = ''
         self.vault = self.wrong_vault
         avu = self._from_plaintext(seq)
-        self.assert_values(avu, seq)
+
+        def compare(avu, seq):
+            return avu == seq
+
+        self.assertRaises(AnsibleError, compare, avu, seq)
