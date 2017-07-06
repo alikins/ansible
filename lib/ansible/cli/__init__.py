@@ -185,9 +185,11 @@ class CLI(with_metaclass(ABCMeta, object)):
             for index, prompted_vault_id in enumerate(prompted_vault_ids):
                 prompted_vault_secret = PromptVaultSecret(prompt_formats=prompt_formats, vault_id=prompted_vault_id)
 
-                # FIXME: we don't need to do this now, we could do it later though
-                #        that would change the cli UXD a bit and may be weird
-                # prompted_vault_secret.ask_vault_passwords()
+                # TODO: we don't need to do this now, we could do it later though
+                #       that would change the cli UXD a bit and may be weird.
+                # TODO: callback style also means callback could be called from worker process
+                #       so keeping enough state to only ask for a password once gets complicated
+                prompted_vault_secret.load()
 
                 vault_secrets[prompted_vault_id] = prompted_vault_secret
 
@@ -197,6 +199,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             # read vault_pass from a file
             file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
                                                               loader=loader)
+            file_vault_secret.load()
             # start with filename as vault id
             file_vault_id = vault_password_file
 

@@ -223,6 +223,9 @@ class VaultSecret:
         '''
         return self._bytes
 
+    def load(self):
+        return self._bytes
+
 
 class PromptVaultSecret(VaultSecret):
     default_prompt_formats = ["Vault password (%s): "]
@@ -238,12 +241,10 @@ class PromptVaultSecret(VaultSecret):
 
     @property
     def bytes(self):
-        if self._bytes:
-            return self._bytes
-
-        self._bytes = self.ask_vault_passwords()
-
         return self._bytes
+
+    def load(self):
+        self._bytes = self.ask_vault_passwords()
 
     def ask_vault_passwords(self):
         b_vault_passwords = []
@@ -296,9 +297,10 @@ class FileVaultSecret(VaultSecret):
         vault_id = vault_id or filename
         file_vault_secret = cls(filename=filename,
                                 loader=loader)
-        # load secrets from file
-        file_vault_secret._bytes = cls.read_file(filename, loader)
         return file_vault_secret
+
+    def load(self):
+        self._bytes = self.read_file(self.filename, self.loader)
 
     @staticmethod
     def read_file(vault_password_file, loader):
