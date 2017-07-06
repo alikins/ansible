@@ -225,62 +225,50 @@ class VaultSecret:
 
 
 class PromptVaultSecret(VaultSecret):
-    default_prompt = "Vault password: "
-    # TODO: nicer format
-    vault_id_prompt = "Vault password (%s): "
+    default_prompt_formats = ["Vault password (%s): "]
+
+    def __init__(self, _bytes=None, vault_id=None, prompt_formats=None):
+        self._bytes = _bytes
+        self.vault_id = vault_id
+
+        if prompt_formats is None:
+            self.prompt_formats = self.default_prompt_formats
+        else:
+            self.prompt_formats = prompt_formats
+
+    @property
+    def bytes(self):
+        if self._bytes:
+            return self._bytes
+
+        self._bytes = self.ask_vault_passwords()
+
+        return self._bytes
 
     def ask_vault_passwords(self):
-        ''' prompt for vault password and/or password change '''
+        import traceback
+        print('\n')
+        traceback.print_stack()
 
-        # TODO: ask for vault id
-        vault_pass = None
+        b_vault_passwords = []
 
-        prompt = self.default_prompt
-        # if vault_id != 'default':
-        #    prompt = self.vault_id_prompt % vault_id
-        prompt = self.vault_id_prompt % self.vault_id
+        for prompt_format in self.prompt_formats:
+            prompt = prompt_format % self.vault_id
+            try:
+                vault_pass = getpass.getpass(prompt=prompt)
+            except EOFError:
+                pass
+            b_vault_pass = to_bytes(vault_pass, errors='strict', nonstring='simplerepr').strip()
+            b_vault_passwords.append(b_vault_pass)
 
-        try:
-            vault_pass = getpass.getpass(prompt=prompt)
-        except EOFError:
-            pass
+        # Make sure the passwords match by comparing them all to the first password
+        for b_vault_password in b_vault_passwords:
+            self.confirm(b_vault_passwords[0], b_vault_password)
 
-        # enforce no newline chars at the end of passwords
-        if vault_pass:
-            b_vault_pass = to_bytes(vault_pass, encoding='utf-8', errors='strict', nonstring='simplerepr').strip()
+        if b_vault_passwords:
+            return b_vault_passwords[0]
 
-        # detect empty passwords?
-        self._bytes = b_vault_pass
-
-
-# class PromptNewVaultSecrets(VaultSecrets):
-class PromptNewVaultSecret(VaultSecret):
-
-    default_prompt = "New Vault password: "
-    vault_id_prompt = "New Vault password (%s): "
-    default_confirm_prompt = "Confirm New Vault password: "
-    vault_id_confirm_prompt = "Confirm New Vault password (%s): "
-
-    def ask_vault_passwords(self):
-        vault_pass_1 = vault_pass_2 = None
-
-        prompt = self.vault_id_prompt % self.vault_id
-        confirm_prompt = self.vault_id_confirm_prompt % self.vault_id
-
-        try:
-            vault_pass_1 = getpass.getpass(prompt=prompt)
-            vault_pass_2 = getpass.getpass(prompt=confirm_prompt)
-        except EOFError:
-            pass
-
-        if vault_pass_1:
-            b_vault_pass_1 = to_bytes(vault_pass_1, errors='strict', nonstring='simplerepr').strip()
-        if vault_pass_2:
-            b_vault_pass_2 = to_bytes(vault_pass_2, errors='strict', nonstring='simplerepr').strip()
-
-        self.confirm(b_vault_pass_1, b_vault_pass_2)
-
-        self._bytes = b_vault_pass_1
+        return None
 
     def confirm(self, b_vault_pass_1, b_vault_pass_2):
         # enforce no newline chars at the end of passwords

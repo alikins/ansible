@@ -43,8 +43,7 @@ from ansible.release import __version__
 from ansible.utils.path import unfrackpath
 from ansible.utils.vars import load_extra_vars, load_options_vars
 from ansible.vars.manager import VariableManager
-from ansible.parsing.vault import PromptVaultSecret, FileVaultSecret, PromptNewVaultSecret
-
+from ansible.parsing.vault import PromptVaultSecret, FileVaultSecret
 
 try:
     from __main__ import display
@@ -176,16 +175,20 @@ class CLI(with_metaclass(ABCMeta, object)):
 
         prompted_vault_ids = vault_ids
 
+        if create_new_password:
+            prompt_formats = ['New vault password (%s): ',
+                              'Confirm vew vault password (%s): ']
+        else:
+            prompt_formats = ['Vault password (%s): ']
+
         if ask_vault_pass:
             for index, prompted_vault_id in enumerate(prompted_vault_ids):
-                if create_new_password:
-                    prompted_vault_secret = PromptNewVaultSecret()
-                else:
-                    prompted_vault_secret = PromptVaultSecret()
+
+                prompted_vault_secret = PromptVaultSecret(prompt_formats=prompt_formats, vault_id=prompted_vault_id)
 
                 # FIXME: we don't need to do this now, we could do it later though
                 #        that would change the cli UXD a bit and may be weird
-                prompted_vault_secret.ask_vault_passwords()
+                # prompted_vault_secret.ask_vault_passwords()
 
                 vault_secrets[prompted_vault_id] = prompted_vault_secret
 
