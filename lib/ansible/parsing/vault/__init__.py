@@ -97,13 +97,6 @@ if HAS_SOME_PYCRYPTO:
 NEED_CRYPTO_LIBRARY += " pycrypto in order to function."
 
 
-class VaultData(object):
-    vault_data = True
-
-    def __init__(self, data):
-        self.data = data
-
-
 class AnsibleVaultError(AnsibleError):
     pass
 
