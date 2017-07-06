@@ -355,7 +355,7 @@ class VaultCLI(CLI):
         for index, b_plaintext_info in enumerate(b_plaintext_list):
             # (the text itself, which input it came from, its name)
             b_plaintext, src, name = b_plaintext_info
-            # FIXME: maybe a good place to take a vault_id as param
+
             b_ciphertext = self.editor.encrypt_bytes(b_plaintext, self.encrypt_secret,
                                                      vault_id=vault_id)
 
