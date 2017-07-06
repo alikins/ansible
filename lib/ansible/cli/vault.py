@@ -185,7 +185,7 @@ class VaultCLI(CLI):
             new_vault_secrets = \
                 self.setup_vault_secrets(loader,
                                          vault_ids=new_vault_ids,
-                                         vault_password_files=self.options.new_vault_password_file,
+                                         vault_password_files=self.options.new_vault_password_files,
                                          ask_vault_pass=self.options.ask_vault_pass,
                                          create_new_password=True)
 
