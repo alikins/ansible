@@ -175,10 +175,13 @@ def parse_vaulttext_envelope(b_vaulttext_envelope, default_vault_id=None):
     return b_ciphertext, b_version, cipher_name, vault_id
 
 
-def format_vaulttext_envelope(b_ciphertext, b_version, cipher_name, vault_id=None):
+def format_vaulttext_envelope(b_ciphertext, cipher_name, version=None, vault_id=None):
     """ Add header and format to 80 columns
 
-        :arg b_vaulttext: the encrypted and hexlified data as a byte string
+        :arg b_ciphertext: the encrypted and hexlified data as a byte string
+        :arg cipher_name: unicode cipher name (for ex, u'AES256')
+        :arg version: unicode vault version (for ex, '1.2'). Optional ('1.1' is default)
+        :arg vault_id: unicode vault identifier. If provided, the version will be bumped to 1.2.
         :returns: a byte str that should be dumped into a file.  It's
             formatted to 80 char columns and has the header prepended
     """
@@ -186,13 +189,25 @@ def format_vaulttext_envelope(b_ciphertext, b_version, cipher_name, vault_id=Non
     if not cipher_name:
         raise AnsibleError("the cipher must be set before adding a header")
 
-    header_parts = [b_HEADER, b_version,
-                    to_bytes(cipher_name, 'utf-8', errors='strict')]
+    version = version or '1.1'
 
-    if b_version == b'1.2':
-        header_parts.append(to_bytes(vault_id, 'utf-8', errors='strict'))
+    # If we specify a vault_id, use format version 1.2. For no vault_id, stick to 1.1
+    if vault_id:
+        version = '1.2'
+
+    b_version = to_bytes(version, 'utf-8', errors='strict')
+    b_vault_id = to_bytes(vault_id, 'utf-8', errors='strict')
+    b_cipher_name = to_bytes(cipher_name, 'utf-8', errors='strict')
+
+    header_parts = [b_HEADER,
+                    b_version,
+                    b_cipher_name]
+
+    if b_version == b'1.2' and b_vault_id:
+        header_parts.append(b_vault_id)
 
     header = b';'.join(header_parts)
+
     b_vaulttext = [header]
     b_vaulttext += [b_ciphertext[i:i + 80] for i in range(0, len(b_ciphertext), 80)]
     b_vaulttext += [b'']
@@ -396,10 +411,6 @@ class VaultLib:
         if secret is None:
             secret = self.secrets['default']
 
-        # use 'default' id if we dont specify
-        if vault_id is None:
-            vault_id = 'default'
-
         b_plaintext = to_bytes(plaintext, errors='surrogate_or_strict')
 
         if is_encrypted(b_plaintext):
@@ -417,8 +428,9 @@ class VaultLib:
         b_ciphertext = this_cipher.encrypt(b_plaintext, secret)
 
         # format the data for output to the file
-        b_vaulttext = format_vaulttext_envelope(b_ciphertext, self.b_version,
-                                                self.cipher_name, vault_id)
+        b_vaulttext = format_vaulttext_envelope(b_ciphertext,
+                                                self.cipher_name,
+                                                vault_id=vault_id)
         return b_vaulttext
 
     def decrypt(self, vaulttext, filename=None):

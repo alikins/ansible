@@ -258,7 +258,9 @@ class TestVaultLib(unittest.TestCase):
     def setUp(self):
         self.vault_password = "test-vault-password"
         self.vault_secrets = {}
-        self.vault_secrets['default'] = TextVaultSecret(self.vault_password)
+        text_secret = TextVaultSecret(self.vault_password)
+        self.vault_secrets['default'] = text_secret
+        self.vault_secrets['test_id'] = text_secret
         self.v = vault.VaultLib(self.vault_secrets)
 
     def test_encrypt(self):
@@ -267,7 +269,18 @@ class TestVaultLib(unittest.TestCase):
 
         self.assertIsInstance(b_vaulttext, six.binary_type)
 
-        b_header = b'$ANSIBLE_VAULT;1.2;AES256;default\n'
+        print('b_vaulttext: %s' % b_vaulttext)
+        b_header = b'$ANSIBLE_VAULT;1.1;AES256\n'
+        self.assertEqual(b_vaulttext[:len(b_header)], b_header)
+
+    def test_encrypt_vault_id(self):
+        plaintext = u'Some text to encrypt in a café'
+        b_vaulttext = self.v.encrypt(plaintext, vault_id='test_id')
+
+        self.assertIsInstance(b_vaulttext, six.binary_type)
+
+        b_header = b'$ANSIBLE_VAULT;1.2;AES256;test_id\n'
+        print('b_vaulttext: %s' % b_vaulttext)
         self.assertEqual(b_vaulttext[:len(b_header)], b_header)
 
     def test_encrypt_bytes(self):
@@ -277,7 +290,7 @@ class TestVaultLib(unittest.TestCase):
 
         self.assertIsInstance(b_vaulttext, six.binary_type)
 
-        b_header = b'$ANSIBLE_VAULT;1.2;AES256;default\n'
+        b_header = b'$ANSIBLE_VAULT;1.1;AES256\n'
         self.assertEqual(b_vaulttext[:len(b_header)], b_header)
 
     def test_is_encrypted(self):
@@ -288,8 +301,10 @@ class TestVaultLib(unittest.TestCase):
     def test_format_vaulttext_envelope(self):
         cipher_name = "TEST"
         b_ciphertext = b"ansible"
-        b_vaulttext = vault.format_vaulttext_envelope(b_ciphertext, self.v.b_version,
-                                                      cipher_name, vault_id='default')
+        b_vaulttext = vault.format_vaulttext_envelope(b_ciphertext,
+                                                      cipher_name,
+                                                      version=self.v.b_version,
+                                                      vault_id='default')
         b_lines = b_vaulttext.split(b'\n')
         self.assertGreater(len(b_lines), 1, msg="failed to properly add header")
 
