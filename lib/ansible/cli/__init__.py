@@ -183,7 +183,6 @@ class CLI(with_metaclass(ABCMeta, object)):
 
         if ask_vault_pass:
             for index, prompted_vault_id in enumerate(prompted_vault_ids):
-
                 prompted_vault_secret = PromptVaultSecret(prompt_formats=prompt_formats, vault_id=prompted_vault_id)
 
                 # FIXME: we don't need to do this now, we could do it later though
@@ -674,8 +673,13 @@ class CLI(with_metaclass(ABCMeta, object)):
         # all needs loader
         loader = DataLoader()
 
+        if options.vault_id:
+            vault_ids = options.vault_id
+        else:
+            vault_ids = ['default']
+
         vault_secrets = CLI.setup_vault_secrets(loader,
-                                                vault_ids=options.vault_id,
+                                                vault_ids=vault_ids,
                                                 vault_password_files=options.vault_password_file,
                                                 ask_vault_pass=options.ask_vault_pass)
         loader.set_vault_secrets(vault_secrets)
