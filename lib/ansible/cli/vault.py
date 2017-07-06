@@ -155,7 +155,7 @@ class VaultCLI(CLI):
         if self.action in ['decrypt', 'view', 'rekey']:
             vault_secrets = self.setup_vault_secrets(loader,
                                                      vault_ids=vault_ids,
-                                                     vault_password_files=self.options.vault_password_file,
+                                                     vault_password_files=self.options.vault_password_files,
                                                      ask_vault_pass=self.options.ask_vault_pass)
 
         if self.action in ['encrypt', 'encrypt_string', 'create']:
@@ -166,7 +166,7 @@ class VaultCLI(CLI):
             vault_secrets = \
                 self.setup_vault_secrets(loader,
                                          vault_ids=vault_ids,
-                                         vault_password_files=self.options.vault_password_file,
+                                         vault_password_files=self.options.vault_password_files,
                                          ask_vault_pass=self.options.ask_vault_pass,
                                          create_new_password=True)
 

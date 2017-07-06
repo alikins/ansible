@@ -276,7 +276,7 @@ class CLI(with_metaclass(ABCMeta, object)):
 
         if vault_opts:
             # Check for vault related conflicts
-            if (op.ask_vault_pass and op.vault_password_file):
+            if (op.ask_vault_pass and op.vault_password_files):
                 self.parser.error("--ask-vault-pass and --vault-password-file are mutually exclusive")
 
         if runas_opts:
@@ -342,7 +342,7 @@ class CLI(with_metaclass(ABCMeta, object)):
         if vault_opts:
             parser.add_option('--ask-vault-pass', default=C.DEFAULT_ASK_VAULT_PASS, dest='ask_vault_pass', action='store_true',
                               help='ask for vault password')
-            parser.add_option('--vault-password-file', default=[], dest='vault_password_file',
+            parser.add_option('--vault-password-file', default=[], dest='vault_password_files',
                               help="vault password file", action="callback", callback=CLI.unfrack_paths, type='string')
             parser.add_option('--new-vault-password-file', default=[], dest='new_vault_password_file',
                               help="new vault password file for rekey", action="callback", callback=CLI.unfrack_paths, type='string')
@@ -679,7 +679,7 @@ class CLI(with_metaclass(ABCMeta, object)):
 
         vault_secrets = CLI.setup_vault_secrets(loader,
                                                 vault_ids=options.vault_id,
-                                                vault_password_files=options.vault_password_file,
+                                                vault_password_files=options.vault_password_files,
                                                 ask_vault_pass=options.ask_vault_pass)
         loader.set_vault_secrets(vault_secrets)
 
