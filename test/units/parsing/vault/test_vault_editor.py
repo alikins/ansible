@@ -520,7 +520,7 @@ class TestVaultEditor(unittest.TestCase):
 
         os.unlink(v10_file.name)
 
-        self.assertIn('AES256', fdata, 'AES256 was not found in vault file %s' % fdata)
+        self.assertIn(b'AES256', fdata, 'AES256 was not found in vault file %s' % to_text(fdata))
         assert error_hit is False, "error decrypting migrated 1.0 file"
         assert dec_data.strip() == b"foo", "incorrect decryption of rekeyed/migrated file: %s" % dec_data
 
