@@ -349,7 +349,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             parser.add_option('--output', default=None, dest='output_file',
                               help='output file name for encrypt or decrypt; use - for stdout',
                               action="callback", callback=CLI.unfrack_path, type='string'),
-            parser.add_option('--vault-id', default=[], dest='vault_id', action='append', type='string',
+            parser.add_option('--vault-id', default=[], dest='vault_ids', action='append', type='string',
                               help='the vault identity to use')
             parser.add_option('--new-vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='new_vault_id', type='string',
                               help='the new vault identity to use for rekey')
@@ -678,7 +678,7 @@ class CLI(with_metaclass(ABCMeta, object)):
         loader = DataLoader()
 
         vault_secrets = CLI.setup_vault_secrets(loader,
-                                                vault_ids=options.vault_id,
+                                                vault_ids=options.vault_ids,
                                                 vault_password_files=options.vault_password_files,
                                                 ask_vault_pass=options.ask_vault_pass)
         loader.set_vault_secrets(vault_secrets)

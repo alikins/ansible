@@ -144,7 +144,7 @@ class VaultCLI(CLI):
         # set default restrictive umask
         old_umask = os.umask(0o077)
 
-        vault_ids = self.options.vault_id
+        vault_ids = self.options.vault_ids
         # there are 3 types of actions, those that just 'read' (decrypt, view) and only
         # need to ask for a password once, and those that 'write' (create, encrypt) that
         # ask for a new password and confirm it, and 'read/write (rekey) that asks for the
