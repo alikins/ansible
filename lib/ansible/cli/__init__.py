@@ -173,7 +173,7 @@ class CLI(with_metaclass(ABCMeta, object)):
                             ask_vault_pass=None, create_new_password=False):
         vault_secrets = {}
 
-        prompted_vault_ids = vault_ids
+        vault_ids = vault_ids or ['default']
 
         if create_new_password:
             prompt_formats = ['New vault password (%s): ',
@@ -182,7 +182,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             prompt_formats = ['Vault password (%s): ']
 
         if ask_vault_pass:
-            for index, prompted_vault_id in enumerate(prompted_vault_ids):
+            for index, prompted_vault_id in enumerate(vault_ids):
                 prompted_vault_secret = PromptVaultSecret(prompt_formats=prompt_formats, vault_id=prompted_vault_id)
 
                 # TODO: we don't need to do this now, we could do it later though
@@ -200,14 +200,17 @@ class CLI(with_metaclass(ABCMeta, object)):
             file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
                                                               loader=loader)
             file_vault_secret.load()
+
             # start with filename as vault id
             file_vault_id = vault_password_file
 
-            # then consume any remaining vault_ids as ids for password file provided secrets
+            # then consume (in order) any unused vault_ids as ids for password file provided secrets
             for vault_id in vault_ids:
                 if vault_id not in vault_secrets:
                     file_vault_id = vault_id
+
             vault_secrets[file_vault_id] = file_vault_secret
+
             # And set the filename based vault_id as well
             vault_secrets[vault_password_file] = file_vault_secret
 
@@ -674,13 +677,8 @@ class CLI(with_metaclass(ABCMeta, object)):
         # all needs loader
         loader = DataLoader()
 
-        if options.vault_id:
-            vault_ids = options.vault_id
-        else:
-            vault_ids = ['default']
-
         vault_secrets = CLI.setup_vault_secrets(loader,
-                                                vault_ids=vault_ids,
+                                                vault_ids=options.vault_id,
                                                 vault_password_files=options.vault_password_file,
                                                 ask_vault_pass=options.ask_vault_pass)
         loader.set_vault_secrets(vault_secrets)
