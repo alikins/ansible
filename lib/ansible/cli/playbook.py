@@ -99,8 +99,7 @@ class PlaybookCLI(CLI):
         if not self.options.listhosts and not self.options.listtasks and not self.options.listtags and not self.options.syntax:
             self.normalize_become_options()
             (sshpass, becomepass) = self.ask_passwords()
-            passwords = {'conn_pass': sshpass,
-                         'become_pass': becomepass}
+            passwords = {'conn_pass': sshpass, 'become_pass': becomepass}
 
         loader, inventory, variable_manager = self._play_prereqs(self.options)
 
