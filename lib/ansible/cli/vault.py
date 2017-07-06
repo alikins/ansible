@@ -181,7 +181,7 @@ class VaultCLI(CLI):
                 raise AnsibleOptionsError("A vault password is required to use Ansible's Vault ")
 
             # only one secret for encrypt for now
-            self.encrypt_vault_id = vault_secrets.keys()[0]
+            self.encrypt_vault_id = list(vault_secrets.keys())[0]
             self.encrypt_secret = vault_secrets[self.encrypt_vault_id]
 
         if self.action in ['rekey']:
@@ -202,7 +202,7 @@ class VaultCLI(CLI):
             self.new_vault_secrets = new_vault_secrets
 
             # There is only one new_vault_id currently and one new_vault_secret
-            self.new_vault_id = new_vault_secrets.keys()[0]
+            self.new_vault_id = list(new_vault_secrets.keys())[0]
             self.new_encrypt_secret = new_vault_secrets[self.new_vault_id]
             # FIXME: redundant with self.new_vault_id
             self.new_encrypt_vault_id = self.new_vault_id
