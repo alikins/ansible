@@ -59,8 +59,6 @@ class VaultCLI(CLI):
         self.b_vault_pass = None
         self.b_new_vault_pass = None
         self.encrypt_string_read_stdin = False
-        self.new_vault_secrets = None
-        self.new_vault_id = None
 
         self.encrypt_secret = None
         self.encrypt_vault_id = None
@@ -140,7 +138,6 @@ class VaultCLI(CLI):
                 raise AnsibleOptionsError('The --prompt option is not supported if also reading input from stdin')
 
     def run(self):
-
         super(VaultCLI, self).run()
         loader = DataLoader()
 
@@ -199,13 +196,9 @@ class VaultCLI(CLI):
             if not new_vault_secrets:
                 raise AnsibleOptionsError("A new vault password is required to use Ansible's Vault rekey")
 
-            self.new_vault_secrets = new_vault_secrets
-
             # There is only one new_vault_id currently and one new_vault_secret
-            self.new_vault_id = list(new_vault_secrets.keys())[0]
-            self.new_encrypt_secret = new_vault_secrets[self.new_vault_id]
-            # FIXME: redundant with self.new_vault_id
-            self.new_encrypt_vault_id = self.new_vault_id
+            self.new_encrypt_vault_id = list(new_vault_secrets.keys())[0]
+            self.new_encrypt_secret = new_vault_secrets[self.new_encrypt_vault_id]
 
         if not vault_secrets:
             raise AnsibleOptionsError("A password is required to use Ansible's Vault")
@@ -334,8 +327,9 @@ class VaultCLI(CLI):
             b_plaintext = to_bytes(plaintext)
             b_plaintext_list.append((b_plaintext, self.FROM_ARGS, name))
 
+        # TODO: specify vault_id per string?
         # Format the encrypted strings and any corresponding stderr output
-        outputs = self._format_output_vault_strings(b_plaintext_list, vault_id=None)
+        outputs = self._format_output_vault_strings(b_plaintext_list, vault_id=self.encrypt_vault_id)
 
         for output in outputs:
             err = output.get('err', None)
@@ -367,7 +361,7 @@ class VaultCLI(CLI):
             b_plaintext, src, name = b_plaintext_info
             # FIXME: maybe a good place to take a vault_id as param
             b_ciphertext = self.editor.encrypt_bytes(b_plaintext, self.encrypt_secret,
-                                                     vault_id=self.encrypt_vault_id)
+                                                     vault_id=vault_id)
 
             # block formatting
             yaml_text = self.format_ciphertext_yaml(b_ciphertext, name=name)
