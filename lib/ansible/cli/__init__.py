@@ -294,10 +294,8 @@ class CLI(with_metaclass(ABCMeta, object)):
         paths = getattr(parser.values, option.dest)
         if isinstance(value, string_types):
             paths.extend([unfrackpath(x) for x in value.split(os.pathsep)])
-            # setattr(parser.values, option.dest, [unfrackpath(x) for x in value.split(os.pathsep)])
         elif isinstance(value, list):
             paths.extend([unfrackpath(x) for x in value])
-            # setattr(parser.values, option.dest, [unfrackpath(x) for x in value])
         else:
             pass  # FIXME: should we raise options error?
         setattr(parser.values, option.dest, paths)
