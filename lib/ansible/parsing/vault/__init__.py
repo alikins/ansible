@@ -351,28 +351,11 @@ class FileVaultSecret(VaultSecret):
     def __repr__(self):
         return "%s(filename='%s')" % (self.__class__.__name__, self.filename)
 
-# TODO: may be more useful to make this an index of VaultLib() or VaultContext() like objects with
-# FIXME: ala a Vaults() Vaults['default'] -> VaultLib(secrets, cipher_id)
-# FIXME: doesnt use VaultSecret yet
 
-# NOTE: vault id is currently just a label we get from the vault blob and use it to select which
-#       of the multiple secrets we will try to use.
-#
-# WARNING: Currently, the vault id is not required to match the vault id in the vault blob to
-#          decrypt a vault properly. The vault id in the vault blob is not part of the encrypted
-#          or signed vault payload. There is no cryptographic checking/verification/validation of the
-#          vault blobs vault id. It can be tampered with and changed. The vault id is just a nick
-#          name to use to pick the best secret and provide some ux/ui info.
-
-
-# VaultLib or some version of VaultLib needs to try multiple secrets for multiple password support
 class VaultLib:
-    default_vault_id = 'default'
-
     def __init__(self, secrets=None):
         self.secrets = secrets or {}
         self.cipher_name = None
-        # Add key_id to header
         self.b_version = b'1.2'
 
     @staticmethod
@@ -445,7 +428,6 @@ class VaultLib:
         """
         b_vaulttext = to_bytes(vaulttext, errors='strict', encoding='utf-8')
 
-        # could provide a default or NullSecrets if this needs to be smarter about when it's ready
         if self.secrets is None:
             raise AnsibleError("A vault password must be specified to decrypt data")
 
@@ -457,9 +439,6 @@ class VaultLib:
 
         b_vaulttext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(b_vaulttext)
 
-        # FIXME: remove if we dont need the state
-        # self.cipher_name = cipher_name
-
         # create the cipher object, note that the cipher used for decrypt can
         # be different than the cipher used for encrypt
         if cipher_name in CIPHER_WHITELIST:
@@ -467,34 +446,19 @@ class VaultLib:
         else:
             raise AnsibleError("{0} cipher could not be found".format(cipher_name))
 
-        # If we dont know the needed vault id, raise error before we even try to decrypt
-        # Or we could wait... TODO
-        # if vault_id not in self.secrets:
-        #    raise AnsibleVaultError('Vault id "%s" is required, but there is no such vault id in vault secrets (current vault_id is "%s")\n'
-        #                            'Try specifying a vault id with --vault-id or config (TODO: details)' %
-        #                            (vault_id, self.secrets.name))
-        # try to unencrypt data
-
-        # The key_id is known at this point from parsing the vault envelope
-        # Add a VaultContext(secrets, key_id, cipher) ?
-        # vault_context = VaultContext(self.secrets, self.key_id, this_cipher)
-        # b_data = vault_context.decrypt(b_data)
-        # vault_context could be an interface to an agent of some sort
-
-        # iterate over all the applicable secrets (all of them by default) until one works...
-        # if we specify a vault_id, only the corresponding vault secret is checked
         b_plaintext = None
 
         if not self.secrets:
             raise AnsibleVaultError('Attempting to decrypt but no vault secrets found')
 
-        # TODO: we dont have to enforce this, and enforcing it does not provide any additional
-        #       security.
-        # if vault_id not in self.secrets:
-        #    msg = 'No secret was provided for vault id (%s) while decrypting filename=%s. For vault ids other than "default", try --vault-id to specify the id'
+        # WARNING: Currently, the vault id is not required to match the vault id in the vault blob to
+        #          decrypt a vault properly. The vault id in the vault blob is not part of the encrypted
+        #          or signed vault payload. There is no cryptographic checking/verification/validation of the
+        #          vault blobs vault id. It can be tampered with and changed. The vault id is just a nick
+        #          name to use to pick the best secret and provide some ux/ui info.
 
-        #    raise AnsibleVaultError(msg % (vault_id, filename))
-
+        # iterate over all the applicable secrets (all of them by default) until one works...
+        # if we specify a vault_id, only the corresponding vault secret is checked
         for vault_secret_id in self.secrets:
             display.vvvvv('Trying to use vault secret (%s) to decrypt %s' % (vault_secret_id, filename))
 
