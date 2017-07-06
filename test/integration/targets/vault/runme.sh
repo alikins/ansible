@@ -11,6 +11,7 @@ echo "This is a test file" > "${TEST_FILE}"
 
 TEST_FILE_OUTPUT="${MYTMPDIR}/test_file_output"
 
+
 # test playbooks using vaulted files
 ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --list-tasks
 ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --list-hosts
@@ -20,6 +21,14 @@ ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-pass
 ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password
 ansible-playbook test_vaulted_inventory.yml -i vaulted.inventory -v "$@" --vault-password-file vault-password
 ansible-playbook test_vaulted_template.yml -i ../../inventory -v "$@" --vault-password-file vault-password
+
+# with multiple password files
+ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --vault-password-file vault-password-wrong
+ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password-wrong --vault-password-file vault-password
+
+ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password --vault-password-file vault-password-wrong --syntax-check
+ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password-wrong --vault-password-file vault-password
+
 
 # old format
 ansible-vault view "$@" --vault-password-file vault-password-ansible format_1_0_AES.yml
@@ -105,12 +114,3 @@ ansible-vault encrypt_string "$@" --vault-password-file "${NEW_VAULT_PASSWORD}" 
 ansible-vault encrypt_string "$@" --vault-password-file "${NEW_VAULT_PASSWORD}" --name "blippy" "a test string names blippy" --output "${MYTMPDIR}/enc_string_test_file"
 
 
-# test playbooks using vaulted files
-ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --list-tasks
-ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --list-hosts
-ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --syntax-check
-ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password
-ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password --syntax-check
-ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password
-ansible-playbook test_vaulted_inventory.yml -i vaulted.inventory -v "$@" --vault-password-file vault-password
-ansible-playbook test_vaulted_template.yml -i ../../inventory -v "$@" --vault-password-file vault-password
