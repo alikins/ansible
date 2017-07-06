@@ -246,16 +246,12 @@ class PromptVaultSecret(VaultSecret):
         return self._bytes
 
     def ask_vault_passwords(self):
-        import traceback
-        print('\n')
-        traceback.print_stack()
-
         b_vault_passwords = []
 
         for prompt_format in self.prompt_formats:
             prompt = prompt_format % self.vault_id
             try:
-                vault_pass = getpass.getpass(prompt=prompt)
+                vault_pass = display.prompt(prompt, private=True)
             except EOFError:
                 pass
             b_vault_pass = to_bytes(vault_pass, errors='strict', nonstring='simplerepr').strip()
