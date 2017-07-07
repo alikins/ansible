@@ -172,7 +172,7 @@ class CLI(with_metaclass(ABCMeta, object)):
     def setup_vault_secrets(loader, vault_ids, vault_password_files=None,
                             ask_vault_pass=None, create_new_password=False):
         vault_secrets = {}
-
+        vault_password_files = vault_password_files or []
         vault_ids = vault_ids or ['default']
 
         if create_new_password:
@@ -208,6 +208,7 @@ class CLI(with_metaclass(ABCMeta, object)):
             for vault_id in vault_ids:
                 if vault_id not in vault_secrets:
                     file_vault_id = vault_id
+                    break
 
             vault_secrets[file_vault_id] = file_vault_secret
 
