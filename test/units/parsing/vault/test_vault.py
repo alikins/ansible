@@ -24,6 +24,7 @@ __metaclass__ = type
 import binascii
 import io
 import os
+import tempfile
 
 from binascii import hexlify
 import pytest
@@ -35,7 +36,65 @@ from ansible.module_utils import six
 from ansible.module_utils._text import to_bytes, to_text
 from ansible.parsing import vault
 
+from units.mock.loader import DictDataLoader
 from units.mock.vault_helper import TextVaultSecret
+
+
+class TestVaultSecret(unittest.TestCase):
+    def test(self):
+        secret = vault.VaultSecret()
+        secret.load()
+        self.assertIsNone(secret._bytes)
+
+    def test_bytes(self):
+        some_text = u'私はガラスを食べられます。それは私を傷つけません。'
+        _bytes = to_bytes(some_text)
+        secret = vault.VaultSecret(_bytes)
+        secret.load()
+        self.assertEqual(secret.bytes, _bytes)
+
+
+class TestPromptVaultSecret(unittest.TestCase):
+    def test_empty_prompt_formats(self):
+        secret = vault.PromptVaultSecret(vault_id='test_id', prompt_formats=[])
+        secret.load()
+        self.assertIsNone(secret._bytes)
+
+
+class TestFileVaultSecret(unittest.TestCase):
+    def test(self):
+        secret = vault.FileVaultSecret()
+        self.assertIsNone(secret._bytes)
+        self.assertIsNone(secret._text)
+
+    def test_empty_bytes(self):
+        secret = vault.FileVaultSecret()
+        self.assertIsNone(secret.bytes)
+
+    def test_file(self):
+        password = 'some password'
+
+        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+        tmp_file.write(to_bytes(password))
+        tmp_file.close()
+
+        fake_loader = DictDataLoader({tmp_file.name: 'sdfadf'})
+
+        secret = vault.FileVaultSecret(loader=fake_loader, filename=tmp_file.name)
+        secret.load()
+
+        os.unlink(tmp_file.name)
+
+        self.assertEqual(secret.bytes, to_bytes(password))
+
+    def test_file_not_found(self):
+        filename = '/dev/null/foobar'
+        fake_loader = DictDataLoader({filename: 'sdfadf'})
+
+        secret = vault.FileVaultSecret(loader=fake_loader, filename=filename)
+        self.assertRaisesRegexp(errors.AnsibleError,
+                                '.*The vault password file /dev/null/foobar was not found.*',
+                                secret.load)
 
 
 class TestVaultIsEncrypted(unittest.TestCase):
