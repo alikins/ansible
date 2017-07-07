@@ -334,7 +334,7 @@ class FileVaultSecret(VaultSecret):
             if p.returncode != 0:
                 raise AnsibleError("Vault password script %s returned non-zero (%s): %s" % (this_path, p.returncode, p.stderr))
 
-            vault_pass = stdout.strip('\r\n')
+            vault_pass = stdout.strip(b'\r\n')
         else:
             try:
                 f = open(this_path, "rb")
