@@ -297,14 +297,11 @@ class FileVaultSecret(VaultSecret):
 
     @property
     def bytes(self):
-        return self._bytes or self._text.encode(self.encoding)
-
-    @classmethod
-    def from_filename(cls, filename, loader, vault_id=None):
-        vault_id = vault_id or filename
-        file_vault_secret = cls(filename=filename,
-                                loader=loader)
-        return file_vault_secret
+        if self._bytes:
+            return self._bytes
+        if self._text:
+            return self._text.encode(self.encoding)
+        return None
 
     def load(self):
         self._bytes = self.read_file(self.filename, self.loader)

@@ -197,8 +197,8 @@ class CLI(with_metaclass(ABCMeta, object)):
         # should use 'default' vault id if one isnt provided?
         for index, vault_password_file in enumerate(vault_password_files):
             # read vault_pass from a file
-            file_vault_secret = FileVaultSecret.from_filename(filename=vault_password_file,
-                                                              loader=loader)
+            file_vault_secret = FileVaultSecret(filename=vault_password_file,
+                                                loader=loader)
             file_vault_secret.load()
 
             # start with filename as vault id
