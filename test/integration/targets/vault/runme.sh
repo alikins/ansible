@@ -39,9 +39,11 @@ set -eux
 # new format, view
 ansible-vault view "$@" --vault-password-file vault-password format_1_1_AES256.yml
 
+# new format, view, using password script
+ansible-vault view "$@" --vault-password-file password-script.py format_1_1_AES256.yml
+
 # encrypt it
 ansible-vault encrypt "$@" --vault-password-file vault-password "${TEST_FILE}"
-
 
 ansible-vault view "$@" --vault-password-file vault-password "${TEST_FILE}"
 
@@ -55,6 +57,13 @@ ansible-vault decrypt "$@" --vault-password-file vault-password "${TEST_FILE}"
 
 # multiple vault passwords (--vault-id)
 ansible-vault view "$@" --vault-password-file vault-password --vault-password-file vault-password-wrong format_1_1_AES256.yml
+
+# encrypt it, with password from password script
+ansible-vault encrypt "$@" --vault-password-file password-script.py "${TEST_FILE}"
+
+ansible-vault view "$@" --vault-password-file password-script.py "${TEST_FILE}"
+
+ansible-vault decrypt "$@" --vault-password-file password-script.py "${TEST_FILE}"
 
 # new password file for rekeyed file
 NEW_VAULT_PASSWORD="${MYTMPDIR}/new-vault-password"
@@ -106,6 +115,9 @@ ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-pass
 ansible-playbook test_vaulted_inventory.yml -i vaulted.inventory -v "$@" --vault-password-file vault-password
 ansible-playbook test_vaulted_template.yml -i ../../inventory -v "$@" --vault-password-file vault-password
 
+# test with password from password script
+ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file password-script.py
+ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file password-script.py
 
 # with multiple password files
 ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password --vault-password-file vault-password-wrong
@@ -113,6 +125,9 @@ ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-pass
 
 ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password --vault-password-file vault-password-wrong --syntax-check
 ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password-wrong --vault-password-file vault-password
+
+# test with multiple password files, including a script, and a wrong password
+ansible-playbook test_vault_embedded.yml -i ../../inventory -v "$@" --vault-password-file vault-password-wrong --vault-password-file password-script.py --vault-password-file vault-password
 
 # with wrong password
 ansible-playbook test_vault.yml          -i ../../inventory -v "$@" --vault-password-file vault-password-wrong && :
