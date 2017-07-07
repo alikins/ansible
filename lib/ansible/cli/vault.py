@@ -145,6 +145,7 @@ class VaultCLI(CLI):
         old_umask = os.umask(0o077)
 
         vault_ids = self.options.vault_ids
+
         # there are 3 types of actions, those that just 'read' (decrypt, view) and only
         # need to ask for a password once, and those that 'write' (create, encrypt) that
         # ask for a new password and confirm it, and 'read/write (rekey) that asks for the
@@ -158,7 +159,10 @@ class VaultCLI(CLI):
                                                      vault_password_files=self.options.vault_password_files,
                                                      ask_vault_pass=self.options.ask_vault_pass)
 
-        if self.action in ['encrypt', 'encrypt_string', 'create']:
+            if not vault_secrets:
+                raise AnsibleOptionsError("A vault password is required to use Ansible's Vault")
+
+        if self.action in ['encrypt', 'encrypt_string', 'create', 'edit']:
             if len(vault_ids) > 1:
                 raise AnsibleOptionsError("Only one --vault-id can be used for encryption")
 
@@ -171,7 +175,7 @@ class VaultCLI(CLI):
                                          create_new_password=True)
 
             if not vault_secrets:
-                raise AnsibleOptionsError("A vault password is required to use Ansible's Vault ")
+                raise AnsibleOptionsError("A vault password is required to use Ansible's Vault")
 
             # only one secret for encrypt for now
             self.encrypt_vault_id = list(vault_secrets.keys())[0]
@@ -195,9 +199,6 @@ class VaultCLI(CLI):
             # There is only one new_vault_id currently and one new_vault_secret
             self.new_encrypt_vault_id = list(new_vault_secrets.keys())[0]
             self.new_encrypt_secret = new_vault_secrets[self.new_encrypt_vault_id]
-
-        if not vault_secrets:
-            raise AnsibleOptionsError("A password is required to use Ansible's Vault")
 
         loader.set_vault_secrets(vault_secrets)
         self.secrets = vault_secrets
@@ -413,10 +414,6 @@ class VaultCLI(CLI):
 
     def execute_rekey(self):
         ''' re-encrypt a vaulted file with a new secret, the previous secret is required '''
-        for f in self.args:
-            if not (os.path.isfile(f)):
-                raise AnsibleError(f + " does not exist")
-
         for f in self.args:
             # FIXME: plumb in vault_id, use the default new_vault_secret for now
             self.editor.rekey_file(f, self.new_encrypt_secret,
