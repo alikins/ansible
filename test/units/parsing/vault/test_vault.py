@@ -364,6 +364,71 @@ fe3db930508b65e0ff5947e4386b79af8ab094017629590ef6ba486814cf70f8e4ab0ed0c7d2587e
         self.assertNotEqual(b_vaulttext, b"foobar", msg="encryption failed")
         self.assertEqual(b_plaintext, b"foobar", msg="decryption failed")
 
+    def test_encrypt_decrypt_aes256_none_secrets(self):
+        vault_secrets = {}
+        vault_secrets['default'] = TextVaultSecret('ansible')
+        v = vault.VaultLib(vault_secrets)
+
+        plaintext = u"foobar"
+        b_vaulttext = v.encrypt(plaintext)
+
+        # VaultLib will default to empty {} if secrets is None
+        v_none = vault.VaultLib(None)
+        # so set secrets None explicitly
+        v_none.secrets = None
+        self.assertRaisesRegexp(vault.AnsibleVaultError,
+                                '.*A vault password must be specified to decrypt data.*',
+                                v_none.decrypt,
+                                b_vaulttext)
+
+    def test_encrypt_decrypt_aes256_empty_secrets(self):
+        vault_secrets = {}
+        vault_secrets['default'] = TextVaultSecret('ansible')
+        v = vault.VaultLib(vault_secrets)
+
+        plaintext = u"foobar"
+        b_vaulttext = v.encrypt(plaintext)
+
+        vault_secrets_empty = {}
+        v_none = vault.VaultLib(vault_secrets_empty)
+
+        self.assertRaisesRegexp(vault.AnsibleVaultError,
+                                '.*Attempting to decrypt but no vault secrets found.*',
+                                v_none.decrypt,
+                                b_vaulttext)
+
+    def test_encrypt_decrypt_aes256_multiple_secrets_all_wrong(self):
+        plaintext = u'Some text to encrypt in a café'
+        b_vaulttext = self.v.encrypt(plaintext)
+
+        vault_secrets = {}
+        vault_secrets['default'] = TextVaultSecret('another-wrong-password')
+        vault_secrets['wrong-password'] = TextVaultSecret('wrong-password')
+
+        v_multi = vault.VaultLib(vault_secrets)
+        self.assertRaisesRegexp(errors.AnsibleError,
+                                '.*Decryption failed.*',
+                                v_multi.decrypt,
+                                b_vaulttext,
+                                filename='/dev/null/fake/filename')
+
+    def test_encrypt_decrypt_aes256_multiple_secrets_one_valid(self):
+        plaintext = u'Some text to encrypt in a café'
+        b_vaulttext = self.v.encrypt(plaintext)
+
+        vault_secrets = {}
+        correct_secret = TextVaultSecret(self.vault_password)
+        wrong_secret = TextVaultSecret('wrong-password')
+
+        vault_secrets['default'] = wrong_secret
+        vault_secrets['correct_secret'] = correct_secret
+        vault_secrets['wrong_secret'] = wrong_secret
+
+        v_multi = vault.VaultLib(vault_secrets)
+        b_plaintext = v_multi.decrypt(b_vaulttext)
+        self.assertNotEqual(b_vaulttext, to_bytes(plaintext), msg="encryption failed")
+        self.assertEqual(b_plaintext, to_bytes(plaintext), msg="decryption failed")
+
     def test_encrypt_decrypt_aes256_existing_vault(self):
         self.v.cipher_name = u'AES256'
         b_orig_plaintext = b"Setec Astronomy"

@@ -432,7 +432,7 @@ class VaultLib:
         b_vaulttext = to_bytes(vaulttext, errors='strict', encoding='utf-8')
 
         if self.secrets is None:
-            raise AnsibleError("A vault password must be specified to decrypt data")
+            raise AnsibleVaultError("A vault password must be specified to decrypt data")
 
         if not is_encrypted(b_vaulttext):
             msg = "input is not vault encrypted data"
