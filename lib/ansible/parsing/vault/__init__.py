@@ -392,7 +392,10 @@ class VaultLib:
         """
 
         if secret is None:
-            secret = self.secrets['default']
+            if self.secrets:
+                secret = self.secrets['default']
+            else:
+                raise AnsibleVaultError("A vault password must be specified to encrypt data")
 
         b_plaintext = to_bytes(plaintext, errors='surrogate_or_strict')
 

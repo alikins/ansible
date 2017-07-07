@@ -269,7 +269,6 @@ class TestVaultLib(unittest.TestCase):
 
         self.assertIsInstance(b_vaulttext, six.binary_type)
 
-        print('b_vaulttext: %s' % b_vaulttext)
         b_header = b'$ANSIBLE_VAULT;1.1;AES256\n'
         self.assertEqual(b_vaulttext[:len(b_header)], b_header)
 
@@ -280,7 +279,6 @@ class TestVaultLib(unittest.TestCase):
         self.assertIsInstance(b_vaulttext, six.binary_type)
 
         b_header = b'$ANSIBLE_VAULT;1.2;AES256;test_id\n'
-        print('b_vaulttext: %s' % b_vaulttext)
         self.assertEqual(b_vaulttext[:len(b_header)], b_header)
 
     def test_encrypt_bytes(self):
@@ -292,6 +290,16 @@ class TestVaultLib(unittest.TestCase):
 
         b_header = b'$ANSIBLE_VAULT;1.1;AES256\n'
         self.assertEqual(b_vaulttext[:len(b_header)], b_header)
+
+    def test_encrypt_no_secret_empty_secrets(self):
+        vault_secrets = {}
+        v = vault.VaultLib(vault_secrets)
+
+        plaintext = u'Some text to encrypt in a café'
+        self.assertRaisesRegexp(vault.AnsibleVaultError,
+                                '.*A vault password must be specified to encrypt data.*',
+                                v.encrypt,
+                                plaintext)
 
     def test_is_encrypted(self):
         self.assertFalse(self.v.is_encrypted(b"foobar"), msg="encryption check on plaintext yielded false positive")
