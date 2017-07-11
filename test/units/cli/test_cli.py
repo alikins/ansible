@@ -23,6 +23,7 @@ from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import patch, MagicMock
 
 from ansible.release import __version__
+from ansible.parsing import vault
 from ansible import cli
 
 
@@ -45,7 +46,7 @@ class TestCliVersion(unittest.TestCase):
 class TestCliSetupVaultSecrets(unittest.TestCase):
     def test(self):
         res = cli.CLI.setup_vault_secrets(None, None)
-        self.assertIsInstance(res, dict)
+        self.assertIsInstance(res, list)
 
     @patch('ansible.cli.FileVaultSecret')
     def test_password_file(self, mock_file_secret):
@@ -54,12 +55,13 @@ class TestCliSetupVaultSecrets(unittest.TestCase):
                                                   vault_id='file1',
                                                   filename=filename)
         res = cli.CLI.setup_vault_secrets(None,
-                                          vault_ids=['secret1', 'secret2'],
+                                          vault_ids=['secret1@%s' % filename, 'secret2'],
                                           vault_password_files=[filename])
-        self.assertIsInstance(res, dict)
-        self.assertIn(filename, res)
-        self.assertIn('secret1', res)
-        self.assertEqual(res['secret1'].bytes, b'file1_password')
+        self.assertIsInstance(res, list)
+        matches = vault.match_secrets(res, ['secret1'])
+        self.assertIn('secret1', [x[0] for x in matches])
+        match = matches[0][1]
+        self.assertEqual(match.bytes, b'file1_password')
 
     @patch('ansible.cli.PromptVaultSecret')
     def test_prompt(self, mock_prompt_secret):
@@ -67,10 +69,13 @@ class TestCliSetupVaultSecrets(unittest.TestCase):
                                                     vault_id='prompt1')
 
         res = cli.CLI.setup_vault_secrets(None,
-                                          vault_ids=['prompt1', 'secret1'],
+                                          vault_ids=['prompt1@prompt'],
                                           ask_vault_pass=True)
 
-        self.assertIsInstance(res, dict)
-        self.assertIn('prompt1', res)
-        self.assertIn('secret1', res)
-        self.assertEqual(res['prompt1'].bytes, b'prompt1_password')
+        self.assertIsInstance(res, list)
+        matches = vault.match_secrets(res, ['prompt1'])
+        self.assertIn('prompt1', [x[0] for x in matches])
+        # self.assertIn('prompt1', res)
+        # self.assertIn('secret1', res)
+        match = matches[0][1]
+        self.assertEqual(match.bytes, b'prompt1_password')

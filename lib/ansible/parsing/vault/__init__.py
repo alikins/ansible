@@ -165,6 +165,7 @@ def parse_vaulttext_envelope(b_vaulttext_envelope, default_vault_id=None):
     b_version = b_tmpheader[1].strip()
     cipher_name = to_text(b_tmpheader[2].strip())
     vault_id = default_vault_id
+    # vault_id = None
 
     # Only attempt to find vault_id if the vault file is version 1.2 or newer
     # if self.b_version == b'1.2':
@@ -193,7 +194,7 @@ def format_vaulttext_envelope(b_ciphertext, cipher_name, version=None, vault_id=
     version = version or '1.1'
 
     # If we specify a vault_id, use format version 1.2. For no vault_id, stick to 1.1
-    if vault_id:
+    if vault_id and vault_id != u'default':
         version = '1.2'
 
     b_version = to_bytes(version, 'utf-8', errors='strict')
@@ -350,9 +351,40 @@ class FileVaultSecret(VaultSecret):
         return "%s(filename='%s')" % (self.__class__.__name__, self.filename)
 
 
+def match_secrets(secrets, target_vault_ids):
+    '''Find all VaultSecret objects that are mapped to any of the target_vault_ids in secrets'''
+    if not secrets:
+        return []
+
+    matches = [(vault_id, secret) for vault_id, secret in secrets if vault_id in target_vault_ids]
+    return matches
+
+
+def match_best_secret(secrets, target_vault_ids):
+    '''Find the best secret from secrets that matches target_vault_ids
+
+    Since secrets should be ordered so the early secrets are 'better' than later ones, this
+    just finds all the matches, then returns the first secret'''
+    matches = match_secrets(secrets, target_vault_ids)
+    if matches:
+        return matches[0]
+    # raise exception?
+    return None
+
+
+def match_encrypt_secret(secrets):
+    '''Find the best/first/only secret in secrets to use for encrypting'''
+
+    # ie, consider all of the available secrets as matches
+    _vault_id_matchers = [_vault_id for _vault_id, _vault_secret in secrets]
+    best_secret = match_best_secret(secrets, _vault_id_matchers)
+    # can be empty list sans any tuple
+    return best_secret
+
+
 class VaultLib:
     def __init__(self, secrets=None):
-        self.secrets = secrets or {}
+        self.secrets = secrets or []
         self.cipher_name = None
         self.b_version = b'1.2'
 
@@ -391,7 +423,7 @@ class VaultLib:
 
         if secret is None:
             if self.secrets:
-                secret = self.secrets[C.DEFAULT_VAULT_IDENTITY]
+                secret_vault_id, secret = match_encrypt_secret(self.secrets)
             else:
                 raise AnsibleVaultError("A vault password must be specified to encrypt data")
 
@@ -409,6 +441,7 @@ class VaultLib:
             raise AnsibleError(u"{0} cipher could not be found".format(self.cipher_name))
 
         # encrypt data
+        display.vvvvv('Encrypting with vault secret %s' % secret)
         b_ciphertext = this_cipher.encrypt(b_plaintext, secret)
 
         # format the data for output to the file
@@ -459,19 +492,48 @@ class VaultLib:
         #          name to use to pick the best secret and provide some ux/ui info.
 
         # iterate over all the applicable secrets (all of them by default) until one works...
-        # if we specify a vault_id, only the corresponding vault secret is checked
-        for vault_secret_id in self.secrets:
-            display.vvvvv('Trying to use vault secret (%s) to decrypt %s' % (vault_secret_id, filename))
+        # if we specify a vault_id, only the corresponding vault secret is checked and
+        # we check it first.
+
+        vault_id_matchers = []
+
+        if vault_id:
+            display.vvvvv('Found a vault_id (%s) in the vaulttext' % (vault_id))
+            vault_id_matchers.append(vault_id)
+            _matches = match_secrets(self.secrets, vault_id_matchers)
+            if _matches:
+                display.vvvvv('We have a secret associated with vault id (%s), will try to use to decrypt %s' % (vault_id, filename))
+            else:
+                display.vvvvv('Found a vault_id (%s) in the vault text, but we do not have a associated secret (--vault-id)' % (vault_id))
+
+        # TODO: add config option to skip this. Not adding the other secrets to
+        #       vault_secret_ids enforces a match between the vault_id from the vault_text and
+        #       the known vault secrets.
+        # match_all_secrets? arg to match() method?
+        vault_id_matchers.extend([_vault_id for _vault_id, _secret in self.secrets if _vault_id != vault_id])
+
+        matched_secrets = match_secrets(self.secrets, vault_id_matchers)
+
+        # for vault_secret_id in vault_secret_ids:
+        for vault_secret_id, vault_secret in matched_secrets:
+            display.vvvvv('Trying to use vault secret=(%s) id=%s to decrypt %s' % (vault_secret, vault_secret_id, filename))
 
             try:
-                secret = self.secrets[vault_secret_id]
-                b_plaintext = this_cipher.decrypt(b_vaulttext, secret)
+                # secret = self.secrets[vault_secret_id]
+                display.vvvv('Trying secret %s for vault_id=%s' % (vault_secret, vault_secret_id))
+                b_plaintext = this_cipher.decrypt(b_vaulttext, vault_secret)
                 if b_plaintext is not None:
+                    display.vvvvv('decrypt succesful with secret=%s and vault_id=%s' % (vault_secret, vault_secret_id))
                     break
             except AnsibleError as e:
-                display.vvvv('Tried to use the vault secret (%s) to decrypt but it failed, continuing to other secrets.\nfilename: %s\nvaulttext: %serror: %s' %
+                display.vvvv('Tried to use the vault secret (%s) to decrypt but it failed, trying the rest.\nfilename: %s\nvaulttext: %serror: %s' %
                              (vault_secret_id, filename, b_vaulttext, e))
                 continue
+        else:
+            msg = "Decryption failed (no vault secrets would found that could decrypt)"
+            if filename:
+                msg += " on %s" % filename
+            raise AnsibleVaultError(msg)
 
         if b_plaintext is None:
             msg = "Decryption failed"
@@ -660,7 +722,9 @@ class VaultEditor:
         b_ciphertext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(b_vaulttext)
 
         # if we could decrypt, the vault_id should be in secrets
-        secret = self.vault.secrets[vault_id]
+        # though we could have multiple secrets for a given vault_id, pick the first one
+        secrets = match_secrets(self.vault.secrets, [vault_id])
+        secret = secrets[0][1]
         if self.vault.cipher_name not in CIPHER_WRITE_WHITELIST:
             # we want to get rid of files encrypted with the AES cipher
             self._edit_file_helper(filename, secret, existing_data=plaintext, force_save=True)
@@ -1046,6 +1110,8 @@ class VaultAES256:
 
     @classmethod
     def encrypt(cls, b_plaintext, secret):
+        if secret is None:
+            raise AnsibleVaultError('The secret passed to encrypt() was None')
         b_salt = os.urandom(32)
         b_password = secret.bytes
         b_key1, b_key2, b_iv = cls._gen_key_initctr(b_password, b_salt)

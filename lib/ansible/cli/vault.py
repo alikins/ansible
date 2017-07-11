@@ -26,7 +26,7 @@ from ansible.cli import CLI
 from ansible.errors import AnsibleError, AnsibleOptionsError
 from ansible.module_utils._text import to_text, to_bytes
 from ansible.parsing.dataloader import DataLoader
-from ansible.parsing.vault import VaultEditor, VaultLib
+from ansible.parsing.vault import VaultEditor, VaultLib, match_encrypt_secret
 
 try:
     from __main__ import display
@@ -114,6 +114,11 @@ class VaultCLI(CLI):
 
         can_output = ['encrypt', 'decrypt', 'encrypt_string']
 
+        if self.options.vault_ids:
+            for vault_id in self.options.vault_ids:
+                if u';' in vault_id:
+                    raise AnsibleOptionsError("'%s' is not a valid vault id. The character ';' is not allowed in vault ids" % vault_id)
+
         if self.action not in can_output:
             if self.options.output_file:
                 raise AnsibleOptionsError("The --output option can be used only with ansible-vault %s" % '/'.join(can_output))
@@ -177,9 +182,12 @@ class VaultCLI(CLI):
             if not vault_secrets:
                 raise AnsibleOptionsError("A vault password is required to use Ansible's Vault")
 
-            # only one secret for encrypt for now
-            self.encrypt_vault_id = list(vault_secrets.keys())[0]
-            self.encrypt_secret = vault_secrets[self.encrypt_vault_id]
+            encrypt_secret = match_encrypt_secret(vault_secrets)
+            # only one secret for encrypt for now, use the first vault_id and use its first secret
+            # self.encrypt_vault_id = list(vault_secrets.keys())[0]
+            # self.encrypt_secret = vault_secrets[self.encrypt_vault_id][0]
+            self.encrypt_vault_id = encrypt_secret[0]
+            self.encrypt_secret = encrypt_secret[1]
 
         if self.action in ['rekey']:
             new_vault_ids = []
@@ -197,8 +205,10 @@ class VaultCLI(CLI):
                 raise AnsibleOptionsError("A new vault password is required to use Ansible's Vault rekey")
 
             # There is only one new_vault_id currently and one new_vault_secret
-            self.new_encrypt_vault_id = list(new_vault_secrets.keys())[0]
-            self.new_encrypt_secret = new_vault_secrets[self.new_encrypt_vault_id]
+            new_encrypt_secret = match_encrypt_secret(new_vault_secrets)
+
+            self.new_encrypt_vault_id = new_encrypt_secret[0]
+            self.new_encrypt_secret = new_encrypt_secret[1]
 
         loader.set_vault_secrets(vault_secrets)
         self.secrets = vault_secrets

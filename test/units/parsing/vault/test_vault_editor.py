@@ -30,8 +30,8 @@ from ansible.compat.tests.mock import patch
 
 from ansible import errors
 from ansible.parsing import vault
-from ansible.parsing.vault import VaultLib
-from ansible.parsing.vault import VaultEditor
+from ansible.parsing.vault import VaultLib, VaultEditor, match_encrypt_secret
+
 from ansible.module_utils._text import to_bytes, to_text
 
 from units.mock.vault_helper import TextVaultSecret
@@ -56,10 +56,13 @@ class TestVaultEditor(unittest.TestCase):
     def setUp(self):
         self._test_dir = None
         self.vault_password = "test-vault-password"
-        self.vault_secret = TextVaultSecret(self.vault_password)
-        self.vault_secrets = {}
-        self.vault_secrets['vault_secret'] = self.vault_secret
-        self.vault_secrets['default'] = self.vault_secret
+        vault_secret = TextVaultSecret(self.vault_password)
+        self.vault_secrets = [('vault_secret', vault_secret),
+                              ('default', vault_secret)]
+
+    @property
+    def vault_secret(self):
+        return match_encrypt_secret(self.vault_secrets)[1]
 
     def tearDown(self):
         if self._test_dir:
@@ -68,9 +71,8 @@ class TestVaultEditor(unittest.TestCase):
         self._test_dir = None
 
     def _secrets(self, password):
-        vault_secrets = {}
         vault_secret = TextVaultSecret(password)
-        vault_secrets['default'] = vault_secret
+        vault_secrets = [('default', vault_secret)]
         return vault_secrets
 
     def test_methods_exist(self):
@@ -195,9 +197,6 @@ class TestVaultEditor(unittest.TestCase):
         # TODO: assert that it is encrypted
         self.assertTrue(vault.is_encrypted(new_src_file_contents))
 
-        import pprint
-        pprint.pprint(locals())
-        pprint.pprint(vault_editor.vault)
         src_file_plaintext = vault_editor.vault.decrypt(new_src_file_contents)
 
         # the plaintext should not be encrypted
@@ -221,10 +220,9 @@ class TestVaultEditor(unittest.TestCase):
 
         # FIXME: update to just set self._secrets or just a new vault secret id
         new_password = 'password2:electricbugaloo'
-        new_vault_secrets = {}
         new_vault_secret = TextVaultSecret(new_password)
-        new_vault_secrets['default'] = new_vault_secret
-        ve.rekey_file(src_file_path, new_vault_secret)
+        new_vault_secrets = [('default', new_vault_secret)]
+        ve.rekey_file(src_file_path, vault.match_encrypt_secret(new_vault_secrets)[1])
 
         # FIXME: can just update self._secrets here
         new_ve = vault.VaultEditor(VaultLib(new_vault_secrets))
@@ -336,7 +334,6 @@ class TestVaultEditor(unittest.TestCase):
         self.assertEqual(src_file_plaintext, new_src_contents)
 
         new_stat = os.stat(src_file_path)
-        print(new_stat)
 
     @patch('ansible.parsing.vault.call')
     def test_edit_file_symlink(self, mock_sp_call):
@@ -429,7 +426,7 @@ class TestVaultEditor(unittest.TestCase):
 
         _secrets = self._secrets('ansible')
         ve = self._vault_editor(_secrets)
-        ve.create_file(tmp_file.name, _secrets['default'])
+        ve.create_file(tmp_file.name, vault.match_encrypt_secret(_secrets)[1])
 
         self.assertTrue(os.path.exists(tmp_file.name))
 
@@ -496,7 +493,7 @@ class TestVaultEditor(unittest.TestCase):
         error_hit = False
         new_secrets = self._secrets("ansible2")
         try:
-            ve.rekey_file(v10_file.name, new_secrets['default'])
+            ve.rekey_file(v10_file.name, vault.match_encrypt_secret(new_secrets)[1])
         except errors.AnsibleError:
             raise
             error_hit = True

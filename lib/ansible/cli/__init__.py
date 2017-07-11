@@ -169,11 +169,42 @@ class CLI(with_metaclass(ABCMeta, object)):
             display.v(u"No config file found; using defaults")
 
     @staticmethod
+    def split_vault_id(vault_id):
+        # return (before_@, after_@)
+        # if no @, return whole string as after_
+        if '@' not in vault_id:
+            return (None, vault_id)
+
+        parts = vault_id.split('@', 1)
+        ret = tuple(parts)
+        return ret
+
+    @staticmethod
+    def build_vault_ids(vault_ids, vault_password_files=None, ask_vault_pass=None):
+        vault_password_files = vault_password_files or []
+        vault_ids = vault_ids or []
+
+        # convert vault_password_files into vault_ids slugs
+        for password_file in vault_password_files:
+            id_slug = u'%s@%s' % (C.DEFAULT_VAULT_IDENTITY, password_file)
+
+            # note this makes --vault-id higher precendence than --vault-password-file
+            # if we want to intertwingle them in order probably need a cli callback to populate vault_ids
+            # used by --vault-id and --vault-password-file
+            vault_ids.append(id_slug)
+
+        if ask_vault_pass:
+            id_slug = u'%s@%s' % (C.DEFAULT_VAULT_IDENTITY, u'prompt')
+            vault_ids.append(id_slug)
+
+        return vault_ids
+
+    # TODO: remove the now unused args
+    @staticmethod
     def setup_vault_secrets(loader, vault_ids, vault_password_files=None,
                             ask_vault_pass=None, create_new_password=False):
-        vault_secrets = {}
-        vault_password_files = vault_password_files or []
-        vault_ids = vault_ids or ['default']
+        # list of tuples
+        vault_secrets = []
 
         if create_new_password:
             prompt_formats = ['New vault password (%s): ',
@@ -181,39 +212,37 @@ class CLI(with_metaclass(ABCMeta, object)):
         else:
             prompt_formats = ['Vault password (%s): ']
 
-        if ask_vault_pass:
-            for index, prompted_vault_id in enumerate(vault_ids):
-                prompted_vault_secret = PromptVaultSecret(prompt_formats=prompt_formats, vault_id=prompted_vault_id)
+        vault_ids = CLI.build_vault_ids(vault_ids,
+                                        vault_password_files,
+                                        ask_vault_pass)
 
-                # TODO: we don't need to do this now, we could do it later though
-                #       that would change the cli UXD a bit and may be weird.
-                # TODO: callback style also means callback could be called from worker process
-                #       so keeping enough state to only ask for a password once gets complicated
-                prompted_vault_secret.load()
+        for index, vault_id in enumerate(vault_ids):
+            pre, post = CLI.split_vault_id(vault_id)
 
-                vault_secrets[prompted_vault_id] = prompted_vault_secret
+            if post == 'prompt':
+                # TODO: we could assume --vault-id=prompt implies --ask-vault-pass
+                #       if not, we need to 'if ask_vault_pass' here
+                if pre:
+                    prompted_vault_secret = PromptVaultSecret(prompt_formats=prompt_formats, vault_id=pre)
+                    prompted_vault_secret.load()
+                    vault_secrets.append((pre, prompted_vault_secret))
+                else:
+                    prompted_vault_secret = PromptVaultSecret(prompt_formats=prompt_formats,
+                                                              vault_id=C.DEFAULT_VAULT_IDENTITY)
+                    prompted_vault_secret.load()
+                    vault_secrets.append((C.DEFAULT_VAULT_IDENTITY, prompted_vault_secret))
+                continue
 
-        # should vault-password-file override prompted (ask-vault-pass) ? who
-        # should use 'default' vault id if one isnt provided?
-        for index, vault_password_file in enumerate(vault_password_files):
+            # assuming anything else is a password file
+            display.vvvvv('Reading vault password file: %s' % post)
             # read vault_pass from a file
-            file_vault_secret = FileVaultSecret(filename=vault_password_file,
+            file_vault_secret = FileVaultSecret(filename=post,
                                                 loader=loader)
             file_vault_secret.load()
-
-            # start with filename as vault id
-            file_vault_id = vault_password_file
-
-            # then consume (in order) any unused vault_ids as ids for password file provided secrets
-            for vault_id in vault_ids:
-                if vault_id not in vault_secrets:
-                    file_vault_id = vault_id
-                    break
-
-            vault_secrets[file_vault_id] = file_vault_secret
-
-            # And set the filename based vault_id as well
-            vault_secrets[vault_password_file] = file_vault_secret
+            if pre:
+                vault_secrets.append((pre, file_vault_secret))
+            else:
+                vault_secrets.append((C.DEFAULT_VAULT_IDENTITY, file_vault_secret))
 
         return vault_secrets
 
@@ -352,7 +381,7 @@ class CLI(with_metaclass(ABCMeta, object)):
                               action="callback", callback=CLI.unfrack_path, type='string'),
             parser.add_option('--vault-id', default=[], dest='vault_ids', action='append', type='string',
                               help='the vault identity to use')
-            parser.add_option('--new-vault-id', default=C.DEFAULT_VAULT_IDENTITY, dest='new_vault_id', type='string',
+            parser.add_option('--new-vault-id', default=None, dest='new_vault_id', type='string',
                               help='the new vault identity to use for rekey')
 
         if subset_opts:

@@ -177,33 +177,35 @@ class TestAnsibleLoaderBasic(unittest.TestCase):
 class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
-        self.vault_secrets = {}
-        self.vault_secret = TextVaultSecret(self.vault_password)
-        self.vault_secrets['vault_secret'] = self.vault_secret
-        self.vault_secrets['default'] = self.vault_secret
+        vault_secret = TextVaultSecret(self.vault_password)
+        self.vault_secrets = [('vault_secret', vault_secret),
+                              ('default', vault_secret)]
         self.vault = vault.VaultLib(self.vault_secrets)
+
+    @property
+    def vault_secret(self):
+        return vault.match_encrypt_secret(self.vault_secrets)[1]
 
     def test_wrong_password(self):
         plaintext = u"Ansible"
         bob_password = "this is a different password"
 
         bobs_secret = TextVaultSecret(bob_password)
-        bobs_secrets = {}
-        bobs_secrets['default'] = bobs_secret
+        bobs_secrets = [('default', bobs_secret)]
 
         bobs_vault = vault.VaultLib(bobs_secrets)
 
-        ciphertext = bobs_vault.encrypt(plaintext, bobs_secret)
+        ciphertext = bobs_vault.encrypt(plaintext, vault.match_encrypt_secret(bobs_secrets)[1])
 
         try:
             self.vault.decrypt(ciphertext)
         except Exception as e:
             self.assertIsInstance(e, errors.AnsibleError)
-            self.assertEqual(e.message, 'Decryption failed')
+            self.assertEqual(e.message, 'Decryption failed (no vault secrets would found that could decrypt)')
 
     def _encrypt_plaintext(self, plaintext):
         # Construct a yaml repr of a vault by hand
-        vaulted_var_bytes = self.vault.encrypt(plaintext, self.vault_secrets['default'])
+        vaulted_var_bytes = self.vault.encrypt(plaintext, self.vault_secret)
 
         # add yaml tag
         vaulted_var = vaulted_var_bytes.decode()
@@ -255,6 +257,7 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         loader = self._loader(stream)
 
         data_from_yaml = loader.get_data()
+
         stream2 = NameStringIO(u'')
         # verify we can dump the object again
         self._dump_stream(data_from_yaml, stream2, dumper=AnsibleDumper)

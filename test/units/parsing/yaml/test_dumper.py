@@ -32,9 +32,8 @@ from units.mock.vault_helper import TextVaultSecret
 class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
     def setUp(self):
         self.vault_password = "hunter42"
-        self.vault_secrets = {}
-        self.vault_secret = TextVaultSecret(self.vault_password)
-        self.vault_secrets['vault_secret'] = self.vault_secret
+        vault_secret = TextVaultSecret(self.vault_password)
+        self.vault_secrets = [('vault_secret', vault_secret)]
         self.good_vault = vault.VaultLib(self.vault_secrets)
         self.vault = self.good_vault
         self.stream = self._build_stream()
@@ -51,7 +50,7 @@ class TestAnsibleDumper(unittest.TestCase, YamlTestUtils):
     def test(self):
         plaintext = 'This is a string we are going to encrypt.'
         avu = objects.AnsibleVaultEncryptedUnicode.from_plaintext(plaintext, vault=self.vault,
-                                                                  secret=self.vault_secrets['vault_secret'])
+                                                                  secret=vault.match_secrets(self.vault_secrets, ['vault_secret'])[0][1])
 
         yaml_out = self._dump_string(avu, dumper=self.dumper)
         stream = self._build_stream(yaml_out)
