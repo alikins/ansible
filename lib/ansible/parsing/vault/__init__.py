@@ -73,6 +73,7 @@ except ImportError:
     pass
 
 from ansible.errors import AnsibleError
+from ansible import constants as C
 from ansible.module_utils.six import PY3, binary_type
 from ansible.module_utils.six.moves import zip
 from ansible.module_utils._text import to_bytes, to_text
@@ -156,7 +157,7 @@ def parse_vaulttext_envelope(b_vaulttext_envelope, default_vault_id=None):
         decrypt() function.
     """
     # used by decrypt
-    default_vault_id = default_vault_id or 'default'
+    default_vault_id = default_vault_id or C.DEFAULT_VAULT_IDENTITY
 
     b_tmpdata = b_vaulttext_envelope.split(b'\n')
     b_tmpheader = b_tmpdata[0].strip().split(b';')
@@ -390,7 +391,7 @@ class VaultLib:
 
         if secret is None:
             if self.secrets:
-                secret = self.secrets['default']
+                secret = self.secrets[C.DEFAULT_VAULT_IDENTITY]
             else:
                 raise AnsibleVaultError("A vault password must be specified to encrypt data")
 
