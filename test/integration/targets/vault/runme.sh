@@ -14,6 +14,12 @@ echo "This is a test file for format 1.2" > "${TEST_FILE_1_2}"
 
 TEST_FILE_OUTPUT="${MYTMPDIR}/test_file_output"
 
+# test with multiple password files, including a script, and a wrong password, and a mix of --vault-id and --vault-password-file
+ansible-playbook test_vault_embedded_ids.yml -i ../../inventory -v "$@" \
+	--vault-password-file vault-password-wrong \
+	--vault-id password-script.py --vault-id example1@example1_password \
+	--vault-id example2@example2_password --vault-password-file example3_password \
+	--vault-id vault-password
 
 # old format
 ansible-vault view "$@" --vault-password-file vault-password-ansible format_1_0_AES.yml
