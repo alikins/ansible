@@ -102,12 +102,13 @@ class InventoryCLI(CLI):
         if len(self.args) > 0:
             self.options.pattern = self.args[0]
         else:
-            self.options.pattern = 'all'
+            self.options.pattern = None
 
 
     def run(self):
 
         results = None
+        results = []
 
         super(InventoryCLI, self).run()
 
@@ -138,6 +139,11 @@ class InventoryCLI(CLI):
             self.inventory = Inventory(loader=self.loader, variable_manager=self.vm, host_list=self.options.inventory)
             self.vm.set_inventory(self.inventory)
 
+        if self.options.pattern:
+            start_at = self._get_group(self.options.pattern)
+            groups = [start_at]
+        else:
+            groups = self._get_group_list()
 
         if self.options.host:
             hosts = self.inventory.get_hosts(self.options.host)
@@ -148,21 +154,25 @@ class InventoryCLI(CLI):
             self._remove_internal(myvars)
 
             #FIXME: should we template first?
-            results = self.dump(myvars)
+            results = self.dump(myvars).splitlines()
 
         elif self.options.graph:
-            results = self.inventory_graph()
+            for group in groups:
+                res = self.inventory_graph(group)
+                results.extend(res)
         elif self.options.list:
-            top = self._get_group('all')
-            if self.options.yaml:
-                results = self.yaml_inventory(top)
-            else:
-                results = self.json_inventory(top)
-            results = self.dump(results)
+            for group_name in groups:
+                group = self._get_group(group_name)
+                if self.options.yaml:
+                    results = self.yaml_inventory(group)
+                else:
+                    results = self.json_inventory(group)
+            results = self.dump(results).splitlines()
 
         if results:
+            out = '\n'.join(results)
             #FIXME: pager?
-            display.display(results)
+            display.display(out)
             exit(0)
 
         exit(1)
@@ -185,6 +195,10 @@ class InventoryCLI(CLI):
         else:
            hostvars =  self.vm.get_vars(self.loader, host=host)
         return hostvars
+
+    def _get_group_list(self):
+        group_list = self.inventory.groups.keys()
+        return group_list
 
     def _get_group(self, gname):
         if self._new_api:
@@ -234,14 +248,14 @@ class InventoryCLI(CLI):
 
         return result
 
-    def inventory_graph(self):
+    def inventory_graph(self, root):
 
-        start_at = self._get_group(self.options.pattern)
+        start_at = self._get_group(root)
         if start_at:
-            return '\n'.join(self._graph_group(start_at))
+            # return '\n'.join(self._graph_group(start_at))
+            return self._graph_group(start_at)
         else:
             raise AnsibleOptionsError("Pattern must be valid group name when using --graph")
-
 
     def json_inventory(self, top):
 
