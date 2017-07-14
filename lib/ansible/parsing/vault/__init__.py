@@ -526,8 +526,8 @@ class VaultLib:
                     display.vvvvv('decrypt succesful with secret=%s and vault_id=%s' % (vault_secret, vault_secret_id))
                     break
             except AnsibleError as e:
-                display.vvvv('Tried to use the vault secret (%s) to decrypt but it failed, trying the rest.\nfilename: %s\nvaulttext: %serror: %s' %
-                             (vault_secret_id, filename, b_vaulttext, e))
+                display.vvvv('Tried to use the vault secret (%s) to decrypt (%s) but it failed. Error: %s' %
+                             (vault_secret_id, filename, e))
                 continue
         else:
             msg = "Decryption failed (no vault secrets would found that could decrypt)"
