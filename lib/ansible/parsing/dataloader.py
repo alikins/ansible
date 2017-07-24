@@ -83,6 +83,9 @@ class DataLoader:
 
     # TODO: since we can query vault_secrets late, we could provide this to DataLoader init
     def set_vault_secrets(self, vault_secrets):
+        print('set_vault_secrets: %s' % vault_secrets)
+        import traceback
+        traceback.print_stack()
         self._vault.secrets = vault_secrets
 
     def load(self, data, file_name='<string>', show_content=True):
@@ -185,6 +188,17 @@ class DataLoader:
             except AttributeError:
                 pass  # older versions of yaml don't have dispose function, ignore
 
+    def _decrypt_if_vault_data(self, b_vault_data, b_file_name=None):
+        if not is_encrypted(b_vault_data):
+            show_content = True
+            return b_vault_data, show_content
+
+        b_ciphertext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(b_vault_data)
+        b_data = self._vault.decrypt(b_vault_data, filename=b_file_name)
+
+        show_content = False
+        return b_data, show_content
+
     def _get_file_contents(self, file_name):
         '''
         Reads the file contents from the given file name, and will decrypt them
@@ -197,17 +211,18 @@ class DataLoader:
         if not self.path_exists(b_file_name) or not self.is_file(b_file_name):
             raise AnsibleFileNotFound("Unable to retrieve file contents", file_name=file_name)
 
-        show_content = True
+        # show_content = True
         try:
             with open(b_file_name, 'rb') as f:
                 data = f.read()
-                if is_encrypted(data):
-                    # FIXME: plugin vault selector
-                    b_ciphertext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(data)
-                    data = self._vault.decrypt(data, filename=b_file_name)
-                    show_content = False
+                return self._decrypt_if_vault_data(data, b_file_name)
+        #        if is_encrypted(data):
+        #            # FIXME: plugin vault selector
+        #            b_ciphertext, b_version, cipher_name, vault_id = parse_vaulttext_envelope(data)
+        #            data = self._vault.decrypt(data, filename=b_file_name)
+        #            show_content = False
 
-            return (data, show_content)
+        #    return (data, show_content)
 
         except (IOError, OSError) as e:
             raise AnsibleParserError("an error occurred while trying to read the file '%s': %s" % (file_name, str(e)), orig_exc=e)

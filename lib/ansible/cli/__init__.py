@@ -231,6 +231,10 @@ class CLI(with_metaclass(ABCMeta, object)):
                                                               vault_id=C.DEFAULT_VAULT_IDENTITY)
                     prompted_vault_secret.load()
                     vault_secrets.append((C.DEFAULT_VAULT_IDENTITY, prompted_vault_secret))
+
+                # update loader with new secrets incrementally, so we can load a vault password
+                # that is encrypted with a vault secret provided earlier
+                loader.set_vault_secrets(vault_secrets)
                 continue
 
             # assuming anything else is a password file
@@ -243,6 +247,9 @@ class CLI(with_metaclass(ABCMeta, object)):
                 vault_secrets.append((pre, file_vault_secret))
             else:
                 vault_secrets.append((C.DEFAULT_VAULT_IDENTITY, file_vault_secret))
+
+            # update loader with as-yet-known vault secrets
+            loader.set_vault_secrets(vault_secrets)
 
         return vault_secrets
 

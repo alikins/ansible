@@ -336,11 +336,17 @@ class FileVaultSecret(VaultSecret):
             if p.returncode != 0:
                 raise AnsibleError("Vault password script %s returned non-zero (%s): %s" % (this_path, p.returncode, p.stderr))
 
-            vault_pass = stdout.strip(b'\r\n')
+            b_vault_data, show_content = loader._decrypt_if_vault_data(stdout, vault_password_file)
+            # vault_pass = stdout.strip(b'\r\n')
+            vault_pass = b_vault_data.strip(b'\r\n')
         else:
             try:
                 f = open(this_path, "rb")
-                vault_pass = f.read().strip()
+                b_vault_data = f.read()
+                b_vault_data, show_content = loader._decrypt_if_vault_data(b_vault_data,
+                                                                           vault_password_file)
+                # vault_pass = f.read().strip()
+                vault_pass = b_vault_data.strip(b'\r\n')
                 f.close()
             except (OSError, IOError) as e:
                 raise AnsibleError("Could not read vault password file %s: %s" % (this_path, e))
@@ -421,6 +427,7 @@ class VaultLib:
         before encryption.
         """
 
+        print('secret: %s' % secret)
         if secret is None:
             if self.secrets:
                 secret_vault_id, secret = match_encrypt_secret(self.secrets)
@@ -462,6 +469,8 @@ class VaultLib:
         """
         b_vaulttext = to_bytes(vaulttext, errors='strict', encoding='utf-8')
 
+        import traceback
+        traceback.print_stack()
         if self.secrets is None:
             raise AnsibleVaultError("A vault password must be specified to decrypt data")
 
