@@ -506,11 +506,11 @@ class VaultLib:
             else:
                 display.vvvvv('Found a vault_id (%s) in the vault text, but we do not have a associated secret (--vault-id)' % (vault_id))
 
-        # TODO: add config option to skip this. Not adding the other secrets to
-        #       vault_secret_ids enforces a match between the vault_id from the vault_text and
-        #       the known vault secrets.
-        # match_all_secrets? arg to match() method?
-        vault_id_matchers.extend([_vault_id for _vault_id, _secret in self.secrets if _vault_id != vault_id])
+        # Not adding the other secrets to vault_secret_ids enforces a match between the vault_id from the vault_text and
+        # the known vault secrets.
+        if not C.DEFAULT_VAULT_ENFORCE_IDENTITY_MATCH:
+            # Add all of the known vault_ids as candidates for decrypting a vault.
+            vault_id_matchers.extend([_vault_id for _vault_id, _secret in self.secrets if _vault_id != vault_id])
 
         matched_secrets = match_secrets(self.secrets, vault_id_matchers)
 

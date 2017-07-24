@@ -69,6 +69,31 @@ ansible-vault view "$@" --vault-password-file password-script.py format_1_2_AES2
 # new 1.2 format, view, using password script with vault-id
 ansible-vault view "$@" --vault-id password-script.py format_1_2_AES256.yml
 
+# new 1.2 format, view, ENFORCE_IDENTITY_MATCH=true, should fail, no 'test_vault_id' vault_id
+ANSIBLE_VAULT_ENFORCE_IDENTITY_MATCH=1 ansible-vault view "$@" --vault-password-file vault-password format_1_2_AES256.yml && :
+WRONG_RC=$?
+echo "rc was $WRONG_RC (1 is expected)"
+[ $WRONG_RC -eq 1 ]
+
+# new 1.2 format, view with vault-id, ENFORCE_IDENTITY_MATCH=true, should work, 'test_vault_id' is provided
+ANSIBLE_VAULT_ENFORCE_IDENTITY_MATCH=1 ansible-vault view "$@" --vault-id=test_vault_id@vault-password format_1_2_AES256.yml
+
+# new 1,2 format, view, using password script, ENFORCE_IDENTITY_MATCH=true, should fail, no 'test_vault_id'
+ANSIBLE_VAULT_ENFORCE_IDENTITY_MATCH=1 ansible-vault view "$@" --vault-password-file password-script.py format_1_2_AES256.yml && :
+WRONG_RC=$?
+echo "rc was $WRONG_RC (1 is expected)"
+[ $WRONG_RC -eq 1 ]
+
+
+# new 1.2 format, view, using password script with vault-id, ENFORCE_IDENTITY_MATCH=true, should fail
+ANSIBLE_VAULT_ENFORCE_IDENTITY_MATCH=1 ansible-vault view "$@" --vault-id password-script.py format_1_2_AES256.yml && :
+WRONG_RC=$?
+echo "rc was $WRONG_RC (1 is expected)"
+[ $WRONG_RC -eq 1 ]
+
+# new 1.2 format, view, using password script with vault-id, ENFORCE_IDENTITY_MATCH=true, 'test_vault_id' provided should work
+ANSIBLE_VAULT_ENFORCE_IDENTITY_MATCH=1 ansible-vault view "$@" --vault-id=test_vault_id@password-script.py format_1_2_AES256.yml
+
 # encrypt it
 ansible-vault encrypt "$@" --vault-password-file vault-password "${TEST_FILE}"
 
