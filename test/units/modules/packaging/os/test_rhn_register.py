@@ -4,7 +4,7 @@ from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import PropertyMock, patch, mock_open
 from ansible.module_utils import basic
 from ansible.module_utils.six.moves import xmlrpc_client
-from ansible.module_utils._text import to_bytes
+from ansible.module_utils._text import to_bytes, to_text
 from ansible.modules.packaging.os import rhn_register
 
 
@@ -76,6 +76,9 @@ class TestRhnRegister(unittest.TestCase):
         self.mock_exit_fail.start()
         self.addCleanup(self.mock_exit_fail.stop)
 
+        self.mock_enable = patch.object(rhn_register.Rhn, 'enable')
+        self.mock_enable.start()
+
     def tearDown(self):
         pass
 
@@ -132,6 +135,7 @@ class TestRhnRegister(unittest.TestCase):
 
         def transport_request(host, handler, request_body, verbose=0):
             """Fake request"""
+            request_body = to_text(request_body, 'utf-8')
             if '<methodName>auth.login</methodName>' in request_body:
                 return ['X' * 43]
             elif '<methodName>channel.software.listSystemChannels</methodName>' in request_body:
@@ -162,6 +166,7 @@ class TestRhnRegister(unittest.TestCase):
 
         def transport_request(host, handler, request_body, verbose=0):
             """Fake request"""
+            request_body = to_text(request_body, 'utf-8')
             if '<methodName>auth.login</methodName>' in request_body:
                 return ['X' * 43]
             elif '<methodName>channel.software.listSystemChannels</methodName>' in request_body:
@@ -192,6 +197,7 @@ class TestRhnRegister(unittest.TestCase):
 
         def transport_request(host, handler, request_body, verbose=0):
             """Fake request"""
+            request_body = to_text(request_body, 'utf-8')
             if '<methodName>auth.login</methodName>' in request_body:
                 return ['X' * 43]
             elif '<methodName>channel.software.listSystemChannels</methodName>' in request_body:
@@ -225,6 +231,7 @@ class TestRhnRegister(unittest.TestCase):
 
         def transport_request(host, handler, request_body, verbose=0):
             """Fake request"""
+            request_body = to_text(request_body, 'utf-8')
             if '<methodName>auth.login</methodName>' in request_body:
                 return ['X' * 43]
             elif '<methodName>system.deleteSystems</methodName>' in request_body:
