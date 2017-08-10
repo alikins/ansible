@@ -47,8 +47,7 @@ class Playbook:
         self._basedir = to_text(os.getcwd(), errors='surrogate_or_strict')
         self._loader = loader
         self._file_name = None
-        self._includes = []
-        self._imports = []
+        self._import_playbooks = []
 
     def __iter__(self):
         return iter(self._entries)
@@ -61,8 +60,7 @@ class Playbook:
         data['basedir'] = self._basedir
         data['file_name'] = self._file_name
         # data['loader'] = self._loader
-        data['includes'] = self._includes
-        data['imports'] = self._imports
+        data['import_playbooks'] = self._import_playbooks
         data['class_name'] = self.__class__.__name__
         return data
 
@@ -131,11 +129,10 @@ class Playbook:
                 if 'include' in entry:
                     display.deprecated("You should use 'import_playbook' instead of 'include' for playbook includes")
                 pbi = PlaybookInclude()
+                self._import_playbooks.append(pbi)
                 pb = pbi.load(entry, basedir=self._basedir, variable_manager=variable_manager, loader=self._loader)
                 if pb is not None:
                     self._entries.extend(pb._entries)
-                    # FIXME: add imports
-                    self._includes.append(pbi)
                 else:
                     display.display("skipping playbook include '%s' due to conditional test failure" % entry.get('include', entry), color=C.COLOR_SKIP)
             else:
