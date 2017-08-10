@@ -41,7 +41,6 @@ class AnsibleDumper(yaml.SafeDumper):
     pass
 
 
-
 class AnsibleUnsafeDumper(yaml.Dumper):
     # for debugging
     def represent_undefined(self, data):
@@ -49,15 +48,12 @@ class AnsibleUnsafeDumper(yaml.Dumper):
         return yaml.Dumper.represent_undefined(self, data)
 
 
-        return yaml.Dumper.represent_undefined(self, data)
-
 def represent_hostvars(self, data):
     return self.represent_dict(dict(data))
 
 
-
 def represent_playbook(self, data):
-    #return self.represent_list(data)
+    # return self.represent_list(data)
     return self.represent_dict(data.__getstate__())
 
 
@@ -66,8 +62,8 @@ def represent_play(self, data):
 
 
 def represent_attribute(self, data):
-    print('repr_attribute %s' % data)
-    print('repr_attrubte.serialize: %s' % data.serialize())
+    # print('repr_attribute %s' % data)
+    # print('repr_attrubte.serialize: %s' % data.serialize())
     return self.represent_dict(data.serialize())
 
 
@@ -76,7 +72,7 @@ def represent_block(self, data):
 
 
 def represent_playbook_include(self, data):
-    return self.represent_dict(data)
+    return self.represent_dict(data.serialize())
 
 
 def represent_bloc2k(self, data):
@@ -84,8 +80,8 @@ def represent_bloc2k(self, data):
     block_data = data.serialize(serialize_parent=False)
     for internal in ('dep_chain',):
         del block_data[internal]
-    #new_data['block'] = block_data
-    #for d in block_data:
+    # new_data['block'] = block_data
+    # for d in block_data:
     #    print('%s t=%s %s' % (d, type(d), repr(d)))
     new_data.update(block_data)
     return self.represent_dict(new_data)
@@ -110,6 +106,11 @@ if PY3:
     represent_unicode = yaml.representer.SafeRepresenter.represent_str
 else:
     represent_unicode = yaml.representer.SafeRepresenter.represent_unicode
+
+if PY3:
+    unsafe_represent_unicode = yaml.representer.SafeRepresenter.represent_str
+else:
+    unsafe_represent_unicode = yaml.representer.SafeRepresenter.represent_unicode
 
 AnsibleUnsafeDumper.add_representer(
     Playbook,
@@ -137,16 +138,24 @@ AnsibleUnsafeDumper.add_representer(
     represent_attribute
 )
 
-#AnsibleUnsafeDumper.add_representer(
-#    PlaybookInclude,
-#    represent_playbook_include
-#)
+# playbook includes dont really show up in the Playbook
+# object (the analog would be C/cpp 'include' files, sort of)
+AnsibleUnsafeDumper.add_representer(
+    PlaybookInclude,
+    represent_playbook_include
+)
 
 
 AnsibleUnsafeDumper.add_representer(
     AnsibleUnicode,
     represent_unicode,
 )
+
+AnsibleUnsafeDumper.add_representer(
+    unicode,
+    represent_unicode,
+)
+
 
 AnsibleUnsafeDumper.add_representer(
     HostVars,
@@ -156,7 +165,7 @@ AnsibleUnsafeDumper.add_representer(
 
 AnsibleUnsafeDumper.add_representer(
     AnsibleSequence,
-    #yaml.representer.SafeRepresenter.represent_list,
+    # yaml.representer.SafeRepresenter.represent_list,
     yaml.representer.Representer.represent_list,
 )
 

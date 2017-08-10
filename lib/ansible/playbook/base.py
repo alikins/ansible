@@ -510,11 +510,11 @@ class Base(with_metaclass(BaseMeta, object)):
         '''
         attrs = dict()
         for (name, attribute) in iteritems(self._valid_attrs):
-            attr = getattr(self, name)
-            if attribute.isa == 'class' and attr is not None and hasattr(attr, 'serialize'):
-                attrs[name] = attr.serialize()
+            value = getattr(self, name)
+            if attribute.isa == 'class' and value is not None and hasattr(value, 'serialize'):
+                attrs[name] = value.serialize()
             else:
-                attrs[name] = attr
+                attrs[name] = value
         return attrs
 
     def from_attrs(self, attrs):
@@ -561,35 +561,47 @@ class Base(with_metaclass(BaseMeta, object)):
 #
 #        self.defaults = sorted(self.defaults)
 
-    def _changed_attrs(self):
+    def _changed_attrs(self, just_changed=False):
         changed = []
         fuzzy_defaults = ('bool', 'list')
 
         for (name, attribute) in iteritems(self._valid_attrs):
             value = getattr(self, name)
+            #print('\nname: %s value: %s attr: %s' % (name, value, attribute))
+            #print('     type(value): %s type(attr.default): %s' % (type(value), type(attribute.default)))
+            # print('name: %s value: %s attr: %s' % (name, value, attribute))
 
-            if name == 'when':
-                changed.append((name, value, attribute))
-            #print('%s %s %s' % (name, value, attribute.default))
-            #if not attribute:
-            #    continue
+            #if name in ['name', 'when']:
+            #    changed.append((name, value, attribute))
 
-            #if not isinstance(value, type(attribute.default)):
-            #    continue
+            # print('%s %s %s' % (name, value, attribute.default))
+            # if not attribute:
+            #     continue
 
-            # check if both are None, since None != None, which isnt useful
-            if value is None and attribute.default is None:
-                continue
+            if just_changed:
 
-            # any_errors_fatal is a bool whose default is None
-            # well we dont really know if the value is changed do we...
-            # assume if value is a different type than the default, then it has changed
-            #if attribute.isa in fuzzy_defaults and not isinstance(value, type(attribute.default)):
-            #    continue
+                #if not isinstance(value, type(attribute.default)):
+                #    continue
+                # check if both are None, since None != None, which isnt useful
+                if value is None and attribute.default is None:
+                    continue
 
-            # bool attributes may not have a default
-            if value != attribute.default:
-                changed.append((name, value, attribute))
+                # any_errors_fatal is a bool whose default is None
+                # well we dont really know if the value is changed do we...
+                # assume if value is a different type than the default, then it has changed
+                if attribute.isa in fuzzy_defaults and not isinstance(value, type(attribute.default)):
+                    continue
+
+                # bool attributes may not have a default
+                if value == attribute.default:
+                    continue
+                    #changed.append((name, value, attribute))
+
+                # specical case for vars={}
+                if name == 'vars' and value == {}:
+                    continue
+
+            changed.append((name, value, attribute))
             # else:
             #    the builtin default value we can skip
         return changed
@@ -603,20 +615,35 @@ class Base(with_metaclass(BaseMeta, object)):
         as field attributes.
         '''
 
-        repr_ds = self.dump_attrs()
-        # This will clearly break other stuff atm since it changes what serialized means
-        changed = self._changed_attrs()
+        repr_ds = {}
 
-        #for name in self._valid_attrs.keys():
+        attrs = self._changed_attrs(just_changed=True)
+        # for name in self._valid_attrs.keys():
         #    repr[name] = getattr(self, name)
 
+        verbose = False
         # serialize the uuid field
-        repr_ds['uuid'] = self._uuid
-        repr_ds['finalized'] = self._finalized
-        repr_ds['squashed'] = self._squashed
+        if verbose:
+            repr_ds['uuid'] = self._uuid
+            repr_ds['finalized'] = self._finalized
+            repr_ds['squashed'] = self._squashed
 
-        for name, value, attribute in changed:
-            repr_ds[name] = value
+        for name, value, attribute in attrs:
+            #print('name: %s value: %s type(value): %s attr: %s' % (name, value, type(value), attribute))
+            # if name not in ('task', 'block', 'rescue', 'always'):
+            if True:
+                # repr_ds[name] = {'field_attribute': attribute,
+                #                'value': value}
+                repr_ds[name] = value
+                #if name == 'args':
+                 #   repr_ds[name] = to_text(value)
+                # repr_ds[name] = attribute
+
+                # FIXME: TODO: maybe add a per instance yaml representer for args?
+                # special case for args, splice in its args dict into the upper dict
+                # FIXME: something weird is up with include_vars args
+                if name == 'args':
+                    repr_ds.update(value)
 
         return repr_ds
 

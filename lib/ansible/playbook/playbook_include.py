@@ -58,7 +58,7 @@ class PlaybookInclude(Base, Conditional, Taggable):
 
         from ansible.parsing.yaml.dumper import AnsibleUnsafeDumper
         # first, we use the original parent method to correctly load the object
-        # via the load_data/preprocess_data system we normally use for other
+        # via the load_dat/daa/preprocess_data system we normally use for other
         # playbook objects
         new_obj = super(PlaybookInclude, self).load_data(ds, variable_manager, loader)
 
@@ -76,7 +76,6 @@ class PlaybookInclude(Base, Conditional, Taggable):
             file_name = os.path.join(basedir, file_name)
 
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
-
 #        pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,
 #                            indent=4, default_flow_style=False)
         #log.debug('pb_yaml=%s', pb_yaml)
@@ -89,7 +88,6 @@ class PlaybookInclude(Base, Conditional, Taggable):
             if new_obj.when and isinstance(entry, Play):
                 entry._included_conditional = new_obj.when[:]
 
-            print('Entry: %s' % entry)
             temp_vars = entry.vars.copy()
             temp_vars.update(new_obj.vars)
             param_tags = temp_vars.pop('tags', None)

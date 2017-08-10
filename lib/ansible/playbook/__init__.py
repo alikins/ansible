@@ -60,7 +60,7 @@ class Playbook:
         data['basedir'] = self._basedir
         data['file_name'] = self._file_name
         # data['loader'] = self._loader
-        data['import_playbooks'] = self._import_playbooks
+        data['_import_playbooks'] = self._import_playbooks
         data['class_name'] = self.__class__.__name__
         return data
 
@@ -77,15 +77,13 @@ class Playbook:
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
         import yaml
         from ansible.parsing.yaml.dumper import AnsibleUnsafeDumper
-        #canonical = True
+        # canonical = True
         canonical = False
         dfs = None
         pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,
                             indent=2, default_flow_style=dfs, canonical=canonical)
-        #log.debug('pb_yaml=%s', pb_yaml)
-        print('pb.load')
         print(pb_yaml)
-        print('PLAYBOOK=%s type(pb)=%s repr=%s' % (pb, type(pb), repr(pb)))
+        #        print('PLAYBOOK=%s type(pb)=%s repr=%s' % (pb, type(pb), repr(pb)))
         return pb
 
     def _load_playbook_data(self, file_name, variable_manager):
@@ -115,7 +113,7 @@ class Playbook:
             raise AnsibleParserError("playbooks must be a list of plays but the playbook in %s is a %s" % (file_name, type(ds)),
                                      obj=ds)
 
-        print('PLAYS DS ds=%s type(ds)=%s repr=%s' % (ds, type(ds), repr(ds)))
+#        print('PLAYS DS ds=%s type(ds)=%s repr=%s' % (ds, type(ds), repr(ds)))
         # Parse the playbook entries. For plays, we simply parse them
         # using the Play() object, and includes are parsed using the
         # PlaybookInclude() object
@@ -128,8 +126,9 @@ class Playbook:
             if 'include' in entry or 'import_playbook' in entry:
                 if 'include' in entry:
                     display.deprecated("You should use 'import_playbook' instead of 'include' for playbook includes")
+                print('entry: %s' % entry)
                 pbi = PlaybookInclude()
-                self._import_playbooks.append(pbi)
+                self._import_playbooks.append(file_name)
                 pb = pbi.load(entry, basedir=self._basedir, variable_manager=variable_manager, loader=self._loader)
                 if pb is not None:
                     self._entries.extend(pb._entries)

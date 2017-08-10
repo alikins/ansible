@@ -83,7 +83,12 @@ class Attribute:
         return data
 
     def __eq__(self, other):
-        return other.priority == self.priority
+        if other is None:
+            return False
+
+        if hasattr(other, 'priority'):
+            return other.priority == self.priority
+        return False
 
     def __ne__(self, other):
         return other.priority != self.priority

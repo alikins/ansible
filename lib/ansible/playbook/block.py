@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+from ansible.module_utils.six import iteritems
 from ansible.errors import AnsibleParserError
 from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.base import Base
@@ -212,20 +213,12 @@ class Block(Base, Become, Conditional, Taggable):
         a task we don't want to include the attribute list of tasks.
         '''
 
-        data = dict()
-        changed = self._changed_attrs()
-        # data = changed
-        # for name, value, attribute in changed:
-        #    data[name] = value
+        data = super(Block, self).serialize()
 
-        for attr in self._valid_attrs:
-            data[attr] = getattr(self, attr)
-
-            if attr not in ('block', 'rescue', 'always'):
-                data[attr] = getattr(self, attr)
-
-        data['dep_chain'] = self.get_dep_chain()
-        data['eor'] = self._eor
+        dep_chain = self.get_dep_chain()
+        if dep_chain:
+            data['dep_chain'] = dep_chain
+        #data['eor'] = self._eor
 
         if self._role is not None:
             data['role'] = self._role.serialize()
@@ -235,8 +228,8 @@ class Block(Base, Become, Conditional, Taggable):
             data['parent'] = self._parent.copy(exclude_tasks=True).serialize()
             data['parent_type'] = self._parent.__class__.__name__
 
-        print('DATA')
-        print(data)
+#        print('DATA')
+#        print(data)
         return data
 
     def deserialize(self, data):
