@@ -449,6 +449,10 @@ class Role(Base, Become, Conditional, Taggable):
             parents.append(parent.serialize(include_deps=False))
         res['_parents'] = parents
 
+        res['tasks'] = self._task_blocks
+
+        res['handlers'] = self._handler_blocks
+
         return res
 
     def deserialize(self, data, include_deps=True):

@@ -30,6 +30,7 @@ from ansible.playbook.play import Play
 from ansible.playbook.block import Block
 from ansible.playbook.handler import Handler
 from ansible.playbook.task import Task
+from ansible.playbook.role import Role
 from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.playbook_include import PlaybookInclude
 
@@ -105,6 +106,12 @@ def represent_handler(self, data):
     handler_data = data.serialize()
     return self.represent_dict(handler_data)
 
+
+def represent_role(self, data):
+    role_data = data.serialize()
+    return self.represent_dict(role_data)
+
+
 # Note: only want to represent the encrypted data
 def represent_vault_encrypted_unicode(self, data):
     return self.represent_scalar(u'!vault', data._ciphertext.decode(), style='|')
@@ -143,6 +150,12 @@ AnsibleUnsafeDumper.add_representer(
 AnsibleUnsafeDumper.add_representer(
     Handler,
     represent_handler
+)
+
+
+AnsibleUnsafeDumper.add_representer(
+    Role,
+    represent_role
 )
 
 

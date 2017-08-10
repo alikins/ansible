@@ -304,7 +304,8 @@ class Play(Base, Taggable, Become):
 
         roles = []
         for role in self.get_roles():
-            roles.append(role.serialize())
+            roles.append(role)
+            #roles.append(role.serialize())
         data['roles'] = roles
         data['included_path'] = self._included_path
         data['ClassName'] = self.__class__.__name__
