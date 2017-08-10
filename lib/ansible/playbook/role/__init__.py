@@ -435,13 +435,17 @@ class Role(Base, Become, Conditional, Taggable):
         res['_had_task_run'] = self._had_task_run.copy()
         res['_completed'] = self._completed.copy()
 
+        # FIXME/TODO: need to stop overloading serialize() as __getstate__()
         if self._metadata:
             res['_metadata'] = self._metadata.serialize()
+            #res['_metadata'] = self._metadata
+            #res['_metadata'] = self._metadata
 
         if include_deps:
             deps = []
             for role in self.get_direct_dependencies():
                 deps.append(role.serialize())
+                #deps.append(role)
             res['_dependencies'] = deps
 
         parents = []
@@ -449,9 +453,9 @@ class Role(Base, Become, Conditional, Taggable):
             parents.append(parent.serialize(include_deps=False))
         res['_parents'] = parents
 
-        res['tasks'] = self._task_blocks
+        res['tasks'] = self._task_blocks[:]
 
-        res['handlers'] = self._handler_blocks
+        res['handlers'] = self._handler_blocks[:]
 
         return res
 

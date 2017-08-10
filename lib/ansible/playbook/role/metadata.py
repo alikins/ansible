@@ -105,8 +105,10 @@ class RoleMetadata(Base):
         return dict(
             allow_duplicates=self._allow_duplicates,
             dependencies=self._dependencies,
+            galaxy_info=self.galaxy_info,
         )
 
     def deserialize(self, data):
         setattr(self, 'allow_duplicates', data.get('allow_duplicates', False))
         setattr(self, 'dependencies', data.get('dependencies', []))
+        # TODO: set galaxy info on deserialize?

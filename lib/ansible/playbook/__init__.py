@@ -77,7 +77,7 @@ class Playbook:
         pb._load_playbook_data(file_name=file_name, variable_manager=variable_manager)
         import yaml
         from ansible.parsing.yaml.dumper import AnsibleUnsafeDumper
-        # canonical = True
+        #canonical = True
         canonical = False
         dfs = None
         pb_yaml = yaml.dump(pb, Dumper=AnsibleUnsafeDumper,

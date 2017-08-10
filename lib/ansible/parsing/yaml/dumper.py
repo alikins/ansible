@@ -51,6 +51,19 @@ class AnsibleUnsafeDumper(yaml.Dumper):
         print('undefined data=%s, type=%s' % (data, type(data)))
         return yaml.Dumper.represent_undefined(self, data)
 
+    def ignore_aliases(self, data):
+        if data == {} or data == []:
+            return True
+
+        if isinstance(data, (list, dict, FieldAttribute, Playbook, Play, Role, Task)):
+            return True
+
+        default = super(AnsibleUnsafeDumper, self).ignore_aliases(data)
+
+        if default is None:
+            print('type: %s ig_data: %s default ignore: %s' % (type(data), data, default))
+        return default
+
 
 def represent_hostvars(self, data):
     return self.represent_dict(dict(data))
