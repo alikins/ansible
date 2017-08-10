@@ -28,6 +28,7 @@ from ansible.vars.hostvars import HostVars
 from ansible.playbook import Playbook
 from ansible.playbook.play import Play
 from ansible.playbook.block import Block
+from ansible.playbook.handler import Handler
 from ansible.playbook.task import Task
 from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.playbook_include import PlaybookInclude
@@ -38,7 +39,9 @@ class AnsibleDumper(yaml.SafeDumper):
     A simple stub class that allows us to add representers
     for our overridden object types.
     '''
-    pass
+    def represent_undefined(self, data):
+        print('undefined data=%s, type=%s' % (data, type(data)))
+        return yaml.Dumper.represent_undefined(self, data)
 
 
 class AnsibleUnsafeDumper(yaml.Dumper):
@@ -98,6 +101,10 @@ def represent_task(self, data):
     return self.represent_dict(new_data)
 
 
+def represent_handler(self, data):
+    handler_data = data.serialize()
+    return self.represent_dict(handler_data)
+
 # Note: only want to represent the encrypted data
 def represent_vault_encrypted_unicode(self, data):
     return self.represent_scalar(u'!vault', data._ciphertext.decode(), style='|')
@@ -132,6 +139,12 @@ AnsibleUnsafeDumper.add_representer(
     Task,
     represent_task
 )
+
+AnsibleUnsafeDumper.add_representer(
+    Handler,
+    represent_handler
+)
+
 
 AnsibleUnsafeDumper.add_representer(
     FieldAttribute,
@@ -214,6 +227,11 @@ AnsibleDumper.add_representer(
 AnsibleDumper.add_representer(
     Task,
     represent_task
+)
+
+AnsibleDumper.add_representer(
+    Handler,
+    represent_handler
 )
 
 
