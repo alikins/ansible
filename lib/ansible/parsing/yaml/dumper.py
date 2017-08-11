@@ -52,16 +52,33 @@ class AnsibleUnsafeDumper(yaml.Dumper):
         return yaml.Dumper.represent_undefined(self, data)
 
     def ignore_aliases(self, data):
-        if data == {} or data == []:
+
+        # Note Task and Block can be aliases and may have to be (circular refs)
+        # default_ignore = (list, dict, Handler, FieldAttribute, Playbook, Play, AnsibleMapping)
+
+        # things like role deps that reference other Role's will be refs
+        lots_o_aliases = (list, dict)
+
+        # let pyyaml alias whatever it can. Good for finding places with refs instead of copies, etc
+        # all_aliases = ()
+
+        ignore_tuple = lots_o_aliases
+
+        if isinstance(data, ignore_tuple):
             return True
 
-        if isinstance(data, (list, dict, FieldAttribute, Playbook, Play, Role, Task)):
+        # empty containers
+        if data == {} or data == [] or data == set():
             return True
+
+        # TODO: we could check for circular refs (Block->Task->Block for ex) and trim them, or only
+        #       allow aliases for that,etc
 
         default = super(AnsibleUnsafeDumper, self).ignore_aliases(data)
 
-        if default is None:
-            print('type: %s ig_data: %s default ignore: %s' % (type(data), data, default))
+        # debugging
+        # if default is None:
+        #    print('type: %s ig_data: %s default ignore: %s' % (type(data), data, default))
         return default
 
 
@@ -129,6 +146,7 @@ def represent_role(self, data):
 def represent_vault_encrypted_unicode(self, data):
     return self.represent_scalar(u'!vault', data._ciphertext.decode(), style='|')
 
+
 if PY3:
     represent_unicode = yaml.representer.SafeRepresenter.represent_str
 else:
@@ -141,7 +159,7 @@ else:
 
 AnsibleUnsafeDumper.add_representer(
     Playbook,
-#    yaml.representer.SafeRepresenter.represent_list,
+    #    yaml.representer.SafeRepresenter.represent_list,
     represent_playbook
 )
 
@@ -236,7 +254,7 @@ AnsibleDumper.add_representer(
 
 AnsibleDumper.add_representer(
     Playbook,
-    #yaml.representer.SafeRepresenter.represent_list,
+    # yaml.representer.SafeRepresenter.represent_list,
     represent_playbook
 )
 
