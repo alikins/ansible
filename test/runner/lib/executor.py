@@ -1117,7 +1117,7 @@ def detect_changes_local(args):
         args.metadata.populate_changes(result.diff)
 
         for path in result.untracked:
-            if is_binary_file(path):
+            if os.path.isdir(path) or is_binary_file(path):
                 args.metadata.changes[path] = ((0, 0),)
                 continue
 
