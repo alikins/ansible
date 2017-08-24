@@ -337,7 +337,7 @@ class Role(Base, Become, Conditional, Taggable):
         all_vars = combine_vars(all_vars, self.vars, scope_name='role_get_vars_self_vars')
         all_vars = combine_vars(all_vars, self._role_vars, scope_name='role_get_vars_self_role_vars')
         if include_params:
-            all_vars = combine_vars(all_vars, self.get_role_params(dep_chain=dep_chain), name_v='role_get_vars_role_params')
+            all_vars = combine_vars(all_vars, self.get_role_params(dep_chain=dep_chain), scope_name='role_get_vars_role_params')
 
         return all_vars
 
