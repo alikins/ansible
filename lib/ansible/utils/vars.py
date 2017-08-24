@@ -32,6 +32,12 @@ from ansible.module_utils.six import iteritems, string_types
 from ansible.module_utils._text import to_native, to_text
 from ansible.parsing.splitter import parse_kv
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 _MAXSIZE = 2 ** 32
 cur_id = 0
@@ -149,16 +155,7 @@ class TrackingDict(dict):
         return data
 
 
-def combine_vars(a, b, scope_name=None, scope_info=None):
-    """
-    Return a copy of dictionaries of variables based on configured hash behavior
-    """
-
-    if C.DEFAULT_HASH_BEHAVIOUR == "merge":
-        return merge_hash(a, b)
-    else:
-        # HASH_BEHAVIOUR == 'replace'
-        _validate_mutable_mappings(a, b)
+def _combine_vars_verbose(a, b, scope_name=None, scope_info=None):
         result = a.copy()
 
         # TODO: need to only add the extra args for update if we are using a TrackingDict
@@ -170,7 +167,32 @@ def combine_vars(a, b, scope_name=None, scope_info=None):
         return result
 
 
-def merge_hash(a, b):
+def _combine_vars_plain(a, b, scope_name=None, scope_info=None):
+    _validate_mutable_mappings(a, b)
+    result = a.copy()
+    result.update(b)
+    return result
+
+
+_combine_vars = _combine_vars_plain
+
+
+def combine_vars(a, b, scope_name=None, scope_info=None):
+    """
+    Return a copy of dictionaries of variables based on configured hash behavior
+    """
+
+    if C.DEFAULT_HASH_BEHAVIOUR == "merge":
+        return merge_hash(a, b)
+    else:
+        # HASH_BEHAVIOUR == 'replace'
+        _validate_mutable_mappings(a, b)
+        return _combine_vars(a, b, scope_name=scope_name, scope_info=scope_info)
+
+
+
+
+def merge_hash(a, b, scope_name=None, scope_info=None):
     """
     Recursively merges hash b into a so that keys from b take precedence over keys from a
     """
@@ -196,6 +218,11 @@ def merge_hash(a, b):
             result[k] = v
 
     return result
+
+
+# TODO: not a fan of module scope code, but until I figure out something better
+if display.verbosity > 4:
+    _combine_vars = _combine_vars_verbose
 
 
 def load_extra_vars(loader, options):
