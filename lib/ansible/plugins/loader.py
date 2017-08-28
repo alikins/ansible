@@ -23,6 +23,7 @@ __metaclass__ = type
 
 import glob
 import imp
+import logging
 import os
 import os.path
 import sys
@@ -40,6 +41,8 @@ try:
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+log = logging.getLogger(__name__)
 
 
 def get_all_plugin_loaders():
@@ -225,6 +228,7 @@ class PluginLoader:
                 if 'options' in dstring['doc'] and isinstance(dstring['doc']['options'], dict):
                     C.config.initialize_plugin_configuration_definitions(type_name, name, dstring['doc']['options'])
                     display.debug('Loaded config def from plugin (%s/%s)' % (type_name, name))
+                    log.debug('Loaded config def from plugin (%s/%s)', type_name, name)
 
     def add_directory(self, directory, with_subdir=False):
         ''' Adds an additional directory to the search path '''
@@ -272,6 +276,7 @@ class PluginLoader:
                 full_paths = (os.path.join(path, f) for f in os.listdir(path))
             except OSError as e:
                 display.warning("Error accessing plugin paths: %s" % to_text(e))
+                log.warn("Error accessing plugin paths: %s", to_text(e))
 
             for full_path in (f for f in full_paths if os.path.isfile(f) and not f.endswith('__init__.py')):
                 full_name = os.path.basename(full_path)
@@ -318,6 +323,8 @@ class PluginLoader:
                     # FIXME: this is not always the case, some are just aliases
                     display.deprecated('%s is kept for backwards compatibility but usage is discouraged. '
                                        'The module documentation details page may explain more about this rationale.' % name.lstrip('_'))
+                    log.warn('%s is kept for backwards compatibility but usage is discouraged. '
+                             'The module documentation details page may explain more about this rationale.', name.lstrip('_'))
                 return pull_cache[alias_name]
 
         return None
@@ -405,6 +412,7 @@ class PluginLoader:
             msg = '%s (found_in_cache=%s, class_only=%s)' % (msg, found_in_cache, class_only)
 
         display.debug(msg)
+        log.debug(msg)
 
     def all(self, *args, **kwargs):
         ''' instantiates all plugins with the same arguments '''
@@ -435,6 +443,7 @@ class PluginLoader:
                 obj = getattr(self._module_cache[path], self.class_name)
             except AttributeError as e:
                 display.warning("Skipping plugin (%s) as it seems to be invalid: %s" % (path, to_text(e)))
+                log.warn("Skipping plugin (%s) as it seems to be invalid: %s", path, to_text(e))
                 continue
 
             if self.base_class:
@@ -455,6 +464,7 @@ class PluginLoader:
                     obj = obj(*args, **kwargs)
                 except TypeError as e:
                     display.warning("Skipping plugin (%s) as it seems to be incomplete: %s" % (path, to_text(e)))
+                    log.warn("Skipping plugin (%s) as it seems to be incomplete: %s", path, to_text(e))
 
             self._update_object(obj, name, path)
             yield obj
