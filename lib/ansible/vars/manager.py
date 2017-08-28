@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 import sys
 
@@ -43,12 +44,16 @@ from ansible.template import Templar
 from ansible.utils.listify import listify_lookup_plugin_terms
 from ansible.utils.vars import combine_vars
 from ansible.utils.unsafe_proxy import wrap_var
+from ansible import logger
 
 try:
     from __main__ import display
 except ImportError:
     from ansible.utils.display import Display
     display = Display()
+
+
+log = logging.getLogger(__name__)
 
 
 def preprocess_vars(a):
@@ -93,6 +98,7 @@ def remove_internal_keys(data):
     for key in list(data.keys()):
         if (key.startswith('_ansible_') and key != '_ansible_parsed') or key in C.INTERNAL_RESULT_KEYS:
             display.warning("Removed unexpected internal key in module return: %s = %s" % (key, data[key]))
+            log.warning("Removed unexpected internal key in module return: %s = %s", key, data[key])
             del data[key]
 
     # remove bad/empty internal keys
@@ -121,6 +127,8 @@ class VariableManager:
             self._fact_cache = FactCache()
         except AnsibleError as e:
             display.warning(to_native(e))
+            log.warn(to_native(e))
+            log.exception(e)
             # fallback to a dict as in memory cache
             self._fact_cache = {}
 
@@ -215,6 +223,7 @@ class VariableManager:
         '''
 
         display.debug("in VariableManager get_vars()")
+        log.debug("in VariableManager get_vars()")
 
         all_vars = dict()
         magic_variables = self._get_magic_variables(
@@ -322,6 +331,7 @@ class VariableManager:
                 if entry.startswith('_') or '.' in entry:
                     continue
                 display.debug('Calling %s to load vars for %s' % (entry, host.name))
+                log.debug('Calling %s to load vars for %s', entry, host.name)
                 all_vars = combine_vars(all_vars, locals()[entry]())
 
             # host vars, from inventory, inventory adjacent and play adjacent via plugins
@@ -389,9 +399,11 @@ class VariableManager:
                         # we do not have a full context here, and the missing variable could be because of that
                         # so just show a warning and continue
                         display.vvv("skipping vars_file '%s' due to an undefined variable" % vars_file_item)
+                        log.log(logger.vvv, "skipping vars_file '%s' due to an undefined variable", vars_file_item)
                         continue
 
                 display.vvv("Read vars_file '%s'" % vars_file_item)
+                log.log(logger.vvv, "Read vars_file '%s'", vars_file_item)
 
             # By default, we now merge in all vars from all roles in the play,
             # unless the user has disabled this via a config option
@@ -445,6 +457,7 @@ class VariableManager:
             all_vars['vars'] = all_vars.copy()
 
         display.debug("done with get_vars()")
+        log.debug("done with get_vars()")
         return all_vars
 
     def _get_magic_variables(self, play, host, task, include_hostvars, include_delegate_to):
