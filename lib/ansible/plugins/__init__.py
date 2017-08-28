@@ -22,6 +22,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from abc import ABCMeta
+import logging
 
 from ansible import constants as C
 from ansible.module_utils.six import with_metaclass

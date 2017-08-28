@@ -33,7 +33,6 @@ from ansible.module_utils.six import string_types
 from ansible.module_utils._text import to_bytes, to_text
 from ansible.plugins import AnsiblePlugin
 from ansible.plugins.loader import shell_loader
-from ansible.plugins import shell_loader
 from ansible import logger
 from ansible.logger.adapters import host
 

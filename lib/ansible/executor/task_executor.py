@@ -95,7 +95,7 @@ class TaskExecutor:
         '''
 
         display.debug("in run() - task %s" % self._task._uuid)
-        self.log.debug("in run() - task %s", self._task._uuid)
+        self.task_log.debug("in run() - task %s", self._task._uuid)
 
         try:
             try:

@@ -536,9 +536,12 @@ class StrategyBase:
                         else:
                             cacheable = result_item.pop('ansible_facts_cacheable', True)
                             for target_host in host_list:
-                                if cacheable:
-                                log.info('setting host facts on host=%s', target_host)                                    self._variable_manager.set_host_facts(target_host, result_item['ansible_facts'].copy())
 
+                                if cacheable:
+                                    log.info('setting host facts on host=%s', target_host)
+                                    self._variable_manager.set_host_facts(target_host, result_item['ansible_facts'].copy())
+
+                                log.info('setting host non persistent facts on host=%s', target_host)
                                 # If we are setting a fact, it should populate non_persistent_facts as well
                                 self._variable_manager.set_nonpersistent_facts(target_host, result_item['ansible_facts'].copy())
 

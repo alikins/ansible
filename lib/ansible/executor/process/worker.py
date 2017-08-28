@@ -91,7 +91,7 @@ class WorkerProcess(multiprocessing.Process):
                         pass
             except (AttributeError, ValueError) as e:
                 # couldn't get stdin's fileno, so we just carry on
-		pass
+                pass
         else:
             # set to /dev/null
             self._new_stdin = os.devnull
@@ -135,7 +135,7 @@ class WorkerProcess(multiprocessing.Process):
             ).run()
 
             display.debug("done running TaskExecutor() for %s/%s [%s]" % (self._host, self._task, self._task._uuid))
-            self.log.debug("done running TaskExecutor() for %s/%s [%s]", self._host, self._task, self._task._uuid))
+            self.log.debug("done running TaskExecutor() for %s/%s [%s]", self._host, self._task, self._task._uuid)
             self._host.vars = dict()
             self._host.groups = []
             task_result = TaskResult(
