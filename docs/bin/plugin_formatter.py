@@ -304,13 +304,23 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         # crash if module is missing documentation and not explicitly hidden from docs index
         if module_map[module]['doc'] is None:
-            sys.exit("*** ERROR: MODULE MISSING DOCUMENTATION: %s, %s ***\n" % (fname, module))
+            print("*** ERROR: MODULE MISSING DOCUMENTATION: %s, %s ***\n" % (fname, module))
+            _doc = {'module': module,
+                    'version_added': '',
+                    'filename': fname}
+            module_map[module]['doc'] = _doc
+            # continue
 
         # Going to reference this heavily so make a short name to reference it by
         doc = module_map[module]['doc']
 
+        import pprint
+        pprint.pprint(doc)
+
+        # add some defaults for plugins that dont have most of the info
+        doc['module'] = doc.get('module', '')
         if module_map[module]['deprecated'] and 'deprecated' not in doc:
-            sys.exit("*** ERROR: DEPRECATED MODULE MISSING 'deprecated' DOCUMENTATION: %s, %s ***\n" % (fname, module))
+            print("*** ERROR: DEPRECATED MODULE MISSING 'deprecated' DOCUMENTATION: %s, %s ***\n" % (fname, module))
 
         if 'version_added' not in doc:
             sys.exit("*** ERROR: missing version_added in: %s ***\n" % module)
@@ -503,10 +513,16 @@ def main():
 
     categories['all'] = {'_modules': mod_info.keys()}
 
+    import pprint
+    pprint.pprint(categories)
+    # pprint.pprint(dict(mod_info))
     # Transform the data
     if options.type == 'rst':
         for record in mod_info.values():
-            record['doc']['short_description'] = rst_ify(record['doc']['short_description'])
+            print('record\n')
+            pprint.pprint(record)
+            if record.get('doc', None):
+                record['doc']['short_description'] = rst_ify(record['doc']['short_description'])
 
     # Write master category list
     category_list_text = templates['category_list'].render(categories=sorted(categories.keys()))
