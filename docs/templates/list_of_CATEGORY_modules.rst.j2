@@ -5,7 +5,7 @@
 @{ blurb }@
 
 {% endif %}
-.. toctree:: :maxdepth: 1
+.. toctree:: :maxdepth: 2
 {% if category['_modules'] %}
 
 {% for module in category['_modules'] | sort %}
@@ -17,10 +17,10 @@
 @{ name.title() }@
 @{ '-' * name | length }@
 
-.. toctree:: :maxdepth: 1
+.. toctree:: :maxdepth: 2
 
 {% for module in info['_modules'] | sort %}
-  @{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} - @{ module_info[module]['doc']['short_description'] }@ <@{ module }@_module>
+  :ref:`@{ module }@`{% if module_info[module]['deprecated'] %} **(D)**{% endif%} @{ module_info[module]['doc']['short_description'] }@
 {% endfor %}
 
 {% endfor %}
