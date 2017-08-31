@@ -300,13 +300,15 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
     for module in module_map:
         print("rendering: %s" % module)
 
+        import pprint
+        pprint.pprint(module_map[module])
         fname = module_map[module]['path']
 
         # crash if module is missing documentation and not explicitly hidden from docs index
         if module_map[module]['doc'] is None:
             print("*** ERROR: MODULE MISSING DOCUMENTATION: %s, %s ***\n" % (fname, module))
             _doc = {'module': module,
-                    'version_added': '',
+                    'version_added': '2.4',
                     'filename': fname}
             module_map[module]['doc'] = _doc
             # continue
@@ -315,10 +317,10 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
         doc = module_map[module]['doc']
 
         import pprint
-        pprint.pprint(doc)
+        # pprint.pprint(doc)
 
         # add some defaults for plugins that dont have most of the info
-        doc['module'] = doc.get('module', '')
+        doc['module'] = doc.get('module', module)
         doc['version_added'] = doc.get('version_added', '')
         if module_map[module]['deprecated'] and 'deprecated' not in doc:
             print("*** ERROR: DEPRECATED MODULE MISSING 'deprecated' DOCUMENTATION: %s, %s ***\n" % (fname, module))
