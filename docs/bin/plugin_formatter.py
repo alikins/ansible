@@ -319,10 +319,12 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         # add some defaults for plugins that dont have most of the info
         doc['module'] = doc.get('module', '')
+        doc['version_added'] = doc.get('version_added', '')
         if module_map[module]['deprecated'] and 'deprecated' not in doc:
             print("*** ERROR: DEPRECATED MODULE MISSING 'deprecated' DOCUMENTATION: %s, %s ***\n" % (fname, module))
 
         if 'version_added' not in doc:
+            pprint.pprint(doc)
             sys.exit("*** ERROR: missing version_added in: %s ***\n" % module)
 
         #
@@ -376,15 +378,19 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
         doc['docuri'] = doc['module'].replace('_', '-')
         doc['now_date'] = datetime.date.today().strftime('%Y-%m-%d')
         doc['ansible_version'] = ansible_version
-        doc['plainexamples'] = module_map[module]['examples']  # plain text
+        if isinstance(module_map[module]['examples'], (str, unicode)):
+            doc['plainexamples'] = module_map[module]['examples']  # plain text
+        else:
+            doc['plainexamples'] = ''
         doc['metadata'] = module_map[module]['metadata']
 
+        pprint.pprint(module_map[module])
         if module_map[module]['returndocs']:
             try:
                 doc['returndocs'] = yaml.safe_load(module_map[module]['returndocs'])
             except:
                 print("could not load yaml: %s" % module_map[module]['returndocs'])
-                raise
+                doc['returndocs'] = None
         else:
             doc['returndocs'] = None
 
@@ -462,6 +468,9 @@ These modules are currently shipped with Ansible, but will most likely be shippe
 
     # Separate the modules by support_level
     for module, info in mod_info.items():
+        if not info.get('metadata', None):
+            print('no metadata for %s' % module)
+            continue
         if info['metadata']['supported_by'] == 'core':
             supported_by['Ansible Core Team']['modules'].append(module)
         elif info['metadata']['supported_by'] == 'network':
