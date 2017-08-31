@@ -18,8 +18,9 @@ endif
 all: docs
 
 docs: clean htmldocs
+#docs: htmldocs
 
-htmldocs: testing keywords modules staticmin config
+htmldocs: testing keywords modules plugins staticmin config
 	CPUS=$(CPUS) $(MAKE) -f Makefile.sphinx html
 
 webdocs: docs
@@ -57,10 +58,13 @@ config:
 modules: $(FORMATTER) ../templates/plugin.rst.j2
 # Limit building of module documentation if requested.
 ifdef MODULES
-	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../templates --module-dir=../../lib/ansible/modules -o rst/ -l $(MODULES)	
+	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../templates --module-dir=../../lib/ansible/modules -o rst/ -l $(MODULES)
 else
 	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../templates --module-dir=../../lib/ansible/modules -o rst/
 endif
+
+plugins: $(FORMATTER) ../templates/plugin.rst.j2
+	PYTHONPATH=../../lib $(FORMATTER) -t rst --template-dir=../templates --module-dir=../../lib/ansible/plugins -o rst/
 
 testing:
 	$(TESTING_FORMATTER)
