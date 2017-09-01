@@ -277,7 +277,8 @@ def jinja2_environment(template_dir, typ, plugin_type):
         templates['category_list'] = env.get_template('%s_by_category.rst.j2' % plugin_type)
         templates['support_list'] = env.get_template('%s_by_support.rst.j2' % plugin_type)
         templates['list_of_CATEGORY_modules'] = env.get_template('list_of_CATEGORY_%s.rst.j2' % plugin_type)
-        outputname = '%s_' + '%s.rst' % plugin_type
+        # trim trailing s off of plugin_type
+        outputname = '%s_' + '%s.rst' % plugin_type[:-1]
     else:
         raise Exception("unknown module format type: %s" % typ)
 
