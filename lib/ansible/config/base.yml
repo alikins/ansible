@@ -576,7 +576,7 @@ DEFAULT_FACT_PATH:
   description:
     - This option allows you to globally configure a custom path for 'local_facts' for the implied M(setup) task when using fact gathering.
     - "If not set, it will fallback to the default from the M(setup) module: ``/etc/ansible/facts.d``."
-    -  This does **not ** affect  user defined tasks that use the M(setup) module.
+    - This does **not ** affect  user defined tasks that use the M(setup) module.
   env: [{name: ANSIBLE_FACT_PATH}]
   ini:
   - {key: fact_path, section: defaults}
@@ -615,7 +615,7 @@ DEFAULT_GATHERING:
   default: 'implicit'
   description:
     - This setting controls the default policy of fact gathering (facts discovered about remote systems).
-    - When ‘implicit’ (the default), the cache plugin will be ignored and facts will be gathered per play unless ‘gather_facts: False’ is set.
+    - "When ‘implicit’ (the default), the cache plugin will be ignored and facts will be gathered per play unless ‘gather_facts: False’ is set."
     - When ‘explicit’ the inverse is true, facts will not be gathered unless directly requested in the play.
     - The ‘smart’ value means each new host that has no facts discovered will be scanned,
       but if the same host is addressed in multiple plays it will not be contacted again in the playbook run.
@@ -1012,7 +1012,6 @@ DEFAULT_STRATEGY_PLUGIN_PATH:
   name: Strategy Plugins Path
   description: Colon separated paths in which Ansible will search for Strategy Plugins.
   default: ~/.ansible/plugins/strategy:/usr/share/ansible/plugins/strategy
-  description: 'TODO: write it'
   env: [{name: ANSIBLE_STRATEGY_PLUGINS}]
   ini:
   - {key: strategy_plugins, section: defaults}
@@ -1119,7 +1118,6 @@ DEFAULT_TEST_PLUGIN_PATH:
   name: Jinja2 Test Plugins Path
   description: Colon separated paths in which Ansible will search for Jinja2 Test Plugins.
   default: ~/.ansible/plugins/test:/usr/share/ansible/plugins/test
-  description: 'TODO: write it'
   env: [{name: ANSIBLE_TEST_PLUGINS}]
   ini:
   - {key: test_plugins, section: defaults}
