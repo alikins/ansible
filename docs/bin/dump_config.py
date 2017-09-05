@@ -2,6 +2,7 @@
 
 import optparse
 import os
+import re
 import sys
 import yaml
 
@@ -25,25 +26,55 @@ def generate_parser():
     return p
 
 
-def fix_description(config_options):
+def fix_description(config_options, config_key):
     '''some descriptions are strings, some are lists. workaround it...'''
 
-    for config_key in config_options:
-        description = config_options[config_key].get('description', [])
-        if isinstance(description, list):
-            desc_list = description
-        else:
-            desc_list = [description]
-        # pprint.pprint(('desc_list', desc_list))
-        config_options[config_key]['description'] = desc_list
+    description = config_options[config_key].get('description', [])
+    if isinstance(description, list):
+        desc_list = description
+    else:
+        desc_list = [description]
+    # pprint.pprint(('desc_list', desc_list))
+    config_options[config_key]['description'] = desc_list
     return config_options
 
 
-def fix_name(config_options):
+def sluggify(text):
+    # extend to know punct or better, use someone elses debugged sluggify
+    return '%s' % (re.sub(r'[^\w-]', '_', text).lower().lstrip('_'))
+
+
+def add_sluggified_option_names(config_options, config_key):
+
+    # TODO:
+    # if we have a label or id, use that
+    # if we have ini or yaml key, try that? section.key?
+    # if we have a name, try a sluggified version of the name
+    name = config_options[config_key].get('name', None)
+    if name is None:
+        # todo: update name? maybe
+        name = config_key
+        slug_label = config_key
+    else:
+        slug_label = sluggify(name)
+
+    config_options[config_key]['slug_label'] = slug_label
+    return config_options
+
+
+def fix_name(config_options, config_key):
+    '''modifies config_options'''
+    name = config_options[config_key].get('name', config_key)
+    config_options[config_key]['name'] = name
+    return config_options
+
+
+def fix_ups(config_options):
     '''fix any options without a name to use the ID as the name'''
     for config_key in config_options:
-        name = config_options[config_key].get('name', config_key)
-        config_options[config_key]['name'] = name
+        config_options = fix_description(config_options, config_key)
+        config_options = fix_name(config_options, config_key)
+        config_options = add_sluggified_option_names(config_options, config_key)
     return config_options
 
 
@@ -73,8 +104,8 @@ def main(args):
             print('missing name for thing: %s' % thing)
 
     config_options = docs
-    config_options = fix_description(config_options)
-    config_options = fix_name(config_options)
+    #config_options = fix_description(config_options)
+    config_options = fix_ups(config_options)
 
     # FIXME: remove when format solidifies
     for thing in config_options:

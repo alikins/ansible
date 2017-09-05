@@ -15,9 +15,11 @@ Common Options
 {% for config_option in config_options|sort %}
 {% set config_len = config_option|length -%}
 {% set config = config_options[config_option] %}
-.. _{{config['name']}}:
+.. _{{config['slug_label']}}:
+{# .. _{{config['name']}}: #}
 {# .. _{{config_option}}: #}
 {# {{config_option}} #}
+
 {{config['name']}}
 {% set config_name_len = config['name']|length %}
 {{ '-' * config_name_len}}
@@ -60,16 +62,17 @@ Environment Variables
 
 
 {% for config_option in config_options %}
-{% for env_var_map in config_options[config_option]['env'] %}
+{% set config = config_options[config_option] %}
+{% for env_var_map in config['env'] %}
 .. envvar:: {{env_var_map['name']}}
 
-{% if config_options[config_option]['description']  and config_options[config_option]['description'] != [''] %}
-{% if config_options[config_option]['description'] != ['TODO: write it'] %}
-    {{ ''.join(config_options[config_option]['description']) }}
+{% if config['description']  and config['description'] != [''] %}
+{% if config['description'] != ['TODO: write it'] %}
+    {{ ''.join(config['description']) }}
 {% endif %}
 {% endif %}
 
-    See also :ref:`{{config_option}} <{{config_option}}>`
+    See also :ref:`{{config['slug_label']}} <{{config['slug_label']}}>`
 
 {% endfor %}
 
