@@ -34,7 +34,16 @@ def fix_description(config_options):
             desc_list = description
         else:
             desc_list = [description]
+        # pprint.pprint(('desc_list', desc_list))
         config_options[config_key]['description'] = desc_list
+    return config_options
+
+
+def fix_name(config_options):
+    '''fix any options without a name to use the ID as the name'''
+    for config_key in config_options:
+        name = config_options[config_key].get('name', config_key)
+        config_options[config_key]['name'] = name
     return config_options
 
 
@@ -54,8 +63,27 @@ def main(args):
     else:
         docs = {}
 
+    names = []
+    for thing in docs:
+        data = docs[thing]
+
+        if 'name' in data:
+            names.append(data['name'])
+        else:
+            print('missing name for thing: %s' % thing)
+
     config_options = docs
     config_options = fix_description(config_options)
+    config_options = fix_name(config_options)
+
+    # FIXME: remove when format solidifies
+    for thing in config_options:
+        blip = config_options[thing]
+        desc = blip.get('description', None)
+        if not desc:
+            print('No description found for %s: %s' % (thing, blip))
+        if not isinstance(desc, list):
+            raise Exception('Description for %s: %s was not a list' % (thing, blip))
 
     env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True,)
     template = env.get_template(template_file)

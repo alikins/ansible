@@ -15,16 +15,19 @@ Common Options
 {% for config_option in config_options|sort %}
 {% set config_len = config_option|length -%}
 {% set config = config_options[config_option] %}
-.. _{{config_option}}:
-
-{{config_option}}
-{{ '-' * config_len }}
+.. _{{config['name']}}:
+{# .. _{{config_option}}: #}
+{# {{config_option}} #}
+{{config['name']}}
+{% set config_name_len = config['name']|length %}
+{{ '-' * config_name_len}}
 
 {% if config['description'] and config['description'] != [''] %}
 {% if config['description'] != ['TODO: write it'] %}
 :Description: {{' '.join(config['description'])}}
 {% endif %}
 {% endif %}
+:ID: {{config_option}}
 {% if config['type'] %}
 :Type: {{config['type']}}
 {% endif %}
