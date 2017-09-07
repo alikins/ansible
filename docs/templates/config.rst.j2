@@ -6,16 +6,14 @@
 {{name}}
 {{ '=' * name_len }}
 
-Common Options
-==============
 
-{% if config_options %}
+.. contents::
+   :local:
+   :depth: 2
 
 
-{% for config_option in config_options|sort %}
+{% macro show_config(config_option, config) -%}
 {% set config_len = config_option|length -%}
-{% set config = config_options[config_option] %}
-{% if 'deprecated' not in config %}
 .. _{{config['slug_label']}}:
 {# .. _{{config['name']}}: #}
 {# .. _{{config_option}}: #}
@@ -50,8 +48,33 @@ Common Options
 :Deprecated detail: {{config['deprecated']['why']}}
 :Deprecated alternatives: {{config['deprecated']['alternatives']}}
 {% endif %}
+{%- endmacro %}
+
+
+{% if config_options %}
+Config Options
+==============
+
+
+{% for config_option in config_options|sort %}
+{% set config = config_options[config_option] %}
+{% if 'deprecated' not in config %}
+{{ show_config(config_option, config) }}
 {% endif %}
 {% endfor %}
+
+
+Deprecated Config Options
+=========================
+
+
+{% for config_option in config_options|sort %}
+{% set config = config_options[config_option] %}
+{% if 'deprecated' in config %}
+{{ show_config(config_option, config) }}
+{% endif %}
+{% endfor %}
+
 
 Environment Variables
 =====================
@@ -76,7 +99,6 @@ Environment Variables
     See also :ref:`{{config['slug_label']}} <{{config['slug_label']}}>`
 
 {% endfor %}
-
 {% endfor %}
 
 {% endif %}
