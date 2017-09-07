@@ -290,6 +290,8 @@ def jinja2_environment(template_dir, typ, plugin_type):
         templates['category_list'] = env.get_template('%s_by_category.rst.j2' % plugin_type)
         templates['support_list'] = env.get_template('%s_by_support.rst.j2' % plugin_type)
         templates['list_of_CATEGORY_modules'] = env.get_template('list_of_CATEGORY_%s.rst.j2' % plugin_type)
+        # trim trailing s off of plugin_type
+        outputname = '%s_' + '%s.rst' % plugin_type[:-1]
     else:
         raise Exception("unknown module format type: %s" % typ)
 
@@ -315,6 +317,8 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         # pprint.pprint(('process_modules module:', module))
 
+        import pprint
+        pprint.pprint(module)
         fname = module_map[module]['path']
 
         # pprint.pprint(('process_modules module_info: ', module_map[module]))
@@ -323,7 +327,7 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         # crash if module is missing documentation and not explicitly hidden from docs index
         if module_map[module]['doc'] is None:
-            print("%s: ERROR: MODULE MISSING DOCUMENTATION" % (fname,))
+            print("*** ERROR: MODULE MISSING DOCUMENTATION: %s, %s ***\n" % (fname, module))
             _doc = {'module': module,
                     'version_added': '2.4',
                     'filename': fname}

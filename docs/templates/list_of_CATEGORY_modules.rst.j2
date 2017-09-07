@@ -20,8 +20,7 @@
 .. toctree:: :maxdepth: 1
 
 {% for module in info['_modules'] | sort %}
-{#  :ref:`@{ module }@`{% if module_info[module]['deprecated'] %} **(D)**{% endif%} @{ module_info[module]['doc']['short_description'] }@ #}
-    @{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} @{ module_info[module]['doc']['short_description'] }@ <@{ module }@_module>
+  :ref:`@{ module }@`{% if module_info[module]['deprecated'] %} **(D)**{% endif%} @{ module_info[module]['doc']['short_description'] }@
 {% endfor %}
 
 {% endfor %}
