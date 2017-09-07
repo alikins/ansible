@@ -15,6 +15,7 @@ Common Options
 {% for config_option in config_options|sort %}
 {% set config_len = config_option|length -%}
 {% set config = config_options[config_option] %}
+{% if 'deprecated' not in config %}
 .. _{{config['slug_label']}}:
 {# .. _{{config['name']}}: #}
 {# .. _{{config_option}}: #}
@@ -49,7 +50,7 @@ Common Options
 :Deprecated detail: {{config['deprecated']['why']}}
 :Deprecated alternatives: {{config['deprecated']['alternatives']}}
 {% endif %}
-
+{% endif %}
 {% endfor %}
 
 Environment Variables
