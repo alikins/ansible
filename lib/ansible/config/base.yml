@@ -576,7 +576,7 @@ DEFAULT_FACT_PATH:
   description:
     - This option allows you to globally configure a custom path for 'local_facts' for the implied M(setup) task when using fact gathering.
     - "If not set, it will fallback to the default from the M(setup) module: ``/etc/ansible/facts.d``."
-    - This does **not ** affect  user defined tasks that use the M(setup) module.
+    - This does :strong:`not` affect  user defined tasks that use the M(setup) module.
   env: [{name: ANSIBLE_FACT_PATH}]
   ini:
   - {key: fact_path, section: defaults}
@@ -972,7 +972,7 @@ DEFAULT_SQUASH_ACTIONS:
   name: Squashable actions
   default: apk, apt, dnf, homebrew, openbsd_pkg, pacman, pkgng, yum, zypper
   description:
-    - Ansible can optimise actions that call modules that support list parameters when using with_ looping.
+    - Ansible can optimise actions that call modules that support list parameters when using ``with_`` looping.
       Instead of calling the module once for each item, the module is called once with the full list.
     - The default value for this setting is only for certain package managers, but it can be used for any module
     - Currently, this is only supported for modules that have a name or pkg parameter, and only when the item is the only thing being passed to the parameter.
