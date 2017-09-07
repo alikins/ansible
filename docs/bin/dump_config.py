@@ -94,14 +94,44 @@ def main(args):
     else:
         docs = {}
 
-    names = []
-    for thing in docs:
-        data = docs[thing]
+    # some value validation
+    fields = ['name', 'default', 'description', 'type', 'version_added', 'env', 'ini', 'yaml']
+    type_names = ['boolean', 'integer', 'pathlist', 'list', 'path', 'float', 'string']
+    fields_dict = {'name': (str,),
+                   'default': None,
+                   'description': (str, list),
+                   'type': (str,),
+                   'version_added': (str,),
+                   'env': (list,),
+                   'ini': (list,),
+                   'yaml': (dict,)}
+    for thing in sorted(docs):
+    # for field in sorted(fields_dict):
+        # for thing in sorted(docs):
+        for field in sorted(fields_dict):
+            field_types = fields_dict[field]
+            data = docs[thing]
 
-        if 'name' in data:
-            names.append(data['name'])
-        else:
-            print('missing name for thing: %s' % thing)
+            if field in data:
+                # print('default of "%s" is type: %s value: %s cfg type: %s' %
+                #       (thing, type(data[field]),
+                #        data[field], data.get('type', 'UNKNOWN')))
+                if field_types is None:
+                    continue
+                if not isinstance(data[field], field_types):
+                    print('wrong data type for field "%s" %s != %s' %
+                          (field, type(data[field]), repr(field_types)))
+                # if field == 'type':
+                #    if data[field] not in type_names:
+                #        print('the "type" field for "%s" is bogus: %s' %
+                #              (thing, data[field]))
+                continue
+
+            if 'deprecated' not in data:
+                print('%s: missing field "%s"' % (thing, field))
+            else:
+                print('%s: missing field "%s" (deprecated)' % (thing, field))
+        print('')
 
     config_options = docs
     #config_options = fix_description(config_options)
