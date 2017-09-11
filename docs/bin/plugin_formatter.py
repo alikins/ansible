@@ -319,7 +319,9 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         fname = module_map[module]['path']
 
-        # pprint.pprint(('process_modules module_info: ', module_map[module]))
+        pprint.pprint(('process_modules module_info: ', module_map[module]))
+
+        module_categories = module_map[module].get('categories', [])
 
         module_categories = module_map[module].get('categories', [])
 
