@@ -91,9 +91,6 @@ plugins: $(FORMATTER) ../templates/plugin.rst.j2
 		PYTHONPATH=../../lib $(FORMATTER) -t rst --plugin-type $$plugin --template-dir=../templates --module-dir=../../lib/ansible/plugins/$$plugin -o rst/ $(PLUGIN_ARGS); \
 	done
 
-plugins: $(FORMATTER) ../templates/plugin.rst.j2
-	PYTHONPATH=../../lib $(FORMATTER) -t rst --plugin-type plugins --template-dir=../templates --module-dir=../../lib/ansible/plugins -o rst/
-
 testing:
 	$(TESTING_FORMATTER)
 
