@@ -315,10 +315,8 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
     for module in module_map:
         # print("rendering: %s" % module)
 
-        # pprint.pprint(('process_modules module:', module))
-
         import pprint
-        pprint.pprint(('process_modules module:', module))
+        # pprint.pprint(('process_modules module:', module))
         fname = module_map[module]['path']
 
         # pprint.pprint(('process_modules module_info: ', module_map[module]))
@@ -414,14 +412,12 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
         doc['now_date'] = datetime.date.today().strftime('%Y-%m-%d')
         doc['ansible_version'] = ansible_version
 
-        # check the 'deprecated' field in doc. We expect a dict potentially with 'why', 'version', and 'alternative' fields
-        # examples = module_map[module]['examples']
+        examples = module_map[module]['examples']
         # print('\n\n%s: type of examples: %s\n' % (module, type(examples)))
-        # if examples and not isinstance(examples, (str, unicode, list)):
-        #    raise TypeError('module %s examples is wrong type (%s): %s' % (module, type(examples), examples))
+        if examples and not isinstance(examples, (str, unicode, list)):
+            raise TypeError('module %s examples is wrong type (%s): %s' % (module, type(examples), examples))
 
-        # use 'examples' for 'plainexamples' if 'examples' is a string
-        if isinstance(module_map[module]['examples'], string_types):
+        if isinstance(module_map[module]['examples'], (string_types)):
             doc['plainexamples'] = module_map[module]['examples']  # plain text
         else:
             doc['plainexamples'] = ''
