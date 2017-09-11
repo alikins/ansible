@@ -318,7 +318,7 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
         # pprint.pprint(('process_modules module:', module))
 
         import pprint
-        pprint.pprint(module)
+        pprint.pprint(('process_modules module:', module))
         fname = module_map[module]['path']
 
         # pprint.pprint(('process_modules module_info: ', module_map[module]))
