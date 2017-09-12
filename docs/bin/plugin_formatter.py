@@ -78,6 +78,9 @@ DEPRECATED = b" (D)"
 def rst_ify(text):
     ''' convert symbols like I(this is in italics) to valid restructured text '''
 
+    print('text: %s' % text)
+    print('type(text): %s' % type(text))
+
     try:
         t = _ITALIC.sub(r'*' + r"\1" + r"*", text)
         t = _BOLD.sub(r'**' + r"\1" + r"**", t)
@@ -290,8 +293,6 @@ def jinja2_environment(template_dir, typ, plugin_type):
         templates['category_list'] = env.get_template('%s_by_category.rst.j2' % plugin_type)
         templates['support_list'] = env.get_template('%s_by_support.rst.j2' % plugin_type)
         templates['list_of_CATEGORY_modules'] = env.get_template('list_of_CATEGORY_%s.rst.j2' % plugin_type)
-        # trim trailing s off of plugin_type
-        outputname = '%s_' + '%s.rst' % plugin_type[:-1]
     else:
         raise Exception("unknown module format type: %s" % typ)
 
@@ -319,7 +320,7 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         fname = module_map[module]['path']
 
-        pprint.pprint(('process_modules module_info: ', module_map[module]))
+        # pprint.pprint(('process_modules module_info: ', module_map[module]))
 
         module_categories = module_map[module].get('categories', [])
 
@@ -414,12 +415,16 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
         doc['now_date'] = datetime.date.today().strftime('%Y-%m-%d')
         doc['ansible_version'] = ansible_version
 
+        # check the 'deprecated' field in doc. We expect a dict potentially with 'why', 'version', and 'alternative' fields
+        doc
+
         # examples = module_map[module]['examples']
         # print('\n\n%s: type of examples: %s\n' % (module, type(examples)))
         # if examples and not isinstance(examples, (str, unicode, list)):
         #    raise TypeError('module %s examples is wrong type (%s): %s' % (module, type(examples), examples))
 
-        if isinstance(module_map[module]['examples'], (string_types)):
+        # use 'examples' for 'plainexamples' if 'examples' is a string
+        if isinstance(module_map[module]['examples'], string_types):
             doc['plainexamples'] = module_map[module]['examples']  # plain text
         else:
             doc['plainexamples'] = ''
