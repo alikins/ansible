@@ -194,7 +194,6 @@ Examples
 @{ example['code'] | escape | indent(4, True) }@
 {% endfor %}
 {% if plainexamples %}@{ plainexamples | indent(4, True) }@{% endif %}
-
 {% endif %}
 
 
@@ -289,6 +288,7 @@ Notes
 {% for note in notes %}
     - @{ note | convert_symbols_to_format }@
 {% endfor %}
+
 
 {% endif %}
 {% if author is defined -%}
