@@ -325,7 +325,7 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         # crash if module is missing documentation and not explicitly hidden from docs index
         if module_map[module]['doc'] is None:
-            print("*** ERROR: MODULE MISSING DOCUMENTATION: %s, %s ***\n" % (fname, module))
+            print("%s: ERROR: MODULE MISSING DOCUMENTATION" % (fname,))
             _doc = {'module': module,
                     'version_added': '2.4',
                     'filename': fname}
@@ -413,8 +413,6 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
         doc['ansible_version'] = ansible_version
 
         # check the 'deprecated' field in doc. We expect a dict potentially with 'why', 'version', and 'alternative' fields
-        doc
-
         # examples = module_map[module]['examples']
         # print('\n\n%s: type of examples: %s\n' % (module, type(examples)))
         # if examples and not isinstance(examples, (str, unicode, list)):
