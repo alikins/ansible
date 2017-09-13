@@ -78,9 +78,6 @@ DEPRECATED = b" (D)"
 def rst_ify(text):
     ''' convert symbols like I(this is in italics) to valid restructured text '''
 
-    print('text: %s' % text)
-    print('type(text): %s' % type(text))
-
     try:
         t = _ITALIC.sub(r'*' + r"\1" + r"*", text)
         t = _BOLD.sub(r'**' + r"\1" + r"**", t)
