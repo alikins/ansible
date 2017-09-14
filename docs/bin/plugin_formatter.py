@@ -27,6 +27,7 @@ import glob
 import optparse
 import os
 import pprint
+import random
 import re
 import sys
 import warnings
@@ -132,6 +133,61 @@ def write_data(text, output_dir, outputname, module=None):
         print(text)
 
 
+def n_modules_per_dir(path_list, mods_per_dir=None):
+    mods_per_dir = mods_per_dir or 15
+
+    dirnames = defaultdict(list)
+    for path in path_list:
+        # print('path: %s' % path)
+        basename = os.path.basename(path)
+        dirname = os.path.dirname(path)
+
+        dirnames[dirname].append(basename)
+
+    filtered_list = []
+    # pprint.pprint(dict(dirnames))
+    for dirname, basenames in dirnames.items():
+        for idx, basename in enumerate(basenames):
+            if idx < mods_per_dir:
+                path = os.path.join(dirname, basename)
+                # print('adding %s' % path)
+                filtered_list.append(path)
+
+    print('num of mods post n_modules_per_dir(%s): %s' % (mods_per_dir, len(filtered_list)))
+    return filtered_list
+
+
+def shuffle_path_list(path_list):
+    random.shuffle(path_list)
+    return path_list
+
+
+def first_n_modules(path_list, num_of_modules=None):
+    num_of_modules = num_of_modules or 150
+    filtered_list = path_list[0:num_of_modules]
+    print('num of mods post first_n_modules(%s): %s' % (num_of_modules, len(filtered_list)))
+    return filtered_list
+
+
+def filter_module_list(path_list, module_dir=None):
+    '''filter out modules by path
+
+    in: path_list
+    out: path_list we care about
+    '''
+    mods_per_dir = 10
+    if module_dir == '../../lib/ansible/modules':
+        filtered_list = n_modules_per_dir(path_list, mods_per_dir=mods_per_dir)
+        filtered_list = first_n_modules(filtered_list, num_of_modules=200)
+
+    if module_dir == '../../lib/ansible/plugins':
+        filtered_list = n_modules_per_dir(path_list, mods_per_dir=mods_per_dir)
+        filtered_list = first_n_modules(filtered_list, num_of_modules=100)
+    print('filtered all but %s paths from %s' % (len(filtered_list), module_dir))
+    return filtered_list
+    # return path_list
+
+
 def get_module_info(module_dir, limit_to_modules=None, verbose=False):
     '''
     Returns information about modules and the categories that they belong to
@@ -172,6 +228,9 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
         glob.glob("%s/*/*/*/*.py" % module_dir)
     )
 
+    print('module_dir: %s' % module_dir)
+    # pprint.pprint(('files', files))
+    path_list = []
     for module_path in files:
         # Do not list __init__.py files
         if module_path.endswith('__init__.py'):
@@ -186,7 +245,12 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
         # modules.
         if limit_to_modules is not None and module.lower() not in limit_to_modules:
             continue
+        path_list.append(module_path)
 
+    path_list = filter_module_list(path_list, module_dir=module_dir)
+
+    for module_path in path_list:
+        module = os.path.splitext(os.path.basename(module_path))[0]
         deprecated = False
         if module.startswith("_"):
             if os.path.islink(module_path):
@@ -206,6 +270,8 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
         #
         # Regular module to process
         #
+
+        # print('loading info for %s' % module_path)
 
         category = categories
 
