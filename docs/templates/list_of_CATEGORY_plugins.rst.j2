@@ -5,11 +5,12 @@
 @{ blurb }@
 
 {% endif %}
-.. toctree:: :maxdepth: 1
+
+
 {% if category['_modules'] %}
 
 {% for module in category['_modules'] | sort %}
-  @{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%}{% if module_info[module]['doc']['short_description'] %} - @{ module_info[module]['doc']['short_description'] }@{% endif %} <plugins/@{ module_info[module]['primary_category'] }@/@{ module }@>
+    * :doc:`@{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%}{% if module_info[module]['doc']['short_description'] %} - @{ module_info[module]['doc']['short_description'] }@{% endif %} <plugins/@{ module_info[module]['primary_category'] }@/@{ module }@>`
 {% endfor %}
 {% endif %}
 
@@ -17,10 +18,8 @@
 @{ name.title() }@
 @{ '-' * name | length }@
 
-.. toctree:: :maxdepth: 1
-
 {% for module in info['_modules'] | sort %}
-  :ref:`@{ module }@`{% if module_info[module]['deprecated'] %} **(D)**{% endif%} @{ module_info[module]['doc']['short_description'] }@
+    * :doc:`@{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} - @{ module_info[module]['doc']['short_description'] }@ <plugins/@{ module_info[module]['primary_category'] }@/@{ module }@>`
 {% endfor %}
 
 {% endfor %}
