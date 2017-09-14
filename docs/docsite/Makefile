@@ -5,6 +5,7 @@ TESTING_FORMATTER=../bin/testing_formatter.sh
 DUMPER=../bin/dump_keywords.py
 CONFIG_DUMPER=../bin/dump_config.py
 GENERATE_CLI=../bin/generate_man.py
+CLI_COMMANDS=ansible ansible-config ansible-console ansible-doc ansible-galaxy ansible-inventory ansible-playbook ansible-pull ansible-vault
 ifeq ($(shell echo $(OS) | egrep -ic 'Darwin|FreeBSD|OpenBSD|DragonFly'),1)
 CPUS ?= $(shell sysctl hw.ncpu|awk '{print $$2}')
 else
@@ -61,6 +62,9 @@ clean:
 	-rm rst/*_by_category.rst
 	-rm rst/*_module.rst
 	-rm rst/*_plugin.rst
+	-rm -rf rst/plugins/*
+	-rm -rf rst/ansible-config.rst rst/ansible-console.rst ansible/
+	-for i in $(CLI_COMMANDS) ; do rm -rf rst/$$i.rst ; done
 	-rm rst/*_maintained.rst
 	-rm rst/playbooks_directives.rst
 	-rm rst/playbooks_keywords.rst
