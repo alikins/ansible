@@ -547,23 +547,23 @@ def process_categories(mod_info, categories, templates,
         write_data(text, output_dir, category_filename)
 
 
-def process_support_levels(mod_info, templates, output_dir):
+def process_support_levels(mod_info, templates, output_dir, plugin_type):
     supported_by = {'Ansible Core Team': {'slug': 'core_supported',
                                           'modules': [],
-                                          'output': 'core_maintained.rst',
+                                          'output': '%s_core_maintained.rst',
                                           'blurb': "These are :doc:`modules maintained by the"
                                                    " Ansible Core Team<core_maintained>` and will always ship"
                                                    " with Ansible itself."},
                     'Ansible Network Team': {'slug': 'network_supported',
                                              'modules': [],
-                                             'output': 'network_maintained.rst',
+                                             'output': '%s_network_maintained.rst',
                                              'blurb': "These are :doc:`modules maintained by the"
                                                       " Ansible Network Team<network_maintained>` in"
                                                       " a relationship similar to how the Ansible Core Team"
                                                       " maintains the Core modules."},
                     'Ansible Partners': {'slug': 'partner_supported',
                                          'modules': [],
-                                         'output': 'partner_maintained.rst',
+                                         'output': '%s_partner_maintained.rst',
                                          'blurb': """
 Some examples of :doc:`Certified Modules<partner_maintained>` are those submitted by other
 companies. Maintainers of these types of modules must watch for any issues reported or pull requests
@@ -579,7 +579,7 @@ These modules are currently shipped with Ansible, but might be shipped separatel
 """},
                     'Ansible Community': {'slug': 'community_supported',
                                           'modules': [],
-                                          'output': 'community_maintained.rst',
+                                          'output': '%s_community_maintained.rst',
                                           'blurb': """
 These are :doc:`modules maintained by the Ansible Community<community_maintained>`.  They **are
 not** supported by the Ansible Core Team or by companies/partners associated to the module.
@@ -615,7 +615,8 @@ These modules are currently shipped with Ansible, but will most likely be shippe
                          'module_info': mod_info,
                          }
         text = templates['support_list'].render(template_data)
-        write_data(text, output_dir, data['output'])
+        output_name = data['output'] % plugin_type
+        write_data(text, output_dir, output_name)
 
 
 def validate_options(options):
@@ -684,7 +685,7 @@ def main():
                        category_list_name_template, plugin_type)
 
     # Render all the categories for modules
-    process_support_levels(mod_info, templates, options.output_dir)
+    process_support_levels(mod_info, templates, options.output_dir, plugin_type)
 
 
 if __name__ == '__main__':
