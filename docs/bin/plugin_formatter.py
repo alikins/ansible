@@ -181,8 +181,8 @@ def filter_module_list(path_list, module_dir=None):
         filtered_list = first_n_modules(filtered_list, num_of_modules=200)
 
     if module_dir == '../../lib/ansible/plugins':
-        filtered_list = n_modules_per_dir(path_list, mods_per_dir=mods_per_dir)
-        filtered_list = first_n_modules(filtered_list, num_of_modules=100)
+        filtered_list = n_modules_per_dir(path_list, mods_per_dir=1)
+        filtered_list = first_n_modules(filtered_list, num_of_modules=20)
     print('filtered all but %s paths from %s' % (len(filtered_list), module_dir))
     return filtered_list
     # return path_list
@@ -521,6 +521,7 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
 def process_categories(mod_info, categories, templates,
                        output_dir, output_name, plugin_type):
+    pprint.pprint(('categories', categories))
     for category in sorted(categories.keys()):
         if (plugin_type, category) == ('plugins', ''):
             print('skipping unknown cat: %s' % category)
@@ -536,9 +537,19 @@ def process_categories(mod_info, categories, templates,
         category_title = category_name.title()
 
         subcategories = dict((k, v) for k, v in module_map.items() if k != '_modules')
+
+        # add a same name subcat if there are no real subcat
+        # ie, list_of_monitoring_modules gets a 'monitoring' subcat
+        # so all toctree entrees are at the same level
+        if not subcategories:
+            subcategories[category] = {'_modules': module_map['_modules']}
+        pprint.pprint(('subcat of', category_name,  subcategories))
+
         template_data = {'title': category_title,
                          'category_name': category_name,
+                         'category_label': category,
                          'category': module_map,
+                         'categories': categories,
                          'subcategories': subcategories,
                          'module_info': mod_info,
                          'plugin_type': plugin_type
