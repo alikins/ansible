@@ -8,13 +8,13 @@ To help identify maintainers and understand how the included modules are officia
 Core
 ````
 
-:doc:`Core modules are maintained by the Ansible Engineering Team<core_maintained>`.
+:doc:`Core modules are maintained by the Ansible Engineering Team<modules_core_maintained>`.
 These modules are integral to the basic foundations of the Ansible distribution.
 
 Network
 ```````
 
-:doc:`Network modules are maintained by the Ansible Network Team<network_maintained>`. Please note there are :doc:`additional networking modules<list_of_network_modules>` that are categorized as Certified or Community not maintained by Ansible.
+:doc:`Network modules are maintained by the Ansible Network Team<modules_network_maintained>`. Please note there are :doc:`additional networking modules<list_of_network_modules>` that are categorized as Certified or Community not maintained by Ansible.
 
 
 Certified
@@ -25,7 +25,7 @@ Certified modules are part of a future planned program currently in development.
 Community
 `````````
 
-:doc:`Community modules are submitted and maintained by the Ansible community<community_maintained>`.  These modules are not maintained by Ansible, and are included as a convenience.
+:doc:`Community modules are submitted and maintained by the Ansible community<modules_community_maintained>`.  These modules are not maintained by Ansible, and are included as a convenience.
 
 Issue Reporting
 ```````````````
