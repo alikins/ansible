@@ -1,7 +1,11 @@
 Plugin Index
 ============
 
+.. toctree:: :maxdepth: 1
 
 {% for name in categories %}
-*   :doc:`@{ name }@ <list_of_@{ name }@_plugins>`
+{% if name != ''%}
+    list_of_@{ name }@_plugins
+{# *   :doc:`@{ name }@ <list_of_@{ name }@_plugins>` #}
+{% endif %}
 {% endfor %}

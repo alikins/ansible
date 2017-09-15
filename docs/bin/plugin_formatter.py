@@ -175,14 +175,14 @@ def filter_module_list(path_list, module_dir=None):
     in: path_list
     out: path_list we care about
     '''
-    mods_per_dir = 10
+    mods_per_dir = 2
     if module_dir == '../../lib/ansible/modules':
         filtered_list = n_modules_per_dir(path_list, mods_per_dir=mods_per_dir)
-        filtered_list = first_n_modules(filtered_list, num_of_modules=200)
+        filtered_list = first_n_modules(filtered_list, num_of_modules=50)
 
     if module_dir == '../../lib/ansible/plugins':
-        filtered_list = n_modules_per_dir(path_list, mods_per_dir=1)
-        filtered_list = first_n_modules(filtered_list, num_of_modules=20)
+        filtered_list = n_modules_per_dir(path_list, mods_per_dir=3)
+        filtered_list = first_n_modules(filtered_list, num_of_modules=60)
     print('filtered all but %s paths from %s' % (len(filtered_list), module_dir))
     return filtered_list
     # return path_list
