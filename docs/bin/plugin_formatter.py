@@ -82,7 +82,7 @@ def rst_ify(text):
     try:
         t = _ITALIC.sub(r'*' + r"\1" + r"*", text)
         t = _BOLD.sub(r'**' + r"\1" + r"**", t)
-        t = _MODULE.sub(r':ref:`' + r"\1 <\1>" + r"`", t)
+        t = _MODULE.sub(r':ref:`' + r"\1 <module_\1>" + r"`", t)
         t = _URL.sub(r"\1", t)
         t = _CONST.sub(r'``' + r"\1" + r"``", t)
     except Exception as e:
@@ -175,14 +175,14 @@ def filter_module_list(path_list, module_dir=None):
     in: path_list
     out: path_list we care about
     '''
-    mods_per_dir = 2
+    mods_per_dir = 1000
     if module_dir == '../../lib/ansible/modules':
         filtered_list = n_modules_per_dir(path_list, mods_per_dir=mods_per_dir)
-        filtered_list = first_n_modules(filtered_list, num_of_modules=50)
+        filtered_list = first_n_modules(filtered_list, num_of_modules=5000)
 
     if module_dir == '../../lib/ansible/plugins':
-        filtered_list = n_modules_per_dir(path_list, mods_per_dir=3)
-        filtered_list = first_n_modules(filtered_list, num_of_modules=60)
+        filtered_list = n_modules_per_dir(path_list, mods_per_dir=1000)
+        filtered_list = first_n_modules(filtered_list, num_of_modules=600)
     print('filtered all but %s paths from %s' % (len(filtered_list), module_dir))
     return filtered_list
     # return path_list
@@ -407,6 +407,10 @@ def process_modules(module_map, templates, outputname,
         doc['version_added'] = doc.get('version_added', 'historical')
 
         doc['plugin_type'] = plugin_type
+        if plugin_type == 'modules':
+            doc['plugin_namespace'] = 'module'
+        else:
+            doc['plugin_namespace'] = '%s_plugin' % module_map[module]['primary_category']
 
         if module_map[module]['deprecated'] and 'deprecated' not in doc:
             print("%s: WARNING: MODULE MISSING DEPRECATION DOCUMENTATION: %s" % (fname, 'deprecated'))
@@ -520,7 +524,7 @@ def process_modules(module_map, templates, outputname,
 
 def process_categories(mod_info, categories, templates,
                        output_dir, output_name, plugin_type):
-    pprint.pprint(('categories', categories))
+    # pprint.pprint(('categories', categories))
     for category in sorted(categories.keys()):
         if (plugin_type, category) == ('plugins', ''):
             print('skipping unknown cat: %s' % category)
@@ -542,7 +546,7 @@ def process_categories(mod_info, categories, templates,
         # so all toctree entrees are at the same level
         if not subcategories:
             subcategories[category] = {'_modules': module_map['_modules']}
-        pprint.pprint(('subcat of', category_name,  subcategories))
+        # pprint.pprint(('subcat of', category_name,  subcategories))
 
         template_data = {'title': category_title,
                          'category_name': category_name,

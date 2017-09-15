@@ -6,20 +6,17 @@
 
 {% endif %}
 
-{#
+{# dont build toctree entries for 'all' since it dupes the per cat toctree entries #}
 {% if category_label == 'all' %}
-
-.. toctree:: :maxdepth: 1
-
-{% for cat in categories | sort%}
-{% if cat != 'all' and cat != '' %}
-    list_of_@{ cat }@_@{ plugin_type }@
-{% endif %}
+{% if category['_modules'] %}
+{% for module in category['_modules'] | sort %}
+    * :doc:`@{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} (@{ module_info[module]['primary_category']}@) - @{ module_info[module]['doc']['short_description'] }@ <plugins/@{ module_info[module]['primary_category'] }@/@{ module }@>`
 {% endfor %}
-{% endif %}
-#}
 
-{% if subcategories %}
+{% endif %}
+{% endif %}
+
+{% if subcategories and category_label != 'all'%}
 {% for name, info in subcategories.items() | sort %}
 @{ name.title() }@
 @{ '-' * name | length }@
@@ -29,6 +26,7 @@
 {% for module in info['_modules'] | sort %}
     plugins/@{ module_info[module]['primary_category'] }@/@{ module }@
 {% endfor %}
+
 {% endfor %}
 {% endif %}
 

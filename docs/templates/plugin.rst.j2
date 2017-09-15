@@ -1,4 +1,4 @@
-.. _@{ module }@:
+.. _@{ plugin_namespace }@_@{ module }@:
 
 {% if short_description %}
 {% set title = module + ' - ' + short_description|convert_symbols_to_format %}
@@ -12,6 +12,7 @@
 
 {% if version_added is defined and version_added != '' -%}
 .. versionadded:: @{ version_added | default('') }@
+
 
 
 {% endif %}

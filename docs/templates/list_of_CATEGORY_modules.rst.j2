@@ -10,26 +10,13 @@
 {# split list_of_all into it's own template? #}
 {% if category_label == 'all' %}
 
-{% if subcategories %}
-{% for name, info in subcategories.items() | sort %}
-@{ name.title() }@
-@{ '-' * name | length }@
-
-{% for module in info['_modules'] | sort %}
+{% if category['_modules'] %}
+{% for module in category['_modules'] | sort %}
     * :doc:`@{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} - @{ module_info[module]['doc']['short_description'] }@ <@{ module }@_module>`
 {% endfor %}
-{% endfor %}
-{% endif %}
-{% endif %}
-{# {% if category['_modules'] and category_label != 'all'%}
 
-.. toctree:: :maxdepth: 1
-
-{% for module in category['_modules'] | sort %}
-    @{ module }@_module
-{% endfor %}
 {% endif %}
-#}
+{% endif %}
 
 {% if subcategories  and category_label != 'all'%}
 {% for name, info in subcategories.items() | sort %}
@@ -39,8 +26,6 @@
 .. toctree:: :maxdepth: 1
 
 {% for module in info['_modules'] | sort %}
-{#  :ref:`@{ module }@`{% if module_info[module]['deprecated'] %} **(D)**{% endif%} @{ module_info[module]['doc']['short_description'] }@ #}
-{#    * :doc:`@{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} - @{ module_info[module]['doc']['short_description'] }@ <@{ module }@_module>` #}
     @{ module }@_module
 {% endfor %}
 
