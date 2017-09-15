@@ -524,7 +524,7 @@ def process_modules(module_map, templates, outputname,
 
 def process_categories(mod_info, categories, templates,
                        output_dir, output_name, plugin_type):
-    # pprint.pprint(('categories', categories))
+    pprint.pprint(('categories', categories))
     for category in sorted(categories.keys()):
         if (plugin_type, category) == ('plugins', ''):
             print('skipping unknown cat: %s' % category)
@@ -539,14 +539,17 @@ def process_categories(mod_info, categories, templates,
         category_name = category.replace("_", " ")
         category_title = category_name.title()
 
-        subcategories = dict((k, v) for k, v in module_map.items() if k != '_modules')
+        # subcategories = dict((k, v) for k, v in module_map.items() if k != '_modules')
+        subcategories = dict((k, v) for k, v in module_map.items())
+        # add the 'other' to a subcat with same name as parent cat
+        subcategories[category] = {'_modules': module_map.pop('_modules')}
 
         # add a same name subcat if there are no real subcat
         # ie, list_of_monitoring_modules gets a 'monitoring' subcat
         # so all toctree entrees are at the same level
         if not subcategories:
             subcategories[category] = {'_modules': module_map['_modules']}
-        # pprint.pprint(('subcat of', category_name,  subcategories))
+        pprint.pprint(('subcat of', category_name,  subcategories))
 
         template_data = {'title': category_title,
                          'category_name': category_name,
