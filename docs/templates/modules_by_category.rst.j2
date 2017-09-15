@@ -2,7 +2,9 @@ Module Index
 ============
 
 
+.. toctree:: :maxdepth: 1
 
 {% for name in categories %}
-*   :doc:`@{ name }@ <list_of_@{ name }@_modules>`
+{# *   :doc:`@{ name }@ <list_of_@{ name }@_modules>` #}
+    list_of_@{ name }@_modules
 {% endfor %}
