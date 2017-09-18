@@ -35,6 +35,13 @@ Common Options
 {% for ini_map in config['ini']|sort %}
 :Ini Section: {{ini_map['section']}}
 :Ini Key: {{ini_map['key']}}
+{% if 'deprecated' in ini_map %}
+
+    :Removed in: {{ini_map['deprecated']['version']}}
+    :Deprecated detail: {{ini_map['deprecated']['why']}}
+    :Deprecated alternatives: {{ini_map['deprecated']['alternatives']}}
+
+{% endif %}
 {% endfor %}
 {% for env_var_map in config['env']|sort %}
 :Environment: :envvar:`{{env_var_map['name']}}`
