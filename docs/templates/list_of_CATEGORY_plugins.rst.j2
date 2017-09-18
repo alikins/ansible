@@ -21,10 +21,8 @@
 @{ name.title() }@
 @{ '-' * name | length }@
 
-.. toctree:: :maxdepth: 1
-
 {% for module in info['_modules'] | sort %}
-    plugins/@{ module_info[module]['primary_category'] }@/@{ module }@
+    * :doc:`@{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} (@{ module_info[module]['primary_category']}@) - @{ module_info[module]['doc']['short_description'] }@ <plugins/@{ module_info[module]['primary_category'] }@/@{ module }@>`
 {% endfor %}
 
 {% endfor %}
