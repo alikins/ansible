@@ -228,7 +228,7 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
         glob.glob("%s/*/*/*/*.py" % module_dir)
     )
 
-    print('module_dir: %s' % module_dir)
+    # print('module_dir: %s' % module_dir)
     # pprint.pprint(('files', files))
     path_list = []
     for module_path in files:
@@ -510,7 +510,8 @@ def process_modules(module_map, templates, outputname,
             doc['author'] = [doc['author']]
 
         # print('about to template')
-        # pprint.pprint(doc)
+        if plugin_type == 'modules':
+            pprint.pprint(doc)
         text = templates['plugin'].render(doc)
 
         # plugins get namespace dirs but modules do not
@@ -524,7 +525,7 @@ def process_modules(module_map, templates, outputname,
 
 def process_categories(mod_info, categories, templates,
                        output_dir, output_name, plugin_type):
-    pprint.pprint(('categories', categories))
+    # pprint.pprint(('categories', categories))
     for category in sorted(categories.keys()):
         if (plugin_type, category) == ('plugins', ''):
             print('skipping unknown cat: %s' % category)
@@ -549,7 +550,7 @@ def process_categories(mod_info, categories, templates,
         # so all toctree entrees are at the same level
         if not subcategories:
             subcategories[category] = {'_modules': module_map['_modules']}
-        pprint.pprint(('subcat of', category_name,  subcategories))
+        # pprint.pprint(('subcat of', category_name,  subcategories))
 
         template_data = {'title': category_title,
                          'category_name': category_name,

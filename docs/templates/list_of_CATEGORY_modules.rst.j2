@@ -23,10 +23,8 @@
 @{ name.title() }@
 @{ '-' * name | length }@
 
-.. toctree:: :maxdepth: 1
-
 {% for module in info['_modules'] | sort %}
-    @{ module }@_module
+    * :doc:`@{ module }@{% if module_info[module]['deprecated'] %} **(D)**{% endif%} - @{ module_info[module]['doc']['short_description'] }@ <@{ module }@_module>`
 {% endfor %}
 
 {% endfor %}
