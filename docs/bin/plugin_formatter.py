@@ -376,7 +376,8 @@ def too_old(added):
 
 
 def process_modules(module_map, templates, outputname,
-                    output_dir, ansible_version, plugin_type):
+                    output_dir, ansible_version, plugin_type,
+                    build_toctree_for_modules=False):
     for module in module_map:
         # print("rendering: %s" % module)
 
@@ -510,8 +511,12 @@ def process_modules(module_map, templates, outputname,
             doc['author'] = [doc['author']]
 
         # print('about to template')
-        if plugin_type == 'modules':
-            pprint.pprint(doc)
+        #if plugin_type == 'modules':
+        #    pprint.pprint(doc)
+
+        # use in templates for to determine if we add toc tree entries for each module (slow...)
+        # or not (fast, but leaves lots of docs out of any toctree)
+        doc['build_toctree_for_modules'] = build_toctree_for_modules
         text = templates['plugin'].render(doc)
 
         # plugins get namespace dirs but modules do not
@@ -524,7 +529,8 @@ def process_modules(module_map, templates, outputname,
 
 
 def process_categories(mod_info, categories, templates,
-                       output_dir, output_name, plugin_type):
+                       output_dir, output_name, plugin_type,
+                       build_toctree_for_modules=False):
     # pprint.pprint(('categories', categories))
     for category in sorted(categories.keys()):
         if (plugin_type, category) == ('plugins', ''):
@@ -559,14 +565,15 @@ def process_categories(mod_info, categories, templates,
                          'categories': categories,
                          'subcategories': subcategories,
                          'module_info': mod_info,
-                         'plugin_type': plugin_type
+                         'plugin_type': plugin_type,
+                         'build_toctree_for_modules': build_toctree_for_modules,
                          }
 
         text = templates['list_of_CATEGORY_modules'].render(template_data)
         write_data(text, output_dir, category_filename)
 
 
-def process_support_levels(mod_info, templates, output_dir, plugin_type):
+def process_support_levels(mod_info, templates, output_dir, plugin_type, build_toctree_for_modules):
     supported_by = {'Ansible Core Team': {'slug': 'core_supported',
                                           'modules': [],
                                           'output': '%s_core_maintained.rst',
@@ -632,6 +639,7 @@ These modules are currently shipped with Ansible, but will most likely be shippe
                          'modules': data['modules'],
                          'slug': data['slug'],
                          'module_info': mod_info,
+                         'build_toctree_for_modules': build_toctree_for_modules,
                          }
         text = templates['support_list'].render(template_data)
         output_name = data['output'] % plugin_type
@@ -689,22 +697,27 @@ def main():
                     short_desc = ''
                 record['doc']['short_description'] = rst_ify(short_desc)
 
+    build_toctree_for_modules = True
     # Write master category list
-    category_list_text = templates['category_list'].render(categories=sorted(categories.keys()))
+    category_list_text = templates['category_list'].render(categories=sorted(categories.keys()),
+                                                           build_toctree_for_modules=build_toctree_for_modules)
     category_index_name = '%s_by_category.rst' % plugin_type
     write_data(category_list_text, options.output_dir, category_index_name)
 
     # Render all the individual module pages
     process_modules(mod_info, templates, outputname,
-                    options.output_dir, options.ansible_version, plugin_type)
+                    options.output_dir, options.ansible_version, plugin_type,
+                    build_toctree_for_modules=build_toctree_for_modules)
 
     # Render all the categories for modules
     category_list_name_template = 'list_of_%s_' + '%s.rst' % plugin_type
     process_categories(mod_info, categories, templates, options.output_dir,
-                       category_list_name_template, plugin_type)
+                       category_list_name_template, plugin_type,
+                       build_toctree_for_modules=build_toctree_for_modules)
 
     # Render all the categories for modules
-    process_support_levels(mod_info, templates, options.output_dir, plugin_type)
+    process_support_levels(mod_info, templates, options.output_dir, plugin_type,
+                           build_toctree_for_modules=build_toctree_for_modules)
 
 
 if __name__ == '__main__':

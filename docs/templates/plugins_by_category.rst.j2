@@ -1,10 +1,17 @@
 Plugin Index
 ============
 
+{% if build_toctree_for_modules %}
+.. toctree:: :maxdepth: 1
+
+{% endif %}
+
 {% for name in categories %}
 {% if name != ''%}
-{#    list_of_@{ name }@_plugins #}
-{#    *   :doc:`@{ name }@ <list_of_@{ name }@_plugins>` #}
+{% if build_toctree_for_modules %}
+    list_of_@{ name }@_plugins
+{% else %}
     *   :doc:`list_of_@{ name }@_plugins`
+{% endif %}
 {% endif %}
 {% endfor %}
