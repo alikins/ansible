@@ -38,9 +38,16 @@ Common Options
 {% endfor %}
 {% for env_var_map in config['env']|sort %}
 :Environment: :envvar:`{{env_var_map['name']}}`
+{% if 'deprecated' in env_var_map %}
+
+    :Removed in: {{env_var_map['deprecated']['version']}}
+    :Deprecated detail: {{env_var_map['deprecated']['why']}}
+    :Deprecated alternatives: {{env_var_map['deprecated']['alternatives']}}
+
+{% endif %}
 {% endfor %}
 {% if config['deprecated'] %}
-:Deprecated in: {{config['deprecated']['version']}}
+:Removed in: {{config['deprecated']['version']}}
 :Deprecated detail: {{config['deprecated']['why']}}
 :Deprecated alternatives: {{config['deprecated']['alternatives']}}
 {% endif %}
