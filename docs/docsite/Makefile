@@ -12,12 +12,12 @@ else
 CPUS ?= $(shell nproc)
 endif
 
-MODULE_ARGS=
+MODULE_ARGS=-v
 ifdef MODULES
 	MODULE_ARGS = -l $(MODULES)
 endif
 
-PLUGIN_ARGS=
+PLUGIN_ARGS=-v
 ifdef PLUGINS
 	PLUGIN_ARGS = -l $(PLUGINS)
 endif

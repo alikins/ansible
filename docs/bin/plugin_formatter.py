@@ -217,6 +217,8 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
 
     categories = dict()
     module_info = defaultdict(dict)
+    modules_without_docs = []
+    modules_without_metadata = []
 
     # * windows powershell modules have documentation stubs in python docstring
     #   format (they are not executed) so skip the ps1 format files
@@ -249,7 +251,7 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
 
     path_list = filter_module_list(path_list, module_dir=module_dir)
 
-    for module_path in path_list:
+    for module_path in sorted(path_list):
         module = os.path.splitext(os.path.basename(module_path))[0]
         deprecated = False
         if module.startswith("_"):
@@ -294,7 +296,17 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
             primary_category = module_categories[0]
 
         # use ansible core library to parse out doc metadata YAML and plaintext examples
-        doc, examples, returndocs, metadata = plugin_docs.get_docstring(module_path, verbose=verbose)
+        try:
+            doc, examples, returndocs, metadata = plugin_docs.get_docstring(module_path, verbose=verbose,
+                                                                            ignore_errors=False)
+        except Exception as e:
+            print('error reading %s' % module_path)
+            raise
+
+        if doc is None:
+            modules_without_docs.append(module_path)
+        if metadata is None:
+            modules_without_metadata.append(module_path)
 
         # save all the information
         module_info[module] = {'path': module_path,
@@ -311,6 +323,11 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
     # keep module tests out of becoming module docs
     if 'test' in categories:
         del categories['test']
+
+    for module_warn in modules_without_docs:
+        print('%s:no documentation found in module' % module_warn)
+    for module_warn in modules_without_metadata:
+        print('%s:no metadata found in module' % module_warn)
 
     return module_info, categories
 
@@ -387,11 +404,9 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
 
         module_categories = module_map[module].get('categories', [])
 
-        module_categories = module_map[module].get('categories', [])
-
         # crash if module is missing documentation and not explicitly hidden from docs index
         if module_map[module]['doc'] is None:
-            print("%s: ERROR: MODULE MISSING DOCUMENTATION" % (fname,))
+            # print("%s: ERROR: MODULE MISSING DOCUMENTATION" % (fname,))
             _doc = {'module': module,
                     'version_added': '2.4',
                     'filename': fname}
@@ -414,21 +429,21 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
             doc['plugin_namespace'] = '%s_plugin' % module_map[module]['primary_category']
 
         if module_map[module]['deprecated'] and 'deprecated' not in doc:
-            print("%s: WARNING: MODULE MISSING DEPRECATION DOCUMENTATION: %s" % (fname, 'deprecated'))
+            print("%s:no deprecation documentation found: %s" % (fname, 'deprecated'))
 
-        required_fields = ('short_description',)
+        required_fields = ('short_description', 'description', 'version_added')
         for field in required_fields:
             if field not in doc:
-                print("%s: WARNING: MODULE MISSING field '%s'" % (fname, field))
+                print("%s:required field '%s' is missing" % (fname, field))
 
         not_nullable_fields = ('short_description',)
         for field in not_nullable_fields:
             if field in doc and doc[field] in (None, ''):
-                print("%s: WARNING: MODULE field '%s' DOCUMENTATION is null/empty value=%s" % (fname, field, doc[field]))
+                print("%s:documentation field '%s' is null/empty value=%s" % (fname, field, doc[field]))
 
         if 'version_added' not in doc:
             pprint.pprint(doc)
-            # sys.exit("*** ERROR: missing version_added in: %s ***\n" % module)
+            print("%s:missing version_added in: %s ***\n" % (fname, module))
 
         #
         # The present template gets everything from doc so we spend most of this
@@ -455,7 +470,9 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
             for (k, v) in iteritems(doc['options']):
                 # Error out if there's no description
                 if 'description' not in doc['options'][k]:
-                    raise AnsibleError("Missing required description for option %s in %s " % (k, module))
+                    # raise AnsibleError("Missing required description for option %s in %s " % (k, module))
+                    print("%s:missing required description for option %s in %s " % (fname, k, module))
+                    continue
 
                 # Error out if required isn't a boolean (people have been putting
                 # information on when something is required in here.  Those need
@@ -483,10 +500,10 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
         doc['ansible_version'] = ansible_version
 
         # check the 'deprecated' field in doc. We expect a dict potentially with 'why', 'version', and 'alternative' fields
-        # examples = module_map[module]['examples']
+        examples = module_map[module]['examples']
         # print('\n\n%s: type of examples: %s\n' % (module, type(examples)))
-        # if examples and not isinstance(examples, (str, unicode, list)):
-        #    raise TypeError('module %s examples is wrong type (%s): %s' % (module, type(examples), examples))
+        if examples and not isinstance(examples, (str, unicode, list)):
+            raise TypeError('module %s examples is wrong type (%s): %s' % (module, type(examples), examples))
 
         # use 'examples' for 'plainexamples' if 'examples' is a string
         if isinstance(module_map[module]['examples'], string_types):
@@ -511,8 +528,8 @@ def process_modules(module_map, templates, outputname, output_dir, ansible_versi
             doc['author'] = [doc['author']]
 
         # print('about to template')
-        if plugin_type == 'modules':
-            pprint.pprint(doc)
+        # if plugin_type == 'modules':
+        #    pprint.pprint(doc)
         text = templates['plugin'].render(doc)
 
         # plugins get namespace dirs but modules do not
@@ -542,9 +559,10 @@ def process_categories(mod_info, categories, templates,
         category_title = category_name.title()
 
         # subcategories = dict((k, v) for k, v in module_map.items() if k != '_modules')
-        subcategories = dict((k, v) for k, v in module_map.items())
+        subcategories = dict((k, v) for k, v in module_map.items() if k != '_modules')
         # add the 'other' to a subcat with same name as parent cat
-        subcategories[category] = {'_modules': module_map.pop('_modules')}
+        # subcategories[category] = {'_modules': module_map.pop('_modules')}
+        subcategories[category] = {'_modules': module_map['_modules']}
 
         # add a same name subcat if there are no real subcat
         # ie, list_of_monitoring_modules gets a 'monitoring' subcat
