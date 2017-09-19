@@ -299,7 +299,7 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
         try:
             doc, examples, returndocs, metadata = plugin_docs.get_docstring(module_path, verbose=verbose,
                                                                             ignore_errors=False)
-        except Exception as e:
+        except Exception:
             print('error reading %s' % module_path)
             raise
 
