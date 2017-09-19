@@ -21,19 +21,12 @@
    :local:
    :depth: 2
 
-{# ------------------------------------------
- #
- # Please note: this looks like a core dump
- # but it isn't one.
- #
- --------------------------------------------#}
 {% if deprecated is defined -%}
 
 
 DEPRECATED
 ----------
 
-{# use unknown here? skip the fields? #}
 :In: version: @{ deprecated['version'] | default('') | string | convert_symbols_to_format }@
 :Why: @{ deprecated['why'] | default('') | convert_symbols_to_format }@
 :Alternative: @{ deprecated['alternative'] | default('')|  convert_symbols_to_format }@
@@ -203,7 +196,6 @@ Examples
 Return Values
 -------------
 
-Common return values are documented :ref:`here <common_return_values>`, the following are the fields unique to this module:
 
 .. raw:: html
 
@@ -295,7 +287,7 @@ Notes
 
 
 Author
-~~~~~~
+------
 
 {% for author_name in author %}
     * @{ author_name }@
@@ -311,7 +303,7 @@ Author
 
 
 Status
-~~~~~~
+------
 
 {% for cur_state in  metadata.status %}
 This module is flagged as **@{cur_state}@** which means that @{module_states[cur_state]}@.
@@ -323,7 +315,7 @@ This module is flagged as **@{cur_state}@** which means that @{module_states[cur
 
 
 Maintenance Info
-~~~~~~~~~~~~~~~~
+----------------
 
 For more information about Red Hat's this support of this module, please
 refer to this `knowledge base article<https://access.redhat.com/articles/rhel-top-support-policies>`
@@ -332,5 +324,4 @@ refer to this `knowledge base article<https://access.redhat.com/articles/rhel-to
 {% endif %}
 {% endif %}
 
-For help in developing on modules, should you be so inclined, please read :doc:`../../community`, :doc:`../../dev_guide/testing` and :doc:`../../dev_guide/developing_modules`.
 

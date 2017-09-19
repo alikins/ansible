@@ -30,7 +30,7 @@ all: docs
 
 docs: clean htmldocs
 
-generate_rst: testing keywords modules plugins staticmin cli config
+generate_rst: modules staticmin
 
 htmldocs: generate_rst
 	CPUS=$(CPUS) $(MAKE) -f Makefile.sphinx html

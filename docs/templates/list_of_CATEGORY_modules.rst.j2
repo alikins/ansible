@@ -17,6 +17,7 @@
 @{ name.title() }@
 @{ '-' * name | length }@
 
+
 .. toctree:: :maxdepth: 1
 
 {% for module in info['_modules'] | sort %}
@@ -25,6 +26,7 @@
 {% endfor %}
 
 {% endfor %}
+
 
 .. note::
     - **(D)**: This marks a module as deprecated, which means a module is kept for backwards compatibility but usage is discouraged.

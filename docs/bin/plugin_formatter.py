@@ -172,6 +172,10 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
         glob.glob("%s/*/*/*/*.py" % module_dir)
     )
 
+    blacklist = []
+    found_mods = []
+    deprecated_mods = []
+    all_aliases = []
     for module_path in files:
         # Do not list __init__.py files
         if module_path.endswith('__init__.py'):
@@ -180,6 +184,7 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
         # Do not list blacklisted modules
         module = os.path.splitext(os.path.basename(module_path))[0]
         if module in plugin_docs.BLACKLIST['MODULE']:
+            blacklist.append(module)
             continue
 
         # If requested, limit module documentation building only to passed-in
@@ -195,6 +200,7 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
                 module = module.replace("_", "", 1)
                 aliases = module_info[source].get('aliases', set())
                 aliases.add(module)
+                all_aliases.append(module)
                 # In case we just created this via get()'s fallback
                 module_info[source]['aliases'] = aliases
                 continue
@@ -202,10 +208,11 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
                 # Handle deprecations
                 module = module.replace("_", "", 1)
                 deprecated = True
-
+                deprecated_mods.append(module)
         #
         # Regular module to process
         #
+        found_mods.append(module)
 
         category = categories
 
@@ -245,6 +252,17 @@ def get_module_info(module_dir, limit_to_modules=None, verbose=False):
     # keep module tests out of becoming module docs
     if 'test' in categories:
         del categories['test']
+
+    import pprint
+    pprint.pprint(('modules', sorted(found_mods)))
+    pprint.pprint(('deprecated', sorted(deprecated_mods)))
+    pprint.pprint(('all_aliases', sorted(all_aliases)))
+    pprint.pprint(('blacklist', sorted(blacklist)))
+
+    print('found_mods: %s' % len(found_mods))
+    print('deprecated: %s' % len(deprecated_mods))
+    print('all_aliases: %s' % len(all_aliases))
+    print('blacklist: %s' % len(blacklist))
 
     return module_info, categories
 

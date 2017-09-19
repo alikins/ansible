@@ -27,7 +27,7 @@ requirements:
 - ACI Fabric 1.0(3f)+
 notes:
 - The C(tenant), C(ap), C(epg), and C(domain) used must exist before using this module in your playbook.
-  The M(aci_tenant) M(aci_ap), M(aci_epg) M(aci_domain) modules can be used for this.
+  The M(aci_tenant) M(aci_ap), M(aci_epg), aci_domain modules can be used for this.
 options:
   allow_useg:
     description:

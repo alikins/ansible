@@ -27,7 +27,7 @@ requirements:
 - ACI Fabric 1.0(3f)+
 notes:
 - The C(bd) and C(l3out) parameters should exist before using this module.
-  The M(aci_bd) and M(aci_l3out) can be used for these.
+  The M(aci_bd) and aci_l3out can be used for these.
 options:
   bd:
     description:

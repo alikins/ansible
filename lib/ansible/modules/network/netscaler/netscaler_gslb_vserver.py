@@ -339,11 +339,9 @@ requirements:
     - nitro python sdk
 '''
 
-EXAMPLES = '''
-'''
+EXAMPLES = ''
 
-RETURN = '''
-'''
+RETURN = ''
 
 
 import copy

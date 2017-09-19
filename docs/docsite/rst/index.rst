@@ -25,25 +25,4 @@ Ansible, Inc. releases a new major release of Ansible approximately every two mo
 .. toctree::
    :maxdepth: 1
 
-   intro
-   quickstart
-   playbooks
-   playbooks_special_topics
-   modules
    modules_by_category
-   vault
-   command_line_tools
-   plugins_by_category
-   guides
-   dev_guide/index
-   tower
-   community
-   galaxy
-   test_strategies
-   faq
-   config
-   glossary
-   YAMLSyntax
-   porting_guides
-   python_3_support
-   release_and_maintenance
