@@ -21,6 +21,7 @@ from __future__ import (absolute_import, division)
 __metaclass__ = type
 
 from collections import defaultdict
+import pprint
 
 # for testing
 from ansible.compat.tests import unittest
