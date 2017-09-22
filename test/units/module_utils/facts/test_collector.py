@@ -63,6 +63,7 @@ class TestSelectCollectorNames(unittest.TestCase):
         res = collector.select_collector_classes(collector_names,
                                                  all_fact_subsets,
                                                  all_collector_classes)
+        pprint.pprint(res)
 
         expected = [default_collectors.DistributionFactCollector,
                     default_collectors.PkgMgrFactCollector]
@@ -78,6 +79,7 @@ class TestSelectCollectorNames(unittest.TestCase):
         res = collector.select_collector_classes(collector_names,
                                                  all_fact_subsets,
                                                  all_collector_classes)
+        pprint.pprint(res)
 
         expected = [default_collectors.PkgMgrFactCollector,
                     default_collectors.DistributionFactCollector]
@@ -91,14 +93,17 @@ class TestSelectCollectorNames(unittest.TestCase):
                                                                          compat_platforms)
 
         all_fact_subsets, aliases_map = collector.build_fact_id_to_collector_map(collectors_for_platform)
+        pprint.pprint((dict(all_fact_subsets), dict(aliases_map)))
 
         all_valid_subsets = frozenset(all_fact_subsets.keys())
         collector_names = collector.get_collector_names(valid_subsets=all_valid_subsets,
                                                         aliases_map=aliases_map,
                                                         platform_info=platform_info)
-        collector.select_collector_classes(collector_names,
-                                           all_fact_subsets,
-                                           default_collectors.collectors)
+        res = collector.select_collector_classes(collector_names,
+                                                 all_fact_subsets,
+                                                 default_collectors.collectors)
+
+        pprint.pprint(res)
 
     def _all_collector_classes(self):
         return [default_collectors.DistributionFactCollector,
