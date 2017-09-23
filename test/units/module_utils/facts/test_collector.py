@@ -283,17 +283,21 @@ class TestGetCollectorNames(unittest.TestCase):
 
 
 class TestCollectorClassesFromGatherSubset(unittest.TestCase):
+    maxDiff = None
+
     def _classes(self,
                  all_collector_classes=None,
                  valid_subsets=None,
                  minimal_gather_subset=None,
                  gather_subset=None,
-                 gather_timeout=None):
+                 gather_timeout=None,
+                 platform_info=None):
         return collector.collector_classes_from_gather_subset(all_collector_classes=all_collector_classes,
                                                               valid_subsets=valid_subsets,
                                                               minimal_gather_subset=minimal_gather_subset,
                                                               gather_subset=gather_subset,
-                                                              gather_timeout=gather_timeout)
+                                                              gather_timeout=gather_timeout,
+                                                              platform_info=platform_info)
 
     def test_no_args(self):
         res = self._classes()
@@ -311,7 +315,37 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
                             # minimal_gather_subset=set(['platform']),
                             gather_subset=['pkg_mgr'])
         self.assertIsInstance(res, list)
-        self.assertEqual(res, [default_collectors.PkgMgrFactCollector])
+        self.assertEqual(res,
+                         [
+                             default_collectors.PlatformFactCollector,
+                             default_collectors.DistributionFactCollector,
+                             default_collectors.PkgMgrFactCollector,
+                         ])
+
+    def test_service_mgr(self):
+        res = self._classes(all_collector_classes=default_collectors.collectors,
+                            # minimal_gather_subset=set(['platform']),
+                            gather_subset=['service_mgr'])
+        self.assertIsInstance(res, list)
+        self.assertEqual(res,
+                         [
+                             default_collectors.PlatformFactCollector,
+                             default_collectors.DistributionFactCollector,
+                             default_collectors.ServiceMgrFactCollector,
+                         ])
+
+    def test_linux_network(self):
+        res = self._classes(all_collector_classes=default_collectors.collectors,
+                            # minimal_gather_subset=set(['platform']),
+                            gather_subset=['network'],
+                            platform_info={'system': 'Linux'})
+        self.assertIsInstance(res, list)
+        self.assertEqual(res,
+                         [
+                             default_collectors.PlatformFactCollector,
+                             default_collectors.DistributionFactCollector,
+                             default_collectors.LinuxNetworkCollector,
+                         ])
 
     def test_env(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,

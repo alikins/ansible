@@ -30,16 +30,19 @@ from ansible.module_utils.facts.utils import get_file_content
 class LinuxNetwork(Network):
     """
     This is a Linux-specific subclass of Network.  It defines
+        self.assertIsInstance(res, list)
+        self.assertEqual(res,
+                         [
+                             default_collectors.PlatformFactCollector,
+                             default_collectors.DistributionFactCollector,
+                             default_collectors.ServiceMgrFactCollector,
+                         ])
     - interfaces (a list of interface names)
     - interface_<name> dictionary of ipv4, ipv6, and mac address information.
     - all_ipv4_addresses and all_ipv6_addresses: lists of all configured addresses.
     - ipv4_address and ipv6_address: the first non-local address for each family.
     """
     platform = 'Linux'
-    required_facts = set(['os_family',
-                          'distribution_version',
-                          'selinux',
-                          'env'])
 
     INTERFACE_TYPE = {
         '1': 'ether',
@@ -315,3 +318,5 @@ class LinuxNetwork(Network):
 class LinuxNetworkCollector(NetworkCollector):
     _platform = 'Linux'
     _fact_class = LinuxNetwork
+    required_facts = set(['os_family',
+                          'distribution_version'])

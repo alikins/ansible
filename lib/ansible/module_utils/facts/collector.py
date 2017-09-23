@@ -146,8 +146,8 @@ def get_collector_names(valid_subsets=None,
     # add one level of deps in
     pprint.pprint(('gather_subset_with_min before', gather_subset_with_min))
 
-    #gather_subset_with_min.extend(deps_subset)
-    #pprint.pprint(('gather_subset after', gather_subset_with_min))
+    gather_subset_with_min.extend(deps_subset)
+    pprint.pprint(('gather_subset after', gather_subset_with_min))
 
     # subsets we mention in gather_subset explicitly, except for 'all'/'min'
     explicitly_added = set()
@@ -247,6 +247,7 @@ def build_fact_id_to_collector_map(collectors_for_platform):
         fact_id_to_collector_map[primary_name].append(collector_class)
 
         for dep_fact_id in collector_class.required_facts:
+            print('dep_fact_id: %s' % dep_fact_id)
             deps_map[primary_name].append(dep_fact_id)
 
         for fact_id in collector_class._fact_ids:
@@ -257,12 +258,15 @@ def build_fact_id_to_collector_map(collectors_for_platform):
     for fact_name_that_requires, what_the_fact_requires_set in deps_map.items():
         deps_subset.extend(what_the_fact_requires_set)
 
+    pprint.pprint(('ddeps_map', dict(deps_map)))
     # map the required fact_id to the collector name that provides it. resolve the dep.
     dmap = defaultdict(set)
     # TODO: should be able to do this within the main collector_class above
     for collector_class in collectors_for_platform:
         for required_fact in deps_subset:
-            if required_fact == collector_class.name or required_fact in collector_class._fact_ids:
+            if required_fact == collector_class.name:
+                dmap[required_fact].add(collector_class.name)
+            if required_fact in collector_class._fact_ids:
                 dmap[required_fact].add(collector_class.name)
 
     pprint.pprint(('dmap', dict(dmap)))
@@ -334,10 +338,10 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
     all_fact_subsets, aliases_map, deps_map = build_fact_id_to_collector_map(collectors_for_platform)
 
-    pprint.pprint(('all_fact_subsets', dict(all_fact_subsets)))
+    #pprint.pprint(('all_fact_subsets', dict(all_fact_subsets)))
     all_valid_subsets = frozenset(all_fact_subsets.keys())
-    pprint.pprint(('all_valid_subsets', all_valid_subsets))
-    pprint.pprint(('aliaes_map', dict(aliases_map)))
+    #pprint.pprint(('all_valid_subsets', all_valid_subsets))
+    #pprint.pprint(('aliaes_map', dict(aliases_map)))
     pprint.pprint(('deps_map', dict(deps_map)))
     # ['lsb', 'selinux', 'system', 'machine', 'env', 'distribution'])
     # expand any fact_id/collectorname/gather_subset term ('all', 'env', etc) to the list of names that represents
