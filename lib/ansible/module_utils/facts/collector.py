@@ -103,7 +103,8 @@ def get_collector_names(valid_subsets=None,
                         gather_subset=None,
                         aliases_map=None,
                         platform_info=None,
-                        deps_map=None):
+                        deps_map=None,
+                        requires_map=None):
     '''return a set of FactCollector names based on gather_subset spec.
 
     gather_subset is a spec describing which facts to gather.
@@ -123,6 +124,7 @@ def get_collector_names(valid_subsets=None,
     aliases_map = aliases_map or defaultdict(set)
 
     deps_map = deps_map or defaultdict(set)
+    requires_map = requires_map or defaultdict(list)
 
     # Retrieve all facts elements
     additional_subsets = set()
@@ -130,7 +132,8 @@ def get_collector_names(valid_subsets=None,
 
     pprint.pprint(('gather_subset', gather_subset))
     pprint.pprint(('minimal_gather_subset', minimal_gather_subset))
-    pprint.pprint(('deps_map', dict(deps_map)))
+    # pprint.pprint(('deps_map', dict(deps_map)))
+    pprint.pprint(('requiers_map', dict(requires_map)))
     # total always starts with the min set, then
     # adds of the additions in gather_subset, then
     # excludes all of the excludes, then add any explicitly
@@ -138,9 +141,17 @@ def get_collector_names(valid_subsets=None,
     gather_subset_with_min = ['min']
     gather_subset_with_min.extend(gather_subset)
 
+    # deps_map = build_dep_map_from_requires_map(requires_map, valid_subsets)
+    pprint.pprint(('deps_map', dict(deps_map)))
+
+    for req in requires_map:
+        if
+    #deps_subset = set()
+    #for value in requires_map.values():
+    #    deps_subset.update(set(value))
     deps_subset = []
-    for fact_name_that_requires, what_the_fact_requires_set in deps_map.items():
-        deps_subset.extend(what_the_fact_requires_set)
+    #for fact_name_that_requires, what_the_fact_requires_set in deps_map.items():
+    #    deps_subset.extend(what_the_fact_requires_set)
 
     pprint.pprint(('deps_subset', deps_subset))
     # add one level of deps in
@@ -203,6 +214,29 @@ def get_collector_names(valid_subsets=None,
     return additional_subsets
 
 
+def expand_gather_spec_element(gather_spec_element, aliases_map, valid_subsets):
+    subset_id = gather_spec_element
+    additional_subsets = set()
+
+    if subset_id == 'min':
+        additional_subsets.update(minimal_gather_subset)
+        continue
+    if subset_id == 'all':
+        additional_subsets.update(valid_subsets)
+        continue
+    if subset_id.startswith('!'):
+        subset = subset[1:]
+        if subset == 'min':
+            exclude_subsets.update(minimal_gather_subset)
+            continue
+        if subset == 'all':
+            exclude_subsets.update(valid_subsets - minimal_gather_subset)
+            continue
+        exclude = True
+    else:
+        exclude = False
+
+
 def find_collectors_for_platform(all_collector_classes, compat_platforms):
     found_collectors = []
     found_collectors_names = set()
@@ -239,38 +273,53 @@ def build_required_fact_ids(collectors_for_platform):
 def build_fact_id_to_collector_map(collectors_for_platform):
     fact_id_to_collector_map = defaultdict(list)
     aliases_map = defaultdict(set)
-    deps_map = defaultdict(list)
+    requires_map = defaultdict(list)
 
     for collector_class in collectors_for_platform:
         primary_name = collector_class.name
 
         fact_id_to_collector_map[primary_name].append(collector_class)
 
-        for dep_fact_id in collector_class.required_facts:
-            print('dep_fact_id: %s' % dep_fact_id)
-            deps_map[primary_name].append(dep_fact_id)
+        for requires_fact_id in collector_class.required_facts:
+            # print('requires_fact_id: %s' % requires_fact_id)
+            requires_map[primary_name].append(requires_fact_id)
 
         for fact_id in collector_class._fact_ids:
             fact_id_to_collector_map[fact_id].append(collector_class)
             aliases_map[primary_name].add(fact_id)
 
-    deps_subset = []
-    for fact_name_that_requires, what_the_fact_requires_set in deps_map.items():
-        deps_subset.extend(what_the_fact_requires_set)
+    return fact_id_to_collector_map, aliases_map, requires_map
 
-    pprint.pprint(('ddeps_map', dict(deps_map)))
+
+def build_dep_map_from_requires_map(requires_map, fact_id_to_collector_map):
+    #deps_subset = []
+    #for fact_name_that_requires, what_the_fact_requires_set in requires_map.items():
+    #    deps_subset.extend(what_the_fact_requires_set)
+    deps_subset = set()
+    for value in requires_map.values():
+        deps_subset.update(set(value))
+    pprint.pprint(('deps_subset', deps_subset))
+    pprint.pprint(('requires_map', dict(requires_map)))
     # map the required fact_id to the collector name that provides it. resolve the dep.
     dmap = defaultdict(set)
+
+    for required_fact in deps_subset:
+        solution_collectors = fact_id_to_collector_map.get(required_fact, None)
+        if solution_collectors is None:
+            print('could not find required_fact dep %s' % required_fact)
+            continue
+        dmap[required_fact].update(set([col.name for col in solution_collectors]))
+
     # TODO: should be able to do this within the main collector_class above
-    for collector_class in collectors_for_platform:
-        for required_fact in deps_subset:
-            if required_fact == collector_class.name:
-                dmap[required_fact].add(collector_class.name)
-            if required_fact in collector_class._fact_ids:
-                dmap[required_fact].add(collector_class.name)
+    #for collector_class in collectors_for_platform:
+    #    for required_fact in deps_subset:
+    #        if required_fact == collector_class.name:
+    #            dmap[required_fact].add(collector_class.name)
+    #        if required_fact in collector_class._fact_ids:
+    #            dmap[required_fact].add(collector_class.name)
 
     pprint.pprint(('dmap', dict(dmap)))
-    return fact_id_to_collector_map, aliases_map, dmap
+    return dmap
 
 
 def select_collector_classes(collector_names, all_fact_subsets, all_collector_classes):
@@ -336,7 +385,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     # all_facts_subsets maps the subset name ('hardware') to the class that provides it.
 
     # TODO: name collisions here? are there facts with the same name as a gather_subset (all, network, hardware, virtual, ohai, facter)
-    all_fact_subsets, aliases_map, deps_map = build_fact_id_to_collector_map(collectors_for_platform)
+    all_fact_subsets, aliases_map, requires_map = build_fact_id_to_collector_map(collectors_for_platform)
+    deps_map = build_dep_map_from_requires_map(requires_map, all_fact_subsets)
 
     #pprint.pprint(('all_fact_subsets', dict(all_fact_subsets)))
     all_valid_subsets = frozenset(all_fact_subsets.keys())
@@ -351,6 +401,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                                           gather_subset=gather_subset,
                                           aliases_map=aliases_map,
                                           platform_info=platform_info,
+                                          requires_map=requires_map,
                                           deps_map=deps_map)
 
     pprint.pprint(('collector_names', collector_names))
