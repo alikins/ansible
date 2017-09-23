@@ -144,8 +144,10 @@ def get_collector_names(valid_subsets=None,
     # deps_map = build_dep_map_from_requires_map(requires_map, valid_subsets)
     pprint.pprint(('deps_map', dict(deps_map)))
 
-    for req in requires_map:
-        if
+    pprint.pprint(('aliases_map1', dict(aliases_map)))
+    aliases_map['min'] = minimal_gather_subset
+    aliases_map['all'] = valid_subsets
+    pprint.pprint(('aliases_map2', dict(aliases_map)))
     #deps_subset = set()
     #for value in requires_map.values():
     #    deps_subset.update(set(value))
@@ -163,7 +165,9 @@ def get_collector_names(valid_subsets=None,
     # subsets we mention in gather_subset explicitly, except for 'all'/'min'
     explicitly_added = set()
 
+    foo = expand_gather_spec_elements(gather_subset_with_min, aliases_map, valid_subsets)
     for subset in gather_subset_with_min:
+        expand_gather_spec_element(subset, aliases_map, valid_subsets)
         subset_id = subset
         if subset_id == 'min':
             additional_subsets.update(minimal_gather_subset)
@@ -213,29 +217,42 @@ def get_collector_names(valid_subsets=None,
     pprint.pprint(('additiona_subsets', additional_subsets))
     return additional_subsets
 
+def expand_gather_spec_elements(gather_spec_elements, aliases_map, valid_subsets):
+    expanded_specs = set()
+    for gather_spec_element in gather_spec_elements:
+        expanded_specs.update(expand_gather_spec_element(gather_spec_element, aliases_map, valid_subsets))
+
+    print('SPECS expanded "%s" to: %s' % (gather_spec_elements, pprint.pformat(expanded_specs)))
+    pprint.pprint(('expanded_specs2', expanded_specs))
+    return expanded_specs
 
 def expand_gather_spec_element(gather_spec_element, aliases_map, valid_subsets):
-    subset_id = gather_spec_element
-    additional_subsets = set()
+    expanded_specs = set()
 
-    if subset_id == 'min':
-        additional_subsets.update(minimal_gather_subset)
-        continue
-    if subset_id == 'all':
-        additional_subsets.update(valid_subsets)
-        continue
-    if subset_id.startswith('!'):
-        subset = subset[1:]
-        if subset == 'min':
-            exclude_subsets.update(minimal_gather_subset)
-            continue
-        if subset == 'all':
-            exclude_subsets.update(valid_subsets - minimal_gather_subset)
-            continue
-        exclude = True
+    #if subset_id == 'min':
+    #    expanded_specs.update(aliases_map['min'])
+    #if subset_id == 'all':
+    #    expanded_specs.update(aliases_map['all'])
+    print('gather_spec_elemenet: %s' % gather_spec_element)
+    if gather_spec_element.startswith('!'):
+        bare_spec_element = gather_spec_element[1:]
+        bare_expanded_spec = expand_gather_spec_element(bare_spec_element, aliases_map, valid_subsets)
+
+        for spec in bare_expanded_spec:
+            expanded_specs.add('!%s' % spec)
     else:
-        exclude = False
+        possible_aliases = aliases_map.get(gather_spec_element, set())
+        if possible_aliases:
+            for possible_alias in possible_aliases:
+                expanded_specs.update(expand_gather_spec_element(possible_alias, aliases_map, valid_subsets))
+        else:
+            # add the single item
+            # expanded_specs.update(expanded_aliases_specs)
+            expanded_specs.add(gather_spec_element)
 
+    print('expanded "%s" to: %s' % (gather_spec_element, pprint.pformat(expanded_specs)))
+    pprint.pprint(('expand_specs', expanded_specs))
+    return expanded_specs
 
 def find_collectors_for_platform(all_collector_classes, compat_platforms):
     found_collectors = []
