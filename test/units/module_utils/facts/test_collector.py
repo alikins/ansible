@@ -310,9 +310,15 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(res, [])
 
+    def test_min(self):
+        res = self._classes(all_collector_classes=default_collectors.collectors,
+                            gather_subset=['min', '!env', 'virtual', '!facter'])
+        self.assertIsInstance(res, list)
+        self.assertEqual(res, [])
+
     def test_all(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,
-                            gather_subset=['all'])
+                            gather_subset=['all', '!env', '!facter'])
         self.assertIsInstance(res, list)
         self.assertEqual(res, [])
 
