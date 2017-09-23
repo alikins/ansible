@@ -39,6 +39,9 @@ class ServiceMgrFactCollector(BaseFactCollector):
     name = 'service_mgr'
     _fact_ids = set()
 
+    required_facts = set(['distribution',
+                          'system'])
+
     @staticmethod
     def is_systemd_managed(module):
         # tools must be installed

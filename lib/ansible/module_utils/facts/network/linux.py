@@ -36,6 +36,11 @@ class LinuxNetwork(Network):
     - ipv4_address and ipv6_address: the first non-local address for each family.
     """
     platform = 'Linux'
+    required_facts = set(['os_family',
+                          'distribution_version',
+                          'selinux',
+                          'env'])
+
     INTERFACE_TYPE = {
         '1': 'ether',
         '32': 'infiniband',

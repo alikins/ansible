@@ -68,6 +68,7 @@ class PkgMgrFactCollector(BaseFactCollector):
     name = 'pkg_mgr'
     _fact_ids = set()
     _platform = 'Generic'
+    required_facts = set(['system', 'selinux', 'lsb', 'machine'])
 
     def collect(self, module=None, collected_facts=None):
         facts_dict = {}

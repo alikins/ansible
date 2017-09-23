@@ -64,6 +64,7 @@ class LinuxHardware(Hardware):
     """
 
     platform = 'Linux'
+    required_facts = set(['architecture'])
 
     # Originally only had these four as toplevelfacts
     ORIGINAL_MEMORY_FACTS = frozenset(('MemTotal', 'SwapTotal', 'MemFree', 'SwapFree'))

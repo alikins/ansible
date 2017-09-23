@@ -37,6 +37,9 @@ class HPUXHardware(Hardware):
     """
 
     platform = 'HP-UX'
+    required_facts = set(['architecture',
+                          'distribution',
+                          'distribution_version'])
 
     def populate(self, collected_facts=None):
         hardware_facts = {}
