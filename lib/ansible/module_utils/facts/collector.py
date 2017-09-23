@@ -146,8 +146,8 @@ def get_collector_names(valid_subsets=None,
     # add one level of deps in
     pprint.pprint(('gather_subset_with_min before', gather_subset_with_min))
 
-    gather_subset_with_min.extend(deps_subset)
-    pprint.pprint(('gather_subset after', gather_subset_with_min))
+    #gather_subset_with_min.extend(deps_subset)
+    #pprint.pprint(('gather_subset after', gather_subset_with_min))
 
     # subsets we mention in gather_subset explicitly, except for 'all'/'min'
     explicitly_added = set()
@@ -257,11 +257,12 @@ def build_fact_id_to_collector_map(collectors_for_platform):
     for fact_name_that_requires, what_the_fact_requires_set in deps_map.items():
         deps_subset.extend(what_the_fact_requires_set)
 
+    # map the required fact_id to the collector name that provides it. resolve the dep.
     dmap = defaultdict(set)
+    # TODO: should be able to do this within the main collector_class above
     for collector_class in collectors_for_platform:
         for required_fact in deps_subset:
             if required_fact == collector_class.name or required_fact in collector_class._fact_ids:
-                #dmap[collector_class.name].add(required_fact)
                 dmap[required_fact].add(collector_class.name)
 
     pprint.pprint(('dmap', dict(dmap)))
@@ -357,7 +358,8 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     required_facts = build_required_fact_ids(selected_collector_classes)
     pprint.pprint(('required_facts', required_facts))
     required_collectors = []
-    if required_facts:
+    if False:
+    #if required_facts:
         # pprint.pprint(('all_valid_subsets', all_valid_subsets))
         solution_collector_names = get_collector_names(valid_subsets=all_valid_subsets,
                                                        minimal_gather_subset=minimal_gather_subset,

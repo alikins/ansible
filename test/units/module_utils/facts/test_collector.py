@@ -311,7 +311,7 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
                             # minimal_gather_subset=set(['platform']),
                             gather_subset=['pkg_mgr'])
         self.assertIsInstance(res, list)
-        self.assertEqual(res, [])
+        self.assertEqual(res, [default_collectors.PkgMgrFactCollector])
 
     def test_env(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,
