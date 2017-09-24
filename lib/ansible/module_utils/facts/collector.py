@@ -165,7 +165,10 @@ def get_collector_names(valid_subsets=None,
     # subsets we mention in gather_subset explicitly, except for 'all'/'min'
     explicitly_added = set()
 
-    foo = expand_gather_spec_elements(gather_subset_with_min, aliases_map, valid_subsets)
+    #foo = expand_gather_spec_elements(gather_subset_with_min, aliases_map, valid_subsets)
+    foo = expand_gather_spec(gather_subset_with_min, aliases_map, valid_subsets)
+
+    gather_subset_with_min = []
     for subset in gather_subset_with_min:
         # expand_gather_spec_element(subset, aliases_map, valid_subsets)
         subset_id = subset
@@ -209,6 +212,8 @@ def get_collector_names(valid_subsets=None,
             # additional_subsets.update(to_add)
             additional_subsets.update(deps_required)
 
+
+    additional_subsets, exclude_subsets, explicitly_added = foo
     if not additional_subsets:
         additional_subsets.update(valid_subsets)
 
@@ -221,15 +226,25 @@ def get_collector_names(valid_subsets=None,
 def expand_gather_spec(gather_spec, aliases_map, valid_subsets):
     exclude_set = set()
     add_set = set()
+    explicitly_added_set = set()
+
     for element in gather_spec:
         if element.startswith('!'):
             bare_element = element[1:]
             expanded_exclude_set = expand_gather_spec_element(bare_element, aliases_map, valid_subsets)
             exclude_set.update(expanded_exclude_set)
         else:
+            explicitly_added_set.add(element)
             expanded_add_set = expand_gather_spec_element(element, aliases_map, valid_subsets)
             add_set.update(expanded_add_set)
 
+    print('')
+    pprint.pprint(('add_set', add_set))
+    print('')
+    pprint.pprint(('exclude_set', exclude_set))
+    print('')
+    pprint.pprint(('explicityly_added_set', explicitly_added_set))
+    return add_set, exclude_set, explicitly_added_set
 
 
 def expand_gather_spec_elements(gather_spec_elements, aliases_map, valid_subsets):
@@ -245,45 +260,23 @@ def expand_gather_spec_elements(gather_spec_elements, aliases_map, valid_subsets
 def expand_gather_spec_element(gather_spec_element, aliases_map, valid_subsets):
     expanded_specs = set()
 
-    #if subset_id == 'min':
-    #    expanded_specs.update(aliases_map['min'])
-    #if subset_id == 'all':
-    #    expanded_specs.update(aliases_map['all'])
     print('\ngather_spec_elemenet: %s' % gather_spec_element)
-    if gather_spec_element.startswith('!'):
-        print('NEGATING %s' % gather_spec_element)
-        bare_spec_element = gather_spec_element[1:]
-        bare_expanded_spec = expand_gather_spec_element(bare_spec_element, aliases_map, valid_subsets)
 
-        negates = set()
-        for spec in bare_expanded_spec:
-            negates.add('!%s' % spec)
-        print('negate set: %s' % pprint.pformat(negates))
-        expanded_specs.update(negates)
-    else:
-        possible_aliases = aliases_map.get(gather_spec_element, set())
-        print('possible_aliases: %s' % possible_aliases)
-        #print('foo %s' % set([gather_spec_element]))
-        if possible_aliases:
-            if not possible_aliases.issuperset(set([gather_spec_element])):
-                print('expanding alias %s' % gather_spec_element)
-                expanded_specs.update(expand_gather_spec_elements(possible_aliases, aliases_map, valid_subsets))
+    possible_aliases = aliases_map.get(gather_spec_element, set())
+    print('possible_aliases: %s' % possible_aliases)
 
-            else:
-                print('superset: %s ' % gather_spec_element)
-                expanded_specs.add(gather_spec_element)
-                # return expanded_specs
-        else:
-            print('no aliases for %s' % gather_spec_element)
+    if possible_aliases:
+        if possible_aliases.issuperset(set([gather_spec_element])):
+            print('superset: %s ' % gather_spec_element)
             expanded_specs.add(gather_spec_element)
-            # return expanded_specs
+        else:
+            print('expanding alias %s' % gather_spec_element)
+            expanded_specs.update(expand_gather_spec_elements(possible_aliases, aliases_map, valid_subsets))
 
-
-                #for possible_alias in possible_aliases:
-                #    expanded_specs.update(expand_gather_spec_element(possible_alias, aliases_map, valid_subsets))
-            # add the single item
-            # expanded_specs.update(expanded_aliases_specs)
-            # expanded_specs.add(gather_spec_element)
+    else:
+        print('no aliases for %s' % gather_spec_element)
+        expanded_specs.add(gather_spec_element)
+        # return expanded_specs
 
     print('EXPANDED "%s":' % (gather_spec_element))
     print('TO: %s' % pprint.pformat(expanded_specs))

@@ -318,14 +318,14 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
 
     def test_all(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,
-                            gather_subset=['all', '!env', '!facter'])
+                            gather_subset=['all', '!env', '!facter', '!chroot'])
         self.assertIsInstance(res, list)
         self.assertEqual(res, [])
 
     def test_pkg_mgr(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,
-                            minimal_gather_subset=set(['python']),
-                            gather_subset=['pkg_mgr', '!env'])
+                            minimal_gather_subset=set(['python', 'hardware']),
+                            gather_subset=['env', 'pkg_mgr', '!env'])
         self.assertIsInstance(res, list)
         self.assertEqual(res,
                          [
@@ -336,7 +336,7 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
 
     def test_service_mgr(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,
-                            # minimal_gather_subset=set(['platform']),
+                            minimal_gather_subset=set(['platform', 'hardware']),
                             gather_subset=['service_mgr'])
         self.assertIsInstance(res, list)
         self.assertEqual(res,
