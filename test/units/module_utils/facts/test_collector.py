@@ -322,10 +322,23 @@ class TestCollectorClassesFromGatherSubset(unittest.TestCase):
         self.assertIsInstance(res, list)
         self.assertEqual(res, [])
 
+    def test_hardware_alias(self):
+        res = self._classes(all_collector_classes=default_collectors.collectors,
+                            # minimal_gather_subset=set(['python', 'platform', 'distribution']),
+                            gather_subset=['hardware'])
+        self.assertIsInstance(res, list)
+        self.assertEqual(res, [])
+
+    def test_hardware_fact(self):
+        res = self._classes(all_collector_classes=default_collectors.collectors,
+                            gather_subset=['uptime_seconds'])
+        self.assertIsInstance(res, list)
+        self.assertEqual(res, [])
+
     def test_pkg_mgr(self):
         res = self._classes(all_collector_classes=default_collectors.collectors,
-                            minimal_gather_subset=set(['python', 'hardware']),
-                            gather_subset=['env', 'pkg_mgr', '!env'])
+                            # minimal_gather_subset=set(['python', 'hardware']),
+                            gather_subset=['pkg_mgr',])
         self.assertIsInstance(res, list)
         self.assertEqual(res,
                          [

@@ -64,7 +64,6 @@ class LinuxHardware(Hardware):
     """
 
     platform = 'Linux'
-    required_facts = set(['architecture'])
 
     # Originally only had these four as toplevelfacts
     ORIGINAL_MEMORY_FACTS = frozenset(('MemTotal', 'SwapTotal', 'MemFree', 'SwapFree'))
@@ -711,3 +710,21 @@ class LinuxHardware(Hardware):
 class LinuxHardwareCollector(HardwareCollector):
     _platform = 'Linux'
     _fact_class = LinuxHardware
+
+    _linux_fact_ids = set(['lvm',
+                           'memory_mb',
+                           'bios_date',
+                           'bios_version',
+                           'form_facter',
+                           'product_name',
+                           'product_serial',
+                           'product_uuid',
+                           'product_version',
+                           'system_vendor',
+                           'uptime_seconds'])
+
+    _fact_ids = set()
+    _fact_ids.update(HardwareCollector._fact_ids)
+    _fact_ids.update(_linux_fact_ids)
+
+    required_facts = set(['architecture'])

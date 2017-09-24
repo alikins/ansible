@@ -262,25 +262,25 @@ def expand_gather_spec_element(gather_spec_element, aliases_map, valid_subsets):
 
     print('\ngather_spec_elemenet: %s' % gather_spec_element)
 
-    possible_aliases = aliases_map.get(gather_spec_element, set())
+    possible_aliases = aliases_map.get(gather_spec_element, set([gather_spec_element]))
     print('possible_aliases: %s' % possible_aliases)
 
-    if possible_aliases:
-        if possible_aliases.issuperset(set([gather_spec_element])):
-            print('superset: %s ' % gather_spec_element)
-            expanded_specs.add(gather_spec_element)
-        else:
-            print('expanding alias %s' % gather_spec_element)
-            expanded_specs.update(expand_gather_spec_elements(possible_aliases, aliases_map, valid_subsets))
-
-    else:
-        print('no aliases for %s' % gather_spec_element)
+    # if possible_aliases:
+    # if the list of possible_aliases is the same as the spec element, we are done.
+    # This is the end to recursion
+    if possible_aliases.issuperset(set([gather_spec_element])):
+        print('nothing to expand for: %s ' % gather_spec_element)
         expanded_specs.add(gather_spec_element)
         # return expanded_specs
+    else:
+        print('expanding aliases for %s' % gather_spec_element)
+        expanded_specs.update(expand_gather_spec_elements(possible_aliases, aliases_map, valid_subsets))
+
 
     print('EXPANDED "%s":' % (gather_spec_element))
     print('TO: %s' % pprint.pformat(expanded_specs))
-    pprint.pprint(('expand_specs', expanded_specs))
+    # pprint.pprint(('expand_specs', expanded_specs))
+    pprint.pprint(('expanded_specs results for %s' % gather_spec_element, expanded_specs))
     return expanded_specs
 
 def find_collectors_for_platform(all_collector_classes, compat_platforms):
@@ -368,30 +368,58 @@ def build_dep_map_from_requires_map(requires_map, fact_id_to_collector_map):
     return dmap
 
 
-def select_collector_classes(collector_names, all_fact_subsets, all_collector_classes):
+def select_collector_classes(collector_names, all_fact_subsets,
+                             all_collector_classes, collectors_for_platform):
+    '''Given all collector classes and the fact->collector map, return any classes with names mentioned in collector_names
+
+    And try to preserve the order from all_collector_classes
+
+    '''
+
     # TODO: can be a set()
-    seen_collector_classes = []
+    seen_collector_classes = set()
 
     selected_collector_classes = []
 
     # pprint.pprint(('all_collector_classes', all_collector_classes))
     pprint.pprint(('collector_names', collector_names))
     for candidate_collector_class in all_collector_classes:
-        candidate_collector_name = candidate_collector_class.name
-        #print('candidate_collector_name: %s' % candidate_collector_name)
-        #print('candidate_collector_class: %s' % candidate_collector_class)
+        cname = candidate_collector_class.name
+        #print('\ncname: %s %s' % (cname, candidate_collector_class))
+        # print('candidate_collector_class: %s' % candidate_collector_class)
 
-        if candidate_collector_name not in collector_names:
-            # print('Did not find collector for candidate_collector_name=%s' % candidate_collector_name)
+        # skip non compat arch
+        #if candidate_collector_class not in collectors_for_platform:
+        #    continue
+
+        if cname in seen_collector_classes:
+            print('seen %s' % cname)
             continue
 
-        collector_classes = all_fact_subsets.get(candidate_collector_name, [])
-        print('collector_classes: %s' % collector_classes)
+        collector_classes = all_fact_subsets.get(cname, [])
 
-        for collector_class in collector_classes:
-            if collector_class not in seen_collector_classes:
-                selected_collector_classes.append(collector_class)
-                seen_collector_classes.append(collector_class)
+        print('collector_classes: %s' % collector_classes)
+        # print('\nseen_collector_classes: %s' % pprint.pformat(seen_collector_classes))
+
+        #c_classes = collector_classes
+        c_classes = set(collector_classes).difference(seen_collector_classes)
+        print('\nc_classes: %s' % c_classes)
+        c_classes = c_classes.intersection(set(collectors_for_platform))
+        #c_classes = set(collectors_for_platform).difference(c_classes)
+        print('\nc_classes2: %s' % c_classes)
+        c_classes = c_classes.intersection(set(collector_classes))
+        print('\nc_classes3: %s' % c_classes)
+
+        skip = False
+        for c_class in c_classes:
+            print('c_class: %s' % c_class)
+            seen_collector_classes.add(c_class)
+            targets = set([c_class.name])
+            targets.update(c_class._fact_ids)
+
+            if cname in targets:
+                selected_collector_classes.append(c_class)
+
 
     pprint.pprint(('selected_collector_classes', selected_collector_classes))
     return selected_collector_classes
@@ -436,7 +464,7 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
 
     #pprint.pprint(('all_fact_subsets', dict(all_fact_subsets)))
     all_valid_subsets = frozenset(all_fact_subsets.keys())
-    #pprint.pprint(('all_valid_subsets', all_valid_subsets))
+    pprint.pprint(('all_valid_subsets', all_valid_subsets))
     #pprint.pprint(('aliaes_map', dict(aliases_map)))
     pprint.pprint(('deps_map', dict(deps_map)))
     # ['lsb', 'selinux', 'system', 'machine', 'env', 'distribution'])
@@ -451,30 +479,16 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
                                           deps_map=deps_map)
 
     pprint.pprint(('collector_names', collector_names))
-    # pprint.pprint(('all_fact_subsets', dict(all_fact_subsets)))
+    pprint.pprint(('collector_for_platform', collectors_for_platform))
+    pprint.pprint(('all_fact_subsets', dict(all_fact_subsets)))
     selected_collector_classes = select_collector_classes(collector_names,
                                                           all_fact_subsets,
-                                                          all_collector_classes)
+                                                          all_collector_classes,
+                                                          collectors_for_platform)
 
     required_facts = build_required_fact_ids(selected_collector_classes)
     pprint.pprint(('required_facts', required_facts))
     required_collectors = []
-    if False:
-    #if required_facts:
-        # pprint.pprint(('all_valid_subsets', all_valid_subsets))
-        solution_collector_names = get_collector_names(valid_subsets=all_valid_subsets,
-                                                       minimal_gather_subset=minimal_gather_subset,
-                                                       gather_subset=required_facts,
-                                                       aliases_map=aliases_map,
-                                                       platform_info=platform_info)
-        pprint.pprint(('solution_collector_names', solution_collector_names))
-        solution_collectors = select_collector_classes(solution_collector_names,
-                                                       all_fact_subsets,
-                                                       all_collector_classes)
-        if solution_collectors:
-            required_collectors.extend(solution_collectors)
-        # for required_fact in required_facts:
-        #     solution_collectors = all_fact_subsets.get(required_fact, None)
 
     pprint.pprint(('required_collectors', required_collectors))
 

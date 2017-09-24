@@ -34,7 +34,6 @@ class SunOSHardware(Hardware):
     swap_reserved_mb and swap_allocated_mb that is available from *swap -s*.
     """
     platform = 'SunOS'
-    required_facts = set(['machine'])
 
     def populate(self, collected_facts=None):
         hardware_facts = {}
@@ -264,3 +263,5 @@ class SunOSHardware(Hardware):
 class SunOSHardwareCollector(HardwareCollector):
     _fact_class = SunOSHardware
     _platform = 'SunOS'
+
+    required_facts = set(['machine'])
