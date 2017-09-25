@@ -252,35 +252,35 @@ def expand_gather_spec_elements(gather_spec_elements, aliases_map, valid_subsets
     for gather_spec_element in gather_spec_elements:
         expanded_specs.update(expand_gather_spec_element(gather_spec_element, aliases_map, valid_subsets))
 
-    print('SPECS expanded "%s" to: %s' % (pprint.pformat(gather_spec_elements),
-                                          pprint.pformat(expanded_specs)))
-    pprint.pprint(('expanded_specs2', expanded_specs))
+    # print('SPECS expanded "%s" to: %s' % (pprint.pformat(gather_spec_elements),
+    #                                      pprint.pformat(expanded_specs)))
+    # pprint.pprint(('expanded_specs2', expanded_specs))
     return expanded_specs
 
 def expand_gather_spec_element(gather_spec_element, aliases_map, valid_subsets):
     expanded_specs = set()
 
-    print('\ngather_spec_elemenet: %s' % gather_spec_element)
+    # print('\ngather_spec_elemenet: %s' % gather_spec_element)
 
     possible_aliases = aliases_map.get(gather_spec_element, set([gather_spec_element]))
-    print('possible_aliases: %s' % possible_aliases)
+    # print('possible_aliases: %s' % possible_aliases)
 
     # if possible_aliases:
     # if the list of possible_aliases is the same as the spec element, we are done.
     # This is the end to recursion
     if possible_aliases.issuperset(set([gather_spec_element])):
-        print('nothing to expand for: %s ' % gather_spec_element)
+        # print('nothing to expand for: %s ' % gather_spec_element)
         expanded_specs.add(gather_spec_element)
         # return expanded_specs
     else:
-        print('expanding aliases for %s' % gather_spec_element)
+        # print('expanding aliases for %s' % gather_spec_element)
         expanded_specs.update(expand_gather_spec_elements(possible_aliases, aliases_map, valid_subsets))
 
 
-    print('EXPANDED "%s":' % (gather_spec_element))
-    print('TO: %s' % pprint.pformat(expanded_specs))
+    # print('EXPANDED "%s":' % (gather_spec_element))
+    # print('TO: %s' % pprint.pformat(expanded_specs))
     # pprint.pprint(('expand_specs', expanded_specs))
-    pprint.pprint(('expanded_specs results for %s' % gather_spec_element, expanded_specs))
+    # pprint.pprint(('expanded_specs results for %s' % gather_spec_element, expanded_specs))
     return expanded_specs
 
 def find_collectors_for_platform(all_collector_classes, compat_platforms):
@@ -393,26 +393,26 @@ def select_collector_classes(collector_names, all_fact_subsets,
         #    continue
 
         if cname in seen_collector_classes:
-            print('seen %s' % cname)
+            # print('seen %s' % cname)
             continue
 
         collector_classes = all_fact_subsets.get(cname, [])
 
-        print('collector_classes: %s' % collector_classes)
+        #print('collector_classes: %s' % collector_classes)
         # print('\nseen_collector_classes: %s' % pprint.pformat(seen_collector_classes))
 
         #c_classes = collector_classes
         c_classes = set(collector_classes).difference(seen_collector_classes)
-        print('\nc_classes: %s' % c_classes)
+        #print('\nc_classes: %s' % c_classes)
         c_classes = c_classes.intersection(set(collectors_for_platform))
         #c_classes = set(collectors_for_platform).difference(c_classes)
-        print('\nc_classes2: %s' % c_classes)
+        #print('\nc_classes2: %s' % c_classes)
         c_classes = c_classes.intersection(set(collector_classes))
-        print('\nc_classes3: %s' % c_classes)
+        #print('\nc_classes3: %s' % c_classes)
 
         skip = False
         for c_class in c_classes:
-            print('c_class: %s' % c_class)
+            #print('c_class: %s' % c_class)
             seen_collector_classes.add(c_class)
             targets = set([c_class.name])
             targets.update(c_class._fact_ids)
@@ -481,6 +481,35 @@ def collector_classes_from_gather_subset(all_collector_classes=None,
     pprint.pprint(('collector_names', collector_names))
     pprint.pprint(('collector_for_platform', collectors_for_platform))
     pprint.pprint(('all_fact_subsets', dict(all_fact_subsets)))
+
+    pprint.pprint(('requires_map', dict(requires_map)))
+    # resolve deps
+    # missing_requires = find_unresolved_requires(collector_names, all_fact_subsets
+    # add_missing_requires_to_collector_names(collector_names)
+    # #def build_dep_data
+    # collector_dep_map = defaultdict(set)
+    # for collector_name in collectors:
+    #    collector_deps = set()
+    #    for collector in all_fact_subsets[collector_name]:
+    #        for dep in collector.required_facts:
+    #            collector_deps.add(dep)
+    #    collector_dep_map[collector_name] = collector_deps
+    # dep_data = build_dep_data(collector_names, all_fact_subsets)
+    # munge collector_dep_map to adjancenty list
+    # #def build_adj_list
+    # dep_adj_list = []
+    # for collector, deps in collector_dep_map.items():
+    #   for dep in deps:
+    #       dep_adj_list.append((collector, dep))
+    #  return dep_adj_list
+    # ordered_collector_names = tsort(dep_adj_list)
+    # lookup collector name -> collector class build collector list
+    # ordered_collector_list = []
+    # for name in ordered_collector_names:
+    #     c_classes = all_fact_subsets[name]
+    #     for c_class in c_classes:
+    #         ordered_collector_list.append(c_class)
+    # return ordered_collector_list
     selected_collector_classes = select_collector_classes(collector_names,
                                                           all_fact_subsets,
                                                           all_collector_classes,
