@@ -40,15 +40,9 @@ Issues per project board
 ========================
 
   * [2.5](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F9)
-    * [most commented](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F9+sort%3Acomments-desc)
-    * [most thumbs up](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F9+sort%3Areactions-%2B1-desc)
-    * [most recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F9+sort%3Aupdated-desc)
-    * [least recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+sort%3Aupdated-asc+project%3Aansible%2Fansible%2F9)
+    * [most commented](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F9+sort%3Acomments-desc) [most thumbs up](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F9+sort%3Areactions-%2B1-desc) [most recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F9+sort%3Aupdated-desc) [least recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+sort%3Aupdated-asc+project%3Aansible%2Fansible%2F9)
   * [networking](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+sort%3Acreated-desc+project%3Aansible%2Fansible%2F10)
-    * [most commented](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Acomments-desc)
-    * [most thumbs up](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Acomments-desc)
-    * [most recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Aupdated-desc)
-    * [least recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Aupdated-asc)
+    * [most commented](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Acomments-desc) [most thumbs up](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Acomments-desc) [most recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Aupdated-desc) [least recently updated](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F10+sort%3Aupdated-asc)
   * [python 3 compatibility](https://github.com/ansible/ansible/issues?q=is%3Aopen+is%3Aissue+project%3Aansible%2Fansible%2F1+sort%3Acreated-desc)
 
 Issues for modules
