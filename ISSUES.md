@@ -1,7 +1,6 @@
 Anisble Issue Queries
 =====================
 
-
 by version
 by module/core
 by affects
