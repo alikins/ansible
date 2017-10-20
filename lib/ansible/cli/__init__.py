@@ -297,6 +297,7 @@ class CLI(with_metaclass(ABCMeta, object)):
                                                       loader=loader)
 
             # an invalid password file will error globally
+            print('vault secrets: %s' % vault_secrets)
             try:
                 file_vault_secret.load()
             except AnsibleError as exc:
