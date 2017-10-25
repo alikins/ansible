@@ -243,3 +243,23 @@ def extract_metadata(module_ast=None, module_data=None, offsets=False):
             break
 
     return metadata, start_line, start_col, end_line, end_col, targets
+
+
+def return_metadata(plugins):
+    """Get the metadata for all modules
+
+    Handle duplicate module names
+
+    :arg plugins: List of plugins to look for
+    :returns: Mapping of plugin name to metadata dictionary
+    """
+    metadata = {}
+    for name, filename in plugins:
+        # There may be several files for a module (if it is written in another
+        # language, for instance) but only one of them (the .py file) should
+        # contain the metadata.
+        if name not in metadata or metadata[name] is not None:
+            with open(filename, 'rb') as f:
+                module_data = f.read()
+            metadata[name] = extract_metadata(module_data=module_data, offsets=True)[0]
+    return metadata
