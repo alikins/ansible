@@ -25,9 +25,7 @@ import os
 import os.path
 
 from ansible.module_utils._text import to_text
-
-# a lib/module version of hacking/metadata-tool.py
-from ansible.utils import module_metadata
+from ansible.parsing import metadata
 
 try:
     from __main__ import display
@@ -159,6 +157,7 @@ class ModuleNamespaces:
 
 
 # filter out modules by their metadata. ie, 'only supported' or 'ignore community' etc
+# TODO: doesn't have to be purely name based filter, we could pass in name, path, etc
 class MetadataModuleFilter:
     '''Can filter modules based on the modules ANSIBLE_METADATA.
 
@@ -182,6 +181,7 @@ class MetadataModuleFilter:
 
         mod_metadata = metadata.get(name, None)
 
+        # print('\nname: %s' % name)
         # print('mod_metadata: %s' % mod_metadata)
 
         # FIXME: if a module doesnt have metadata, do we always exclude it? vice versa
@@ -226,9 +226,8 @@ class MetadataModuleFilter:
                 allowed = True
                 status_allowed = True
 
-        # print('\nname: %s' % name)
-        # print('supported_by_allowed: %s' % supported_by_allowed)
-        # print('status_allowed: %s' % status_allowed)
+        # print('plugin "%s" supported_by_allowed: %s' % (name, supported_by_allowed))
+        # print('plugin "%s" status_allowed: %s' % (name, status_allowed))
 
         # require both supported_by and status to be valid
         allowed = supported_by_allowed and status_allowed
@@ -238,13 +237,12 @@ class MetadataModuleFilter:
     # FIXME: rename to something more filtery
     def check_plugin(self, name, path):
 
-        metadata = None
         # FIXME: this doesnt 'cache' module metadata
-        metadata = module_metadata.return_metadata([(name, path)])
+        _metadata = metadata.return_metadata([(name, path)])
 
         # pprint.pprint(metadata)
 
-        metadata_result = self.check_metadata(name, path, metadata)
+        metadata_result = self.check_metadata(name, path, _metadata)
         # print('mr: %s' % repr(metadata_result))
 
         # FIXME FIXME FIXME: add a Result obj instead of this tuple nonsense
@@ -254,6 +252,17 @@ class MetadataModuleFilter:
 
         if metadata_result[0]:
             return (True, metadata_result[1], name, path)
+
+        display.warning('Plugin "%s" does not meet required metadata rules' % name)
+
+        # FIXME: make/user a result object repr instead
+        filter_msg_list = ['Plugin "%s" was rejected by plugin filter blacklists:' % (name)]
+        for denier in metadata_result[1]:
+            filter_msg_list.append('- "%s" was in %s: %s' %
+                                   (denier[2], denier[0], self.filter_rules['blacklists'][denier[0]]))
+
+        filter_msg = '\n'.join(filter_msg_list)
+        display.warning(filter_msg)
 
         return (False, metadata_result[1], name, path)
 
