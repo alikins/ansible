@@ -74,6 +74,9 @@ class PluginLoader:
         self._extra_dirs = []
         self._searched_paths = set()
 
+        self.module_finder = ModuleFinder(path_cache=self._plugin_path_cache,
+                                          aliases=self.aliases)
+
     def __setstate__(self, data):
         '''
         Deserializer.
@@ -245,17 +248,10 @@ class PluginLoader:
             # they can have any suffix
             suffix = ''
 
-        if check_aliases:
-            name = self.aliases.get(name, name)
+        find_result = self.module_finder.find_plugin(name, mod_type=suffix)
 
-        # The particular cache to look for modules within.  This matches the
-        # requested mod_type
-        pull_cache = self._plugin_path_cache[suffix]
-        try:
-            return pull_cache[name]
-        except KeyError:
-            # Cache miss.  Now let's find the plugin
-            pass
+        if find_result:
+            return find_result
 
         # TODO: Instead of using the self._paths cache (PATH_CACHE) and
         #       self._searched_paths we could use an iterator.  Before enabling that
@@ -299,22 +295,10 @@ class PluginLoader:
                     self._plugin_path_cache[extension][full_name] = full_path
 
             self._searched_paths.add(path)
-            try:
-                return pull_cache[name]
-            except KeyError:
-                # Didn't find the plugin in this directory. Load modules from the next one
-                pass
 
-        # if nothing is found, try finding alias/deprecated
-        if not name.startswith('_'):
-            alias_name = '_' + name
-            # We've already cached all the paths at this point
-            if alias_name in pull_cache:
-                if not ignore_deprecated and not os.path.islink(pull_cache[alias_name]):
-                    # FIXME: this is not always the case, some are just aliases
-                    display.deprecated('%s is kept for backwards compatibility but usage is discouraged. '
-                                       'The module documentation details page may explain more about this rationale.' % name.lstrip('_'))
-                return pull_cache[alias_name]
+            find_result = self.module_finder.find_plugin(name, mod_type=suffix)
+            if find_result:
+                return find_result
 
         return None
 
@@ -361,6 +345,7 @@ class PluginLoader:
             return None
 
         if path not in self._module_cache:
+            # self._module_cache[path] = self._load_module_source('.'.join([self.package, name]), path)
             self._module_cache[path] = self._load_module_source(name, path)
             found_in_cache = False
 
@@ -413,6 +398,7 @@ class PluginLoader:
         for i in self._get_paths():
             all_matches.extend(glob.glob(os.path.join(i, "*.py")))
 
+        # for path in sorted(all_matches, key=lambda match: os.path.basename(match)):
         for path in sorted(all_matches, key=os.path.basename):
             name = os.path.basename(os.path.splitext(path)[0])
 
