@@ -18,6 +18,7 @@ from collections import defaultdict
 
 from ansible import constants as C
 from ansible.plugins import get_plugin_class, MODULE_CACHE, PATH_CACHE, PLUGIN_PATH_CACHE
+from ansible.plugins.finder import ModuleFinder
 from ansible.module_utils._text import to_text
 from ansible.parsing.plugin_docs import read_docstring
 
@@ -440,6 +441,7 @@ class PluginLoader:
 
             self._update_object(obj, name, path)
             yield obj
+
 
 action_loader = PluginLoader(
     'ActionModule',
