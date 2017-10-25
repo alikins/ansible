@@ -18,7 +18,7 @@ from collections import defaultdict
 
 from ansible import constants as C
 from ansible.plugins import get_plugin_class, MODULE_CACHE, PATH_CACHE, PLUGIN_PATH_CACHE
-from ansible.plugins.finder import ModuleFinder
+from ansible.plugins.finder import PluginFinder
 from ansible.module_utils._text import to_text
 from ansible.parsing.plugin_docs import read_docstring
 
@@ -75,7 +75,7 @@ class PluginLoader:
         self._extra_dirs = []
         self._searched_paths = set()
 
-        self.module_finder = ModuleFinder(path_cache=self._plugin_path_cache,
+        self.module_finder = PluginFinder(path_cache=self._plugin_path_cache,
                                           aliases=self.aliases)
 
     def __setstate__(self, data):

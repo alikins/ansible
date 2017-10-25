@@ -41,7 +41,7 @@ PLUGIN_PATH_CACHE = {}
 
 # TODO: this is becoming less of a namespace and more of a name resolver, but I
 #       guess there isnt a ton of difference
-class ModuleNamespace:
+class PluginNamespace:
     _name = None
 
     # FIXME: pull_cache is not a very good name, but it is used elsewhere
@@ -89,7 +89,7 @@ class ModuleNamespace:
         return find_result
 
 
-class DeprecatedModuleNamespace(ModuleNamespace):
+class DeprecatedPluginNamespace(PluginNamespace):
     _name = '_'
 
     def _check_deprecated(self, name, ignore_deprecated, module_path):
@@ -109,7 +109,7 @@ class DeprecatedModuleNamespace(ModuleNamespace):
                            name.lstrip(deprecated_namespace))
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
-        find_result = super(DeprecatedModuleNamespace, self).find_plugin(name, mod_type,
+        find_result = super(DeprecatedPluginNamespace, self).find_plugin(name, mod_type,
                                                                          ignore_deprecated)
 
         if find_result:
@@ -119,13 +119,13 @@ class DeprecatedModuleNamespace(ModuleNamespace):
         return find_result
 
 
-class AliasModuleNamespace(ModuleNamespace):
-    '''map one module name to another'''
+class AliasPluginNamespace(PluginNamespace):
+    '''map one plugin name to another'''
 
     name = '_alias_'
 
     def __init__(self, name=None, path_cache=None, alias_map=None):
-        super(AliasModuleNamespace, self).__init__(name=name, path_cache=path_cache)
+        super(AliasPluginNamespace, self).__init__(name=name, path_cache=path_cache)
 
         # when asked for 'foo', return 'bar' found via map
         self.alias_map = {}
@@ -136,7 +136,7 @@ class AliasModuleNamespace(ModuleNamespace):
         return self.alias_map.get(name, name)
 
 
-class ModuleNamespaces:
+class PluginNamespaces:
 
     def __init__(self, namespaces=None):
         self.namespaces = []
@@ -158,7 +158,7 @@ class ModuleNamespaces:
 
 # filter out modules by their metadata. ie, 'only supported' or 'ignore community' etc
 # TODO: doesn't have to be purely name based filter, we could pass in name, path, etc
-class MetadataModuleFilter:
+class MetadataPluginFinder:
     '''Can filter modules based on the modules ANSIBLE_METADATA.
 
     At least for python modules.
@@ -273,12 +273,12 @@ class MetadataModuleFilter:
 
 # other potential subclass
 # a finder that adds filter rules from a config or playbook (sort of task firewall ish)
-class BaseModuleFinder:
+class BasePluginFinder:
     def __init__(self, path_cache=None, module_namespaces=None, filter_rules=None):
 
-        self.namespaces = ModuleNamespaces(namespaces=module_namespaces)
+        self.namespaces = PluginNamespaces(namespaces=module_namespaces)
 
-        self.metadata_filter = MetadataModuleFilter(filter_rules=filter_rules)
+        self.metadata_filter = MetadataPluginFinder(filter_rules=filter_rules)
 
     def find_plugin(self, name, mod_type=None, ignore_deprecated=False):
         namespace_find_result = self.namespaces.find_plugin(name, mod_type, ignore_deprecated)
@@ -301,12 +301,12 @@ class BaseModuleFinder:
 
 
 # The module finder with our defaults
-class ModuleFinder(BaseModuleFinder):
+class PluginFinder(BasePluginFinder):
     # TODO: could be passed to an alt constructor, or just called directly
     def __init__(self, path_cache=None, module_namespaces=None, aliases=None):
         # alias -> real name
 
-        # TODO: Construct this outside of ModuleFinder init, and pass it in
+        # TODO: Construct this outside of PluginFinder init, and pass it in
         #       as namespaces option. Most instances with use the same setup, but
         #       it would be useful to use different impls at times (for example,
         #       a windows/winrm specific pluginload would want a window specific module
@@ -314,15 +314,15 @@ class ModuleFinder(BaseModuleFinder):
         #       getting their scopes and lifetimes sorted out.
 
         # Now check other namespaces as well, include the default '' namespacei
-        module_namespaces = [ModuleNamespace(name='',                 # the normal namespace
+        module_namespaces = [PluginNamespace(name='',                 # the normal namespace
                                              path_cache=path_cache),
 
                              # potentially runtime mapping of module names
-                             AliasModuleNamespace(alias_map=aliases,
+                             AliasPluginNamespace(alias_map=aliases,
                                                   path_cache=path_cache),
 
                              # deprecated modules with _modulename
-                             DeprecatedModuleNamespace(path_cache=path_cache)]
+                             DeprecatedPluginNamespace(path_cache=path_cache)]
 
         filter_rules = {'whitelists': {'supported_by_whitelist': ['core',
                                                                   'community',
@@ -330,6 +330,6 @@ class ModuleFinder(BaseModuleFinder):
                                        'status_whitelist': []},
                         'blacklists': {'supported_by_blacklist': ['community'],
                                        'status_blacklist': ['preview', 'removed']}}
-        super(ModuleFinder, self).__init__(path_cache=path_cache,
+        super(PluginFinder, self).__init__(path_cache=path_cache,
                                            module_namespaces=module_namespaces,
                                            filter_rules=filter_rules)
