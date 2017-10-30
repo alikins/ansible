@@ -418,6 +418,8 @@ class VariableManager:
                             vars_file = templar.template(vars_file)
                             vars_file_scope_info = {'vars_file': vars_file}
                             vars_file_scope_info.update(scope_info.copy())
+                            # vars_file_scope_info['vars_files'] = vars_files
+                            # vars_file_scope_info['vars_file_item'] = vars_file_item
                             try:
                                 data = preprocess_vars(self._loader.load_from_file(vars_file, unsafe=True))
                                 if data is not None:
