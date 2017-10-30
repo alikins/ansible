@@ -141,6 +141,12 @@ class DataLoader:
             # return a deep copy here, so the cache is not affected
             return copy.deepcopy(parsed_data)
 
+    def load_from_file_with_data(self, file_name, cache=True, unsafe=False):
+        full_file_name = self.path_dwim(file_name)
+        obj = self.load_from_file(file_name, cache, unsafe)
+        metadata = {'full_path': full_file_name}
+        return (obj, metadata)
+
     def path_exists(self, path):
         path = self.path_dwim(path)
         return os.path.exists(to_bytes(path, errors='surrogate_or_strict'))

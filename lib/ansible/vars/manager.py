@@ -421,8 +421,13 @@ class VariableManager:
                             # vars_file_scope_info['vars_files'] = vars_files
                             # vars_file_scope_info['vars_file_item'] = vars_file_item
                             try:
-                                data = preprocess_vars(self._loader.load_from_file(vars_file, unsafe=True))
+                                ds, metadata = self._loader.load_from_file_with_data(vars_file, unsafe=True)
+                                # data = preprocess_vars(self._loader.load_from_file(vars_file, unsafe=True))
+                                data = preprocess_vars(ds)
+                                vars_file_scope_info['vars_file_full_path'] = metadata['full_path']
                                 if data is not None:
+                                    import pprint
+                                    pprint.pprint(data)
                                     for item in data:
                                         all_vars = combine_vars(all_vars, item,
                                                                 scope_name='vars_file',
