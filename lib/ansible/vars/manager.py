@@ -416,13 +416,15 @@ class VariableManager:
                     try:
                         for vars_file in vars_file_list:
                             vars_file = templar.template(vars_file)
+                            vars_file_scope_info = {'vars_file': vars_file}
+                            vars_file_scope_info.update(scope_info.copy())
                             try:
                                 data = preprocess_vars(self._loader.load_from_file(vars_file, unsafe=True))
                                 if data is not None:
                                     for item in data:
                                         all_vars = combine_vars(all_vars, item,
                                                                 scope_name='vars_file',
-                                                                scope_info={'vars_file': vars_file}.update(scope_info))
+                                                                scope_info=vars_file_scope_info)
                                 break
                             except AnsibleFileNotFound:
                                 # we continue on loader failures
@@ -460,15 +462,14 @@ class VariableManager:
         # follow the role dependency chain, and then we merge in the tasks
         # vars (which will look at parent blocks/task includes)
         if task:
+            scope_info = self._scope_info(host, play, task._role, task)
             if task._role:
                 all_vars = combine_vars(all_vars, task._role.get_vars(task.get_dep_chain(), include_params=False),
                                         scope_name='task_roles_vars',
-                                        scope_info={'role_name': task._role._role_name,
-                                                    'role_path': task._role._role_path,
-                                                    'task': task.name})
+                                        scope_info=scope_info)
             all_vars = combine_vars(all_vars, task.get_vars(),
                                     scope_name='task_vars',
-                                    scope_info={'task': task.name})
+                                    scope_info=scope_info)
 
         # next, we merge in the vars cache (include vars) and nonpersistent
         # facts cache (set_fact/register), in that order
@@ -483,14 +484,7 @@ class VariableManager:
             registered_vars = self._nonpersistent_fact_cache.get(host.name, self._vars_dict_class())
             # registered_vars = self._nonpersistent_fact_cache.get(host.name, {})
 
-            scope_info = {'hostname': host.name}
-            if task:
-                scope_info['task'] = task.name
-                if task._role:
-                    scope_info['role_name'] = task._role._role_name
-                    scope_info['role_path'] = task._role._role_path
-            if play:
-                scope_info['play'] = play.name
+            scope_info = self._scope_info(host, play, task._role, task)
 
             all_vars = combine_vars(all_vars, registered_vars,
                                     scope_name='registered_vars',
