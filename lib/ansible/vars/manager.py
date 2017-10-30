@@ -209,6 +209,19 @@ class VariableManager:
 
         return data
 
+    def _scope_info(self, host=None, play=None, role=None, task=None):
+        scope_info = {}
+        if play:
+            scope_info['play'] = play.name
+        if host:
+            scope_info['hostname'] = host.name
+        if task:
+            scope_info['task'] = task.name
+        if role:
+            scope_info['role_name'] = role._role_name
+            scope_info['role_path'] = role._role_path
+        return scope_info
+
     def get_vars(self, play=None, host=None, task=None, include_hostvars=True, include_delegate_to=True, use_cache=True):
         '''
         Returns the variables, with optional "context" given via the parameters
@@ -376,7 +389,10 @@ class VariableManager:
                 pass
 
         if play:
-            all_vars = combine_vars(all_vars, play.get_vars(), scope_name='play_get_vars')
+            scope_info = self._scope_info(host, play, None, task)
+            all_vars = combine_vars(all_vars, play.get_vars(),
+                                    scope_name='play_get_vars',
+                                    scope_info=scope_info)
 
             vars_files = play.get_vars_files()
             try:
@@ -404,7 +420,9 @@ class VariableManager:
                                 data = preprocess_vars(self._loader.load_from_file(vars_file, unsafe=True))
                                 if data is not None:
                                     for item in data:
-                                        all_vars = combine_vars(all_vars, item, scope_name='vars_file', scope_info=vars_file)
+                                        all_vars = combine_vars(all_vars, item,
+                                                                scope_name='vars_file',
+                                                                scope_info={'vars_file': vars_file}.update(scope_info))
                                 break
                             except AnsibleFileNotFound:
                                 # we continue on loader failures
@@ -437,8 +455,7 @@ class VariableManager:
                 for role in play.get_roles():
                     all_vars = combine_vars(all_vars, role.get_vars(include_params=False),
                                             scope_name='role_play_vars_%s' % role.get_name(),
-                                            scope_info=role._role_path)
-
+                                            scope_info=scope_info)
         # next, we merge in the vars from the role, which will specifically
         # follow the role dependency chain, and then we merge in the tasks
         # vars (which will look at parent blocks/task includes)
@@ -446,18 +463,38 @@ class VariableManager:
             if task._role:
                 all_vars = combine_vars(all_vars, task._role.get_vars(task.get_dep_chain(), include_params=False),
                                         scope_name='task_roles_vars',
-                                        scope_info=task._role._role_path)
-            all_vars = combine_vars(all_vars, task.get_vars(), scope_name='task_vars')
+                                        scope_info={'role_name': task._role._role_name,
+                                                    'role_path': task._role._role_path,
+                                                    'task': task.name})
+            all_vars = combine_vars(all_vars, task.get_vars(),
+                                    scope_name='task_vars',
+                                    scope_info={'task': task.name})
 
         # next, we merge in the vars cache (include vars) and nonpersistent
         # facts cache (set_fact/register), in that order
         if host:
+
+
+            # import epdb; epdb.st()
+
+
             all_vars = combine_vars(all_vars, self._vars_cache.get(host.get_name(), dict()),
                                     scope_name='vars_cache')
             registered_vars = self._nonpersistent_fact_cache.get(host.name, self._vars_dict_class())
+            # registered_vars = self._nonpersistent_fact_cache.get(host.name, {})
+
+            scope_info = {'hostname': host.name}
+            if task:
+                scope_info['task'] = task.name
+                if task._role:
+                    scope_info['role_name'] = task._role._role_name
+                    scope_info['role_path'] = task._role._role_path
+            if play:
+                scope_info['play'] = play.name
+
             all_vars = combine_vars(all_vars, registered_vars,
                                     scope_name='registered_vars',
-                                    scope_info={'hostname': host.name})
+                                    scope_info=scope_info)
 
         # next, we merge in role params and task include params
         if task:

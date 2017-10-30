@@ -90,7 +90,10 @@ class TrackingDict(dict):
         # info into ours so we preserve the origin update_name/scope_info
         other_meta = getattr(other, 'meta', None)
         if other_meta:
-            print('other_meta: %s update_name=%s' % (other_meta, update_name))
+            # import pprint
+            # pprint.pprint(('other_meta', dict(other_meta)))
+            # pprint.pprint(('update_name', update_name))
+            # print('other_meta: %s update_name=%s' % (other_meta, update_name))
             self.meta.update(other_meta)
 
         for key in other:
