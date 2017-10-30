@@ -44,3 +44,117 @@
       assert:
         that:
           - ansible_foobar == 'blippy'
+
+- name: show ansible_nodename
+  hosts: localhost
+  tasks:
+    - name: show nodename fact after second play
+      debug:
+        var: ansible_nodename
+
+- name: show ansible_nodename overridden with var
+  hosts: localhost
+  vars:
+    ansible_nodename: 'thisisnotthenodename'
+  tasks:
+    - name: show nodename fact after second play
+      debug:
+        var: ansible_nodename
+
+- name: verify ansible_nodename from vars overrides the fact
+  hosts: localhost
+  vars:
+    ansible_nodename: 'thisisnotthenodename'
+  tasks:
+    - name: show nodename fact
+      debug:
+        var: ansible_nodename
+
+    - name: assert ansible_nodename is correct value
+      assert:
+        that:
+          - ansible_nodename == 'thisisnotthenodename'
+
+- name: set_fact ansible_nodename
+  hosts: localhost
+  tasks:
+    - name: set a persistent fact nodename
+      set_fact:
+        ansible_nodename: 'nodename_from_set_fact_cacheable'
+
+    - name: show nodename fact
+      debug:
+        var: ansible_nodename
+
+    - name: assert ansible_nodename is correct value
+      assert:
+        that:
+          - ansible_nodename == 'nodename_from_set_fact_cacheable'
+
+- name: verify that ansible_nodename in vars overrides a set_fact non_cacheable
+  hosts: localhost
+  vars:
+    ansible_nodename: 'nodename_set_from_play_vars'
+  tasks:
+    - name: show nodename fact
+      debug:
+        var: ansible_nodename
+
+    - name: assert ansible_nodename is correct value
+      assert:
+        that:
+          - ansible_nodename == 'nodename_set_from_play_vars'
+      ignore_errors: true
+
+- name: set_fact ansible_nodename cacheable
+  hosts: localhost
+  tasks:
+    - name: set a persistent fact nodename
+      set_fact:
+        ansible_nodename: 'nodename_from_set_fact_cacheable'
+        cacheable: true
+
+    - name: show nodename fact
+      debug:
+        var: ansible_nodename
+
+    - name: assert ansible_nodename is correct value
+      assert:
+        that:
+          - ansible_nodename == 'nodename_from_set_fact_cacheable'
+
+
+- name: verify that ansible_nodename in vars overrides a set_fact_cacheable
+  hosts: localhost
+  vars:
+    ansible_nodename: 'nodename_set_from_play_vars'
+  tasks:
+    - name: show nodename fact
+      debug:
+        var: ansible_nodename
+
+    - name: assert ansible_nodename is correct value
+      assert:
+        that:
+          - ansible_nodename == 'nodename_set_from_play_vars'
+
+
+
+- name: the fourth play
+  hosts: localhost
+  vars:
+    ansible_foobar: 'not blippy'
+  tasks:
+    - name: show example fact
+      debug:
+        var: ansible_example
+
+    - name: set a persistent fact example
+      set_fact:
+        ansible_example: 'blippy_example'
+        cacheable: true
+
+    - name: assert ansible_example is correct value
+      assert:
+        that:
+          - ansible_example == 'not blippy'
