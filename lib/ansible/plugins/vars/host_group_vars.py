@@ -105,7 +105,7 @@ class VarsModule(BaseVarsPlugin):
                             newer_data.update(new_data, update_name='host_group_vars_newer_data', scope_info=found)
                             new_data = newer_data
                         data = combine_vars(data, new_data, scope_name='host_group_vars_new_data', scope_info=found)
-                        print('data.meta: %s' % data.meta)
+                        print('data.meta: %s' % getattr(data, 'meta', 'no meta for dict'))
 
             except Exception as e:
                 raise AnsibleParserError(to_native(e))

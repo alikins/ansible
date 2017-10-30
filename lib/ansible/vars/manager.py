@@ -130,7 +130,6 @@ class VariableManager:
             # fallback to a dict as in memory cache
             self._fact_cache = {}
 
-
         # At high verbosity, use TrackingDict for all_vars so we keep track of where
         # the items come from
         if display.verbosity > 4:
@@ -249,7 +248,8 @@ class VariableManager:
             # first we compile any vars specified in defaults/main.yml
             # for all roles within the specified play
             for role in play.get_roles():
-                all_vars = combine_vars(all_vars, role.get_default_vars(), scope_name='play_roles_%s' % role.get_name(), scope_info=role._role_path)
+                all_vars = combine_vars(all_vars, role.get_default_vars(), scope_name='play_roles_%s' % role.get_name(),
+                                        scope_info=role._role_path)
 
         if task:
             # set basedirs
@@ -265,7 +265,8 @@ class VariableManager:
             # sure it sees its defaults above any other roles, as we previously
             # (v1) made sure each task had a copy of its roles default vars
             if task._role is not None and (play or task.action == 'include_role'):
-                all_vars = combine_vars(all_vars, task._role.get_default_vars(dep_chain=task.get_dep_chain()), scope_name='task_role', scope_info=task._role._role_path)
+                all_vars = combine_vars(all_vars, task._role.get_default_vars(dep_chain=task.get_dep_chain()),
+                                        scope_name='task_role', scope_info=task._role._role_path)
 
         if host:
             # THE 'all' group and the rest of groups for a host, used below
@@ -303,7 +304,8 @@ class VariableManager:
                     for plugin in vars_loader.all():
                         scope_info = {'original_path': plugin._original_path,
                                       'inventory_dir': inventory_dir}
-                        data = combine_vars(data, _get_plugin_vars(plugin, inventory_dir, entities), scope_name='inventory_plugin_dir_%s_%s' % (plugin, inventory_dir), scope_info=scope_info)
+                        data = combine_vars(data, _get_plugin_vars(plugin, inventory_dir, entities),
+                                            scope_name='inventory_plugin_dir_%s_%s' % (plugin, inventory_dir), scope_info=scope_info)
 
                 return data
 
@@ -433,22 +435,29 @@ class VariableManager:
             # unless the user has disabled this via a config option
             if not C.DEFAULT_PRIVATE_ROLE_VARS:
                 for role in play.get_roles():
-                    all_vars = combine_vars(all_vars, role.get_vars(include_params=False), scope_name='role_play_vars_%s' % role.get_name(), scope_info=role._role_path)
+                    all_vars = combine_vars(all_vars, role.get_vars(include_params=False),
+                                            scope_name='role_play_vars_%s' % role.get_name(),
+                                            scope_info=role._role_path)
 
         # next, we merge in the vars from the role, which will specifically
         # follow the role dependency chain, and then we merge in the tasks
         # vars (which will look at parent blocks/task includes)
         if task:
             if task._role:
-                all_vars = combine_vars(all_vars, task._role.get_vars(task.get_dep_chain(), include_params=False), scope_name='task_roles_vars', scope_info=task._role._role_path)
+                all_vars = combine_vars(all_vars, task._role.get_vars(task.get_dep_chain(), include_params=False),
+                                        scope_name='task_roles_vars',
+                                        scope_info=task._role._role_path)
             all_vars = combine_vars(all_vars, task.get_vars(), scope_name='task_vars')
 
         # next, we merge in the vars cache (include vars) and nonpersistent
         # facts cache (set_fact/register), in that order
         if host:
-            all_vars = combine_vars(all_vars, self._vars_cache.get(host.get_name(), dict()), scope_name='vars_cache')
+            all_vars = combine_vars(all_vars, self._vars_cache.get(host.get_name(), dict()),
+                                    scope_name='vars_cache')
             registered_vars = self._nonpersistent_fact_cache.get(host.name, self._vars_dict_class())
-            all_vars = combine_vars(all_vars, registered_vars, scope_name='registered_vars')
+            all_vars = combine_vars(all_vars, registered_vars,
+                                    scope_name='registered_vars',
+                                    scope_info={'hostname': host.name})
 
         # next, we merge in role params and task include params
         if task:
