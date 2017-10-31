@@ -109,8 +109,8 @@ class DisplayDict(dict):
             msg = u'%s: %s=%s' % (
                 to_text(update_name),
                 to_text(key),
-                to_text(repr(other[key])),
-            )
+                to_text(repr(other[key])))
+
             if orig is not None:
                 msg += u' (was=%s)' % to_text(repr(orig))
 
