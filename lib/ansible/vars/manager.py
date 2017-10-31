@@ -41,7 +41,7 @@ from ansible.plugins.loader import lookup_loader, vars_loader
 from ansible.plugins.cache import FactCache
 from ansible.template import Templar
 from ansible.utils.listify import listify_lookup_plugin_terms
-from ansible.utils.vars import combine_vars, TrackingDict
+from ansible.utils.vars import combine_vars, DisplayDict, TrackingDict
 from ansible.utils.unsafe_proxy import wrap_var
 
 try:
@@ -133,7 +133,8 @@ class VariableManager:
         # At high verbosity, use TrackingDict for all_vars so we keep track of where
         # the items come from
         if display.verbosity > 4:
-            self._vars_dict_class = TrackingDict
+            # self._vars_dict_class = TrackingDict
+            self._vars_dict_class = DisplayDict
         else:
             self._vars_dict_class = dict
 
@@ -217,9 +218,16 @@ class VariableManager:
             scope_info['hostname'] = host.name
         if task:
             scope_info['task'] = task.name
+            if task._role:
+                if hasattr(role, '_role_name'):
+                    scope_info['role_name'] = role._role_name
+                if hasattr(role, '_role_path'):
+                    scope_info['role_path'] = role._role_path
         if role:
-            scope_info['role_name'] = role._role_name
-            scope_info['role_path'] = role._role_path
+            if hasattr(role, '_role_name'):
+                scope_info['role_name'] = role._role_name
+            if hasattr(role, '_role_path'):
+                scope_info['role_path'] = role._role_path
         return scope_info
 
     def get_vars(self, play=None, host=None, task=None, include_hostvars=True, include_delegate_to=True, use_cache=True):
@@ -261,7 +269,8 @@ class VariableManager:
             # first we compile any vars specified in defaults/main.yml
             # for all roles within the specified play
             for role in play.get_roles():
-                all_vars = combine_vars(all_vars, role.get_default_vars(), scope_name='play_roles_%s' % role.get_name(),
+                all_vars = combine_vars(all_vars, role.get_default_vars(),
+                                        scope_name='play_role_defaults("%s")' % role.get_name(),
                                         scope_info=role._role_path)
 
         if task:
@@ -279,7 +288,8 @@ class VariableManager:
             # (v1) made sure each task had a copy of its roles default vars
             if task._role is not None and (play or task.action == 'include_role'):
                 all_vars = combine_vars(all_vars, task._role.get_default_vars(dep_chain=task.get_dep_chain()),
-                                        scope_name='task_role', scope_info=task._role._role_path)
+                                        scope_name='task_role_defaults',
+                                        scope_info=task._role._role_path)
 
         if host:
             # THE 'all' group and the rest of groups for a host, used below
@@ -318,7 +328,7 @@ class VariableManager:
                         scope_info = {'original_path': plugin._original_path,
                                       'inventory_dir': inventory_dir}
                         data = combine_vars(data, _get_plugin_vars(plugin, inventory_dir, entities),
-                                            scope_name='inventory_plugin_dir_%s_%s' % (plugin, inventory_dir), scope_info=scope_info)
+                                            scope_name='inventory_plugin_dir_(%s,%s)' % (plugin, inventory_dir), scope_info=scope_info)
 
                 return data
 
@@ -329,7 +339,7 @@ class VariableManager:
                     for path in basedirs:
                         # TODO: include path in name_b?
                         data = combine_vars(data, _get_plugin_vars(plugin, path, entities),
-                                            scope_name='plugins_play_%s' % plugin, scope_info=plugin._original_path)
+                                            scope_name='plugins_play("%s")' % plugin, scope_info=plugin._original_path)
                 return data
 
             # configurable functions that are sortable via config, rememer to add to _ALLOWED if expanding this list
@@ -361,8 +371,10 @@ class VariableManager:
                 '''
                 data = {}
                 for group in host_groups:
-                    data[group] = combine_vars(data[group], _plugins_inventory(group), scope_name='group_inventory_plugin_%s' % group)
-                    data[group] = combine_vars(data[group], _plugins_play(group), scope_name='group_inventory_play_plugin_%s' % group)
+                    data[group] = combine_vars(data[group], _plugins_inventory(group),
+                                               scope_name='group_inventory_plugin("%s")' % group)
+                    data[group] = combine_vars(data[group], _plugins_play(group),
+                                               scope_name='group_inventory_play_plugin("%s")' % group)
                 return data
 
             # Merge groups as per precedence config
@@ -370,7 +382,8 @@ class VariableManager:
             for entry in C.VARIABLE_PRECEDENCE:
                 if entry in self._ALLOWED:
                     display.debug('Calling %s to load vars for %s' % (entry, host.name))
-                    all_vars = combine_vars(all_vars, locals()[entry](), scope_name='precedence_config_%s' % entry)
+                    all_vars = combine_vars(all_vars, locals()[entry](),
+                                            scope_name='precedence_config("%s")' % entry)
                 else:
                     display.warning('Ignoring unknown variable precedence entry: %s' % (entry))
 
@@ -384,6 +397,7 @@ class VariableManager:
                 host_facts = wrap_var(self._fact_cache.get(host.name, {}))
 
                 # push facts to main namespace
+                # TODO: add host to scope_info
                 all_vars = combine_vars(all_vars, host_facts, scope_name='facts_cache')
             except KeyError:
                 pass
@@ -426,8 +440,8 @@ class VariableManager:
                                 data = preprocess_vars(ds)
                                 vars_file_scope_info['vars_file_full_path'] = metadata['full_path']
                                 if data is not None:
-                                    import pprint
-                                    pprint.pprint(data)
+                                    # import pprint
+                                    # pprint.pprint(data)
                                     for item in data:
                                         all_vars = combine_vars(all_vars, item,
                                                                 scope_name='vars_file',
@@ -463,7 +477,7 @@ class VariableManager:
             if not C.DEFAULT_PRIVATE_ROLE_VARS:
                 for role in play.get_roles():
                     all_vars = combine_vars(all_vars, role.get_vars(include_params=False),
-                                            scope_name='role_play_vars_%s' % role.get_name(),
+                                            scope_name='role_play_vars("%s")' % role.get_name(),
                                             scope_info=scope_info)
         # next, we merge in the vars from the role, which will specifically
         # follow the role dependency chain, and then we merge in the tasks
@@ -491,7 +505,7 @@ class VariableManager:
             registered_vars = self._nonpersistent_fact_cache.get(host.name, self._vars_dict_class())
             # registered_vars = self._nonpersistent_fact_cache.get(host.name, {})
 
-            scope_info = self._scope_info(host, play, task._role, task)
+            scope_info = self._scope_info(host=host, play=play, task=task)
 
             all_vars = combine_vars(all_vars, registered_vars,
                                     scope_name='registered_vars',

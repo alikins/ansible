@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import ast
+import copy
 import random
 import uuid
 
@@ -73,6 +74,66 @@ def _validate_mutable_mappings(a, b):
         raise AnsibleError("failed to combine variables, expected dicts but got a '{0}' and a '{1}': \n{2}\n{3}".format(
             a.__class__.__name__, b.__class__.__name__, myvars[0], myvars[1])
         )
+
+
+class DisplayDict(dict):
+    def __init__(self, *args, **kw):
+        super(DisplayDict, self).__init__(*args, **kw)
+
+        self.meta = defaultdict(list)
+        self.ignore_internal = True
+        self._data = {}
+
+    def __setitem__(self, key, value):
+        super(DisplayDict, self).__setitem__(key, value)
+
+    def update(self, other, update_name=None, scope_info=None):
+        for key in sorted(other):
+            if key == 'update_name' or key == 'scope_info':
+                continue
+
+            orig = copy.copy(self.get(key, None))
+            self[key] = other[key]
+
+            if self._is_ignored(key):
+                continue
+
+            # msg = u'"%s" -> %s from scope=%s' % (to_text(key), to_text(repr(other[key])),
+            #                                     to_text(update_name))
+            msg = u'%s: %s=%s' % (
+                to_text(update_name),
+                to_text(key),
+                to_text(repr(other[key])),
+            )
+            if orig is not None:
+                msg += u' (was=%s)' % to_text(repr(orig))
+            print(msg)
+
+    def copy(self):
+        d = DisplayDict(super(DisplayDict, self).copy())
+        d.meta = self.meta.copy()
+        return d
+
+    def _is_ignored(self, key):
+        ignores = ('hostvars', 'groups', 'vars', 'omit', 'inventory_hostname', 'tasks')
+        if self.ignore_internal and key.startswith('ansible_') or key in ignores:
+            return True
+        return False
+
+    def as_dict(self):
+        data = {}
+        for key in self:
+            if self._is_ignored(key):
+                continue
+            scopes = []
+            for idx, level in enumerate(self.meta[key]):
+                scopes.append({'rank': idx,
+                               'scope': level[0],
+                               'info': level[2],
+                               'value': level[1]})
+            data[key] = {'scopes': scopes,
+                         'final': self[key]}
+        return data
 
 
 class TrackingDict(dict):
@@ -138,14 +199,7 @@ class TrackingDict(dict):
         for key in self:
             if self._is_ignored(key):
                 continue
-            scopes = []
-            for idx, level in enumerate(self.meta[key]):
-                scopes.append({'rank': idx,
-                               'scope': level[0],
-                               'info': level[2],
-                               'value': level[1]})
-            data[key] = {'scopes': scopes,
-                         'final': self[key]}
+            data[key] = self[key]
         return data
 
 

@@ -69,7 +69,6 @@ class VarsModule(BaseVarsPlugin):
         super(VarsModule, self).get_vars(loader, path, entities)
 
         data = vars_dict_class()
-        print('data: %s' % type(data))
         for entity in entities:
             if isinstance(entity, Host):
                 subdir = 'host_vars'
@@ -101,11 +100,11 @@ class VarsModule(BaseVarsPlugin):
                     if new_data:  # ignore empty files
                         if vars_dict_class is not None:
                             newer_data = vars_dict_class()
-                            print('vars_dict_class %s' % vars_dict_class)
+                            # print('vars_dict_class %s' % vars_dict_class)
                             newer_data.update(new_data, update_name='host_group_vars_newer_data', scope_info=found)
                             new_data = newer_data
                         data = combine_vars(data, new_data, scope_name='host_group_vars_new_data', scope_info=found)
-                        print('data.meta: %s' % getattr(data, 'meta', 'no meta for dict'))
+                        # print('data.meta: %s' % getattr(data, 'meta', 'no meta for dict'))
 
             except Exception as e:
                 raise AnsibleParserError(to_native(e))
