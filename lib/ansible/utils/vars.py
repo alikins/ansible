@@ -33,6 +33,12 @@ from ansible.module_utils.six import iteritems, string_types
 from ansible.module_utils._text import to_native, to_text
 from ansible.parsing.splitter import parse_kv
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 _MAXSIZE = 2 ** 32
 cur_id = 0
@@ -107,7 +113,11 @@ class DisplayDict(dict):
             )
             if orig is not None:
                 msg += u' (was=%s)' % to_text(repr(orig))
-            print(msg)
+
+            if display.verbosity > 5:
+                msg += u' scope_info: %s' % to_text(repr(scope_info))
+
+            display.vvvvv(msg)
 
     def copy(self):
         d = DisplayDict(super(DisplayDict, self).copy())
