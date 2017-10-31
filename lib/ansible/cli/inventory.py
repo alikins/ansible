@@ -184,9 +184,11 @@ class InventoryCLI(CLI):
 
     def _get_host_variables(self, host):
         if self._new_api:
-            hostvars = self.vm.get_vars(host=host)
+            hostvars = self.vm.get_vars(host=host,
+                                        var_context='cli_inventory_get_host_variables')
         else:
-            hostvars = self.vm.get_vars(self.loader, host=host)
+            hostvars = self.vm.get_vars(self.loader, host=host,
+                                        var_context='cli_inventory_get_host_variables_old_api')
         return hostvars
 
     def _get_group(self, gname):

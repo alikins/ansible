@@ -127,7 +127,8 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         # if we have the required datastructures, and if the role_name
         # contains a variable, try and template it now
         if self._variable_manager:
-            all_vars = self._variable_manager.get_vars(play=self._play)
+            all_vars = self._variable_manager.get_vars(play=self._play,
+                                                       var_context='role_defination_load_name')
             templar = Templar(loader=self._loader, variables=all_vars)
             if templar._contains_vars(role_name):
                 role_name = templar.template(role_name)
@@ -164,7 +165,8 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         # create a templar class to template the dependency names, in
         # case they contain variables
         if self._variable_manager is not None:
-            all_vars = self._variable_manager.get_vars(play=self._play)
+            all_vars = self._variable_manager.get_vars(play=self._play,
+                                                       var_context='role_defination_load_path')
         else:
             all_vars = dict()
 

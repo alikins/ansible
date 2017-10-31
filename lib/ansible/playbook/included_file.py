@@ -79,7 +79,10 @@ class IncludedFile:
                     if 'skipped' in include_result and include_result['skipped'] or 'failed' in include_result and include_result['failed']:
                         continue
 
-                    task_vars = variable_manager.get_vars(play=iterator._play, host=original_host, task=original_task)
+                    task_vars = variable_manager.get_vars(play=iterator._play,
+                                                          host=original_host,
+                                                          task=original_task,
+                                                          var_context='included_file')
                     templar = Templar(loader=loader, variables=task_vars)
 
                     include_variables = include_result.get('include_variables', dict())

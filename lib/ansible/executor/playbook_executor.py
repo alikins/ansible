@@ -123,7 +123,7 @@ class PlaybookExecutor:
 
                     # Create a temporary copy of the play here, so we can run post_validate
                     # on it without the templating changes affecting the original object.
-                    all_vars = self._variable_manager.get_vars(play=play)
+                    all_vars = self._variable_manager.get_vars(play=play, var_context='pbex_run_post_validate')
                     templar = Templar(loader=self._loader, variables=all_vars)
                     new_play = play.copy()
                     new_play.post_validate(templar)

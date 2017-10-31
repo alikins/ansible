@@ -127,7 +127,8 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                     loader=loader
                 )
 
-                all_vars = variable_manager.get_vars(play=play, task=t)
+                all_vars = variable_manager.get_vars(play=play, task=t,
+                                                     var_context='playbook_helpers_load_list_of_tasks_include')
                 templar = Templar(loader=loader, variables=all_vars)
 
                 # check to see if this include is dynamic or static:
@@ -314,7 +315,8 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                     ir.statically_loaded = True
 
                     # template the role name now, if needed
-                    all_vars = variable_manager.get_vars(play=play, task=ir)
+                    all_vars = variable_manager.get_vars(play=play, task=ir,
+                                                         var_context='playbook_helpers_load_list_of_tasks_static')
                     templar = Templar(loader=loader, variables=all_vars)
                     if templar._contains_vars(ir._role_name):
                         ir._role_name = templar.template(ir._role_name)

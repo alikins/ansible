@@ -179,7 +179,8 @@ class PlaybookCLI(CLI):
 
                             return taskmsg
 
-                        all_vars = variable_manager.get_vars(play=play)
+                        all_vars = variable_manager.get_vars(play=play,
+                                                             var_context='cli_playbook_run_play_vars')
                         play_context = PlayContext(play=play, options=self.options)
                         for block in play.compile():
                             block = block.filter_tagged_tasks(play_context, all_vars)

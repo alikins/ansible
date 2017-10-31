@@ -230,7 +230,7 @@ class VariableManager:
                 scope_info['role_path'] = role._role_path
         return scope_info
 
-    def get_vars(self, play=None, host=None, task=None, include_hostvars=True, include_delegate_to=True, use_cache=True):
+    def get_vars(self, play=None, host=None, task=None, include_hostvars=True, include_delegate_to=True, use_cache=True, var_context=None):
         '''
         Returns the variables, with optional "context" given via the parameters
         for the play, host, and task (which could possibly result in different
@@ -252,7 +252,7 @@ class VariableManager:
 
         display.debug("in VariableManager get_vars()")
 
-        all_vars = self._vars_dict_class()
+        all_vars = self._vars_dict_class(var_context=var_context)
 
         magic_variables = self._get_magic_variables(
             play=play,
@@ -502,7 +502,7 @@ class VariableManager:
 
             all_vars = combine_vars(all_vars, self._vars_cache.get(host.get_name(), dict()),
                                     scope_name='vars_cache')
-            registered_vars = self._nonpersistent_fact_cache.get(host.name, self._vars_dict_class())
+            registered_vars = self._nonpersistent_fact_cache.get(host.name, self._vars_dict_class(var_context='get_vars_registered_vars'))
             # registered_vars = self._nonpersistent_fact_cache.get(host.name, {})
 
             scope_info = self._scope_info(host=host, play=play, task=task)
@@ -679,6 +679,7 @@ class VariableManager:
                 task=task,
                 include_delegate_to=False,
                 include_hostvars=False,
+                var_context='delegated_host_vars'
             )
         return delegated_host_vars
 
