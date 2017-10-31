@@ -82,7 +82,8 @@ class HostVars(collections.Mapping):
         if host is None:
             return Undefined(name="hostvars['%s']" % host_name)
 
-        return self._variable_manager.get_vars(host=host, include_hostvars=False)
+        return self._variable_manager.get_vars(host=host, include_hostvars=False,
+                                               var_context='hostvars_raw_get')
 
     def __getitem__(self, host_name):
         data = self.raw_get(host_name)

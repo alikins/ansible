@@ -247,7 +247,9 @@ class StrategyModule(StrategyBase):
                                 break
 
                         display.debug("getting variables")
-                        task_vars = self._variable_manager.get_vars(play=iterator._play, host=host, task=task)
+                        task_vars = self._variable_manager.get_vars(play=iterator._play, host=host,
+                                                                    task=task,
+                                                                    var_context='strategy_linear_run')
 
                         # NOTE: add callback hook?
                         # display the details of which vars came from where at vvvvv (where we use TrackingDict for all_vars)
@@ -349,6 +351,7 @@ class StrategyModule(StrategyBase):
                                 task_vars = self._variable_manager.get_vars(
                                     play=iterator._play,
                                     task=included_file._task,
+                                    var_context='strategy_linear_run_new_blocks'
                                 )
                                 display.debug("filtering new block on tags")
                                 final_block = new_block.filter_tagged_tasks(play_context, task_vars)

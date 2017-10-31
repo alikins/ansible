@@ -86,7 +86,15 @@ class DisplayDict(dict):
     def __init__(self, *args, **kw):
         super(DisplayDict, self).__init__(*args, **kw)
 
+        print('kw: %s' % repr(kw))
+
+        if not kw:
+            import traceback
+            traceback.print_stack()
+        var_context = kw.pop('var_context', None)
+
         self.meta = defaultdict(list)
+        self.meta['var_context'].append(var_context)
         self.ignore_internal = True
         self._data = {}
 
@@ -112,7 +120,10 @@ class DisplayDict(dict):
                 to_text(repr(other[key])))
 
             if orig is not None:
-                msg += u' (was=%s)' % to_text(repr(orig))
+                msg += u' (was=%s)' % (to_text(repr(orig)))
+
+            if self.meta.get('var_context'):
+                msg += u' (var_context=%s)' % to_text(repr(self.meta['var_context']))
 
             if display.verbosity > 5:
                 msg += u' scope_info: %s' % to_text(repr(scope_info))
@@ -120,7 +131,7 @@ class DisplayDict(dict):
             display.vvvvv(msg)
 
     def copy(self):
-        d = DisplayDict(super(DisplayDict, self).copy())
+        d = DisplayDict(super(DisplayDict, self).copy(), var_context=self.meta.get('var_context'))
         d.meta = self.meta.copy()
         return d
 

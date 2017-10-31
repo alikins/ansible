@@ -370,7 +370,8 @@ class StrategyBase:
             for handler_block in handler_blocks:
                 for handler_task in handler_block.block:
                     if handler_task.name:
-                        handler_vars = self._variable_manager.get_vars(play=iterator._play, task=handler_task)
+                        handler_vars = self._variable_manager.get_vars(play=iterator._play, task=handler_task,
+                                                                       var_context='strategy_search_handlers_by_name')
                         templar = Templar(loader=self._loader, variables=handler_vars)
                         try:
                             # first we check with the full result of get_name(), which may
@@ -403,7 +404,8 @@ class StrategyBase:
             if target_handler:
                 if isinstance(target_handler, (TaskInclude, IncludeRole)):
                     try:
-                        handler_vars = self._variable_manager.get_vars(play=iterator._play, task=target_handler)
+                        handler_vars = self._variable_manager.get_vars(play=iterator._play, task=target_handler,
+                                                                       var_context='strategy_parent_handler_match')
                         templar = Templar(loader=self._loader, variables=handler_vars)
                         target_handler_name = templar.template(target_handler.name)
                         if target_handler_name == handler_name:
@@ -864,7 +866,9 @@ class StrategyBase:
         host_results = []
         for host in notified_hosts:
             if not handler.has_triggered(host) and (not iterator.is_failed(host) or play_context.force_handlers):
-                task_vars = self._variable_manager.get_vars(play=iterator._play, host=host, task=handler)
+                task_vars = self._variable_manager.get_vars(play=iterator._play, host=host,
+                                                            task=handler,
+                                                            var_context='strategy_do_handler_run')
                 self.add_tqm_variables(task_vars, play=iterator._play)
                 self._queue_task(host, handler, task_vars, play_context)
                 if run_once:
@@ -949,7 +953,8 @@ class StrategyBase:
         #   on a meta task that doesn't support them
 
         def _evaluate_conditional(h):
-            all_vars = self._variable_manager.get_vars(play=iterator._play, host=h, task=task)
+            all_vars = self._variable_manager.get_vars(play=iterator._play, host=h, task=task,
+                                                       var_context='strategy_execute_meta_eval_conditional')
             templar = Templar(loader=self._loader, variables=all_vars)
             return task.evaluate_conditional(templar, all_vars)
 
