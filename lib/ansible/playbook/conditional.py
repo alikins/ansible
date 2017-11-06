@@ -42,27 +42,42 @@ LOOKUP_REGEX = re.compile(r'lookup\s*\(')
 VALID_VAR_REGEX = re.compile("^[_A-Za-z][_a-zA-Z0-9]*$")
 
 
+class AnsibleInvalidConditional(AnsibleError):
+    pass
+
+
 # FIXME: any ideas for a better repr?
 class ConditionalResult:
     _boolable = False
     _conditional_result = True
 
-    def __init__(self, value=None, conditional=None, templated_expr=None):
+    def __init__(self, value=None, conditional=None,
+                 templated_expr=None, undefined=None,
+                 jinja_exp=None):
         self.conditional = conditional
         self.value = value or False
         self.templated_expr = templated_expr
+        self.undefined = undefined
+        self.jinja_exp = jinja_exp
 
     def __bool__(self):
         return self.value
     __nonzero__ = __bool__
 
     def __repr__(self):
-        return "'%s' is %s expanded_to [%s]" % (self.conditional, self.value, self.templated_expr)
+        return "'%s' is %s expanded_to [%s] undefined=%s jinja_exp=%s" % (self.conditional,
+                                                                          self.value,
+
+                                                                          self.templated_expr,
+                                                                          self.undefined,
+                                                                          self.jinja_exp)
 
     def __getstate__(self):
         return {'conditional': self.conditional,
                 'value': self.value,
-                'templated_expr': self.templated_expr}
+                'undefined': self.undefined,
+                'templated_expr': self.templated_expr,
+                'jinja_exp': self.jinja_exp}
 
 
 class ConditionalResults:
@@ -79,6 +94,9 @@ class ConditionalResults:
             return False
         return True
     __nonzero__ = __bool__
+
+    def __iter__(self):
+        return iter(self.conditional_results)
 
     def __repr__(self):
         return "%s(%s)" % (bool(self), self.conditional_results)
@@ -163,7 +181,18 @@ class Conditional:
                     result = self._check_conditional(conditional, templar, all_vars)
                     conditional_results.append(result)
                 except AnsibleUndefinedVariable as e:
-                    raise AnsibleError("The conditional check '%s' failed. The error was: %s" % (to_native(conditional), to_native(e)), obj=ds)
+                    raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" % (to_native(conditional), to_native(e)), obj=ds)
+
+            undefined_errors = []
+            for conditional_result in conditional_results:
+                print('cr: %s' % conditional_result)
+                if conditional_result.undefined:
+                    undefined_errors.append(conditional_result)
+
+            print('undefined_errors: %s' % undefined_errors)
+            if any(undefined_errors):
+                raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" % (to_native(undefined_errors), [x.undefined for x in undefined_errors]), obj=ds)
+
 
         return conditional_results
 
@@ -241,22 +270,27 @@ class Conditional:
                 e.tests.update(templar._get_tests())
 
                 res = e._parse(conditional, None, None)
-                res = generate(res, e, None, None)
-                parsed = ast.parse(res, mode='exec')
+                res2 = generate(res, e, None, None)
+                parsed = ast.parse(res2, mode='exec')
 
                 cnv = CleansingNodeVisitor()
                 cnv.visit(parsed)
             except Exception as e:
-                raise AnsibleError("Invalid conditional detected: %s" % to_native(e))
+                raise AnsibleInvalidConditional("Invalid conditional detected: %s" % to_native(e))
 
             # and finally we generate and template the presented string and look at the resulting string
             presented = "{%% if %s %%} True {%% else %%} False {%% endif %%}" % conditional
             val = templar.template(presented, disable_lookups=disable_lookups).strip()
             conditional_val = templar.template(conditional, disable_lookups=disable_lookups).strip()
             if val == "True":
-                return ConditionalResult(True, conditional=conditional, templated_expr=conditional_val)
+                return ConditionalResult(True, conditional=conditional,
+                                         templated_expr=conditional_val,
+                                         jinja_exp=repr((res, e, res2)))
             elif val == "False":
-                return ConditionalResult(False, conditional=conditional, templated_expr=conditional_val)
+                return ConditionalResult(False, conditional=conditional,
+                                         templated_expr=conditional_val,
+                                         undefined='bbbb',
+                                         jinja_exp=repr((res, e, res2)))
             else:
                 raise AnsibleError("unable to evaluate conditional: %s" % original)
         except (AnsibleUndefinedVariable, UndefinedError) as e:
@@ -279,14 +313,20 @@ class Conditional:
                         # against the state (defined or undefined)
                         should_exist = ('not' in logic) != (state == 'defined')
                         if should_exist:
-                            return ConditionalResult(False, conditional=conditional)
+                            return ConditionalResult(False, conditional=conditional, undefined='ssss')
                         else:
-                            return ConditionalResult(True, conditional=conditional)
+                            return ConditionalResult(True, conditional=conditional, undefined='xxxx')
+
+                # undefined
+                # return ConditionalResult(False, conditional=conditional, undefined='ccccc')
                 # as nothing above matched the failed var name, re-raise here to
                 # trigger the AnsibleUndefinedVariable exception again below
                 raise
             # we dont except as e to avoid clobbering existing e exception
-            except Exception:
+            except Exception as new_e:
+                print('new_e: %s type: %s' % (new_e, type(new_e)))
+                print('e: %s type: %s' % (e, type(e)))
+                return ConditionalResult(False, conditional=conditional, undefined='ffffff')
                 raise AnsibleUndefinedVariable(
-                    "error while evaluating conditional (%s): %s" % (original, e)
+                    "error2 while evaluating conditional (%s): %s" % (original, e)
                 )
