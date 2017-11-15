@@ -118,6 +118,9 @@ class CallbackBase(AnsiblePlugin):
         if 'exception' in abridged_result:
             del abridged_result['exception']
 
+        module_stdout = abridged_result.pop('module_stdout', None)
+        module_stderr = abridged_result.pop('module_stderr', None)
+        
         try:
             jsonified_results = json.dumps(abridged_result, cls=AnsibleJSONEncoder, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
         except TypeError:
@@ -129,8 +132,12 @@ class CallbackBase(AnsiblePlugin):
             jsonified_results = json.dumps(OrderedDict(sorted(abridged_result.items(), key=to_text)),
                                            cls=AnsibleJSONEncoder, indent=indent,
                                            ensure_ascii=False, sort_keys=False)
-        return jsonified_results
-
+        out = '%s' % jsonified_results
+        if module_stdout:
+            out = '%s\nmodule_stdout:\n%s' % (out, module_stdout)
+        if module_stderr:
+            out = '%s\nmodule_stderr:\n%s' % (out, module_stderr)
+        return out
     def _handle_warnings(self, res):
         ''' display warnings, if enabled and any exist in the result '''
         if C.ACTION_WARNINGS:
@@ -149,6 +156,7 @@ class CallbackBase(AnsiblePlugin):
             msg = "An exception occurred during task execution. "
             if self._display.verbosity < 3:
                 # extract just the actual error message from the exception text
+                print(error)
                 error = result['exception'].strip().split('\n')[-1]
                 msg += "To see the full traceback, use -vvv. The error was: %s" % error
             else:

@@ -866,6 +866,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         # actually execute
         res = self._low_level_execute_command(cmd, sudoable=sudoable, in_data=in_data)
 
+        print('---res----\n%s\n---res---\n' % res)
         # parse the main result
         data = self._parse_returned_data(res)
 

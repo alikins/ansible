@@ -453,6 +453,7 @@ class Connection(ConnectionBase):
         self.control_path = C.ANSIBLE_SSH_CONTROL_PATH
         self.control_path_dir = C.ANSIBLE_SSH_CONTROL_PATH_DIR
 
+        self.stderr_dest = True
     # The connection is created by running ssh/scp/sftp from the exec_command,
     # put_file, and fetch_file methods, so we don't need to do any connection
     # management here.
@@ -657,6 +658,15 @@ class Connection(ConnectionBase):
                 b_args = (b"-o", b"ControlPath=" + to_bytes(self.control_path % dict(directory=cpdir), errors='surrogate_or_strict'))
                 self._add_args(b_command, b_args, u"found only ControlPersist; added ControlPath")
 
+        if binary == 'ssh' and self.stderr_dest:
+            # FIXME: per host/port, reuse create_control_path
+            # b_args = (b"-o", b"ControlPath=" + to_bytes(self.control_path % dict(directory=cpdir), errors='surrogate_or_strict'))
+            self.stderr_dest = os.path.join(C.DEFAULT_LOCAL_TMP,
+                                            'ssh-stderr-%s-%s-%s.log' % (self.host, self.port, self.user))
+            print('stderr_dest: %s' % self.stderr_dest)
+            b_args = (b'-E', b'%s' % to_bytes(self.stderr_dest))
+            self._add_args(b_command, b_args,
+                           u"Logging ssh stderr to stderr_dest file %s" % self.stderr_dest)
         # Finally, we add any caller-supplied extras.
         if other_args:
             b_command += [to_bytes(a) for a in other_args]
@@ -1006,16 +1016,23 @@ class Connection(ConnectionBase):
             raise AnsibleError('using -c ssh on certain older ssh versions may not support ControlPersist, set ANSIBLE_SSH_ARGS="" '
                                '(or ssh_args in [ssh_connection] section of the config file) before running again')
 
+        b_connection_stderr = b''
+        # on error, check stashed ssh dir output and
+        if p.returncode == 255 and self.stderr_dest:
+            b_connection_stderr = open(self.stderr_dest, 'rb').read()
+            print('connection_stderr: %s' % to_text(b_connection_stderr))
+
         # If we find a broken pipe because of ControlPersist timeout expiring (see #16731),
         # we raise a special exception so that we can retry a connection.
-        controlpersist_broken_pipe = b'mux_client_hello_exchange: write packet: Broken pipe' in b_stderr
+        controlpersist_broken_pipe = b'mux_client_hello_exchange: write packet: Broken pipe' in b_connection_stderr
         if p.returncode == 255 and controlpersist_broken_pipe:
             raise AnsibleControlPersistBrokenPipeError('SSH Error: data could not be sent because of ControlPersist broken pipe.')
 
         if p.returncode == 255 and in_data and checkrc:
+            # FIXME: could include stderr info in exception
             raise AnsibleConnectionFailure('SSH Error: data could not be sent to remote host "%s". Make sure this host can be reached over ssh' % self.host)
 
-        return (p.returncode, b_stdout, b_stderr)
+        return (p.returncode, b_stdout, b_stderr, b_connection_stderr)
 
     @_ssh_retry
     def _run(self, cmd, in_data, sudoable=True, checkrc=True):
