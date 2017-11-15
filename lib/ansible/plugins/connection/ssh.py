@@ -287,7 +287,6 @@ from ansible.errors import (
     AnsibleFileNotFound,
 )
 from ansible.errors import AnsibleOptionsError
-from ansible.errors import AnsibleSSHConnectionFailure
 from ansible.compat import selectors
 from ansible.module_utils.six import PY3, text_type, binary_type
 from ansible.module_utils.six.moves import shlex_quote
@@ -353,8 +352,12 @@ def _handle_error(remaining_retries, command, return_tuple, no_log, host, displa
                 msg = '{0} <error censored due to no log>'.format(msg)
             else:
                 msg = '{0} {1}'.format(msg, to_native(return_tuple[2]).rstrip())
-            raise AnsibleSSHConnectionFailure(msg,
-                                              error_data=dict(connection_stderr=return_tuple[3]))
+            raise AnsibleConnectionFailure(msg,
+                                           error_data={connection_stderr=return_tuple[3],
+                                                       connection_plugin='ssh',
+                                                       connection_return_code=return_tuple[0]})
+
+
     # For other errors, no execption is raised so the connection is retried and we only log the messages
     if 1 <= return_tuple[0] <= 254:
         msg = "Failed to connect to the host via ssh:"
@@ -1038,7 +1041,9 @@ class Connection(ConnectionBase):
         if p.returncode == 255 and in_data and checkrc:
             # FIXME: could include stderr info in exception
             raise AnsibleConnectionFailure('SSH Error: data could not be sent to remote host "%s". Make sure this host can be reached over ssh' % self.host,
-                                           error_data=dict(connection_stderr=b_connection_stderr))
+                                           error_data=dict(connection_stderr=b_connection_stderr,
+                                                           connection_plugin='ssh',
+                                                           connection_return_code=p.return_code))
 
         return (p.returncode, b_stdout, b_stderr, b_connection_stderr)
 
@@ -1128,8 +1133,10 @@ class Connection(ConnectionBase):
                     display.debug(msg='%s' % to_native(stderr))
 
         if returncode == 255:
-            raise AnsibleConnectionFailure("Failed to connect to the host via %s: %s" %
-                                           (method, to_native(connection_stderr)),
+            raise AnsibleConnectionFailure("Failed to connect to the host %s via %s to transfer %s to %s: %s" %
+                                           (method, to_native(connection_stderr),
+                                            to_native(in_path),
+                                            to_native(out_path)),
                                            error_data=dict(connection_stderr=connection_stderr))
         else:
             raise AnsibleError("failed to transfer file to %s %s:\n%s\n%s" %

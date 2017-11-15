@@ -222,7 +222,6 @@ class AnsibleConnectionFailure(AnsibleError):
         self.error_data = error_data or {}
 
 
-        self.error_data['connection_stderr'] = self.connection_stderr
 
 
 class AnsibleAuthenticationFailure(AnsibleConnectionFailure):
