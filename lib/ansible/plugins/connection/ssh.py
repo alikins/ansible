@@ -231,9 +231,11 @@ class AnsibleControlPersistBrokenPipeError(AnsibleError):
     ''' ControlPersist broken pipe '''
     def __init__(self, *args, **kwargs):
         connection_stderr = kwargs.pop('connection_stderr', None)
+        error_data = kwargs.pop('error_data', {})
         super(AnsibleControlPersistBrokenPipeError, self).__init__(args, kwargs)
         self.connection_stderr = connection_stderr
-        self.data = {'connection_stderr': self.connection_stderr}
+        self.error_data = error_data
+        self.error_data['connection_stderr'] = self.connection_stderr
 
 
 def _ssh_retry(func):
