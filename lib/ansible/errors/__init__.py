@@ -210,12 +210,9 @@ class AnsibleConnectionFailure(AnsibleRuntimeError):
 class AnsibleConnectionFailure(AnsibleError):
     ''' ControlPersist broken pipe '''
     def __init__(self, *args, **kwargs):
-        connection_stderr = kwargs.pop('connection_stderr', None)
         error_data = kwargs.pop('error_data', {})
         super(AnsibleConnectionFailure, self).__init__(args, kwargs)
         self.error_data = error_data or {}
-        self.connection_stderr = connection_stderr
-        self.error_data['connection_stderr'] = self.connection_stderr
 
 
 class AnsibleSSHConnectionFailure(AnsibleConnectionFailure):

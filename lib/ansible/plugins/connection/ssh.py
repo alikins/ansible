@@ -230,12 +230,9 @@ SSHPASS_AVAILABLE = None
 class AnsibleControlPersistBrokenPipeError(AnsibleError):
     ''' ControlPersist broken pipe '''
     def __init__(self, *args, **kwargs):
-        connection_stderr = kwargs.pop('connection_stderr', None)
         error_data = kwargs.pop('error_data', {})
         super(AnsibleControlPersistBrokenPipeError, self).__init__(args, kwargs)
-        self.connection_stderr = connection_stderr
         self.error_data = error_data
-        self.error_data['connection_stderr'] = self.connection_stderr
 
 
 def _ssh_retry(func):
@@ -276,7 +273,7 @@ def _ssh_retry(func):
                     break
                 else:
                     raise AnsibleSSHConnectionFailure("Failed to connect to the host via ssh: %s" % to_native(return_tuple[2]),
-                                                      connection_stderr=return_tuple[3])
+                                                      error_data=dict(connection_stderr=return_tuple[3]))
             except (AnsibleConnectionFailure, Exception) as e:
                 if attempt == remaining_tries - 1:
                     raise
@@ -884,11 +881,12 @@ class Connection(ConnectionBase):
         controlpersist_broken_pipe = b'mux_client_hello_exchange: write packet: Broken pipe' in b_connection_stderr
         if p.returncode == 255 and controlpersist_broken_pipe:
             raise AnsibleControlPersistBrokenPipeError('SSH Error: data could not be sent because of ControlPersist broken pipe.',
-                                                       connection_stderr=b_connection_stderr)
+                                                       error_data=dict(connection_stderr=b_connection_stderr))
 
         if p.returncode == 255 and in_data and checkrc:
             # FIXME: could include stderr info in exception
-            raise AnsibleConnectionFailure('SSH Error: data could not be sent to remote host "%s". Make sure this host can be reached over ssh' % self.host, connection_stderr=b_connection_stderr)
+            raise AnsibleConnectionFailure('SSH Error: data could not be sent to remote host "%s". Make sure this host can be reached over ssh' % self.host,
+                                           error_data=dict(connection_stderr=b_connection_stderr))
 
         return (p.returncode, b_stdout, b_stderr, b_connection_stderr)
 
@@ -974,7 +972,9 @@ class Connection(ConnectionBase):
                     display.debug(msg='%s' % to_native(stderr))
 
         if returncode == 255:
-            raise AnsibleConnectionFailure("Failed to connect to the host via %s: %s" % (method, to_native(connection_stderr)))
+            raise AnsibleConnectionFailure("Failed to connect to the host via %s: %s" %
+                                           (method, to_native(connection_stderr)),
+                                           error_data=dict(connection_stderr=connection_stderr))
         else:
             raise AnsibleError("failed to transfer file to %s %s:\n%s\n%s" %
                                (to_native(in_path), to_native(out_path), to_native(stdout), to_native(stderr)))
