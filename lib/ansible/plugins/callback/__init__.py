@@ -121,7 +121,7 @@ class CallbackBase(AnsiblePlugin):
 
         module_stdout = abridged_result.pop('module_stdout', None)
         module_stderr = abridged_result.pop('module_stderr', None)
-        error_data = abridged_result.pop('error_data', None)
+        error_data = abridged_result.get('error_data', {})
         connection_stderr = error_data.get('connection_stderr', None)
         
         try:

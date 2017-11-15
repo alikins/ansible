@@ -214,9 +214,18 @@ class AnsibleModuleError(AnsibleRuntimeError):
     pass
 
 
-class AnsibleConnectionFailure(AnsibleRuntimeError):
-    ''' the transport / connection_plugin had a fatal error '''
-    pass
+class AnsibleConnectionFailure(AnsibleError):
+    ''' ControlPersist broken pipe '''
+    def __init__(self, *args, **kwargs):
+        connection_stderr = kwargs.pop('connection_stderr', None)
+        error_data = kwargs.pop('error_data', {})
+        super(AnsibleConnectionFailure, self).__init__(args, kwargs)
+        self.error_data = error_data or {}
+        self.connection_stderr = connection_stderr
+        self.error_data['connection_stderr'] = self.connection_stderr
+
+
+        self.error_data['connection_stderr'] = self.connection_stderr
 
 
 class AnsibleAuthenticationFailure(AnsibleConnectionFailure):
@@ -229,8 +238,11 @@ class AnsibleCallbackError(AnsibleRuntimeError):
 
 
 class AnsibleSSHConnectionFailure(AnsibleConnectionFailure):
-    def __init__(self, message="", obj=None, show_content=True,
+    pass
+
+    def sdfsd__init__(self, message="", obj=None, show_content=True,
                  suppress_extended_error=False, orig_exc=None,
+                 error_data=None,
                  connection_stderr=None):
         super(AnsibleSSHConnectionFailure, self).__init__(message=message,
                                                           obj=obj,
@@ -238,9 +250,13 @@ class AnsibleSSHConnectionFailure(AnsibleConnectionFailure):
                                                           suppress_extended_error=suppress_extended_error,
                                                           orig_exc=orig_exc)
 
+        self.error_data = error_data or {}
         self.connection_stderr = connection_stderr
-        self.data = {'connection_stderr': self.connection_stderr}
+        self.error_data['connection_stderr'] = self.connection_stderr
 
+
+class AnsibleCallbackError(AnsibleRuntimeError):
+    ''' a callback failure '''
 
 class AnsibleTemplateError(AnsibleRuntimeError):
     '''A template related errror'''

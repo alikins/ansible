@@ -647,13 +647,10 @@ class TaskExecutor:
                 return dict(skipped=True, msg=to_text(e))
             except AnsibleActionFail as e:
                 return dict(failed=True, msg=to_text(e))
-            except AnsibleSSHConnectionFailure as e:
-                return dict(unreachable=True,
-                            msg=to_text(e),
-                            error_data=e.data)
             except AnsibleConnectionFailure as e:
                 return dict(unreachable=True,
-                            msg=to_text(e))
+                            msg=to_text(e),
+                            error_data=e.error_data)
             display.debug("handler run complete")
 
             # preserve no log
