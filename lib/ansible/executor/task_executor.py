@@ -16,6 +16,7 @@ import traceback
 
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleParserError, AnsibleUndefinedVariable, AnsibleConnectionFailure, AnsibleActionFail, AnsibleActionSkip
+from ansible.errors import AnsibleSSHConnectionFailure
 from ansible.executor.task_result import TaskResult
 from ansible.module_utils.six import iteritems, string_types, binary_type
 from ansible.module_utils._text import to_text, to_native
@@ -646,8 +647,13 @@ class TaskExecutor:
                 return dict(skipped=True, msg=to_text(e))
             except AnsibleActionFail as e:
                 return dict(failed=True, msg=to_text(e))
+            except AnsibleSSHConnectionFailure as e:
+                return dict(unreachable=True,
+                            msg=to_text(e),
+                            error_data=e.data)
             except AnsibleConnectionFailure as e:
-                return dict(unreachable=True, msg=to_text(e))
+                return dict(unreachable=True,
+                            msg=to_text(e))
             display.debug("handler run complete")
 
             # preserve no log

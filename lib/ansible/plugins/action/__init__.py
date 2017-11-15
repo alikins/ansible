@@ -984,7 +984,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             cwd = os.getcwd()
             os.chdir(to_bytes(self._loader.get_basedir()))
         try:
-            rc, stdout, stderr = self._connection.exec_command(cmd, in_data=in_data, sudoable=sudoable)
+            rc, stdout, stderr, connection_stderr = self._connection.exec_command(cmd, in_data=in_data, sudoable=sudoable)
         finally:
             if self._connection.transport == 'local':
                 os.chdir(cwd)
@@ -1005,14 +1005,23 @@ class ActionBase(with_metaclass(ABCMeta, object)):
         else:
             err = stderr
 
+        # FIXME: unneeded?
+        # FIXME: if we can actually return a file-like object, could we return the ssh stderr log file (the -E /path/to/stderr target)
+        if isinstance(connection_stderr, binary_type):
+            connection_err = to_text(connection_stderr, errors=encoding_errors)
+        elif not isinstance(connection_stderr, text_type):
+            connection_err = to_text(b''.join(connection_stderr.readlines()), errors=encoding_errors)
+        else:
+            connection_err = stderr
+
         if rc is None:
             rc = 0
 
         # be sure to remove the BECOME-SUCCESS message now
         out = self._strip_success_message(out)
 
-        display.debug(u"_low_level_execute_command() done: rc=%d, stdout=%s, stderr=%s" % (rc, out, err))
-        return dict(rc=rc, stdout=out, stdout_lines=out.splitlines(), stderr=err, stderr_lines=err.splitlines())
+        display.debug(u"_low_level_execute_command() done: rc=%d, stdout=%s, stderr=%s, connection_stderr=%s" % (rc, out, err, connection_stderr))
+        return dict(rc=rc, stdout=out, stdout_lines=out.splitlines(), stderr=err, connection_stderr=connection_err)
 
     def _get_diff_data(self, destination, source, task_vars, source_file=True):
 
