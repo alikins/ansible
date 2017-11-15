@@ -100,6 +100,7 @@ class CallbackBase(AnsiblePlugin):
 
     def _dump_results(self, result, indent=None, sort_keys=True, keep_invocation=False):
 
+        print('keys: %s' % result.keys())
         if not indent and (result.get('_ansible_verbose_always') or self._display.verbosity > 2):
             indent = 4
 
@@ -120,12 +121,16 @@ class CallbackBase(AnsiblePlugin):
 
         module_stdout = abridged_result.pop('module_stdout', None)
         module_stderr = abridged_result.pop('module_stderr', None)
+        error_data = abridged_result.pop('error_data', None)
+        connection_stderr = error_data.get('connection_stderr', None)
         json_string = json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
         out = '%s' % json_string
         if module_stdout:
             out = '%s\nmodule_stdout:\n%s' % (out, module_stdout)
         if module_stderr:
             out = '%s\nmodule_stderr:\n%s' % (out, module_stderr)
+        if connection_stderr:
+            out = '%s\nconnection_stderr:\n%s' % (out, connection_stderr)
 
         return out
 

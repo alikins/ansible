@@ -208,6 +208,7 @@ from functools import wraps
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleConnectionFailure, AnsibleFileNotFound
 from ansible.errors import AnsibleOptionsError
+from ansible.errors import AnsibleSSHConnectionFailure
 from ansible.compat import selectors
 from ansible.module_utils.six import PY3, text_type, binary_type
 from ansible.module_utils.six.moves import shlex_quote
@@ -228,7 +229,11 @@ SSHPASS_AVAILABLE = None
 
 class AnsibleControlPersistBrokenPipeError(AnsibleError):
     ''' ControlPersist broken pipe '''
-    pass
+    def __init__(self, *args, **kwargs):
+        connection_stderr = kwargs.pop('connection_stderr', None)
+        super(AnsibleControlPersistBrokenPipeError, self).__init__(args, kwargs)
+        self.connection_stderr = connection_stderr
+        self.data = {'connection_stderr': self.connection_stderr}
 
 
 def _ssh_retry(func):
@@ -268,7 +273,8 @@ def _ssh_retry(func):
                 if return_tuple[0] != 255:
                     break
                 else:
-                    raise AnsibleConnectionFailure("Failed to connect to the host via ssh: %s" % to_native(return_tuple[2]))
+                    raise AnsibleSSHConnectionFailure("Failed to connect to the host via ssh: %s" % to_native(return_tuple[2]),
+                                                      connection_stderr=return_tuple[3])
             except (AnsibleConnectionFailure, Exception) as e:
                 if attempt == remaining_tries - 1:
                     raise
@@ -869,17 +875,18 @@ class Connection(ConnectionBase):
         # on error, check stashed ssh dir output and
         if p.returncode == 255 and self.stderr_dest:
             b_connection_stderr = open(self.stderr_dest, 'rb').read()
-            print('connection_stderr: %s' % to_text(b_connection_stderr))
+            # print('connection_stderr: %s' % to_text(b_connection_stderr))
 
         # If we find a broken pipe because of ControlPersist timeout expiring (see #16731),
         # we raise a special exception so that we can retry a connection.
         controlpersist_broken_pipe = b'mux_client_hello_exchange: write packet: Broken pipe' in b_connection_stderr
         if p.returncode == 255 and controlpersist_broken_pipe:
-            raise AnsibleControlPersistBrokenPipeError('SSH Error: data could not be sent because of ControlPersist broken pipe.')
+            raise AnsibleControlPersistBrokenPipeError('SSH Error: data could not be sent because of ControlPersist broken pipe.',
+                                                       connection_stderr=b_connection_stderr)
 
         if p.returncode == 255 and in_data and checkrc:
             # FIXME: could include stderr info in exception
-            raise AnsibleConnectionFailure('SSH Error: data could not be sent to remote host "%s". Make sure this host can be reached over ssh' % self.host)
+            raise AnsibleConnectionFailure('SSH Error: data could not be sent to remote host "%s". Make sure this host can be reached over ssh' % self.host, connection_stderr=b_connection_stderr)
 
         return (p.returncode, b_stdout, b_stderr, b_connection_stderr)
 
@@ -923,20 +930,23 @@ class Connection(ConnectionBase):
             else:
                 methods = ['sftp']
 
+        # FIXME: stdout/stderr/connection_stderr should be bytes b_stderr etc
+        returncode = stdout = stderr = connection_stderr = None
+
         for method in methods:
             returncode = stdout = stderr = None
             if method == 'sftp':
                 cmd = self._build_command('sftp', to_bytes(host))
                 in_data = u"{0} {1} {2}\n".format(sftp_action, shlex_quote(in_path), shlex_quote(out_path))
                 in_data = to_bytes(in_data, nonstring='passthru')
-                (returncode, stdout, stderr) = self._bare_run(cmd, in_data, checkrc=False)
+                (returncode, stdout, stderr, connection_stderr) = self._bare_run(cmd, in_data, checkrc=False)
             elif method == 'scp':
                 if sftp_action == 'get':
                     cmd = self._build_command('scp', u'{0}:{1}'.format(host, shlex_quote(in_path)), out_path)
                 else:
                     cmd = self._build_command('scp', in_path, u'{0}:{1}'.format(host, shlex_quote(out_path)))
                 in_data = None
-                (returncode, stdout, stderr) = self._bare_run(cmd, in_data, checkrc=False)
+                (returncode, stdout, stderr, connection_stderr) = self._bare_run(cmd, in_data, checkrc=False)
             elif method == 'piped':
                 if sftp_action == 'get':
                     # we pass sudoable=False to disable pty allocation, which
@@ -952,6 +962,7 @@ class Connection(ConnectionBase):
 
             # Check the return code and rollover to next method if failed
             if returncode == 0:
+                # FIXME: could return b_connection_stderr here as well. ssh warning/errors could be useful even on success module
                 return (returncode, stdout, stderr)
             else:
                 # If not in smart mode, the data will be printed by the raise below
@@ -961,7 +972,7 @@ class Connection(ConnectionBase):
                     display.debug(msg='%s' % to_native(stderr))
 
         if returncode == 255:
-            raise AnsibleConnectionFailure("Failed to connect to the host via %s: %s" % (method, to_native(stderr)))
+            raise AnsibleConnectionFailure("Failed to connect to the host via %s: %s" % (method, to_native(connection_stderr)))
         else:
             raise AnsibleError("failed to transfer file to %s %s:\n%s\n%s" %
                                (to_native(in_path), to_native(out_path), to_native(stdout), to_native(stderr)))
@@ -993,9 +1004,9 @@ class Connection(ConnectionBase):
             args = (ssh_executable, self.host, cmd)
 
         cmd = self._build_command(*args)
-        (returncode, stdout, stderr) = self._run(cmd, in_data, sudoable=sudoable)
+        (returncode, stdout, stderr, connection_stderr) = self._run(cmd, in_data, sudoable=sudoable)
 
-        return (returncode, stdout, stderr)
+        return (returncode, stdout, stderr, connection_stderr)
 
     def put_file(self, in_path, out_path):
         ''' transfer a file from local to remote '''

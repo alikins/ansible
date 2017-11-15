@@ -207,6 +207,20 @@ class AnsibleConnectionFailure(AnsibleRuntimeError):
     pass
 
 
+class AnsibleSSHConnectionFailure(AnsibleConnectionFailure):
+    def __init__(self, message="", obj=None, show_content=True,
+                 suppress_extended_error=False, orig_exc=None,
+                 connection_stderr=None):
+        super(AnsibleSSHConnectionFailure, self).__init__(message=message,
+                                                          obj=obj,
+                                                          show_content=show_content,
+                                                          suppress_extended_error=suppress_extended_error,
+                                                          orig_exc=orig_exc)
+
+        self.connection_stderr = connection_stderr
+        self.data = {'connection_stderr': self.connection_stderr}
+
+
 class AnsibleFilterError(AnsibleRuntimeError):
     ''' a templating failure '''
     pass
