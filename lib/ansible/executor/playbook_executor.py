@@ -165,7 +165,9 @@ class PlaybookExecutor:
                             # restrict the inventory to the hosts in the serialized batch
                             self._inventory.restrict_to_hosts(batch)
                             # and run it...
+                            self.showgrowth(msg='before _tqm.run play=%s' % p_index)
                             result = self._tqm.run(play=play)
+                            self.showgrowth(msg='after _tqm.run play=%s' % p_index)
 
                             # break the play if the result equals the special return code
                             if result & self._tqm.RUN_FAILED_BREAK_PLAY != 0:
@@ -218,7 +220,9 @@ class PlaybookExecutor:
                             if self._generate_retry_inventory(filename, retries):
                                 display.display("\tto retry, use: --limit @%s\n" % filename)
 
+                    self.showgrowth(msg='before _tqm.send_cb stats play=%s' % p_index)
                     self._tqm.send_callback('v2_playbook_on_stats', self._tqm._stats)
+                    self.showgrowth(msg='after _tqm.send_cb stats play=%s' % p_index)
 
                 # if the last result wasn't zero, break out of the playbook file name loop
                 if result != 0:

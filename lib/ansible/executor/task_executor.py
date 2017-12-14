@@ -32,6 +32,8 @@ except ImportError:
     display = Display()
 
 
+import objgraph
+
 __all__ = ['TaskExecutor']
 
 
@@ -62,6 +64,12 @@ class TaskExecutor:
 
         self._task.squash()
 
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowthi (task executor)')
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
+
     def run(self):
         '''
         The main executor entrypoint, where we determine if the specified
@@ -74,7 +82,9 @@ class TaskExecutor:
 
         try:
             try:
+                self.showgrowth(msg='before _get_loop_items stats task=%s' % self._task._uuid)
                 items = self._get_loop_items()
+                self.showgrowth(msg='after _get_loop_items stats task=%s' % self._task._uuid)
             except AnsibleUndefinedVariable as e:
                 # save the error raised here for use later
                 items = None
@@ -82,7 +92,9 @@ class TaskExecutor:
 
             if items is not None:
                 if len(items) > 0:
+                    self.showgrowth(msg='before _run_loop stats task=%s' % self._task._uuid)
                     item_results = self._run_loop(items)
+                    self.showgrowth(msg='before _run_loop stats task=%s' % self._task._uuid)
 
                     # create the overall result item
                     res = dict(results=item_results)
@@ -279,7 +291,9 @@ class TaskExecutor:
                 ran_once = True
 
             try:
+                self.showgrowth(msg='before _task.copy stats task=%s' % self._task._uuid)
                 tmp_task = self._task.copy(exclude_parent=True, exclude_tasks=True)
+                self.showgrowth(msg='after _task.copy stats task=%s' % self._task._uuid)
                 tmp_task._parent = self._task._parent
                 tmp_play_context = self._play_context.copy()
             except AnsibleParserError as e:

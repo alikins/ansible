@@ -99,6 +99,14 @@ class VariableManager:
             # fallback to a dict as in memory cache
             self._fact_cache = {}
 
+    def __repr__(self):
+        rep = ['VariableManager']
+        rep.append('  hostvars=%s' % self._hostvars)
+        rep.append('  options_vars=%s' % self._options_vars)
+        rep.append('  extra_vars=%s' % self._extra_vars)
+        rep.append('_all_vars=%s' % self._all_vars)
+        return '\n'.join(rep)
+
     def __getstate__(self):
         data = dict(
             fact_cache=self._fact_cache,
