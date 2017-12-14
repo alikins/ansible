@@ -39,7 +39,7 @@ except ImportError:
     display = Display()
 
 SKIP = True
-#---------------------------------------------------------------------------------------------------
+
 
 class PlaybookCLI(CLI):
     ''' the tool to run *Ansible playbooks*, which are a configuration and multinode deployment system.
@@ -238,9 +238,6 @@ class PlaybookCLI(CLI):
                            max_depth=5)
         objgraph.show_backrefs(objs,
                                refcounts=True,
-                               shortnames=False,
-                               filename=backrefs_full_fn,
-                               max_depth=5)
                                shortnames=False,
                                filename=backrefs_full_fn,
                                max_depth=5)

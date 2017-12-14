@@ -140,7 +140,7 @@ class PlaybookExecutor:
 
                     # Create a temporary copy of the play here, so we can run post_validate
                     # on it without the templating changes affecting the original object.
-                    self.showgrowth(msg='before get_vars' % p_index)
+                    self.showgrowth(msg='before get_vars play=%s' % p_index)
                     all_vars = self._variable_manager.get_vars(play=play)
                     self.showgrowth(msg='after get_vars play=%s' % p_index)
                     templar = Templar(loader=self._loader, variables=all_vars)
