@@ -231,7 +231,7 @@ class PlaybookCLI(CLI):
             variable_manager.clear_facts(hostname)
 
     def refs(self, filename=None, objs=None):
-        SKIP = True
+        SKIP = False
         if SKIP:
             return
         filename = filename or "object-graph"
