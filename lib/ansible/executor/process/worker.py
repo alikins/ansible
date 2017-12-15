@@ -41,6 +41,8 @@ from ansible.executor.task_executor import TaskExecutor
 from ansible.executor.task_result import TaskResult
 from ansible.module_utils._text import to_text
 
+import objgraph
+
 try:
     from __main__ import display
 except ImportError:
@@ -89,6 +91,13 @@ class WorkerProcess(multiprocessing.Process):
         else:
             # set to /dev/null
             self._new_stdin = os.devnull
+        # self.showgrowth(msg='worker init')
+
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowthi (worker) pid=%s' % os.getpid())
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
 
     def run(self):
         '''
@@ -101,8 +110,10 @@ class WorkerProcess(multiprocessing.Process):
         # pr = cProfile.Profile()
         # pr.enable()
 
+        #self.showgrowth(msg='start of worker.run')
         if HAS_PYCRYPTO_ATFORK:
             atfork()
+        # self.showgrowth(msg='after pycrypt atfork()')
 
         try:
             # execute the task and build a TaskResult from the result
@@ -117,6 +128,7 @@ class WorkerProcess(multiprocessing.Process):
                 self._shared_loader_obj,
                 self._rslt_q
             ).run()
+            # self.showgrowth(msg='after TaskExecutor.run()')
 
             display.debug("done running TaskExecutor() for %s/%s [%s]" % (self._host, self._task, self._task._uuid))
             self._host.vars = dict()

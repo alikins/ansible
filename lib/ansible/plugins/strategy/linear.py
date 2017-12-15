@@ -173,12 +173,13 @@ class StrategyModule(StrategyBase):
         it for all hosts, then wait for the queue to drain before
         moving on to the next task
         '''
-
+        self.showgrowth(msg='start of linear strategy run()')
         # iteratate over each task, while there is one left to run
         result = self._tqm.RUN_OK
         work_to_do = True
         while work_to_do and not self._tqm._terminated:
 
+            self.showgrowth(msg='top of linear strategy run work loop')
             try:
                 display.debug("getting the remaining hosts for this loop")
                 hosts_left = self.get_hosts_left(iterator)
@@ -280,7 +281,9 @@ class StrategyModule(StrategyBase):
                     if run_once:
                         break
 
+                    self.showgrowth(msg='before linear strategy process_pending_results')
                     results += self._process_pending_results(iterator, max_passes=max(1, int(len(self._tqm._workers) * 0.1)))
+                    self.showgrowth(msg='after linear strategy process_pending_results')
 
                 # go to next host/task group
                 if skip_rest:
@@ -288,12 +291,15 @@ class StrategyModule(StrategyBase):
 
                 display.debug("done queuing things up, now waiting for results queue to drain")
                 if self._pending_results > 0:
+                    self.showgrowth(msg='before linear strategy _wait_on_pending_results')
                     results += self._wait_on_pending_results(iterator)
+                    self.showgrowth(msg='after linear strategy _wait_on_pending_results')
 
                 host_results.extend(results)
 
                 self.update_active_connections(results)
 
+                self.showgrowth(msg='before linear strategy process_include_results')
                 try:
                     included_files = IncludedFile.process_include_results(
                         host_results,
@@ -304,6 +310,7 @@ class StrategyModule(StrategyBase):
                 except AnsibleError as e:
                     # this is a fatal error, so we abort here regardless of block state
                     return self._tqm.RUN_ERROR
+                self.showgrowth(msg='after linear strategy process_include_results')
 
                 include_failure = False
                 if len(included_files) > 0:
@@ -313,28 +320,41 @@ class StrategyModule(StrategyBase):
                     noop_task = Task()
                     noop_task.action = 'meta'
                     noop_task.args['_raw_params'] = 'noop'
+                    self.showgrowth(msg='before linear strategy noop_task.set_loader')
                     noop_task.set_loader(iterator._play._loader)
+                    self.showgrowth(msg='after linear strategy noop_task.set_loader')
 
                     display.debug("generating all_blocks data")
                     all_blocks = dict((host, []) for host in hosts_left)
+                    self.showgrowth(msg='after linear strategy all_blocks thing')
+
                     display.debug("done generating all_blocks data")
                     for included_file in included_files:
                         display.debug("processing included file: %s" % included_file._filename)
                         # included hosts get the task list while those excluded get an equal-length
                         # list of noop tasks, to make sure that they continue running in lock-step
+                        self.showgrowth(msg='before linear strategy included_file stuff in run for file=%s host=%s task=%s'
+                                        % (included_file._filename, host, task))
                         try:
                             if included_file._is_role:
+                                self.showgrowth(msg='before linear strategy task.copy()')
                                 new_ir = included_file._task.copy()
+                                self.showgrowth(msg='after linear strategy task.copy()')
                                 new_ir.vars.update(included_file._args)
+                                self.showgrowth(msg='after linear strategy new_it.vars.update')
 
                                 new_blocks, handler_blocks = new_ir.get_block_list(
                                     play=iterator._play,
                                     variable_manager=self._variable_manager,
                                     loader=self._loader,
                                 )
+                                self.showgrowth(msg='after linear strategy new_ir.get_block_list')
                                 self._tqm.update_handler_list([handler for handler_block in handler_blocks for handler in handler_block.block])
+                                self.showgrowth(msg='after linear strategy update_handler_list')
                             else:
+                                self.showgrowth(msg='before linear strategy _load_included_file')
                                 new_blocks = self._load_included_file(included_file, iterator=iterator)
+                                self.showgrowth(msg='after linear strategy _load_included_file')
 
                             display.debug("iterating over new_blocks loaded from include file")
                             for new_block in new_blocks:
@@ -370,14 +390,17 @@ class StrategyModule(StrategyBase):
                     # accumulated blocks to their list of tasks
                     display.debug("extending task lists for all hosts with included blocks")
 
+                    self.showgrowth(msg='before linear strategy before iterator.add_tasks')
                     for host in hosts_left:
                         iterator.add_tasks(host, all_blocks[host])
+                    self.showgrowth(msg='after linear strategy before iterator.add_tasks')
 
                     display.debug("done extending task lists")
                     display.debug("done processing included files")
 
                 display.debug("results queue empty")
 
+                self.showgrowth(msg='after linear strategy wtf the block stuff in the middle of run')
                 display.debug("checking for any_errors_fatal")
                 failed_hosts = []
                 unreachable_hosts = []

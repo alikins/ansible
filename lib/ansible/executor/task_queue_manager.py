@@ -48,6 +48,7 @@ except ImportError:
 
 __all__ = ['TaskQueueManager']
 
+import objgraph
 
 class TaskQueueManager:
 
@@ -216,6 +217,12 @@ class TaskQueueManager:
 
         self._callbacks_loaded = True
 
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowthi (tqm) pid=%s' % os.getpid())
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
+
     def run(self, play):
         '''
         Iterates over the roles/tasks in a play, using the given (or default)
@@ -225,24 +232,34 @@ class TaskQueueManager:
         are done with the current task).
         '''
 
+        self.showgrowth(msg='start of tqm.run')
         if not self._callbacks_loaded:
             self.load_callbacks()
 
+        self.showgrowth(msg='before get_vars')
         all_vars = self._variable_manager.get_vars(play=play)
+        self.showgrowth(msg='after get_vars')
         warn_if_reserved(all_vars)
         templar = Templar(loader=self._loader, variables=all_vars)
 
+        self.showgrowth(msg='before play.copy')
         new_play = play.copy()
+        self.showgrowth(msg='after play.copy')
         new_play.post_validate(templar)
         new_play.handlers = new_play.compile_roles_handlers() + new_play.handlers
 
+        self.showgrowth(msg='before creating HostVars')
         self.hostvars = HostVars(
             inventory=self._inventory,
             variable_manager=self._variable_manager,
             loader=self._loader,
         )
+        self.showgrowth(msg='After creating HostVars')
 
         play_context = PlayContext(new_play, self._options, self.passwords, self._connection_lockfile.fileno())
+
+        self.showgrowth(msg='After creating PlayContext')
+
         for callback_plugin in self._callback_plugins:
             if hasattr(callback_plugin, 'set_play_context'):
                 callback_plugin.set_play_context(play_context)
@@ -252,6 +269,7 @@ class TaskQueueManager:
         # initialize the shared dictionary containing the notified handlers
         self._initialize_notified_handlers(new_play)
 
+        self.showgrowth(msg='before creating PlayIterator')
         # build the iterator
         iterator = PlayIterator(
             inventory=self._inventory,
@@ -262,11 +280,15 @@ class TaskQueueManager:
             start_at_done=self._start_at_done,
         )
 
+        self.showgrowth(msg='after creating PlayIterator')
         # adjust to # of workers to configured forks or size of batch, whatever is lower
         self._initialize_processes(min(self._options.forks, iterator.batch_size))
+        self.showgrowth(msg='After _initialize_processes')
 
         # load the specified strategy (or the default linear one)
         strategy = strategy_loader.get(new_play.strategy, self)
+        self.showgrowth(msg='after strategy_loader.get')
+
         if strategy is None:
             raise AnsibleError("Invalid play strategy specified: %s" % new_play.strategy, obj=play._ds)
 
@@ -274,11 +296,14 @@ class TaskQueueManager:
         # any hosts as failed in the iterator here which may have been marked
         # as failed in previous runs. Then we clear the internal list of failed
         # hosts so we know what failed this round.
+        self.showgrowth(msg='before failed_host loop')
         for host_name in self._failed_hosts.keys():
             host = self._inventory.get_host(host_name)
             iterator.mark_host_failed(host)
 
+        self.showgrowth(msg='after failed_host loop')
         self.clear_failed_hosts()
+        self.showgrowth(msg='after clear_failed_hosts')
 
         # during initialization, the PlayContext will clear the start_at_task
         # field to signal that a matching task was found, so check that here
@@ -287,7 +312,9 @@ class TaskQueueManager:
             self._start_at_done = True
 
         # and run the play using the strategy and cleanup on way out
+        self.showgrowth(msg='before strategy.run ')
         play_return = strategy.run(iterator, play_context)
+        self.showgrowth(msg='after strategy.run ')
 
         # now re-save the hosts that failed from the iterator to our internal list
         for host_name in iterator.get_failed_hosts():
