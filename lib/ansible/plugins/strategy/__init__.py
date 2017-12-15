@@ -213,6 +213,7 @@ class StrategyBase:
         self.showgrowth('end of strategy base init')
 
     def showgrowth(self, msg=None):
+        return
         print('\n\nshowgrowth (strategy base) pid=%s' % os.getpid())
         if msg:
             print('%s' % msg)
@@ -777,17 +778,10 @@ class StrategyBase:
             elif not isinstance(data, list):
                 raise AnsibleError("included task files must contain a list of tasks")
 
-            # ti_copy = included_file._task.copy()
-            # temp_vars = ti_copy.vars.copy()
-            # temp_vars = included_file._task.vars.copy()
-            # ti_copy = included_file._task.vars.copy()
-            temp_vars = {}
-            temp_vars.update(included_file._task.vars.copy())
-            #temp_vars.update(included_file.vars.copy())
+            ti_copy = included_file._task.copy()
+            temp_vars = ti_copy.vars.copy()
+
             temp_vars.update(included_file._args)
-            import pprint
-            pprint.pprint(temp_vars)
-            # self.showgrowth(msg='after strategy base tempvars.update')
             # pop tags out of the include args, if they were specified there, and assign
             # them to the include. If the include already had tags specified, we raise an
             # error so that users know not to specify them both ways
@@ -804,9 +798,9 @@ class StrategyBase:
                 # included_file._task.tags = tags
                 included_file._task.tags = []
 
-            ti_copy = included_file._task.copy()
-            ti_copy.vars = temp_vars.copy()
-            del temp_vars
+            #ti_copy = included_file._task.copy()
+            ti_copy.vars = temp_vars
+            # del temp_vars
 
             block_list = load_list_of_blocks(
                 data,

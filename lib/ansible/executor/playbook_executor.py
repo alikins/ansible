@@ -251,6 +251,7 @@ class PlaybookExecutor:
         return result
 
     def showgrowth(self, msg=None):
+        return
         print('\n\nshowgrowth')
         if msg:
             print('%s' % msg)

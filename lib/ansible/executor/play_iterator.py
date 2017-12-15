@@ -234,6 +234,8 @@ class PlayIterator:
             play_context.start_at_task = None
 
     def showgrowth(self, msg=None):
+        return
+
         print('\n\nshowgrowth (play_iterator) pid=%s' % os.getpid())
         if msg:
             print('%s' % msg)
@@ -559,11 +561,13 @@ class PlayIterator:
 
     def _insert_tasks_into_state(self, state, task_list):
         self.showgrowth('start of _insert_tasks_into_state')
+        # import gc; gc.collect()
+
         #self.refs(objs=[state, task_list, self])
         #elf.refs(objs=[state, task_list])
         # if we've failed at all, or if the task list is empty, just return the current state
-        import pprint
-        pprint.pprint(state.__dict__)
+        #import pprint
+        #pprint.pprint(state.__dict__)
         if state.fail_state != self.FAILED_NONE and state.run_state not in (self.ITERATING_RESCUE, self.ITERATING_ALWAYS) or not task_list:
             return state
 

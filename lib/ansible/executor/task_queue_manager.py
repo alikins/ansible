@@ -218,6 +218,7 @@ class TaskQueueManager:
         self._callbacks_loaded = True
 
     def showgrowth(self, msg=None):
+        return
         print('\n\nshowgrowthi (tqm) pid=%s' % os.getpid())
         if msg:
             print('%s' % msg)
