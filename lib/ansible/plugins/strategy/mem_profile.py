@@ -57,14 +57,23 @@ def filter_obj(obj):
     return True
 
 
-def extra_info(obj):
+def extra_info_repr(obj):
+    '''Add the obj repr to extra_info for ansible.* types'''
     if not obj.__class__.__module__.startswith('ansible'):
         return None
+
     try:
         return repr(obj)
     except Exception as e:
         print(e)
+
     return None
+
+
+def extra_info_id(obj):
+    '''return the hex obj id as extra_info'''
+
+    return hex(id(obj))
 
 
 def show_common_ansible_types(limit=None):
@@ -109,11 +118,7 @@ def track_mem(msg=None, pid=None, call_stack=None, subsystem=None, prev_mem=None
 
 def show_refs(filename=None, objs=None, max_depth=5, max_objs=None):
 
-    SKIP = False
-    if SKIP:
-        return
-
-    filename = filename or "playbook_iterator-object-graph"
+    filename = filename or "mem-profile-default"
     refs_full_fn = "%s-refs.png" % filename
     backrefs_full_fn = "%s-backrefs.png" % filename
 
@@ -124,13 +129,14 @@ def show_refs(filename=None, objs=None, max_depth=5, max_objs=None):
     objgraph.show_refs(objs,
                        filename=refs_full_fn,
                        refcounts=True,
-                       extra_info=extra_info,
+                       extra_info=extra_info_id,
                        shortnames=False,
                        max_depth=max_depth)
+
     objgraph.show_backrefs(objs,
                            refcounts=True,
                            shortnames=False,
-                           extra_info=extra_info,
+                           extra_info=extra_info_id,
                            filename=backrefs_full_fn,
                            max_depth=max_depth)
 
@@ -153,11 +159,12 @@ class StrategyModule(LinearStrategyModule):
         res = super(StrategyModule, self).run(iterator, play_context)
         self.track_mem(msg='after run')
 
-        tis = objgraph.by_type('ansible.playbook.task_include.TaskInclude')
-
         show_common_ansible_types()
 
+        # example of dumping graphviz dot/pngs for ref graph of some objs
+        tis = objgraph.by_type('ansible.playbook.task_include.TaskInclude')
         show_refs(filename='task_include_refs', objs=tis, max_depth=6, max_objs=1)
+
         return res
 
     def add_tqm_variables(self, vars, play):
