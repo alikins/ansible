@@ -64,8 +64,29 @@ class TaskExecutor:
 
         self._task.squash()
 
+    def refs(self, filename=None, objs=None):
+        SKIP = False
+        if SKIP:
+            return
+        filename = filename or "object-graph"
+        refs_full_fn = "%s-te-refs.png" % filename
+        backrefs_full_fn = "%s-te-backrefs.png" % filename
+        print('refs: filename=%s' % (filename))
+        objs = objs or []
+        objgraph.show_refs(objs,
+                           filename=refs_full_fn,
+                           refcounts=True,
+                           shortnames=False,
+                           max_depth=5)
+        objgraph.show_backrefs(objs,
+                               refcounts=True,
+                               shortnames=False,
+                               filename=backrefs_full_fn,
+                               max_depth=5)
+
     def showgrowth(self, msg=None):
-        print('\n\nshowgrowthi (task executor)')
+        return
+        print('\n\nshowgrowthi (task executor) pid=%s' % os.getpid())
         if msg:
             print('%s' % msg)
         objgraph.show_growth(limit=30)
@@ -78,13 +99,15 @@ class TaskExecutor:
         returned as a dict.
         '''
 
+        self.showgrowth(msg='the start of run stats task=%s host=%s' % (self._task._uuid,                     self._host.name))
+
         display.debug("in run() - task %s" % self._task._uuid)
 
         try:
             try:
-                self.showgrowth(msg='before _get_loop_items stats task=%s' % self._task._uuid)
+                # self.showgrowth(msg='before _get_loop_items stats task=%s' % self._task._uuid)
                 items = self._get_loop_items()
-                self.showgrowth(msg='after _get_loop_items stats task=%s' % self._task._uuid)
+                # self.showgrowth(msg='after _get_loop_items stats task=%s' % self._task._uuid)
             except AnsibleUndefinedVariable as e:
                 # save the error raised here for use later
                 items = None
@@ -291,23 +314,33 @@ class TaskExecutor:
                 ran_once = True
 
             try:
-                self.showgrowth(msg='before _task.copy stats task=%s' % self._task._uuid)
+                # self.showgrowth(msg='before _task.copy stats task=%s' % self._task._uuid)
                 tmp_task = self._task.copy(exclude_parent=True, exclude_tasks=True)
-                self.showgrowth(msg='after _task.copy stats task=%s' % self._task._uuid)
+                # self.showgrowth(msg='after _task.copy stats task=%s' % self._task._uuid)
                 tmp_task._parent = self._task._parent
+                self.showgrowth(msg='before tmp_play_context.copy task=%s' % self._task._uuid)
                 tmp_play_context = self._play_context.copy()
+                self.showgrowth(msg='after tmp_play_context.copy  task=%s' % self._task._uuid)
             except AnsibleParserError as e:
                 results.append(dict(failed=True, msg=to_text(e)))
                 continue
 
+            self.showgrowth(msg='before we saw pre execute stats task=%s' % self._task._uuid)
             # now we swap the internal task and play context with their copies,
             # execute, and swap them back so we can do the next iteration cleanly
             (self._task, tmp_task) = (tmp_task, self._task)
             (self._play_context, tmp_play_context) = (tmp_play_context, self._play_context)
+
+            self.showgrowth(msg='before _execute stats task=%s' % self._task._uuid)
             res = self._execute(variables=task_vars)
+            self.showgrowth(msg='after _execute stats task=%s' % self._task._uuid)
+
+            # self.showgrowth(msg='before _dump_attrs stats task=%s' % self._task._uuid)
             task_fields = self._task.dump_attrs()
+            # self.showgrowth(msg='after _dump_attrs stats task=%s' % self._task._uuid)
             (self._task, tmp_task) = (tmp_task, self._task)
             (self._play_context, tmp_play_context) = (tmp_play_context, self._play_context)
+            # self.showgrowth(msg='after _dump_attrs and refs stats task=%s' % self._task._uuid)
 
             # now update the result with the item info, and append the result
             # to the list of results

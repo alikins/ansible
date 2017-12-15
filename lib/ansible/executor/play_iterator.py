@@ -21,12 +21,15 @@ __metaclass__ = type
 
 import fnmatch
 
+import pprint
 from ansible import constants as C
 from ansible.module_utils.six import iteritems
 from ansible.module_utils.parsing.convert_bool import boolean
 from ansible.playbook.block import Block
 from ansible.playbook.task import Task
 
+import os
+import objgraph
 
 try:
     from __main__ import display
@@ -110,7 +113,7 @@ class HostState:
         return self._blocks[self.cur_block]
 
     def copy(self):
-        new_state = HostState(self._blocks)
+        new_state = HostState(self._blocks[:])
         new_state.cur_block = self.cur_block
         new_state.cur_regular_task = self.cur_regular_task
         new_state.cur_rescue_task = self.cur_rescue_task
@@ -232,6 +235,12 @@ class PlayIterator:
             # plays won't try to advance)
             play_context.start_at_task = None
 
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowth (play_iterator) pid=%s' % os.getpid())
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
+
     def get_host_state(self, host):
         # Since we're using the PlayIterator to carry forward failed hosts,
         # in the event that a previous host was not in the current inventory
@@ -242,6 +251,8 @@ class PlayIterator:
         return self._host_states[host.name].copy()
 
     def cache_block_tasks(self, block):
+        # self.showgrowth('start of cache_block_tasks')
+
         def _cache_portion(p):
             for t in p:
                 if isinstance(t, Block):
@@ -252,6 +263,7 @@ class PlayIterator:
         for portion in (block.block, block.rescue, block.always):
             if portion is not None:
                 _cache_portion(portion)
+        # self.showgrowth('end of cache_block_tasks')
 
     def get_next_task_for_host(self, host, peek=False):
 
@@ -534,12 +546,51 @@ class PlayIterator:
 
         return self._task_uuid_cache.get(the_uuid, None)
 
+    def refs(self, filename=None, objs=None):
+        SKIP = False
+        if SKIP:
+            return
+        filename = filename or "playbook_iterator-object-graph"
+        refs_full_fn = "%s-refs.png" % filename
+        backrefs_full_fn = "%s-backrefs.png" % filename
+        print('refs: filename=%s' % (filename))
+        objs = objs or []
+        print('SHOW BACK REFS')
+        # print('SHOW REFS: show the chain for objs=%s' % objs)
+        pprint.pprint(objgraph.show_chain(objgraph.find_backref_chain(objs, objgraph.is_proper_module)))
+        print('\n')
+        print('SHOW REFS')
+        # print('SHOW REFS: show the chain for objs=%s' % objs)
+        pprint.pprint(objgraph.show_chain(objgraph.find_ref_chain(objs, objgraph.is_proper_module)))
+        return
+        objgraph.show_refs(objs,
+                           # filename=refs_full_fn,
+                           refcounts=True,
+                           shortnames=False,
+                           max_depth=5)
+        objgraph.show_refs(objs,
+                           filename=refs_full_fn,
+                           refcounts=True,
+                           shortnames=False,
+                           max_depth=5)
+        objgraph.show_backrefs(objs,
+                               refcounts=True,
+                               shortnames=False,
+                               filename=backrefs_full_fn,
+                               max_depth=5)
+
     def _insert_tasks_into_state(self, state, task_list):
+        self.showgrowth('start of _insert_tasks_into_state')
+        #self.refs(objs=[state, task_list, self])
+        #elf.refs(objs=[state, task_list])
         # if we've failed at all, or if the task list is empty, just return the current state
+        import pprint
+        pprint.pprint(state.__dict__)
         if state.fail_state != self.FAILED_NONE and state.run_state not in (self.ITERATING_RESCUE, self.ITERATING_ALWAYS) or not task_list:
             return state
 
         if state.run_state == self.ITERATING_TASKS:
+            self.showgrowth('start of _insert_tasks_into_state state=ITERATING_TASKS')
             if state.tasks_child_state:
                 state.tasks_child_state = self._insert_tasks_into_state(state.tasks_child_state, task_list)
             else:
@@ -549,6 +600,7 @@ class PlayIterator:
                 target_block.block = before + task_list + after
                 state._blocks[state.cur_block] = target_block
         elif state.run_state == self.ITERATING_RESCUE:
+            self.showgrowth('start of _insert_tasks_into_state state=ITERATING_RESCUE')
             if state.rescue_child_state:
                 state.rescue_child_state = self._insert_tasks_into_state(state.rescue_child_state, task_list)
             else:
@@ -558,6 +610,7 @@ class PlayIterator:
                 target_block.rescue = before + task_list + after
                 state._blocks[state.cur_block] = target_block
         elif state.run_state == self.ITERATING_ALWAYS:
+            self.showgrowth('start of _insert_tasks_into_state state=ITERATING_ALWAYS')
             if state.always_child_state:
                 state.always_child_state = self._insert_tasks_into_state(state.always_child_state, task_list)
             else:
@@ -566,9 +619,12 @@ class PlayIterator:
                 after = target_block.always[state.cur_always_task:]
                 target_block.always = before + task_list + after
                 state._blocks[state.cur_block] = target_block
+        self.showgrowth('end of _insert_tasks_into_state')
         return state
 
     def add_tasks(self, host, task_list):
+        self.showgrowth(msg='start of iterator.add_tasks')
         for b in task_list:
             self.cache_block_tasks(b)
         self._host_states[host.name] = self._insert_tasks_into_state(self.get_host_state(host), task_list)
+        self.showgrowth(msg='end of iterator.add_tasks')

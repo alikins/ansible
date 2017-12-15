@@ -55,6 +55,8 @@ except ImportError:
 
 __all__ = ['StrategyBase']
 
+import objgraph
+
 
 class StrategySentinel:
     pass
@@ -103,6 +105,7 @@ class StrategyBase:
     '''
 
     def __init__(self, tqm):
+        self.showgrowth('start of strategy base init')
         self._tqm = tqm
         self._inventory = tqm.get_inventory()
         self._workers = tqm.get_workers()
@@ -136,6 +139,13 @@ class StrategyBase:
         # holds the list of active (persistent) connections to be shutdown at
         # play completion
         self._active_connections = dict()
+        self.showgrowth('end of strategy base init')
+
+    def showgrowth(self, msg=None):
+        print('\n\nshowgrowth (strategy base) pid=%s' % os.getpid())
+        if msg:
+            print('%s' % msg)
+        objgraph.show_growth(limit=30)
 
     def cleanup(self):
         # close active persistent connections
@@ -150,6 +160,7 @@ class StrategyBase:
         self._results_thread.join()
 
     def run(self, iterator, play_context, result=0):
+        self.showgrowth('start strategy base run')
         # execute one more pass through the iterator without peeking, to
         # make sure that all of the hosts are advanced to their final task.
         # This should be safe, as everything should be ITERATING_COMPLETE by
@@ -195,8 +206,10 @@ class StrategyBase:
         Base class method to add extra variables/information to the list of task
         vars sent through the executor engine regarding the task queue manager state.
         '''
+        self.showgrowth('start strategy base add_tqm_variables')
         vars['ansible_current_hosts'] = [h.name for h in self.get_hosts_remaining(play)]
         vars['ansible_failed_hosts'] = [h.name for h in self.get_failed_hosts(play)]
+        self.showgrowth('end strategy base add_tqm_variables')
 
     def _queue_task(self, host, task, task_vars, play_context):
         ''' handles queueing the task up to be sent to a worker '''
@@ -672,17 +685,27 @@ class StrategyBase:
         Loads an included YAML file of tasks, applying the optional set of variables.
         '''
 
+        # self.showgrowth(msg='start of strategy base _load_included_file')
         display.debug("loading included file: %s" % included_file._filename)
         try:
             data = self._loader.load_from_file(included_file._filename)
+            # self.showgrowth(msg='after strategy base loder.load_from_file')
             if data is None:
                 return []
             elif not isinstance(data, list):
                 raise AnsibleError("included task files must contain a list of tasks")
 
-            ti_copy = included_file._task.copy()
-            temp_vars = ti_copy.vars.copy()
+            # ti_copy = included_file._task.copy()
+            # temp_vars = ti_copy.vars.copy()
+            # temp_vars = included_file._task.vars.copy()
+            # ti_copy = included_file._task.vars.copy()
+            temp_vars = {}
+            temp_vars.update(included_file._task.vars.copy())
+            #temp_vars.update(included_file.vars.copy())
             temp_vars.update(included_file._args)
+            import pprint
+            pprint.pprint(temp_vars)
+            # self.showgrowth(msg='after strategy base tempvars.update')
             # pop tags out of the include args, if they were specified there, and assign
             # them to the include. If the include already had tags specified, we raise an
             # error so that users know not to specify them both ways
@@ -690,14 +713,18 @@ class StrategyBase:
             if isinstance(tags, string_types):
                 tags = tags.split(',')
             if len(tags) > 0:
-                if len(included_file._task.tags) > 0:
-                    raise AnsibleParserError("Include tasks should not specify tags in more than one way (both via args and directly on the task). "
-                                             "Mixing tag specify styles is prohibited for whole import hierarchy, not only for single import statement",
-                                             obj=included_file._task._ds)
-                display.deprecated("You should not specify tags in the include parameters. All tags should be specified using the task-level option")
-                included_file._task.tags = tags
 
-            ti_copy.vars = temp_vars
+                #if len(included_file._task.tags) > 0:
+                #    raise AnsibleParserError("Include tasks should not specify tags in more than one way (both via args and directly on the task). "
+                #                             "Mixing tag specify styles is prohibited for whole import hierarchy, not only for single import statement",
+                #                             obj=included_file._task._ds)
+                #display.deprecated("You should not specify tags in the include parameters. All tags should be specified using the task-level option")
+                # included_file._task.tags = tags
+                included_file._task.tags = []
+
+            ti_copy = included_file._task.copy()
+            ti_copy.vars = temp_vars.copy()
+            del temp_vars
 
             block_list = load_list_of_blocks(
                 data,
@@ -715,6 +742,7 @@ class StrategyBase:
             for host in included_file._hosts:
                 self._tqm._stats.increment('ok', host.name)
 
+            data = None
         except AnsibleError as e:
             # mark all of the hosts including this file as failed, send callbacks,
             # and increment the stats for this host
@@ -750,7 +778,7 @@ class StrategyBase:
         return result
 
     def _do_handler_run(self, handler, handler_name, iterator, play_context, notified_hosts=None):
-
+        self.showgrowth('start of strat base _do_handler_run')
         # FIXME: need to use iterator.get_failed_hosts() instead?
         # if not len(self.get_hosts_remaining(iterator._play)):
         #     self._tqm.send_callback('v2_playbook_on_no_hosts_remaining')
@@ -830,6 +858,7 @@ class StrategyBase:
         # wipe the notification list
         self._notified_handlers[handler._uuid] = []
         display.debug("done running handlers, result is: %s" % result)
+        self.showgrowth('end of strat base _do_handler_run')
         return result
 
     def _take_step(self, task, host=None):
