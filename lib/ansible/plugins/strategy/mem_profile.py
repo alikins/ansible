@@ -18,6 +18,7 @@ __metaclass__ = type
 import os
 
 from ansible.plugins.strategy.linear import StrategyModule as LinearStrategyModule
+from ansible.module_utils.six import string_types
 
 import objgraph
 import memory_profiler as mem_profile
@@ -54,6 +55,12 @@ def filter_obj(obj):
             return False
     except Exception as e:
         print(e)
+    return True
+
+
+def filter_str(obj):
+    if isinstance(obj, string_types):
+        return False
     return True
 
 
@@ -131,6 +138,8 @@ def show_refs(filename=None, objs=None, max_depth=5, max_objs=None):
                        refcounts=True,
                        extra_info=extra_info_id,
                        shortnames=False,
+                       #filter=filter_str,
+                       too_many=4,
                        max_depth=max_depth)
 
     objgraph.show_backrefs(objs,
@@ -138,6 +147,8 @@ def show_refs(filename=None, objs=None, max_depth=5, max_objs=None):
                            shortnames=False,
                            extra_info=extra_info_id,
                            filename=backrefs_full_fn,
+                           too_many=4,
+                           #filter=filter_str,
                            max_depth=max_depth)
 
 
@@ -163,7 +174,16 @@ class StrategyModule(LinearStrategyModule):
 
         # example of dumping graphviz dot/pngs for ref graph of some objs
         tis = objgraph.by_type('ansible.playbook.task_include.TaskInclude')
+        #import pprint
+        #for i in tis:
+        #    pprint.pprint(i.__dict__)
         show_refs(filename='task_include_refs', objs=tis, max_depth=6, max_objs=1)
+
+        things = objgraph.by_type('ansible.playbook.attribute.FieldAttribute')
+        show_refs(filename='things_refs', objs=things, max_depth=6, max_objs=2)
+
+        things2 = objgraph.by_type('ansible.playbook.block.Block')
+        show_refs(filename='things2_refs', objs=things2, max_depth=6, max_objs=2)
 
         return res
 
