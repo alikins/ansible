@@ -274,6 +274,7 @@ class TaskExecutor:
 
             # pause between loop iterations
             if loop_pause and ran_once:
+                print('sleep for %s loop_pause' % loop_pause)
                 time.sleep(loop_pause)
             else:
                 ran_once = True
@@ -607,6 +608,7 @@ class TaskExecutor:
                         result['retries'] = retries
                         display.debug('Retrying task, attempt %d of %d' % (attempt, retries))
                         self._rslt_q.put(TaskResult(self._host.name, self._task._uuid, result, task_fields=self._task.dump_attrs()), block=False)
+                        print('sleep for %s retry sleep' % delay)
                         time.sleep(delay)
         else:
             if retries > 1:
@@ -679,6 +681,7 @@ class TaskExecutor:
 
         time_left = self._task.async_val
         while time_left > 0:
+            print('sleep for %s task.poll' % self._task.poll)
             time.sleep(self._task.poll)
 
             try:

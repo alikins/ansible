@@ -22,6 +22,7 @@ __metaclass__ = type
 import multiprocessing
 import os
 import tempfile
+import time
 
 from ansible import constants as C
 from ansible.errors import AnsibleError
@@ -107,12 +108,17 @@ class TaskQueueManager:
         # plugins for inter-process locking.
         self._connection_lockfile = tempfile.TemporaryFile()
 
-    def _initialize_processes(self, num):
+    def _initialize_processes(self, num, rslt_q=None):
         self._workers = []
 
+        print('worker num: %s' % num)
         for i in range(num):
-            rslt_q = multiprocessing.Queue()
-            self._workers.append([None, rslt_q])
+            worker_rslt_q = None
+            #worker_rslt_q = rslt_q or multiprocessing.Queue()
+            #print('\n\nworker_rslt_q: %s %s i=%s' % (worker_rslt_q, id(worker_rslt_q), i))
+            #import traceback
+            # traceback.print_stack()
+            self._workers.append([None, worker_rslt_q])
 
     def _initialize_notified_handlers(self, play):
         '''
@@ -262,8 +268,11 @@ class TaskQueueManager:
             start_at_done=self._start_at_done,
         )
 
+        rslt_q = None
+        #rslt_q = multiprocessing.Queue()
+
         # adjust to # of workers to configured forks or size of batch, whatever is lower
-        self._initialize_processes(min(self._options.forks, iterator.batch_size))
+        self._initialize_processes(min(self._options.forks, iterator.batch_size), rslt_q)
 
         # load the specified strategy (or the default linear one)
         strategy = strategy_loader.get(new_play.strategy, self)
@@ -294,7 +303,10 @@ class TaskQueueManager:
             self._failed_hosts[host_name] = True
 
         strategy.cleanup()
-        self._cleanup_processes()
+        # rslt_q.close()
+        # rslt_q = None
+        # self._cleanup_processes(rslt_q)
+        self._cleanup_processes(self._final_q)
         return play_return
 
     def cleanup(self):
@@ -303,15 +315,23 @@ class TaskQueueManager:
         self._final_q.close()
         self._cleanup_processes()
 
-    def _cleanup_processes(self):
+    def _cleanup_processes(self, rslt_q=None):
+        # print('\ncleanup rslt_q: %s self.final_q:%sa' % (rslt_q, self._final_q))
+        #import traceback
+        #traceback.print_stack()
         if hasattr(self, '_workers'):
             for (worker_prc, rslt_q) in self._workers:
-                rslt_q.close()
+                # print('dead check for %s' % worker_prc)
                 if worker_prc and worker_prc.is_alive():
+                    print('\n%s still alive DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD\n' % worker_prc)
                     try:
                         worker_prc.terminate()
                     except AttributeError:
                         pass
+
+        # print('_workers: %s' % self._workers)
+        if rslt_q:
+            rslt_q.close()
 
     def clear_failed_hosts(self):
         self._failed_hosts = dict()
@@ -332,7 +352,10 @@ class TaskQueueManager:
         self._terminated = True
 
     def has_dead_workers(self):
-
+        return False
+        # import traceback
+        # traceback.print_stack()
+        start = time.time()
         # [<WorkerProcess(WorkerProcess-2, stopped[SIGKILL])>,
         # <WorkerProcess(WorkerProcess-2, stopped[SIGTERM])>
 
@@ -341,6 +364,9 @@ class TaskQueueManager:
             if hasattr(x[0], 'exitcode'):
                 if x[0].exitcode in [-9, -11, -15]:
                     defunct = True
+        print('spent %s defunct: %s' % (time.time() - start, defunct))
+        if defunct:
+            print('\n\n\n\nXXXXXXXXXXXXXXXXXXXXXX\n\n\n')
         return defunct
 
     def send_callback(self, method_name, *args, **kwargs):

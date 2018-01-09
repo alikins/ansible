@@ -91,9 +91,11 @@ def results_thread_main(strategy):
             if isinstance(result, StrategySentinel):
                 break
             else:
+                start = time.clock()
                 strategy._results_lock.acquire()
                 strategy._results.append(result)
                 strategy._results_lock.release()
+                print('rtm spent: %f' % (time.clock() - start))
         except (IOError, EOFError):
             break
         except Queue.Empty:
@@ -317,6 +319,8 @@ class StrategyBase:
                 if queued:
                     break
                 elif self._cur_worker == starting_worker:
+                    delay = 0.0001
+                    print('sleep for %s workers' % delay)
                     time.sleep(0.0001)
 
             self._pending_results += 1
@@ -421,6 +425,7 @@ class StrategyBase:
             except IndexError:
                 break
             finally:
+                # pass
                 self._results_lock.release()
 
             # get the original host and task. We then assign them to the TaskResult for use in callbacks/etc.
@@ -434,10 +439,10 @@ class StrategyBase:
             task_result._task = original_task
 
             # get the correct loop var for use later
-            if original_task.loop_control:
-                loop_var = original_task.loop_control.loop_var
-            else:
-                loop_var = 'item'
+            #if original_task.loop_control:
+            #    loop_var = original_task.loop_control.loop_var
+            #else:
+            #    loop_var = 'item'
 
             # send callbacks for 'non final' results
             if '_ansible_retry' in task_result._result:
@@ -668,12 +673,23 @@ class StrategyBase:
         display.debug("waiting for pending results...")
         while self._pending_results > 0 and not self._tqm._terminated:
 
-            if self._tqm.has_dead_workers():
-                raise AnsibleError("A worker was found in a dead state")
+            #if self._tqm.has_dead_workers():
+            #    raise AnsibleError("A worker was found in a dead state")
 
+            print('%f self._pending_results: %s' % (time.clock(), self._pending_results))
+            #print('%s self._tqm._workers  %s' %
+            #      (time.time(), [x[0]._task for x in self._tqm._workers if x[0].is_alive()]))
+            # print('self._tqm._workers len(): %s' % len([x for x in self._tqm._workers if x[0].is_alive()]))
+            start = time.clock()
             results = self._process_pending_results(iterator)
-            ret_results.extend(results)
+            print('_process_pending_results spent: %f' % (time.clock() - start))
+            if results != []:
+                print('results: %s' % len(results))
+                ret_results.extend(results)
+            print('%f self._pending_results2: %s\n' % (time.clock(), self._pending_results))
+
             if self._pending_results > 0:
+                # print('sleep for %s internal_poll_interval' % C.DEFAULT_INTERNAL_POLL_INTERVAL)
                 time.sleep(C.DEFAULT_INTERNAL_POLL_INTERVAL)
 
         display.debug("no more pending results, returning what we have")

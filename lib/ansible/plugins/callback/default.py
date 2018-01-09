@@ -67,6 +67,7 @@ class CallbackModule(CallbackBase):
 
     def v2_runner_on_ok(self, result):
 
+        # return
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
         self._clean_results(result._result, result._task.action)
 
