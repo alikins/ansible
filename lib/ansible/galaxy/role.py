@@ -34,14 +34,8 @@ from ansible.errors import AnsibleError
 from ansible.module_utils.urls import open_url
 from ansible.playbook.role.requirement import RoleRequirement
 from ansible.galaxy.api import GalaxyAPI
+from ansible.utils.version_compare import Version
 
-try:
-    from packaging.version import Version
-except ImportError:
-    try:
-        from pip._vendor.packaging.version import Version
-    except ImportError:
-        from distutils.version import LooseVersion as Version
 
 try:
     from __main__ import display
