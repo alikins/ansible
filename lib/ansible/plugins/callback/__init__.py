@@ -103,7 +103,7 @@ class CallbackBase(AnsiblePlugin):
 
     def _dump_results(self, result, indent=None, sort_keys=True, keep_invocation=False):
 
-        print('keys: %s' % result.keys())
+        # print('keys: %s' % result.keys())
         if not indent and (result.get('_ansible_verbose_always') or self._display.verbosity > 2):
             indent = 4
 

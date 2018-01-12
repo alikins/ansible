@@ -523,7 +523,7 @@ class Connection(ConnectionBase):
             # b_args = (b"-o", b"ControlPath=" + to_bytes(self.control_path % dict(directory=cpdir), errors='surrogate_or_strict'))
             self.stderr_dest = os.path.join(C.DEFAULT_LOCAL_TMP,
                                             'ssh-stderr-%s-%s-%s.log' % (self.host, self.port, self.user))
-            print('stderr_dest: %s' % self.stderr_dest)
+            # print('stderr_dest: %s' % self.stderr_dest)
             b_args = (b'-E', b'%s' % to_bytes(self.stderr_dest))
             self._add_args(b_command, b_args,
                            u"Logging ssh stderr to stderr_dest file %s" % self.stderr_dest)
