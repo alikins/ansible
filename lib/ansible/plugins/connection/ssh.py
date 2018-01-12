@@ -1027,7 +1027,7 @@ class Connection(ConnectionBase):
 
         b_connection_stderr = b''
         # on error, check stashed ssh dir output and
-        if p.returncode == 255 and self.stderr_dest:
+        if p.returncode == 255 and self.stderr_dest or True:
             b_connection_stderr = open(self.stderr_dest, 'rb').read()
             # print('connection_stderr: %s' % to_text(b_connection_stderr))
 

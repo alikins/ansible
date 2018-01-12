@@ -933,6 +933,8 @@ class ActionBase(with_metaclass(ABCMeta, object)):
 
             if 'rc' in res:
                 data['rc'] = res['rc']
+            if 'connection_stderr' in res:
+                data['connection_stderr'] = res['connection_stderr']
         return data
 
     def _low_level_execute_command(self, cmd, sudoable=True, in_data=None, executable=None, encoding_errors='surrogate_then_replace', chdir=None):
