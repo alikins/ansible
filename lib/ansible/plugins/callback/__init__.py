@@ -122,7 +122,8 @@ class CallbackBase(AnsiblePlugin):
         module_stdout = abridged_result.pop('module_stdout', None)
         module_stderr = abridged_result.pop('module_stderr', None)
         error_data = abridged_result.get('error_data', {})
-        connection_stderr = error_data.get('connection_stderr', None)
+        connection_stderr = abridged_result.pop('connection_stderr', None)
+        connection_stderr = error_data.get('connection_stderr', connection_stderr)
         json_string = json.dumps(abridged_result, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
         out = '%s' % json_string
         if module_stdout:
