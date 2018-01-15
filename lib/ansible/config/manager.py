@@ -18,6 +18,7 @@ except ImportError:
     from yaml import SafeLoader
 
 from ansible.config.data import ConfigData
+from ansible.config.schema import base_defs
 from ansible.errors import AnsibleOptionsError, AnsibleError
 from ansible.module_utils.six import string_types
 from ansible.module_utils.six.moves import configparser
@@ -171,26 +172,28 @@ class ConfigManager(object):
 
     def __init__(self, conf_file=None, defs_file=None):
 
-        self._base_defs = {}
+        self._base_defs = base_defs
         self._plugins = {}
         self._parser = None
 
         self._config_file = conf_file
         self.data = ConfigData()
 
-        if defs_file is None:
-            # Create configuration definitions from source
-            b_defs_file = to_bytes('%s/base.yml' % os.path.dirname(__file__))
-        else:
-            b_defs_file = to_bytes(defs_file)
+#        if defs_file is None:
+#            # Create configuration definitions from source
+#            b_defs_file = to_bytes('%s/base.yml' % os.path.dirname(__file__))
+#        else:
+#            b_defs_file = to_bytes(defs_file)
 
         # consume definitions
-        if os.path.exists(b_defs_file):
-            with open(b_defs_file, 'rb') as config_def:
-                self._base_defs = yaml_load(config_def, Loader=SafeLoader)
-        else:
-            raise AnsibleError("Missing base configuration definition file (bad install?): %s" % to_native(b_defs_file))
+#        if os.path.exists(b_defs_file):
+#            with open(b_defs_file, 'rb') as config_def:
+#                self._base_defs = yaml_load(config_def, Loader=SafeLoader)
+#        else:
+#            raise AnsibleError("Missing base configuration definition file (bad install?): %s" % to_native(b_defs_file))
 
+#        import pprint
+#        pprint.pprint(self._base_defs)
         if self._config_file is None:
             # set config using ini
             self._config_file = find_ini_config_file()

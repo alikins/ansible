@@ -8,7 +8,7 @@ __metaclass__ = type
 import os  # used to set lang and for backwards compat get_config
 
 from ast import literal_eval
-from jinja2 import Template
+# from jinja2 import Template
 from string import ascii_letters, digits
 
 from ansible.module_utils._text import to_text
@@ -168,18 +168,20 @@ config = ConfigManager()
 for setting in config.data.get_settings():
 
     value = setting.value
-    if setting.origin == 'default' and \
-       isinstance(setting.value, string_types) and \
-       (setting.value.startswith('{{') and setting.value.endswith('}}')):
-        try:
-            t = Template(setting.value)
-            value = t.render(vars())
-            try:
-                value = literal_eval(value)
-            except ValueError:
-                pass  # not a python data structure
-        except:
-            pass  # not templatable
-        value = ensure_type(value, setting.name)
+#    if setting.origin == 'default' and \
+#       isinstance(setting.value, string_types) and \
+#       (setting.value.startswith('{{') and setting.value.endswith('}}')):
+#        print('setting: %s' % repr(setting))
+#        print('setting.value: %s' % repr(setting.value))
+#        try:
+#            t = Template(setting.value)
+#            value = t.render(vars())
+#            try:
+#                value = literal_eval(value)
+#            except ValueError:
+#                pass  # not a python data structure
+#        except:
+#            pass  # not templatable
+#        value = ensure_type(value, setting.name)
 
     set_constant(setting.name, value)
