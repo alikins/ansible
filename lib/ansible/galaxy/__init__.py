@@ -40,10 +40,21 @@ class Galaxy(object):
         self.options = options
         # self.options.roles_path needs to be a list and will be by default
         roles_path = getattr(self.options, 'roles_path', [])
+
+        # self.options.library handling for modules_path
+        content_path = getattr(self.options, 'content_path', [])
+
         # cli option handling is responsible for making roles_path a list
         self.roles_paths = roles_path
 
+        # cli option handling is responsible for making content_path a list
+        self.content_paths = content_path
+
         self.roles = {}
+
+        # FIXME self.content will eventually replace self.roles when we're ready
+        # to deprecate
+        self.content = {}
 
         # load data path for resource usage
         this_dir, this_filename = os.path.split(__file__)
@@ -59,3 +70,9 @@ class Galaxy(object):
 
     def remove_role(self, role_name):
         del self.roles[role_name]
+
+    def add_content(self, content):
+        self.content[content.name] = content
+
+    def remove_content(self, content_name):
+        del self.content[content_name]

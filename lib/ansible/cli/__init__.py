@@ -151,7 +151,11 @@ class CLI(with_metaclass(ABCMeta, object)):
         """
         Actually runs a child defined method using the execute_<action> pattern
         """
-        fn = getattr(self, "execute_%s" % self.action)
+        if '-' in self.action:
+            # Call a function named execute_some_action if the action is some-action
+            fn = getattr(self, "execute_%s" % self.action.replace('-', '_'))
+        else:
+            fn = getattr(self, "execute_%s" % self.action)
         fn()
 
     @abstractmethod

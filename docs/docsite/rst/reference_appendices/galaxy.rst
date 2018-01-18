@@ -207,6 +207,97 @@ When dependencies are encountered by ``ansible-galaxy``, it will automatically i
     At the time of this writing, the Galaxy website expects all role dependencies to exist in Galaxy, and therefore dependencies to be specified in the
     ``username.role_name`` format. If you import a role with a dependency where the ``src`` value is a URL, the import process will fail.
 
+Installing Galaxy Content Types
+--------------------------------
+
+Use the ``ansible-galaxy`` command to download various content types from the `Galaxy website <https://galaxy.ansible.com>`_, from SCM (`git <https://git-scm.com/>`_ and `mercurial <https://www.mercurial-scm.org/>`_ supported at this time), or local tarball.
+
+::
+
+    $ ansible-galaxy content-install username.role_name
+
+
+Current content types supported are ``roles`` and ``modules``
+
+content_path
+============
+
+Be aware that by default Ansible downloads roles to the path specified by the environment variable :envvar:`ANSIBLE_ROLES_PATH`. This can be set to a series of
+directories (i.e. */etc/ansible/roles:~/.ansible/roles*), in which case the first writable path will be used. When Ansible is first installed it defaults
+to */etc/ansible/roles*, which requires *root* privileges. Similarly, Anisble downloads other content types into their default location, for example
+the path for modules is specified by the environment variable :envvar:`ANSIBLE_MODULE_PATH`. This can be set to a series of
+directories (i.e. *~/.ansible/plugins/modules:/usr/share/ansible/plugins/modules*), in which case the first writable path will be used. When Ansible is first installed it defaults
+to */usr/share/ansible/plugins/modules*, which requires *root* privileges.
+
+You can override this by setting the environment variable in your session, defining *module_path* in an *ansible.cfg* file, or by using the *--content-path* option.
+The following provides an example of using *--content-path* to install the role into the current working directory:
+
+.. note::
+
+    If a content type is not provided, the type *role* is assumed. This exists
+    for backward functionality with the way the command worked before
+    ansible-galaxy understood how to install multiple types of content.
+
+::
+
+    $ ansible-galaxy content-install -t role --content-path . geerlingguy.apache
+
+.. seealso::
+
+   :doc:`intro_configuration`
+      All about configuration files
+
+version
+=======
+
+You can install a specific version of content from Galaxy by appending a comma and the value of a GitHub release tag. For example:
+
+::
+
+   $ ansible-galaxy content-install -t role geerlingguy.apache,v1.0.0
+
+It's also possible to point directly to the git repository and specify a branch name or commit hash as the version. For example, the following will
+install a specific commit:
+
+::
+
+   $ ansible-galaxy content-install -t git+https://github.com/geerlingguy/ansible-role-apache.git,0b7cd353c0250e87a26e0499e59e7fd265cc2f25
+
+
+Installing multiple Galaxy Content Types from a file
+====================================================
+
+.. FIXME: Need docs on how to do this
+
+FIXME - TODO
+
+Installing multiple Galaxy Content Types from multiple files
+============================================================
+
+.. FIXME: Need docs on how to do this
+
+FIXME - TODO
+
+
+Dependencies
+============
+
+.. FIXME: Need docs on how exactly this is going to work
+
+FIXME - TODO
+
+Create Galaxy Content
+---------------------
+
+Ansible Galaxy Content types can live in Galaxy, and is encouraged because
+Galaxy allows users to easily discover your work, but it does not have to and it
+can be hosted and installed from many places. You can even create your own
+locally.
+
+.. FIXME: Need docs on how to do this
+
+FIXME - TODO
+
 Create roles
 ------------
 
