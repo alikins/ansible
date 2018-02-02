@@ -70,6 +70,8 @@ NON_TEMPLATED_TYPES = (bool, Number)
 
 JINJA2_OVERRIDE = '#jinja2:'
 
+QUIET = False
+DEBUG = False
 
 from akl import alogging
 log = alogging.get_logger()
@@ -520,9 +522,9 @@ class Templar:
                         if cache:
                             self._cached_result[sha1_hash] = result
 
-                self.log.debug('OUT:%s %s (type=%s)   -->   %s (type=%s)',
-                               'CHANGED:' if (variable != result) else '',
-                               repr(variable), type(variable), repr(result), type(result))
+                QUIET or self.log.debug('OUT:%s %s (type=%s)   -->   %s (type=%s)',
+                                        'CHANGED:' if (variable != result) else '',
+                                        repr(variable), type(variable), repr(result), type(result))
                 return result
 
             elif isinstance(variable, (list, tuple)):
@@ -553,12 +555,12 @@ class Templar:
                     else:
                         d[k] = variable[k]
 
-                self.log.debug('OUT:%s %s (type=%s) --dict-->   %s (type=%s)',
-                               'CHANGED:' if (variable != d) else '',
-                               repr(variable), type(variable), repr(d), type(d))
+                QUIET or self.log.debug('OUT:%s %s (type=%s) --dict-->   %s (type=%s)',
+                                        'CHANGED:' if (variable != d) else '',
+                                        repr(variable), type(variable), repr(d), type(d))
                 return d
             else:
-                self.log.debug('OUT: %s (type=%s) is not a known type so returning the original value -->   %s', repr(variable), type(variable), repr(variable))
+                QUIET or self.log.debug('OUT: %s (type=%s) is not a known type so returning the original value -->   %s', repr(variable), type(variable), repr(variable))
                 return variable
 
         except AnsibleFilterError as afe:
