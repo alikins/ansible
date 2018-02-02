@@ -71,6 +71,10 @@ NON_TEMPLATED_TYPES = (bool, Number)
 JINJA2_OVERRIDE = '#jinja2:'
 
 
+from akl import alogging
+log = alogging.get_logger()
+
+
 def generate_ansible_template_vars(path):
 
     b_path = to_bytes(path)
@@ -424,10 +428,12 @@ class Templar:
         set to True, the given data will be wrapped as a jinja2 variable ('{{foo}}')
         before being sent through the template engine.
         '''
+        log.debug('Template input: %s (type=%s)', repr(variable), type(variable))
         static_vars = [''] if static_vars is None else static_vars
 
         # Don't template unsafe variables, just return them.
         if hasattr(variable, '__UNSAFE__'):
+            log.debug('%s (type=%s) was UNSAFE, returning it untemplated', repr(variable), type(variable))
             return variable
 
         if fail_on_undefined is None:
@@ -450,8 +456,12 @@ class Templar:
                         if var_name in self._available_variables:
                             resolved_val = self._available_variables[var_name]
                             if isinstance(resolved_val, NON_TEMPLATED_TYPES):
+                                log.debug('%s (type=%s) is a non-templated-type,  templated to --> %s (type=%s)',
+                                          repr(variable), type(variable), resolved_val, type(resolved_val))
                                 return resolved_val
                             elif resolved_val is None:
+                                log.debug('%s (type=%s) templated to --> %s (type=%s) (default null representation)',
+                                          repr(variable), type(variable), C.DEFAULT_NULL_REPRESENTATION, type(C.DEFAULT_NULL_REPRESENTATION))
                                 return C.DEFAULT_NULL_REPRESENTATION
 
                     # Using a cache in order to prevent template calls with already templated variables
@@ -469,6 +479,7 @@ class Templar:
                         sha1_hash = variable_hash.hexdigest() + options_hash.hexdigest()
                     if cache and sha1_hash in self._cached_result:
                         result = self._cached_result[sha1_hash]
+                        log.debug('(cached) %s --> %s', repr(variable), repr(result))
                     else:
                         result = self.do_template(
                             variable,
@@ -488,6 +499,7 @@ class Templar:
                                 if eval_results[1] is None:
                                     result = eval_results[0]
                                     if unsafe:
+                                        log.debug('(UNSAFE) %s (type=%s) was eval() to be unsafe, will be wrapped as unsafe', repr(variable), type(variable))
                                         result = wrap_var(result)
                                 else:
                                     # FIXME: if the safe_eval raised an error, should we do something with it?
@@ -499,16 +511,20 @@ class Templar:
                         if cache:
                             self._cached_result[sha1_hash] = result
 
+                log.debug('%s (type=%s) templated to --> %s (type=%s)', repr(variable), type(variable), result, type(result))
                 return result
 
             elif isinstance(variable, (list, tuple)):
-                return [self.template(
+                result = [self.template(
                     v,
                     preserve_trailing_newlines=preserve_trailing_newlines,
                     fail_on_undefined=fail_on_undefined,
                     overrides=overrides,
                     disable_lookups=disable_lookups,
                 ) for v in variable]
+                log.debug('%s (type=%s) templated to --> %s (type=%s)',
+                          repr(variable), type(variable), result, type(result))
+                return result
             elif isinstance(variable, dict):
                 d = {}
                 # we don't use iteritems() here to avoid problems if the underlying dict
@@ -524,14 +540,19 @@ class Templar:
                         )
                     else:
                         d[k] = variable[k]
+                log.debug('%s (type=dict) templated to -> %s', repr(variable), d)
                 return d
             else:
+                log.debug('%s (type=%s) is not a known type so returning the original value --> %s', repr(variable), type(variable), repr(variable))
                 return variable
 
-        except AnsibleFilterError:
+        except AnsibleFilterError as afe:
+            log.exception(afe)
             if self._fail_on_filter_errors:
                 raise
             else:
+                log.debug('Templating %s (type=%s) caused a AnsibleFilterError("%s") , returning the original value --> "%s"',
+                          repr(variable), type(variable), afe, repr(variable))
                 return variable
 
     def is_template(self, data):
@@ -572,6 +593,7 @@ class Templar:
         if isinstance(data, string_types):
             for marker in (self.environment.block_start_string, self.environment.variable_start_string, self.environment.comment_start_string):
                 if marker in data:
+                    log.debug('%s contains_vars: %s', repr(data), repr(marker))
                     return True
         return False
 
@@ -656,6 +678,7 @@ class Templar:
             raise AnsibleError("lookup plugin (%s) not found" % name)
 
     def do_template(self, data, preserve_trailing_newlines=True, escape_backslashes=True, fail_on_undefined=None, overrides=None, disable_lookups=False):
+        log.debug('Template input: %s (type=%s)', repr(data), type(data))
         # For preserving the number of input newlines in the output (used
         # later in this method)
         data_newlines = _count_newlines_from_end(data)
@@ -696,6 +719,8 @@ class Templar:
                 if 'recursion' in to_native(e):
                     raise AnsibleError("recursive loop detected in template string: %s" % to_native(data))
                 else:
+                    log.exception(e)
+                    log.warn('Failure creating template env for data: %s returning data: %s', data, data)
                     return data
 
             if disable_lookups:
@@ -716,12 +741,13 @@ class Templar:
                 if new_context.unsafe:
                     res = wrap_var(res)
             except TypeError as te:
+                log.exception(te)
                 if 'StrictUndefined' in to_native(te):
                     errmsg = "Unable to look up a name or access an attribute in template string (%s).\n" % to_native(data)
                     errmsg += "Make sure your variable name does not contain invalid characters like '-': %s" % to_native(te)
                     raise AnsibleUndefinedVariable(errmsg)
                 else:
-                    display.debug("failing because of a type error, template data is: %s" % to_native(data))
+                    display.debug('failing because of a type error, template data is: "%s"' % to_native(data))
                     raise AnsibleError("Unexpected templating type error occurred on (%s): %s" % (to_native(data), to_native(te)))
 
             if preserve_trailing_newlines:
@@ -740,12 +766,16 @@ class Templar:
                 res_newlines = _count_newlines_from_end(res)
                 if data_newlines > res_newlines:
                     res += self.environment.newline_sequence * (data_newlines - res_newlines)
+            log.debug('%s do_template()d to --> %s', repr(data), res)
             return res
         except (UndefinedError, AnsibleUndefinedVariable) as e:
             if fail_on_undefined:
-                raise AnsibleUndefinedVariable(e)
+                raise AnsibleUndefinedVariable(e) from e
+                #raise
             else:
                 display.debug("Ignoring undefined failure: %s" % to_text(e))
+                log.exception(e)
+                log.debug('Attempt to template failed, returning original data: %s', data)
                 return data
 
     # for backwards compatibility in case anyone is using old private method directly
