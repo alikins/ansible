@@ -31,9 +31,11 @@ __all__ = ['listify_lookup_plugin_terms']
 def listify_lookup_plugin_terms(terms, templar, loader, fail_on_undefined=True, convert_bare=False):
 
     if isinstance(terms, string_types):
-        terms = templar.template(terms.strip(), convert_bare=convert_bare, fail_on_undefined=fail_on_undefined)
+        terms = templar.template(terms.strip(), convert_bare=convert_bare, fail_on_undefined=fail_on_undefined,
+                                 sub_scope='listify_plugin_terms_strings')
     else:
-        terms = templar.template(terms, fail_on_undefined=fail_on_undefined)
+        terms = templar.template(terms, fail_on_undefined=fail_on_undefined,
+                                 sub_scope='listify_plugin_terms')
 
     if isinstance(terms, string_types) or not isinstance(terms, Iterable):
         terms = [terms]

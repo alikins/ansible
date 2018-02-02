@@ -121,14 +121,14 @@ class StrategyModule(StrategyBase):
                         display.debug("done getting variables")
 
                         try:
-                            task.name = to_text(templar.template(task.name, fail_on_undefined=False), nonstring='empty')
+                            task.name = to_text(templar.template(task.name, fail_on_undefined=False, sub_scope='task_name'), nonstring='empty')
                             display.debug("done templating")
                         except:
                             # just ignore any errors during task name templating,
                             # we don't care if it just shows the raw name
                             display.debug("templating failed for some reason")
 
-                        run_once = templar.template(task.run_once) or action and getattr(action, 'BYPASS_HOST_LOOP', False)
+                        run_once = templar.template(task.run_once, sub_scope='run_once') or action and getattr(action, 'BYPASS_HOST_LOOP', False)
                         if run_once:
                             if action and getattr(action, 'BYPASS_HOST_LOOP', False):
                                 raise AnsibleError("The '%s' module bypasses the host loop, which is currently not supported in the free strategy "

@@ -305,7 +305,6 @@ class Templar:
         else:
             tmpl_log_name = "%s.(%s)" % (alogging.get_class_logger_name(self), 'template')
         self.tmpl_log = alogging.get_logger(tmpl_log_name)
-        self.tmpl_log.debug('log setup')
 
     def _get_filters(self):
         '''
@@ -443,12 +442,12 @@ class Templar:
         # self.log.debug('IN: %s (type=%s)', repr(variable), type(variable))
         sub_scope = sub_scope or ''
         static_vars = [''] if static_vars is None else static_vars
-        #self.log.debug('self.scope: %s', self.scope)
-        #self.tmpl_log.debug('self.scope: %s  FOOO', self.scope)
+        # self.log.debug('self.scope: %s', self.scope)
+        # self.tmpl_log.debug('self.scope: %s  FOOO', self.scope)
         # Don't template unsafe variables, just return them.
         if hasattr(variable, '__UNSAFE__'):
-            self.tmpl_log.debug('OUT: %s (type=%s) was UNSAFE, not templating   --->   %s (type=%s)',
-                                repr(variable), type(variable), repr(variable), type(variable))
+            self.tmpl_log.debug('OUT:%s %s (type=%s) was UNSAFE, not templating   --->   %s (type=%s)',
+                                sub_scope, repr(variable), type(variable), repr(variable), type(variable))
             return variable
 
         if fail_on_undefined is None:
@@ -471,12 +470,14 @@ class Templar:
                         if var_name in self._available_variables:
                             resolved_val = self._available_variables[var_name]
                             if isinstance(resolved_val, NON_TEMPLATED_TYPES):
-                                self.log.debug('OUT:%s %s (type=%s) is a non-templated-type   -->   %s (type=%s)',
+                                self.log.debug('OUT:%s%s %s (type=%s) is a non-templated-type   -->   %s (type=%s)',
+                                               sub_scope,
                                                'CHANGED:' if (variable != resolved_val) else '',
                                                repr(variable), type(variable), resolved_val, type(resolved_val))
                                 return resolved_val
                             elif resolved_val is None:
-                                self.log.debug('OUT:%s %s (type=%s)   -->   %s (type=%s) (default null representation)',
+                                self.log.debug('OUT:%s%s %s (type=%s)   -->   %s (type=%s) (default null representation)',
+                                               sub_scope,
                                                'CHANGED:' if (variable != C.DEFAULT_NULL_REPRESENTATION) else '',
                                                repr(variable), type(variable), C.DEFAULT_NULL_REPRESENTATION, type(C.DEFAULT_NULL_REPRESENTATION))
                                 return C.DEFAULT_NULL_REPRESENTATION
@@ -496,7 +497,8 @@ class Templar:
                         sha1_hash = variable_hash.hexdigest() + options_hash.hexdigest()
                     if cache and sha1_hash in self._cached_result:
                         result = self._cached_result[sha1_hash]
-                        self.log.debug('OUT:%s (cached) %s   -->   %s',
+                        self.log.debug('OUT:%s%s (cached) %s   -->   %s',
+                                       sub_scope,
                                        'CHANGED:' if (variable != result) else '',
                                        repr(variable), repr(result))
                     else:
@@ -507,6 +509,7 @@ class Templar:
                             fail_on_undefined=fail_on_undefined,
                             overrides=overrides,
                             disable_lookups=disable_lookups,
+                            sub_scope=sub_scope
                         )
 
                         unsafe = hasattr(result, '__UNSAFE__')
@@ -544,6 +547,7 @@ class Templar:
                     fail_on_undefined=fail_on_undefined,
                     overrides=overrides,
                     disable_lookups=disable_lookups,
+                    sub_scope='%s_list_items' % sub_scope
                 ) for v in variable]
                 self.tmpl_log.debug('OUT:%s:%s %s (type=%s)   -->   %s (type=%s)',
                                     sub_scope,
@@ -562,17 +566,19 @@ class Templar:
                             fail_on_undefined=fail_on_undefined,
                             overrides=overrides,
                             disable_lookups=disable_lookups,
+                            sub_scope='%s_dict_items' % sub_scope
                         )
                     else:
                         d[k] = variable[k]
 
-                self.tmpl_log.debug('OUT:%s %s (type=%s) --dict-->   %s (type=%s)',
+                self.tmpl_log.debug('OUT:%s%s %s (type=%s) --dict-->   %s (type=%s)',
+                                    sub_scope,
                                     'CHANGED:' if (variable != d) else '',
                                     repr(variable), type(variable), repr(d), type(d))
                 return d
             else:
-                self.tmpl_log.debug('OUT: %s (type=%s) is not a known type so returning the original value -->   %s',
-                                    repr(variable), type(variable), repr(variable))
+                self.tmpl_log.debug('OUT:%s %s (type=%s) is not a known type so returning the original value -->   %s',
+                                    sub_scope, repr(variable), type(variable), repr(variable))
                 return variable
 
         except AnsibleFilterError as afe:
@@ -580,8 +586,8 @@ class Templar:
             if self._fail_on_filter_errors:
                 raise
             else:
-                self.tmpl_log.debug('OUT: Templating %s (type=%s) caused a AnsibleFilterError("%s") , returning the original value -->   %s',
-                                    repr(variable), type(variable), afe, repr(variable))
+                self.tmpl_log.debug('OUT:%s Templating %s (type=%s) caused a AnsibleFilterError("%s") , returning the original value -->   %s',
+                                    sub_scope, repr(variable), type(variable), afe, repr(variable))
                 return variable
 
     def is_template(self, data):
@@ -610,7 +616,7 @@ class Templar:
         '''
         templatable = True
         try:
-            self.template(data)
+            self.template(data, sub_scope='templatable')
         except:
             templatable = False
         return templatable
@@ -706,11 +712,12 @@ class Templar:
         else:
             raise AnsibleError("lookup plugin (%s) not found" % name)
 
-    def do_template(self, data, preserve_trailing_newlines=True, escape_backslashes=True, fail_on_undefined=None, overrides=None, disable_lookups=False):
+    def do_template(self, data, preserve_trailing_newlines=True, escape_backslashes=True, fail_on_undefined=None, overrides=None, disable_lookups=False, sub_scope=None):
         # self.log.debug('IN: %s (type=%s)', repr(data), type(data))
         # For preserving the number of input newlines in the output (used
         # later in this method)
         data_newlines = _count_newlines_from_end(data)
+        sub_scope = sub_scope or ''
 
         if fail_on_undefined is None:
             fail_on_undefined = self._fail_on_undefined_errors
@@ -796,7 +803,8 @@ class Templar:
                 if data_newlines > res_newlines:
                     res += self.environment.newline_sequence * (data_newlines - res_newlines)
 
-            self.tmpl_log.debug('OUT:%s %s   -->   %s',
+            self.tmpl_log.debug('OUT:%s%s %s   -->   %s',
+                                sub_scope,
                                 'CHANGED:' if (data != res) else '',
                                 repr(data), res)
             return res
@@ -810,8 +818,8 @@ class Templar:
             else:
                 display.debug("Ignoring undefined failure: %s" % to_text(e))
                 # TODO: warn here instead of debug?
-                self.tmpl_log.debug('OUT: Attempt to template %s failed with error "%s", returning original data   -->   %s',
-                                    data, to_text(e), data)
+                self.tmpl_log.debug('OUT:%s Attempt to template %s failed with error "%s", returning original data   -->   %s',
+                                    sub_scope, data, to_text(e), data)
                 return data
 
     # for backwards compatibility in case anyone is using old private method directly

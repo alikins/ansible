@@ -230,7 +230,7 @@ class TaskExecutor:
                 raise AnsibleError("Unexpected failure in finding the lookup named '%s' in the available lookup plugins" % self._task.loop_with)
 
         elif self._task.loop:
-            items = templar.template(self._task.loop)
+            items = templar.template(self._task.loop, sub_scope='loop_items')
             if not isinstance(items, list):
                 raise AnsibleError("Invalid data passed to 'loop' it requires a list, got this instead: %s" % items)
 
@@ -321,7 +321,7 @@ class TaskExecutor:
 
             if label is not None:
                 templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=self._job_vars, scope='task_executor_item_label')
-                res['_ansible_item_label'] = templar.template(label)
+                res['_ansible_item_label'] = templar.template(label, sub_scope='loop_item_label')
 
             self._rslt_q.put(
                 TaskResult(
@@ -352,7 +352,8 @@ class TaskExecutor:
             templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=variables, scope='task_executor_squash_items')
             task_action = self._task.action
             if templar._contains_vars(task_action):
-                task_action = templar.template(task_action, fail_on_undefined=False)
+                task_action = templar.template(task_action, fail_on_undefined=False,
+                                               sub_scope='task_action')
 
             if len(items) > 0 and task_action in self.SQUASH_ACTIONS:
                 if all(isinstance(o, string_types) for o in items):
@@ -369,9 +370,9 @@ class TaskExecutor:
                     if name:
                         if templar._contains_vars(name):
                             variables[loop_var] = '\0$'
-                            template_no_item = templar.template(name, variables, cache=False)
+                            template_no_item = templar.template(name, variables, cache=False, sub_scope='name_field_template_no_item')
                             variables[loop_var] = '\0@'
-                            template_with_item = templar.template(name, variables, cache=False)
+                            template_with_item = templar.template(name, variables, cache=False, sub_scope='name_field_template_with_item')
                             del variables[loop_var]
 
                         # Check if the user is doing some operation that doesn't take
@@ -381,7 +382,7 @@ class TaskExecutor:
                             for item in items:
                                 variables[loop_var] = item
                                 if self._task.evaluate_conditional(templar, variables):
-                                    new_item = templar.template(name, cache=False)
+                                    new_item = templar.template(name, cache=False, sub_scope='name_field_new_item')
                                     final_items.append(new_item)
                             self._task.args['name'] = final_items
                             # Wrap this in a list so that the calling function loop
@@ -784,13 +785,13 @@ class TaskExecutor:
         options = {'_extras': {}}
         for k in option_vars:
             if k in final_vars:
-                options[k] = templar.template(final_vars[k])
+                options[k] = templar.template(final_vars[k], sub_scope='connection_options')
 
         # add extras if plugin supports them
         if getattr(self._connection, 'allow_extras', False):
             for k in final_vars:
                 if k.startswith('ansible_%s_' % self._connection._load_name) and k not in options:
-                    options['_extras'][k] = templar.template(final_vars[k])
+                    options['_extras'][k] = templar.template(final_vars[k], sub_scope='connection_options_extras')
 
         # set options with 'templated vars' specific to this plugin
         self._connection.set_options(var_options=options)
@@ -801,7 +802,7 @@ class TaskExecutor:
         options = {}
         for k in option_vars:
             if k in variables:
-                options[k] = templar.template(variables[k])
+                options[k] = templar.template(variables[k], sub_scope='shell_options')
         self._connection._shell.set_options(var_options=options)
 
     def _get_action_handler(self, connection, templar):

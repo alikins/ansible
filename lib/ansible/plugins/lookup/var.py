@@ -91,7 +91,7 @@ class LookupModule(LookupBase):
                 value = myvars['hostvars'][term]
             else:
                 raise AnsibleUndefinedVariable('No variable found with this name: %s' % term)
-            ret = self._templar.template(value, fail_on_undefined=True)
+            ret = self._templar.template(value, fail_on_undefined=True, sub_scope='lookup_run')
         except AnsibleUndefinedVariable:
             if default is None:
                 ret = default

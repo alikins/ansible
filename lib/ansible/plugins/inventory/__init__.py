@@ -275,7 +275,7 @@ class Constructable(object):
             for group_name in groups:
                 conditional = "{%% if %s %%} True {%% else %%} False {%% endif %%}" % groups[group_name]
                 try:
-                    result = boolean(self.templar.template(conditional))
+                    result = boolean(self.templar.template(conditional, sub_scope='inventory_plugin_group_conditional'))
                 except Exception as e:
                     if strict:
                         raise AnsibleOptionsError("Could not add to group %s: %s" % (group_name, to_native(e)))

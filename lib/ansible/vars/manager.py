@@ -357,7 +357,8 @@ class VariableManager:
                     # raise an error, which is silently ignored at this point.
                     try:
                         for vars_file in vars_file_list:
-                            vars_file = templar.template(vars_file)
+                            # TODO: scope_info for filename?
+                            vars_file = templar.template(vars_file, sub_scope='vars_file')
                             try:
                                 data = preprocess_vars(self._loader.load_from_file(vars_file, unsafe=True))
                                 if data is not None:
@@ -513,7 +514,7 @@ class VariableManager:
             else:
                 raise AnsibleError("Failed to find the lookup named '%s' in the available lookup plugins" % task.loop_with)
         elif task.loop is not None:
-            items = templar.template(task.loop)
+            items = templar.template(task.loop, sub_scope='loop_items')
         else:
             items = [None]
 
@@ -525,7 +526,7 @@ class VariableManager:
                 vars_copy[item_var] = item
 
             templar.set_available_variables(vars_copy)
-            delegated_host_name = templar.template(task.delegate_to, fail_on_undefined=False)
+            delegated_host_name = templar.template(task.delegate_to, fail_on_undefined=False, sub_scope='delegated_host_name')
             if delegated_host_name is None:
                 raise AnsibleError(message="Undefined delegate_to host for task:", obj=task._ds)
             if delegated_host_name in delegated_host_vars:

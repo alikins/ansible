@@ -40,7 +40,7 @@ class ActionModule(ActionBase):
 
         if self._task.args:
             for (k, v) in iteritems(self._task.args):
-                k = self._templar.template(k)
+                k = self._templar.template(k, sub_scope='set_fact_args')
 
                 if not isidentifier(k):
                     result['failed'] = True

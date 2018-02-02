@@ -108,7 +108,7 @@ class AnsibleJ2Vars(Mapping):
         else:
             value = None
             try:
-                value = self._templar.template(variable)
+                value = self._templar.template(variable, sub_scope='ansible_jinja_env_getitem')
             except AnsibleUndefinedVariable:
                 raise
             except Exception as e:

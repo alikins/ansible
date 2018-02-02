@@ -250,7 +250,7 @@ class StrategyModule(StrategyBase):
                         templar = Templar(loader=self._loader, variables=task_vars, scope='strategy_linear_run')
                         display.debug("done getting variables")
 
-                        run_once = templar.template(task.run_once) or action and getattr(action, 'BYPASS_HOST_LOOP', False)
+                        run_once = templar.template(task.run_once, sub_scope='run_once') or action and getattr(action, 'BYPASS_HOST_LOOP', False)
 
                         if (task.any_errors_fatal or run_once) and not task.ignore_errors:
                             any_errors_fatal = True
@@ -260,7 +260,7 @@ class StrategyModule(StrategyBase):
                             saved_name = task.name
                             display.debug("done copying, going to template now")
                             try:
-                                task.name = to_text(templar.template(task.name, fail_on_undefined=False), nonstring='empty')
+                                task.name = to_text(templar.template(task.name, fail_on_undefined=False, sub_scope='task_name'), nonstring='empty')
                                 display.debug("done templating")
                             except:
                                 # just ignore any errors during task name templating,

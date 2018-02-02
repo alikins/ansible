@@ -41,7 +41,8 @@ class ActionModule(ActionBase):
             data = self._task.args.get('data', {})
 
             if not isinstance(data, dict):
-                data = self._templar.template(data, convert_bare=False, fail_on_undefined=True)
+                data = self._templar.template(data, convert_bare=False, fail_on_undefined=True,
+                                              sub_scope='action_set_stats_data_arg')
 
             if not isinstance(data, dict):
                 result['failed'] = True
@@ -53,13 +54,13 @@ class ActionModule(ActionBase):
                 val = self._task.args.get(opt, None)
                 if val is not None:
                     if not isinstance(val, bool):
-                        stats[opt] = boolean(self._templar.template(val), strict=False)
+                        stats[opt] = boolean(self._templar.template(val, sub_scope='action_set_stats_options'), strict=False)
                     else:
                         stats[opt] = val
 
             for (k, v) in iteritems(data):
 
-                k = self._templar.template(k)
+                k = self._templar.template(k, sub_scope='action_set_stats_data_items_key')
 
                 if not isidentifier(k):
                     result['failed'] = True
@@ -67,7 +68,7 @@ class ActionModule(ActionBase):
                                      "letters, numbers and underscores." % k)
                     return result
 
-                stats['data'][k] = self._templar.template(v)
+                stats['data'][k] = self._templar.template(v, sub_scope='action_set_stats_data_items_value')
 
         result['changed'] = False
         result['ansible_stats'] = stats

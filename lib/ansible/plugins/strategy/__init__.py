@@ -377,11 +377,11 @@ class StrategyBase:
                             # include the role name (if the handler is from a role). If that
                             # is not found, we resort to the simple name field, which doesn't
                             # have anything extra added to it.
-                            target_handler_name = templar.template(handler_task.name)
+                            target_handler_name = templar.template(handler_task.name, sub_scope='target_handler_name')
                             if target_handler_name == handler_name:
                                 return handler_task
                             else:
-                                target_handler_name = templar.template(handler_task.get_name())
+                                target_handler_name = templar.template(handler_task.get_name(), sub_scope='target_handler_get_name')
                                 if target_handler_name == handler_name:
                                     return handler_task
                         except (UndefinedError, AnsibleUndefinedVariable):
@@ -405,11 +405,11 @@ class StrategyBase:
                     try:
                         handler_vars = self._variable_manager.get_vars(play=iterator._play, task=target_handler)
                         templar = Templar(loader=self._loader, variables=handler_vars, scope='strategy_parent_handler_match')
-                        target_handler_name = templar.template(target_handler.name)
+                        target_handler_name = templar.template(target_handler.name, sub_scope='target_handler_name')
                         if target_handler_name == handler_name:
                             return True
                         else:
-                            target_handler_name = templar.template(target_handler.get_name())
+                            target_handler_name = templar.template(target_handler.get_name(), sub_scope='target_handler_get_name')
                             if target_handler_name == handler_name:
                                 return True
                     except (UndefinedError, AnsibleUndefinedVariable):

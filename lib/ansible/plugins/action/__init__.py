@@ -179,7 +179,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             for environment in environments:
                 if environment is None or len(environment) == 0:
                     continue
-                temp_environment = self._templar.template(environment)
+                temp_environment = self._templar.template(environment, sub_scope='action_compute_environment')
                 if not isinstance(temp_environment, dict):
                     raise AnsibleError("environment must be a dictionary, received %s (%s)" % (temp_environment, type(temp_environment)))
                 # very deliberately using update here instead of combine_vars, as
@@ -187,7 +187,7 @@ class ActionBase(with_metaclass(ABCMeta, object)):
                 final_environment.update(temp_environment)
 
         if len(final_environment) > 0:
-            final_environment = self._templar.template(final_environment)
+            final_environment = self._templar.template(final_environment, sub_scope='action_compute_environment_final')
 
         if isinstance(raw_environment_out, dict):
             raw_environment_out.clear()

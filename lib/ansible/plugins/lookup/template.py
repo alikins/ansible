@@ -86,7 +86,8 @@ class LookupModule(LookupBase):
 
                     # do the templating
                     res = self._templar.template(template_data, preserve_trailing_newlines=True,
-                                                 convert_data=convert_data_p, escape_backslashes=False)
+                                                 convert_data=convert_data_p, escape_backslashes=False,
+                                                 sub_scope='template_plugin_run')
                     ret.append(res)
             else:
                 raise AnsibleError("the template file %s could not be found for the lookup" % term)

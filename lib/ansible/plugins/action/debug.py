@@ -52,13 +52,17 @@ class ActionModule(ActionBase):
 
             elif 'var' in self._task.args:
                 try:
-                    results = self._templar.template(self._task.args['var'], convert_bare=True, fail_on_undefined=True, bare_deprecated=False)
+                    results = self._templar.template(self._task.args['var'], convert_bare=True,
+                                                     fail_on_undefined=True, bare_deprecated=False,
+                                                     sub_scope='debug_action_var_arg')
                     if results == self._task.args['var']:
                         # if results is not str/unicode type, raise an exception
                         if not isinstance(results, string_types):
                             raise AnsibleUndefinedVariable
                         # If var name is same as result, try to template it
-                        results = self._templar.template("{{" + results + "}}", convert_bare=True, fail_on_undefined=True)
+                        results = self._templar.template("{{" + results + "}}",
+                                                         convert_bare=True, fail_on_undefined=True,
+                                                         sub_scope='debug_action_var_arg_results_same_name')
                 except AnsibleUndefinedVariable as e:
                     results = u"VARIABLE IS NOT DEFINED!"
                     if self._display.verbosity > 0:
