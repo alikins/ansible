@@ -28,6 +28,10 @@ from ansible.module_utils.six import iteritems
 from ansible.module_utils._text import to_native
 
 
+from akl import alogging
+alogging.default_setup('ansible')
+log = alogging.get_logger()
+
 __all__ = ['AnsibleJ2Vars']
 
 
@@ -105,12 +109,15 @@ class AnsibleJ2Vars(Mapping):
             value = None
             try:
                 value = self._templar.template(variable)
-            except AnsibleUndefinedVariable:
-                raise
+            #except AnsibleUndefinedVariable:
+            #    raise
             except Exception as e:
+                alogging.STACK_INFO = True
+                log.debug('catch all', stack_info=True)
+                log.exception(e)
                 msg = getattr(e, 'message') or to_native(e)
                 raise AnsibleError("An unhandled exception occurred while templating '%s'. "
-                                   "Error was a %s, original message: %s" % (to_native(variable), type(e), msg))
+                                   "Error was a %s, original message: %s" % (to_native(variable), type(e), msg)) from e
 
             return value
 
