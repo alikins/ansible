@@ -117,7 +117,7 @@ class AnsibleJ2Vars(Mapping):
                 log.exception(e)
                 msg = getattr(e, 'message') or to_native(e)
                 raise AnsibleError("An unhandled exception occurred while templating '%s'. "
-                                   "Error was a %s, original message: %s" % (to_native(variable), type(e), msg)) from e
+                                   "Error was a %s, original message: %s" % (to_native(variable), type(e), msg))
 
             return value
 
