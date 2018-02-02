@@ -150,7 +150,7 @@ class BaseInventoryPlugin(AnsiblePlugin):
 
         self.loader = loader
         self.inventory = inventory
-        self.templar = Templar(loader=loader)
+        self.templar = Templar(loader=loader, scope='inventory_base_plugin_parse')
 
     def verify_file(self, path):
         ''' Verify if file is usable by this plugin, base does minimal accessability check '''

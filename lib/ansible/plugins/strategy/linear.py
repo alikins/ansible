@@ -247,7 +247,7 @@ class StrategyModule(StrategyBase):
                         display.debug("getting variables")
                         task_vars = self._variable_manager.get_vars(play=iterator._play, host=host, task=task)
                         self.add_tqm_variables(task_vars, play=iterator._play)
-                        templar = Templar(loader=self._loader, variables=task_vars)
+                        templar = Templar(loader=self._loader, variables=task_vars, scope='strategy_linear_run')
                         display.debug("done getting variables")
 
                         run_once = templar.template(task.run_once) or action and getattr(action, 'BYPASS_HOST_LOOP', False)

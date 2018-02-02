@@ -74,7 +74,7 @@ class IncludedFile:
                         continue
 
                     task_vars = variable_manager.get_vars(play=iterator._play, host=original_host, task=original_task)
-                    templar = Templar(loader=loader, variables=task_vars)
+                    templar = Templar(loader=loader, variables=task_vars, scope='included_file_process_include_results')
 
                     include_variables = include_result.get('include_variables', dict())
                     loop_var = 'item'
@@ -101,12 +101,13 @@ class IncludedFile:
                                     if isinstance(parent_include, IncludeRole):
                                         parent_include_dir = parent_include._role_path
                                     else:
-                                        parent_include_dir = os.path.dirname(templar.template(parent_include.args.get('_raw_params')))
+                                        parent_include_dir = os.path.dirname(templar.template(parent_include.args.get('_raw_params'),
+                                                                                              sub_scope='parent_include_dir'))
                                     if cumulative_path is not None and not os.path.isabs(cumulative_path):
                                         cumulative_path = os.path.join(parent_include_dir, cumulative_path)
                                     else:
                                         cumulative_path = parent_include_dir
-                                    include_target = templar.template(include_result['include'])
+                                    include_target = templar.template(include_result['include'], sub_scope='include_target')
                                     if original_task._role:
                                         new_basedir = os.path.join(original_task._role._role_path, 'tasks', cumulative_path)
                                         candidates = [loader.path_dwim_relative(original_task._role._role_path, 'tasks', include_target),
@@ -129,24 +130,24 @@ class IncludedFile:
 
                         if include_file is None:
                             if original_task._role:
-                                include_target = templar.template(include_result['include'])
+                                include_target = templar.template(include_result['include'], sub_scope='include_target_origin_task')
                                 include_file = loader.path_dwim_relative(original_task._role._role_path, 'tasks', include_target)
                             else:
                                 include_file = loader.path_dwim(include_result['include'])
 
-                        include_file = templar.template(include_file)
+                        include_file = templar.template(include_file, sub_scope='include_file')
                         inc_file = IncludedFile(include_file, include_variables, original_task)
                     else:
                         # template the included role's name here
                         role_name = include_variables.get('name', include_variables.get('role', None))
                         if role_name is not None:
-                            role_name = templar.template(role_name)
+                            role_name = templar.template(role_name, sub_scope='role_name')
 
                         original_task._role_name = role_name
                         for from_arg in original_task.FROM_ARGS:
                             if from_arg in include_variables:
                                 from_key = from_arg.replace('_from', '')
-                                original_task._from_files[from_key] = templar.template(include_variables[from_arg])
+                                original_task._from_files[from_key] = templar.template(include_variables[from_arg], sub_scope='role_name_original_task')
 
                         inc_file = IncludedFile("role", include_variables, original_task, is_role=True)
 

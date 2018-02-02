@@ -129,7 +129,7 @@ class ModuleArgsParser:
         final_args = dict()
         if additional_args:
             if isinstance(additional_args, string_types):
-                templar = Templar(loader=None)
+                templar = Templar(loader=None, scope='mod_args_normalize_paramaters')
                 if templar._contains_vars(additional_args):
                     final_args['_variable_params'] = additional_args
                 else:
@@ -295,7 +295,7 @@ class ModuleArgsParser:
                 raise AnsibleParserError("no action detected in task. This often indicates a misspelled module name, or incorrect module path.",
                                          obj=self._task_ds)
         elif args.get('_raw_params', '') != '' and action not in RAW_PARAM_MODULES:
-            templar = Templar(loader=None)
+            templar = Templar(loader=None, scope='mod_args_parse_raw_params')
             raw_params = args.pop('_raw_params')
             if templar._contains_vars(raw_params):
                 args['_variable_params'] = raw_params

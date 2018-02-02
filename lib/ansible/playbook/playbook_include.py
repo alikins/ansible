@@ -60,12 +60,12 @@ class PlaybookInclude(Base, Conditional, Taggable):
         if variable_manager:
             all_vars.update(variable_manager.get_vars())
 
-        templar = Templar(loader=loader, variables=all_vars)
+        templar = Templar(loader=loader, variables=all_vars, scope='playbook_include_load_data')
 
         # then we use the object to load a Playbook
         pb = Playbook(loader=loader)
 
-        file_name = templar.template(new_obj.import_playbook)
+        file_name = templar.template(new_obj.import_playbook, sub_scope='playbook_filename')
         if not os.path.isabs(file_name):
             file_name = os.path.join(basedir, file_name)
 

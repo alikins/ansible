@@ -106,7 +106,7 @@ class PlaybookExecutor:
                     # on it without the templating changes affecting the original object.
                     # Doing this before vars_prompt to allow for using variables in prompt.
                     all_vars = self._variable_manager.get_vars(play=play)
-                    templar = Templar(loader=self._loader, variables=all_vars)
+                    templar = Templar(loader=self._loader, variables=all_vars, scope='playbook_executor_run_post_validate')
                     new_play = play.copy()
                     new_play.post_validate(templar)
 
@@ -130,7 +130,7 @@ class PlaybookExecutor:
 
                         # Post validating again in case variables were entered in the prompt.
                         all_vars = self._variable_manager.get_vars(play=play)
-                        templar = Templar(loader=self._loader, variables=all_vars)
+                        templar = Templar(loader=self._loader, variables=all_vars, scope='playbook_executor_run_post_validate_phase_2')
                         new_play.post_validate(templar)
 
                     if self._options.syntax:

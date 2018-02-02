@@ -271,7 +271,7 @@ class Task(Base, Conditional, Taggable, Become):
 
             def _parse_env_kv(k, v):
                 try:
-                    env[k] = templar.template(v, convert_bare=False)
+                    env[k] = templar.template(v, convert_bare=False, sub_scope='task_env_kv_post_validate')
                 except AnsibleUndefinedVariable as e:
                     if self.action in ('setup', 'gather_facts') and 'ansible_env' in to_native(e):
                         # ignore as fact gathering sets ansible_env
@@ -283,7 +283,7 @@ class Task(Base, Conditional, Taggable, Become):
                         for k in env_item:
                             _parse_env_kv(k, env_item[k])
                     else:
-                        isdict = templar.template(env_item, convert_bare=False)
+                        isdict = templar.template(env_item, convert_bare=False, sub_scope='task_env_list_post_validate')
                         if isinstance(isdict, dict):
                             env.update(isdict)
                         else:
@@ -296,7 +296,7 @@ class Task(Base, Conditional, Taggable, Become):
                     _parse_env_kv(env_item, value[env_item])
             else:
                 # at this point it should be a simple string, also should not happen
-                env = templar.template(value, convert_bare=False)
+                env = templar.template(value, convert_bare=False, sub_scope='task_env_post_validate')
 
         return env
 

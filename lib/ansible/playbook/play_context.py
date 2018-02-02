@@ -318,7 +318,7 @@ class PlayContext(Base):
             # In the case of a loop, the delegated_to host may have been
             # templated based on the loop variable, so we try and locate
             # the host name in the delegated variable dictionary here
-            delegated_host_name = templar.template(task.delegate_to)
+            delegated_host_name = templar.template(task.delegate_to, sub_scope='play_context_delegate_to')
             delegated_vars = variables.get('ansible_delegated_vars', dict()).get(delegated_host_name, dict())
 
             delegated_transport = C.DEFAULT_TRANSPORT

@@ -389,7 +389,7 @@ class Base(with_metaclass(BaseMeta, object)):
                     value = getattr(self, name)
                 else:
                     # if the attribute contains a variable, template it now
-                    value = templar.template(getattr(self, name))
+                    value = templar.template(getattr(self, name), sub_scope='post_validate_templated_attr')
 
                 # if this evaluated to the omit value, set the value back to
                 # the default specified in the FieldAttribute and move on

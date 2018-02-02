@@ -248,9 +248,10 @@ class Templar:
     The main class for templating, with the main entry-point of template().
     '''
 
-    def __init__(self, loader, shared_loader_obj=None, variables=None):
+    def __init__(self, loader, shared_loader_obj=None, variables=None, scope=None):
         variables = {} if variables is None else variables
 
+        self.scope = scope
         self._loader = loader
         self._filters = None
         self._tests = None
@@ -299,6 +300,12 @@ class Templar:
         self._no_type_regex = re.compile(r'.*\|\s*(?:%s)\s*(?:%s)?$' % ('|'.join(C.STRING_TYPE_FILTERS), self.environment.variable_end_string))
 
         self.log = alogging.get_class_logger(self)
+        if self.scope:
+            tmpl_log_name = "%s.(%s)" % (alogging.get_class_logger_name(self), self.scope)
+        else:
+            tmpl_log_name = "%s.(%s)" % (alogging.get_class_logger_name(self), 'template')
+        self.tmpl_log = alogging.get_logger(tmpl_log_name)
+        self.tmpl_log.debug('log setup')
 
     def _get_filters(self):
         '''
@@ -426,7 +433,7 @@ class Templar:
         self._cached_result = {}
 
     def template(self, variable, convert_bare=False, preserve_trailing_newlines=True, escape_backslashes=True, fail_on_undefined=None, overrides=None,
-                 convert_data=True, static_vars=None, cache=True, bare_deprecated=True, disable_lookups=False):
+                 convert_data=True, static_vars=None, cache=True, bare_deprecated=True, disable_lookups=False, sub_scope=None):
         '''
         Templates (possibly recursively) any given data as input. If convert_bare is
         set to True, the given data will be wrapped as a jinja2 variable ('{{foo}}')
@@ -434,12 +441,14 @@ class Templar:
         '''
         # alogging.STACK_INFO = True
         # self.log.debug('IN: %s (type=%s)', repr(variable), type(variable))
+        sub_scope = sub_scope or ''
         static_vars = [''] if static_vars is None else static_vars
-
+        #self.log.debug('self.scope: %s', self.scope)
+        #self.tmpl_log.debug('self.scope: %s  FOOO', self.scope)
         # Don't template unsafe variables, just return them.
         if hasattr(variable, '__UNSAFE__'):
-            self.log.debug('OUT: %s (type=%s) was UNSAFE, not templating   --->   %s (type=%s)',
-                           repr(variable), type(variable), repr(variable), type(variable))
+            self.tmpl_log.debug('OUT: %s (type=%s) was UNSAFE, not templating   --->   %s (type=%s)',
+                                repr(variable), type(variable), repr(variable), type(variable))
             return variable
 
         if fail_on_undefined is None:
@@ -522,9 +531,10 @@ class Templar:
                         if cache:
                             self._cached_result[sha1_hash] = result
 
-                QUIET or self.log.debug('OUT:%s %s (type=%s)   -->   %s (type=%s)',
-                                        'CHANGED:' if (variable != result) else '',
-                                        repr(variable), type(variable), repr(result), type(result))
+                self.tmpl_log.debug('OUT:%s:%s %s (type=%s)   -->   %s (type=%s)',
+                                    sub_scope,
+                                    'CHANGED:' if (variable != result) else '',
+                                    repr(variable), type(variable), repr(result), type(result))
                 return result
 
             elif isinstance(variable, (list, tuple)):
@@ -535,9 +545,10 @@ class Templar:
                     overrides=overrides,
                     disable_lookups=disable_lookups,
                 ) for v in variable]
-                self.log.debug('OUT:%s %s (type=%s)   -->   %s (type=%s)',
-                               'CHANGED:' if (variable != result) else '',
-                               repr(variable), type(variable), repr(result), type(result))
+                self.tmpl_log.debug('OUT:%s:%s %s (type=%s)   -->   %s (type=%s)',
+                                    sub_scope,
+                                    'CHANGED:' if (variable != result) else '',
+                                    repr(variable), type(variable), repr(result), type(result))
                 return result
             elif isinstance(variable, dict):
                 d = {}
@@ -555,12 +566,13 @@ class Templar:
                     else:
                         d[k] = variable[k]
 
-                QUIET or self.log.debug('OUT:%s %s (type=%s) --dict-->   %s (type=%s)',
-                                        'CHANGED:' if (variable != d) else '',
-                                        repr(variable), type(variable), repr(d), type(d))
+                self.tmpl_log.debug('OUT:%s %s (type=%s) --dict-->   %s (type=%s)',
+                                    'CHANGED:' if (variable != d) else '',
+                                    repr(variable), type(variable), repr(d), type(d))
                 return d
             else:
-                QUIET or self.log.debug('OUT: %s (type=%s) is not a known type so returning the original value -->   %s', repr(variable), type(variable), repr(variable))
+                self.tmpl_log.debug('OUT: %s (type=%s) is not a known type so returning the original value -->   %s',
+                                    repr(variable), type(variable), repr(variable))
                 return variable
 
         except AnsibleFilterError as afe:
@@ -568,8 +580,8 @@ class Templar:
             if self._fail_on_filter_errors:
                 raise
             else:
-                self.log.debug('OUT: Templating %s (type=%s) caused a AnsibleFilterError("%s") , returning the original value -->   %s',
-                               repr(variable), type(variable), afe, repr(variable))
+                self.tmpl_log.debug('OUT: Templating %s (type=%s) caused a AnsibleFilterError("%s") , returning the original value -->   %s',
+                                    repr(variable), type(variable), afe, repr(variable))
                 return variable
 
     def is_template(self, data):
@@ -784,9 +796,9 @@ class Templar:
                 if data_newlines > res_newlines:
                     res += self.environment.newline_sequence * (data_newlines - res_newlines)
 
-            self.log.debug('OUT:%s %s   -->   %s',
-                           'CHANGED:' if (data != res) else '',
-                           repr(data), res)
+            self.tmpl_log.debug('OUT:%s %s   -->   %s',
+                                'CHANGED:' if (data != res) else '',
+                                repr(data), res)
             return res
         except (UndefinedError, AnsibleUndefinedVariable) as e:
             if fail_on_undefined:
@@ -798,8 +810,8 @@ class Templar:
             else:
                 display.debug("Ignoring undefined failure: %s" % to_text(e))
                 # TODO: warn here instead of debug?
-                self.log.debug('OUT: Attempt to template %s failed with error "%s", returning original data   -->   %s',
-                               data, to_text(e), data)
+                self.tmpl_log.debug('OUT: Attempt to template %s failed with error "%s", returning original data   -->   %s',
+                                    data, to_text(e), data)
                 return data
 
     # for backwards compatibility in case anyone is using old private method directly

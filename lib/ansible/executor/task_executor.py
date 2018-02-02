@@ -201,7 +201,7 @@ class TaskExecutor:
         # get search path for this task to pass to lookup plugins
         self._job_vars['ansible_search_path'] = self._task.get_search_path()
 
-        templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=self._job_vars)
+        templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=self._job_vars, scope='task_executor_get_loop_items')
         items = None
         if self._task.loop_with:
             if self._task.loop_with in self._shared_loader_obj.lookup_loader:
@@ -320,7 +320,7 @@ class TaskExecutor:
             res['_ansible_ignore_errors'] = task_fields.get('ignore_errors')
 
             if label is not None:
-                templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=self._job_vars)
+                templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=self._job_vars, scope='task_executor_item_label')
                 res['_ansible_item_label'] = templar.template(label)
 
             self._rslt_q.put(
@@ -349,7 +349,7 @@ class TaskExecutor:
             # optimizing it here, the templatable string might use template vars
             # that aren't available until later (it could even use vars from the
             # with_items loop) so don't make the templated string permanent yet.
-            templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=variables)
+            templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=variables, scope='task_executor_squash_items')
             task_action = self._task.action
             if templar._contains_vars(task_action):
                 task_action = templar.template(task_action, fail_on_undefined=False)
@@ -415,7 +415,7 @@ class TaskExecutor:
         if variables is None:
             variables = self._job_vars
 
-        templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=variables)
+        templar = Templar(loader=self._loader, shared_loader_obj=self._shared_loader_obj, variables=variables, scope='task_executor_execute')
 
         context_validation_error = None
         try:
@@ -475,7 +475,7 @@ class TaskExecutor:
             if not include_file:
                 return dict(failed=True, msg="No include file was specified to the include")
 
-            include_file = templar.template(include_file)
+            include_file = templar.template(include_file, sub_scope='include_task')
             return dict(include=include_file, include_variables=include_variables)
 
         # if this task is a IncludeRole, we just return now with a success code so the main thread can expand the task list for the given host

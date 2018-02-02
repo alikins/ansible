@@ -230,7 +230,7 @@ class TaskQueueManager:
 
         all_vars = self._variable_manager.get_vars(play=play)
         warn_if_reserved(all_vars)
-        templar = Templar(loader=self._loader, variables=all_vars)
+        templar = Templar(loader=self._loader, variables=all_vars, scope='task_queue_manager_run')
 
         new_play = play.copy()
         new_play.post_validate(templar)

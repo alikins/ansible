@@ -129,9 +129,9 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         # contains a variable, try and template it now
         if self._variable_manager:
             all_vars = self._variable_manager.get_vars(play=self._play)
-            templar = Templar(loader=self._loader, variables=all_vars)
+            templar = Templar(loader=self._loader, variables=all_vars, scope='role_definition_load_role_name')
             if templar._contains_vars(role_name):
-                role_name = templar.template(role_name)
+                role_name = templar.template(role_name, sub_scope='role_name')
 
         return role_name
 
@@ -169,12 +169,12 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         else:
             all_vars = dict()
 
-        templar = Templar(loader=self._loader, variables=all_vars)
-        role_name = templar.template(role_name)
+        templar = Templar(loader=self._loader, variables=all_vars, scope='role_definition_load_role_path')
+        role_name = templar.template(role_name, sub_scope='role_name')
 
         # now iterate through the possible paths and return the first one we find
         for path in role_search_paths:
-            path = templar.template(path)
+            path = templar.template(path, sub_scope='role_search_path')
             role_path = unfrackpath(os.path.join(path, role_name))
             if self._loader.path_exists(role_path):
                 return (role_name, role_path)

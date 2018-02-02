@@ -343,7 +343,7 @@ class VariableManager:
                     # and magic vars so we can properly template the vars_files entries
                     temp_vars = combine_vars(all_vars, self._extra_vars)
                     temp_vars = combine_vars(temp_vars, magic_variables)
-                    templar = Templar(loader=self._loader, variables=temp_vars)
+                    templar = Templar(loader=self._loader, variables=temp_vars, scope='get_vars')
 
                     # we assume each item in the list is itself a list, as we
                     # support "conditional includes" for vars_files, which mimics
@@ -467,7 +467,7 @@ class VariableManager:
         if self._inventory is not None:
             variables['groups'] = self._inventory.get_groups_dict()
             if play:
-                templar = Templar(loader=self._loader)
+                templar = Templar(loader=self._loader, scope='vars_manager_get_magic_variables')
                 if templar.is_template(play.hosts):
                     pattern = 'all'
                 else:
@@ -497,7 +497,7 @@ class VariableManager:
         # as we're fetching vars before post_validate has been called on
         # the task that has been passed in
         vars_copy = existing_variables.copy()
-        templar = Templar(loader=self._loader, variables=vars_copy)
+        templar = Templar(loader=self._loader, variables=vars_copy, scope='vars_manager_get_delegated_vars')
 
         items = []
         if task.loop_with is not None:

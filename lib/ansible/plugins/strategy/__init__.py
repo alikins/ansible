@@ -371,7 +371,7 @@ class StrategyBase:
                 for handler_task in handler_block.block:
                     if handler_task.name:
                         handler_vars = self._variable_manager.get_vars(play=iterator._play, task=handler_task)
-                        templar = Templar(loader=self._loader, variables=handler_vars)
+                        templar = Templar(loader=self._loader, variables=handler_vars, scope='strategy_search_handler_blocks_by_name')
                         try:
                             # first we check with the full result of get_name(), which may
                             # include the role name (if the handler is from a role). If that
@@ -404,7 +404,7 @@ class StrategyBase:
                 if isinstance(target_handler, (TaskInclude, IncludeRole)):
                     try:
                         handler_vars = self._variable_manager.get_vars(play=iterator._play, task=target_handler)
-                        templar = Templar(loader=self._loader, variables=handler_vars)
+                        templar = Templar(loader=self._loader, variables=handler_vars, scope='strategy_parent_handler_match')
                         target_handler_name = templar.template(target_handler.name)
                         if target_handler_name == handler_name:
                             return True
@@ -946,7 +946,7 @@ class StrategyBase:
 
         def _evaluate_conditional(h):
             all_vars = self._variable_manager.get_vars(play=iterator._play, host=h, task=task)
-            templar = Templar(loader=self._loader, variables=all_vars)
+            templar = Templar(loader=self._loader, variables=all_vars, scope='strategy_execute_meta_eval_conditional')
             return task.evaluate_conditional(templar, all_vars)
 
         skipped = False

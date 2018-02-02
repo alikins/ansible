@@ -53,8 +53,8 @@ class Taggable:
         should_run = True
 
         if self.tags:
-            templar = Templar(loader=self._loader, variables=all_vars)
-            tags = templar.template(self.tags)
+            templar = Templar(loader=self._loader, variables=all_vars, scope='taggable_evaluate_tags')
+            tags = templar.template(self.tags, sub_scope='evaluate_tags')
 
             if not isinstance(tags, list):
                 if tags.find(',') != -1:

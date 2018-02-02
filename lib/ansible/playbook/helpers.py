@@ -131,7 +131,7 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                 )
 
                 all_vars = variable_manager.get_vars(play=play, task=t)
-                templar = Templar(loader=loader, variables=all_vars)
+                templar = Templar(loader=loader, variables=all_vars, scope='playbook_helpers_load_list_of_tasks_include_import')
 
                 # check to see if this include is dynamic or static:
                 # 1. the user has set the 'static' option to false or true
@@ -172,12 +172,13 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                         if not isinstance(parent_include, TaskInclude):
                             parent_include = parent_include._parent
                             continue
-                        parent_include_dir = os.path.dirname(templar.template(parent_include.args.get('_raw_params')))
+                        parent_include_dir = os.path.dirname(templar.template(parent_include.args.get('_raw_params'),
+                                                                              sub_scope='parent_include_dir'))
                         if cumulative_path is None:
                             cumulative_path = parent_include_dir
                         elif not os.path.isabs(cumulative_path):
                             cumulative_path = os.path.join(parent_include_dir, cumulative_path)
-                        include_target = templar.template(t.args['_raw_params'])
+                        include_target = templar.template(t.args['_raw_params'], sub_scope='include_target')
                         if t._role:
                             new_basedir = os.path.join(t._role._role_path, subdir, cumulative_path)
                             include_file = loader.path_dwim_relative(new_basedir, subdir, include_target)
@@ -192,7 +193,7 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
 
                     if not found:
                         try:
-                            include_target = templar.template(t.args['_raw_params'])
+                            include_target = templar.template(t.args['_raw_params'], sub_scope='raw_params')
                         except AnsibleUndefinedVariable as e:
                             raise AnsibleParserError(
                                 "Error when evaluating variable in include name: %s.\n\n"
@@ -321,9 +322,10 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
 
                     # template the role name now, if needed
                     all_vars = variable_manager.get_vars(play=play, task=ir)
-                    templar = Templar(loader=loader, variables=all_vars)
+                    templar = Templar(loader=loader, variables=all_vars,
+                                      scope='playbook_helpers_load_list_of_tasks_include_import_role_static')
                     if templar._contains_vars(ir._role_name):
-                        ir._role_name = templar.template(ir._role_name)
+                        ir._role_name = templar.template(ir._role_name, sub_scope='role_name')
 
                     # uses compiled list from object
                     blocks, _ = ir.get_block_list(variable_manager=variable_manager, loader=loader)

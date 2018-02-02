@@ -138,7 +138,7 @@ class Conditional:
         try:
             # if the conditional is "unsafe", disable lookups
             disable_lookups = hasattr(conditional, '__UNSAFE__')
-            conditional = templar.template(conditional, disable_lookups=disable_lookups)
+            conditional = templar.template(conditional, disable_lookups=disable_lookups, sub_scope='check_conditional_unsafe_check')
             if not isinstance(conditional, text_type) or conditional == "":
                 return conditional
 
@@ -190,7 +190,7 @@ class Conditional:
 
             # and finally we generate and template the presented string and look at the resulting string
             presented = "{%% if %s %%} True {%% else %%} False {%% endif %%}" % conditional
-            val = templar.template(presented, disable_lookups=disable_lookups).strip()
+            val = templar.template(presented, disable_lookups=disable_lookups, sub_scope='check_conditional').strip()
             if val == "True":
                 return True
             elif val == "False":
