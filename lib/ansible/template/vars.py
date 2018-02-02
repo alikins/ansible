@@ -109,11 +109,11 @@ class AnsibleJ2Vars(Mapping):
             value = None
             try:
                 value = self._templar.template(variable)
-            #except AnsibleUndefinedVariable:
-            #    raise
+            except AnsibleUndefinedVariable:
+                raise
             except Exception as e:
                 alogging.STACK_INFO = True
-                log.debug('catch all', stack_info=True)
+#                log.debug('catch all', stack_info=True)
                 log.exception(e)
                 msg = getattr(e, 'message') or to_native(e)
                 raise AnsibleError("An unhandled exception occurred while templating '%s'. "
