@@ -428,12 +428,14 @@ class Templar:
         set to True, the given data will be wrapped as a jinja2 variable ('{{foo}}')
         before being sent through the template engine.
         '''
-        log.debug('Template input: %s (type=%s)', repr(variable), type(variable))
+        # alogging.STACK_INFO = True
+        # log.debug('IN: %s (type=%s)', repr(variable), type(variable))
         static_vars = [''] if static_vars is None else static_vars
 
         # Don't template unsafe variables, just return them.
         if hasattr(variable, '__UNSAFE__'):
-            log.debug('%s (type=%s) was UNSAFE, returning it untemplated', repr(variable), type(variable))
+            log.debug('OUT: %s (type=%s) was UNSAFE, not templating   --->   %s (type=%s)',
+                      repr(variable), type(variable), repr(variable), type(variable))
             return variable
 
         if fail_on_undefined is None:
@@ -456,11 +458,11 @@ class Templar:
                         if var_name in self._available_variables:
                             resolved_val = self._available_variables[var_name]
                             if isinstance(resolved_val, NON_TEMPLATED_TYPES):
-                                log.debug('%s (type=%s) is a non-templated-type,  templated to --> %s (type=%s)',
+                                log.debug('OUT: %s (type=%s) is a non-templated-type   -->   %s (type=%s)',
                                           repr(variable), type(variable), resolved_val, type(resolved_val))
                                 return resolved_val
                             elif resolved_val is None:
-                                log.debug('%s (type=%s) templated to --> %s (type=%s) (default null representation)',
+                                log.debug('OUT: %s (type=%s)   -->   %s (type=%s) (default null representation)',
                                           repr(variable), type(variable), C.DEFAULT_NULL_REPRESENTATION, type(C.DEFAULT_NULL_REPRESENTATION))
                                 return C.DEFAULT_NULL_REPRESENTATION
 
@@ -479,7 +481,7 @@ class Templar:
                         sha1_hash = variable_hash.hexdigest() + options_hash.hexdigest()
                     if cache and sha1_hash in self._cached_result:
                         result = self._cached_result[sha1_hash]
-                        log.debug('(cached) %s --> %s', repr(variable), repr(result))
+                        log.debug('OUT: (cached) %s   -->   %s', repr(variable), repr(result))
                     else:
                         result = self.do_template(
                             variable,
@@ -511,7 +513,7 @@ class Templar:
                         if cache:
                             self._cached_result[sha1_hash] = result
 
-                log.debug('%s (type=%s) templated to --> %s (type=%s)', repr(variable), type(variable), result, type(result))
+                log.debug('OUT: %s (type=%s)   -->   %s (type=%s)', repr(variable), type(variable), result, type(result))
                 return result
 
             elif isinstance(variable, (list, tuple)):
@@ -522,7 +524,7 @@ class Templar:
                     overrides=overrides,
                     disable_lookups=disable_lookups,
                 ) for v in variable]
-                log.debug('%s (type=%s) templated to --> %s (type=%s)',
+                log.debug('OUT: %s (type=%s)   -->   %s (type=%s)',
                           repr(variable), type(variable), result, type(result))
                 return result
             elif isinstance(variable, dict):
@@ -540,10 +542,10 @@ class Templar:
                         )
                     else:
                         d[k] = variable[k]
-                log.debug('%s (type=dict) templated to -> %s', repr(variable), d)
+                log.debug('OUT: %s (type=dict)   -->   %s', repr(variable), d)
                 return d
             else:
-                log.debug('%s (type=%s) is not a known type so returning the original value --> %s', repr(variable), type(variable), repr(variable))
+                log.debug('OUT: %s (type=%s) is not a known type so returning the original value -->   %s', repr(variable), type(variable), repr(variable))
                 return variable
 
         except AnsibleFilterError as afe:
@@ -551,7 +553,7 @@ class Templar:
             if self._fail_on_filter_errors:
                 raise
             else:
-                log.debug('Templating %s (type=%s) caused a AnsibleFilterError("%s") , returning the original value --> "%s"',
+                log.debug('OUT: Templating %s (type=%s) caused a AnsibleFilterError("%s") , returning the original value -->   %s',
                           repr(variable), type(variable), afe, repr(variable))
                 return variable
 
@@ -678,7 +680,7 @@ class Templar:
             raise AnsibleError("lookup plugin (%s) not found" % name)
 
     def do_template(self, data, preserve_trailing_newlines=True, escape_backslashes=True, fail_on_undefined=None, overrides=None, disable_lookups=False):
-        log.debug('Template input: %s (type=%s)', repr(data), type(data))
+        # log.debug('IN: %s (type=%s)', repr(data), type(data))
         # For preserving the number of input newlines in the output (used
         # later in this method)
         data_newlines = _count_newlines_from_end(data)
@@ -766,16 +768,19 @@ class Templar:
                 res_newlines = _count_newlines_from_end(res)
                 if data_newlines > res_newlines:
                     res += self.environment.newline_sequence * (data_newlines - res_newlines)
-            log.debug('%s do_template()d to --> %s', repr(data), res)
+            log.debug('OUT: %s   -->   %s', repr(data), res)
             return res
         except (UndefinedError, AnsibleUndefinedVariable) as e:
             if fail_on_undefined:
-                raise AnsibleUndefinedVariable(e) from e
-                #raise
+                log.exception(e)
+                # FIXME: py3 only
+                # raise AnsibleUndefinedVariable(e) from e
+                raise AnsibleUndefinedVariable(e)
+
             else:
                 display.debug("Ignoring undefined failure: %s" % to_text(e))
-                log.exception(e)
-                log.debug('Attempt to template failed, returning original data: %s', data)
+                # TODO: warn here instead of debug?
+                log.debug('OUT: Attempt to template %s failed with error "%s", returning original data   -->   %s', data, to_text(e), data)
                 return data
 
     # for backwards compatibility in case anyone is using old private method directly
