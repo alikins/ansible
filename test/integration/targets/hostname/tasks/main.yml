@@ -1,0 +1,91 @@
+
+# Copyright: (c) 2018 Ansible Project
+# License: GNU General Public License v3 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt )
+
+- name: get the current hostname related info and store it
+  set_fact:
+    orig_hostname: "{{ ansible_hostname }}"
+    orig_nodename: "{{ ansible_nodename }}"
+    orig_fqdn: "{{ ansible_fqdn }}"
+    orig_domain: "{{ ansible_domain }}"
+    origin_env_hostname: "{{ ansible_env['HOSTNAME'] }}"
+
+- name: show the orig info
+  debug:
+    var: "{{ item }}"
+  loop:
+    - orig_hostname
+    - orig_nodename
+    - orig_fqdn
+    - orig_domain
+    - origin_env_hostname
+
+- name: create the testname
+  set_fact:
+    testname: "{{ orig_hostname }}hostnametest"
+
+- name: debug testname
+  debug:
+    var: testname
+
+- name:
+  block:
+
+    - name: set the hostname to orig_hostname + hostnametest
+      hostname:
+        name: "{{ testname }}"
+      register: result1
+
+    - name: debug result1
+      debug:
+        var: result1
+
+    - name: debug facts post hostname before setup
+      debug:
+        var: ansible_hostname
+
+    - name: store the new ansible_hostname value
+      set_fact:
+        post_hostname_ansible_hostname: "{{ ansible_hostname }}"
+
+    - name: collect facts again
+      setup:
+      register: setup_results
+
+    - name: debug setup_results
+      debug:
+        var: setup_results['ansible_facts']['ansible_hostname']
+
+    - name: store the hostname value post setup
+      set_fact:
+        post_hostname_setup_results_ansible_hostname: "{{ setup_results['ansible_facts']['ansible_hostname'] }}"
+
+    - name: debug facts post hostname
+      debug:
+        var: ansible_hostname
+
+  always:
+    - name: set hostname back to orig_hostname
+      hostname:
+        name: "{{ orig_hostname }}"
+      register: always_result
+
+    - name: debug always_result
+      debug:
+        var: always_result
+
+# in theory, we have reset the hostname now, so we need to assert on the set_fact values
+- name: assert facts and setup_results and results1 hostname match
+  assert:
+    that:
+      - post_hostname_ansible_hostname == post_hostname_setup_results_ansible_hostname
+      - post_hostname_ansible_hostname == testname
+      - post_hostname_ansible_hostname != orig_hostname
+    msg: "post_hostname_ansible_hosts {{ post_hostname_ansible_hostname }} should be ==  {{ post_hostname_setup_results_ansible_hostname }}"
+
+- name: assert hostname is reset to original hostname
+  assert:
+    that:
+      - ansible_hostname == orig_hostname
+      - ansible_hostname != testname
+    msg: "ansible_hostname ( {{ansible_hostname}} ) was not reset to orig_hostname ({{ orig_hostname }})"
