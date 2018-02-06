@@ -211,6 +211,7 @@ class StrategyBase:
         # play completion
         self._active_connections = dict()
         self.showgrowth('end of strategy base init')
+        self.debugger_active = C.ENABLE_TASK_DEBUGGER
 
     def showgrowth(self, msg=None):
         return
@@ -219,7 +220,6 @@ class StrategyBase:
             print('%s' % msg)
         objgraph.show_growth(limit=30)
 
-        self.debugger_active = C.ENABLE_TASK_DEBUGGER
 
     def cleanup(self):
         # close active persistent connections
