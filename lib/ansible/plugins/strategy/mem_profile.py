@@ -172,20 +172,24 @@ class StrategyModule(LinearStrategyModule):
 
         show_common_ansible_types()
 
+
+        return res
+
+
         # example of dumping graphviz dot/pngs for ref graph of some objs
-        tis = objgraph.by_type('ansible.playbook.task_include.TaskInclude')
+#        tis = objgraph.by_type('ansible.playbook.task_include.TaskInclude')
         #import pprint
         #for i in tis:
         #    pprint.pprint(i.__dict__)
-        show_refs(filename='task_include_refs', objs=tis, max_depth=6, max_objs=1)
+#        show_refs(filename='task_include_refs', objs=tis, max_depth=6, max_objs=1)
 
-        things = objgraph.by_type('ansible.playbook.attribute.FieldAttribute')
-        show_refs(filename='things_refs', objs=things, max_depth=6, max_objs=2)
+#        things = objgraph.by_type('ansible.playbook.attribute.FieldAttribute')
+#        show_refs(filename='things_refs', objs=things, max_depth=6, max_objs=2)
 
-        things2 = objgraph.by_type('ansible.playbook.block.Block')
-        show_refs(filename='things2_refs', objs=things2, max_depth=6, max_objs=2)
+#        things2 = objgraph.by_type('ansible.playbook.block.Block')
+#        show_refs(filename='things2_refs', objs=things2, max_depth=6, max_objs=2)
 
-        return res
+#        return res
 
     def add_tqm_variables(self, vars, play):
         self.track_mem(msg='before add_tqm_variables')
