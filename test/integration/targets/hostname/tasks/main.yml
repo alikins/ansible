@@ -2,13 +2,16 @@
 # Copyright: (c) 2018 Ansible Project
 # License: GNU General Public License v3 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt )
 
+- name: gather facts
+  setup:
+
 - name: get the current hostname related info and store it
   set_fact:
     orig_hostname: "{{ ansible_hostname }}"
     orig_nodename: "{{ ansible_nodename }}"
     orig_fqdn: "{{ ansible_fqdn }}"
     orig_domain: "{{ ansible_domain }}"
-    origin_env_hostname: "{{ ansible_env['HOSTNAME'] }}"
+    origin_env_hostname: "{{ ansible_env['HOSTNAME'] | default(ansible_hostname) }}"
 
 - name: show the orig info
   debug:
