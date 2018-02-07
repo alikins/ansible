@@ -101,10 +101,6 @@ class GalaxyCLI(CLI):
             self.parser.add_option('-n', '--no-deps', dest='no_deps', action='store_true', default=False, help='Don\'t download roles listed as dependencies')
             self.parser.add_option('-r', '--role-file', dest='role_file', help='A file containing a list of roles to be imported') #FIXME - Unsure about keeping this around
             self.parser.add_option('-t', '--type', dest='content_type', default="all", help='A type of Galaxy Content to install: role, module, etc')
-            self.parser.add_option('--content-path', dest='content_path', action="callback", callback=CLI.unfrack_paths, default=[":"],
-                                   help='The path to the directory containing your roles. The default is the default path for the'
-                                        'content type configured in your ansible.cfg file (/etc/ansible/roles or /etc/ansible/plugins if not configured'
-                                        'depending on content type)', type='str')
         elif self.action == "remove":
             self.parser.set_usage("usage: %prog remove role1 role2 ...")
         elif self.action == "list":
@@ -329,18 +325,17 @@ class GalaxyCLI(CLI):
         #       probably find a better solution before this goes GA
         #
         # Fix content_path if this was not provided
-        if self.options.content_path == ":":
-            if self.options.content_type != "all" and self.options.content_type not in GalaxyContent.CONTENT_TYPES:
-                raise AnsibleOptionsError(
-                    "- invalid Galaxy Content type provided: %s\n  - Expected one of: %s" %
-                    (self.options.content_type, ", ".join(GalaxyContent.CONTENT_TYPES))
-                )
-                # NOTE: This is a special case, we will check for this to be
-                #       None or not None and evaluated the content inside
-                #       GalaxyContent
-                #
-                #       FIXME - Better way to handle this?
-                self.galaxy.content_paths = None
+        if self.options.content_type != "all" and self.options.content_type not in GalaxyContent.CONTENT_TYPES:
+            raise AnsibleOptionsError(
+                "- invalid Galaxy Content type provided: %s\n  - Expected one of: %s" %
+                (self.options.content_type, ", ".join(GalaxyContent.CONTENT_TYPES))
+            )
+
+        # If someone provides a --roles-path at the command line, we assume this is
+        # for use with a legacy role and we want to maintain backwards compat
+        if self.options.roles_path != C.DEFAULT_ROLES_PATH:
+            self.galaxy.content_paths = self.options.roles_path
+            self.galaxy.options['type'] = 'role'
 
             # FIXME - add more types here, PoC is just role/module
 

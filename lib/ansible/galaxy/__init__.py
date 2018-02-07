@@ -41,14 +41,13 @@ class Galaxy(object):
         # self.options.roles_path needs to be a list and will be by default
         roles_path = getattr(self.options, 'roles_path', [])
 
-        # self.options.library handling for modules_path
-        content_path = getattr(self.options, 'content_path', [])
-
         # cli option handling is responsible for making roles_path a list
         self.roles_paths = roles_path
 
-        # cli option handling is responsible for making content_path a list
-        self.content_paths = content_path
+        # FIXME - this is a hack for now, the ":" is just a special place holder
+        #         marker and should be replaced once the rest of the pathing
+        #         is handled properly from DEFAULT_CONTENT_PATH in ansible.cfg
+        self.content_paths = [":"]
 
         self.roles = {}
 
