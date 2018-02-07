@@ -220,7 +220,8 @@ class Base(with_metaclass(BaseMeta, object)):
         ''' dump_me, but to a list of strings '''
         #if depth == 0:
         #    lines.append("-- Dump of %s" % type(self))
-        lines.append("%s- %s (%s, id=%s)" % (" " * depth, self.__class__.__name__, self, id(self)))
+        lines.append("%s- %s ==> %s" % (" " * depth, self.__class__.__name__, repr(self)))
+        #lines.append("%s- %s, id=%s)" % (" " * depth, repr(self), id(self)))
         if hasattr(self, '_parent') and self._parent:
             plines = self._parent.dumps_me([], depth + 2)
             lines.extend(plines)
@@ -233,6 +234,9 @@ class Base(with_metaclass(BaseMeta, object)):
             play_lines = self._play.dumps_me([], depth + 2)
             lines.extend(play_lines)
         return lines
+
+    def __repr__(self):
+        return '%s(id=%s)' % (self.__class__.__name__, id(self))
 
     def preprocess_data(self, ds):
         ''' infrequently used method to do some pre-processing of legacy terms '''

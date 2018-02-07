@@ -145,6 +145,9 @@ class Task(Base, Conditional, Taggable, Become):
         return t.load_data(data, variable_manager=variable_manager, loader=loader)
 
     def __repr__(self):
+        return '%s(name=%s, action=%s, id=%s)' % (self.__class__.__name__, self.get_name(), self.action, id(self))
+
+    def __str__(self):
         ''' returns a human readable representation of the task '''
         if self.get_name() == 'meta':
             return "TASK: meta (%s)" % self.args['_raw_params']

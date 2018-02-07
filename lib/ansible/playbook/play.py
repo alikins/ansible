@@ -100,7 +100,7 @@ class Play(Base, Taggable, Become):
         self.ROLE_CACHE = {}
 
     def __repr__(self):
-        return self.get_name()
+        return '%s(name=%s, id=%s)' % (self.__class__.__name__, self.get_name(), id(self))
 
     def get_name(self):
         ''' return the name of the Play '''
