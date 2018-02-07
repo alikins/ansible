@@ -180,8 +180,12 @@ def linux_distribution(distname='', version='', id='', supported_dists=_supporte
     # check for the LSB /etc/lsb-release file first, needed so
     # that the distribution doesn't get identified as Debian.
     try:
+        print(open)
         with open("/etc/lsb-release", "rU") as etclsbrel:
+            # print(etclsbrel)
+            _u_distname = _u_version = None
             for line in etclsbrel:
+                print('line: %s' % line)
                 m = _distributor_id_file_re.search(line)
                 if m:
                     _u_distname = m.group(1).strip()
@@ -193,7 +197,8 @@ def linux_distribution(distname='', version='', id='', supported_dists=_supporte
                     _u_id = m.group(1).strip()
             if _u_distname and _u_version:
                 return (_u_distname, _u_version, _u_id)
-    except (EnvironmentError, UnboundLocalError):
+    except (EnvironmentError, UnboundLocalError) as e:
+        print(e)
         pass
 
     try:
