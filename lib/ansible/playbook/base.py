@@ -223,15 +223,15 @@ class Base(with_metaclass(BaseMeta, object)):
         #lines.append("%s- %s, id=%s)" % (" " * depth, repr(self), id(self)))
         lines.append("%s- %s ==> %s" % (" " * depth, self.__class__.__name__, repr(self)))
         if hasattr(self, '_parent') and self._parent:
-            plines = self._parent.dumps_me([], depth + 2)
+            plines = self._parent.dumps_me([], depth + 1)
             lines.extend(plines)
             dep_chain = self._parent.get_dep_chain()
             if dep_chain:
                 for dep in dep_chain:
-                    dlines = dep.dumps_me([], depth + 2)
+                    dlines = dep.dumps_me([], depth + 1)
                     lines.extend(dlines)
         if hasattr(self, '_play') and self._play:
-            play_lines = self._play.dumps_me([], depth + 2)
+            play_lines = self._play.dumps_me([], depth + 1)
             lines.extend(play_lines)
         return lines
 

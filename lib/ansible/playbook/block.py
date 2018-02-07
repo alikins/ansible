@@ -64,7 +64,7 @@ class Block(Base, Become, Conditional, Taggable):
         super(Block, self).__init__()
 
     def __repr__(self):
-        return "BLOCK(name=%s, uuid=%s, id=%s, parent=%s)" % (self.name, self._uuid, id(self), self._parent)
+        return "BLOCK(name=%s, uuid=%s, id=%s, implicit=%s)" % (self.name, self._uuid, id(self), self._implicit)
 
     def get_vars(self):
         '''
