@@ -27,6 +27,8 @@ from ansible.module_utils.parsing.convert_bool import boolean
 from ansible.playbook.block import Block
 from ansible.playbook.task import Task
 
+import pprint
+import deepdiff
 
 try:
     from __main__ import display
@@ -34,6 +36,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+from akl import alogging
+log = alogging.get_logger()
 
 __all__ = ['PlayIterator']
 
@@ -131,6 +135,9 @@ class HostState:
         return new_state
 
 
+from autologging import traced
+
+@traced("__init__")
 class PlayIterator:
 
     # the primary running states for the play iteration
@@ -158,6 +165,8 @@ class PlayIterator:
         gather_timeout = play_context.gather_timeout
         fact_path = play_context.fact_path
 
+        self.log = alogging.get_class_logger(self)
+        self.log.debug('class init')
         # Retrieve subset to gather
         if self._play.gather_subset is not None:
             gather_subset = self._play.gather_subset
@@ -516,6 +525,7 @@ class PlayIterator:
         return (None, None)
 
     def _insert_tasks_into_state(self, state, task_list):
+        #self.log.debug('state=%s, task_list=%s', state, task_list)
         # if we've failed at all, or if the task list is empty, just return the current state
         if state.fail_state != self.FAILED_NONE and state.run_state not in (self.ITERATING_RESCUE, self.ITERATING_ALWAYS) or not task_list:
             return state
@@ -527,7 +537,7 @@ class PlayIterator:
                 target_block = state._blocks[state.cur_block].copy(exclude_parent=True)
                 before = target_block.block[:state.cur_regular_task]
                 after = target_block.block[state.cur_regular_task:]
-                target_block.block = before + task_list + after
+                self.log.debug('target_block.block == before + task_list + after: %s', target_block.block == before + task_list + after)
                 state._blocks[state.cur_block] = target_block
         elif state.run_state == self.ITERATING_RESCUE:
             if state.rescue_child_state:
@@ -550,4 +560,5 @@ class PlayIterator:
         return state
 
     def add_tasks(self, host, task_list):
+        # self.log.debug('host=%s, task_list=%s', host, task_list)
         self._host_states[host.name] = self._insert_tasks_into_state(self.get_host_state(host), task_list)

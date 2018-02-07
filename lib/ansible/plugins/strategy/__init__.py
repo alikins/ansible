@@ -112,11 +112,11 @@ def debug_closure(func):
             task = result._task
             host = result._host
             _queued_task_args = self._queued_task_cache.pop((host.name, task._uuid), None)
-            log.debug('huh?')
+            # log.debug('huh?')
             #log.debug('wtf? locals()', pprint.pformat(locals()))
             _processed_results.append(result)
         return _processed_results
-    log.debug('locals(): %s', locals())
+    # log.debug('locals(): %s', locals())
     return inner
 
 
@@ -249,14 +249,14 @@ class StrategyBase:
             while True:
                 (worker_prc, rslt_q) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
-                    self.log.debug('adding to queued_task_cache host.name=%s, task.uuid=%s', host.name, task._uuid)
+                    # self.log.debug('adding to queued_task_cache host.name=%s, task.uuid=%s', host.name, task._uuid)
                     self._queued_task_cache[(host.name, task._uuid)] = {
                         'host': host,
                         'task': task,
                         'task_vars': task_vars,
                         'play_context': play_context
                     }
-                    self.log.debug('len(self._queued_task_cache)=%s', len(self._queued_task_cache))
+                    # self.log.debug('len(self._queued_task_cache)=%s', len(self._queued_task_cache))
                     worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
@@ -305,12 +305,15 @@ class StrategyBase:
         ret_results = []
 
         def get_original_host(host_name):
-            # FIXME: this should not need x2 _inventory
+            # self.log.debug('host_name=%s', host_name)
+            #  FIXME: this should not need x2 _inventory
             host_name = to_text(host_name)
             if host_name in self._inventory.hosts:
-                return self._inventory.hosts[host_name]
+                ret = self._inventory.hosts[host_name]
             else:
-                return self._inventory.get_host(host_name)
+                ret = self._inventory.get_host(host_name)
+            # self.log.debug('ret=%s, type(ret)=%s', ret, type(ret))
+            return ret
 
         def search_handler_blocks_by_name(handler_name, handler_blocks):
             for handler_block in handler_blocks:
@@ -376,9 +379,15 @@ class StrategyBase:
 
             # get the original host and task. We then assign them to the TaskResult for use in callbacks/etc.
             original_host = get_original_host(task_result._host)
-            print('original_host: %s type: %s' % (original_host, type(original_host)))
+            # self.log.debug('original_host: %s type: %s', original_host, original_host)
+
             queue_cache_entry = (original_host.name, task_result._task)
-            found_task = self._queued_task_cache.get(queue_cache_entry)['task']
+            found_task_entry = self._queued_task_cache.get(queue_cache_entry)
+
+            #self.log.debug('found_task_entry=%s', found_task_entry)
+
+            found_task = found_task_entry['task']
+            # self.log.debug('found_task %s', found_task)
             original_task = found_task.copy(exclude_parent=True, exclude_tasks=True)
             original_task._parent = found_task._parent
             original_task.from_attrs(task_result._task_fields)

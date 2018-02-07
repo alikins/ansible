@@ -42,6 +42,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+from akl import alogging
+import autologging
+log = alogging.get_logger()
 
 def _generic_g(prop_name, self):
     try:
@@ -175,7 +178,8 @@ class Base(with_metaclass(BaseMeta, object)):
     ]
 
     def __init__(self):
-
+        self.log = alogging.get_class_logger(self)
+        self.log.debug('class init')
         # initialize the data loader and variable manager, which will be provided
         # later when the object is actually loaded
         self._loader = None
@@ -211,6 +215,24 @@ class Base(with_metaclass(BaseMeta, object)):
                     dep.dump_me(depth + 2)
         if hasattr(self, '_play') and self._play:
             self._play.dump_me(depth + 2)
+
+    def dumps_me(self, lines, depth=0):
+        ''' dump_me, but to a list of strings '''
+        #if depth == 0:
+        #    lines.append("-- Dump of %s" % type(self))
+        lines.append("%s- %s (%s, id=%s)" % (" " * depth, self.__class__.__name__, self, id(self)))
+        if hasattr(self, '_parent') and self._parent:
+            plines = self._parent.dumps_me([], depth + 2)
+            lines.extend(plines)
+            dep_chain = self._parent.get_dep_chain()
+            if dep_chain:
+                for dep in dep_chain:
+                    dlines = dep.dumps_me([], depth + 2)
+                    lines.extend(dlines)
+        if hasattr(self, '_play') and self._play:
+            play_lines = self._play.dumps_me([], depth + 2)
+            lines.extend(play_lines)
+        return lines
 
     def preprocess_data(self, ds):
         ''' infrequently used method to do some pre-processing of legacy terms '''
@@ -324,6 +346,8 @@ class Base(with_metaclass(BaseMeta, object)):
         Create a copy of this object and return it.
         '''
 
+        lines = self.dumps_me([])
+        self.log.debug('dumps_me: \n%s', '\n'.join(lines))
         new_me = self.__class__()
 
         for name in self._valid_attrs.keys():

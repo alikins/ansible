@@ -37,6 +37,8 @@ from ansible.playbook.loop_control import LoopControl
 from ansible.playbook.role import Role
 from ansible.playbook.taggable import Taggable
 
+import pprint
+import deepdiff
 
 try:
     from __main__ import display
@@ -45,6 +47,9 @@ except ImportError:
     display = Display()
 
 __all__ = ['Task']
+
+from akl import alogging
+log = alogging.get_logger()
 
 
 class Task(Base, Conditional, Taggable, Become):
@@ -97,6 +102,7 @@ class Task(Base, Conditional, Taggable, Become):
             self._parent = block
 
         super(Task, self).__init__()
+        self.log = alogging.get_class_logger(self)
 
     def get_path(self):
         ''' return the absolute path of the task with its line number '''
@@ -338,6 +344,7 @@ class Task(Base, Conditional, Taggable, Become):
         return all_vars
 
     def copy(self, exclude_parent=False, exclude_tasks=False):
+        # self.log.debug('exclude_parent=%s, exclude_tasks=%s', exclude_parent, exclude_tasks)
         new_me = super(Task, self).copy()
 
         new_me._parent = None
@@ -348,6 +355,9 @@ class Task(Base, Conditional, Taggable, Become):
         if self._role:
             new_me._role = self._role
 
+#        if exclude_parent and exclude_tasks:
+#            self.log.debug('self --> new_me deepdiff')
+#            self.log.debug('%s', pprint.pformat(deepdiff.DeepDiff(self, new_me, verbose_level=2)))
         return new_me
 
     def serialize(self):
