@@ -119,8 +119,13 @@ class Role(Base, Become, Conditional, Taggable):
 
         super(Role, self).__init__()
 
-    def __repr__(self):
+    def __str__(self):
         return self.get_name()
+
+    def __repr__(self):
+        return '%s(name=%s, path=%s, from_files=%s, id=%s)' % (self.__class__.__name__,
+                                                               self.get_name(), self._role_path,
+                                                               self._from_files, id(self))
 
     def get_name(self):
         return self._role_name
@@ -234,6 +239,9 @@ class Role(Base, Become, Conditional, Taggable):
             self._default_vars = dict()
         elif not isinstance(self._default_vars, dict):
             raise AnsibleParserError("The defaults/main.yml file for role '%s' must contain a dictionary of variables" % self._role_name)
+
+        lines = self.dumps_me([])
+        self.log.debug('dumps_me: \n%s', '\n'.join(lines))
 
     def _load_role_yaml(self, subdir, main=None):
         file_path = os.path.join(self._role_path, subdir)
