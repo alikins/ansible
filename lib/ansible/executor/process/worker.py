@@ -41,6 +41,10 @@ from ansible.executor.task_executor import TaskExecutor
 from ansible.executor.task_result import TaskResult
 from ansible.module_utils._text import to_text
 
+import logging
+log = multiprocessing.util.get_logger()
+log.setLevel(logging.DEBUG)
+
 try:
     from __main__ import display
 except ImportError:
@@ -104,6 +108,7 @@ class WorkerProcess(multiprocessing.Process):
         if HAS_PYCRYPTO_ATFORK:
             atfork()
 
+        log.debug('running...')
         try:
             # execute the task and build a TaskResult from the result
             display.debug("running TaskExecutor() for %s/%s" % (self._host, self._task))

@@ -46,6 +46,8 @@ from ansible.template import Templar
 from ansible.utils.vars import combine_vars
 from ansible.vars.manager import strip_internal_keys
 
+import logging
+log = logging.getLogger('ansible.plugins.strategy')
 
 try:
     from __main__ import display
@@ -94,6 +96,7 @@ def results_thread_main(strategy):
         except Queue.Empty:
             pass
 
+import pprint
 
 def debug_closure(func):
     """
@@ -109,8 +112,11 @@ def debug_closure(func):
             task = result._task
             host = result._host
             _queued_task_args = self._queued_task_cache.pop((host.name, task._uuid), None)
+            log.debug('huh?')
+            #log.debug('wtf? locals()', pprint.pformat(locals()))
             _processed_results.append(result)
         return _processed_results
+    log.debug('locals(): %s', locals())
     return inner
 
 
@@ -133,6 +139,7 @@ class StrategyBase:
         self._step = getattr(tqm._options, 'step', False)
         self._diff = getattr(tqm._options, 'diff', False)
 
+        self.log = logging.getLogger('ansible.plugins.strategy.StrategyBase')
         # the task cache is a dictionary of tuples of (host.name, task._uuid)
         # used to find the original task object of in-flight tasks and to store
         # the task args/vars and play context info used to queue the task.
@@ -242,13 +249,14 @@ class StrategyBase:
             while True:
                 (worker_prc, rslt_q) = self._workers[self._cur_worker]
                 if worker_prc is None or not worker_prc.is_alive():
+                    self.log.debug('adding to queued_task_cache host.name=%s, task.uuid=%s', host.name, task._uuid)
                     self._queued_task_cache[(host.name, task._uuid)] = {
                         'host': host,
                         'task': task,
                         'task_vars': task_vars,
                         'play_context': play_context
                     }
-
+                    self.log.debug('len(self._queued_task_cache)=%s', len(self._queued_task_cache))
                     worker_prc = WorkerProcess(self._final_q, task_vars, host, task, play_context, self._loader, self._variable_manager, shared_loader_obj)
                     self._workers[self._cur_worker][0] = worker_prc
                     worker_prc.start()
@@ -368,6 +376,7 @@ class StrategyBase:
 
             # get the original host and task. We then assign them to the TaskResult for use in callbacks/etc.
             original_host = get_original_host(task_result._host)
+            print('original_host: %s type: %s' % (original_host, type(original_host)))
             queue_cache_entry = (original_host.name, task_result._task)
             found_task = self._queued_task_cache.get(queue_cache_entry)['task']
             original_task = found_task.copy(exclude_parent=True, exclude_tasks=True)

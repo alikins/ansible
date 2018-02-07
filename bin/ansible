@@ -42,6 +42,15 @@ from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.utils.display import Display
 from ansible.module_utils._text import to_text
 
+from akl import alogging
+alogging.default_setup('ansible')
+
+import logging
+log = alogging.get_logger()
+import multiprocessing
+mplog = multiprocessing.util.get_logger()
+mplog.setLevel(logging.DEBUG)
+mplog.propagate = True
 
 ########################################
 # OUTPUT OF LAST RESORT

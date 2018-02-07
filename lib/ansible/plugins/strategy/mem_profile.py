@@ -211,30 +211,56 @@ class StrategyModule(LinearStrategyModule):
 
         # gc.set_debug(gc.DEBUG_LEAK|gc.DEBUG_STATS)
 
-    def show_backrefs(self):
+    def show_backrefs(self, blurb=None):
         # funcs = objgraph.by_type('__builtin__.dict')
         # funcs = objgraph.by_type('ansible.parsing.yaml.objects.AnsibleUnicode')
         #funcs = objgraph.by_type('ansible.executor.task_result.TaskResult')
-
+        blurb = blurb or ''
         funcs = []
         #funcs = objgraph.by_type('ansible.playbook.task.Task')
         #funcs = objgraph.by_type('ansible.vars.manager.VariableManager')
-        funcs = objgraph.by_type('ansible.vars.hostvars.HostVars')
-        #funcs.extend(objgraph.by_type('ansible.playbook.block.Block'))
-        #funcs.extend(objgraph.by_type('TaskResult'))
-        #funcs.extend(objgraph.by_type('ansible.playbook.role_include.RoleInclude'))
-        #funcs.extend(objgraph.by_type('ansible.playbook.included_file.IncludedFile'))
-        #funcs.extend(objgraph.by_type('ansible.playbook.base.Base'))
-        #funcs.extend(objgraph.by_type('ansible.playbook.handler.Handler'))
-        #funcs.extend(objgraph.by_type('ansible.inventory.host.Host'))
-        #funcs.extend(objgraph.by_type('ansible.inventory.group.Group'))
-        if len(funcs) > 0:
+        targets = [
+                   # 'ansible.vars.hostvars.HostVars',
+                   'ansible.playbooks.handler.Handler',
+                   # 'ansible.executor.task_result.TaskResult',
+                   # 'ansible.playbook.task.Task',
+                   # 'ansible.vars.manager.VariableManager',
+                   # 'ansible.playbook.block.Block',
+                   # 'ansible.inventory.host.Host',
+                   'ansible.playbook.role_include.RoleInclude',
+                   'ansible.playbook.included_file.IncludedFile',
+                   'ansible.executor.play_iterator.PlayIterator']
+        for target in targets:
+            funcs = objgraph.by_type(target)
+            slug = self.sluggify(blurb)
+            if len(funcs) > 0 or target == 'ansible.inventory.host.Host':
+                #        show_refs(filename='task_include_refs', objs=tis, max_depth=6, max_objs=1)
+                show_refs(filename='mem_profile_objgraph_%s_%s' % (target, slug), objs=funcs, max_depth=5, max_objs=37)
 
-#        show_refs(filename='task_include_refs', objs=tis, max_depth=6, max_objs=1)
-            show_refs(filename='task_include_refs', objs=funcs, max_depth=6)
+        slug = self.sluggify(blurb)
+        funcs = [self._queued_task_cache]
+        show_refs(filename='mem_profile_objgraph_Strategy._queded_task_cache_%s' % slug, objs=funcs, max_depth=8, max_objs=37)
+
+        # funcs.extend(objgraph.by_type('ansible.playbook.block.Block'))
+        # funcs.extend(objgraph.by_type('TaskResult'))
+        # funcs.extend(objgraph.by_type('ansible.playbook.role_include.RoleInclude'))
+        # funcs.extend(objgraph.by_type('ansible.playbook.included_file.IncludedFile'))
+        # funcs.extend(objgraph.by_type('ansible.playbook.base.Base'))
+        # funcs.extend(objgraph.by_type('ansible.playbook.handler.Handler'))
+        # funcs.extend(objgraph.by_type('ansible.inventory.host.Host'))
+        # funcs.extend(objgraph.by_type('ansible.inventory.group.Group'))
+
+    def sluggify(self, blurb):
+        for c in [' ', '-', '.', '/']:
+            blurb = blurb.replace(c, '_')
+        return blurb
 
 
     def track_mem(self, msg=None, pid=None, call_stack=None, subsystem=None):
+        return
+
+
+
         subsystem = subsystem or 'strategy'
 #        show_common_ansible_types()
 
@@ -250,7 +276,9 @@ class StrategyModule(LinearStrategyModule):
         res = super(StrategyModule, self).run(iterator, play_context)
         # self.track_mem(msg='after run')
         print('after strat.run')
-        self.show_backrefs()
+        import pprint
+        pprint.pprint(play_context)
+        self.show_backrefs('%s' % iterator._play)
 
         # self.show_backrefs()
         #show_common_ansible_types()
@@ -283,9 +311,9 @@ class StrategyModule(LinearStrategyModule):
         self.track_mem(msg='after _load_included_file')
         return res
 
-    def _process_pending_results(self, iterator, one_pass=False, max_passes=None):
-        self.track_mem(msg='before _process_pending_results')
-        self.show_backrefs()
-        res = super(StrategyModule, self)._process_pending_results(iterator, one_pass, max_passes)
-        self.track_mem(msg='after _process_pending_results')
-        return res
+#    def _process_pending_results(self, iterator, one_pass=False, max_passes=None):
+#        self.track_mem(msg='before _process_pending_results')
+#        # self.show_backrefs()
+#        res = super(StrategyModule, self)._process_pending_results(iterator, one_pass, max_passes)
+#        self.track_mem(msg='after _process_pending_results')
+#        return res
