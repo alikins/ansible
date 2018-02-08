@@ -41,8 +41,6 @@ from ansible.galaxy.content import GalaxyContent
 from ansible.galaxy.token import GalaxyToken
 from ansible.module_utils._text import to_text
 
-import q
-
 try:
     from __main__ import display
 except ImportError:
@@ -325,10 +323,10 @@ class GalaxyCLI(CLI):
         #       probably find a better solution before this goes GA
         #
         # Fix content_path if this was not provided
-        if self.options.content_type != "all" and self.options.content_type not in GalaxyContent.CONTENT_TYPES:
+        if self.options.content_type != "all" and self.options.content_type not in C.CONTENT_TYPES:
             raise AnsibleOptionsError(
                 "- invalid Galaxy Content type provided: %s\n  - Expected one of: %s" %
-                (self.options.content_type, ", ".join(GalaxyContent.CONTENT_TYPES))
+                (self.options.content_type, ", ".join(C.CONTENT_TYPES))
             )
 
         # If someone provides a --roles-path at the command line, we assume this is
@@ -355,7 +353,6 @@ class GalaxyCLI(CLI):
         for content in self.args:
             galaxy_content = GalaxyContent.yaml_parse(content.strip())
             galaxy_content["type"] = self.options.content_type
-            q.q(galaxy_content)
             content_left.append(GalaxyContent(self.galaxy, **galaxy_content))
 
         for content in content_left:

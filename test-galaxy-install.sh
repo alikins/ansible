@@ -2,7 +2,7 @@
 
 cleanup() {
 
-    rm -fr ~/.ansible/plugins/modules/* && rm -fr ~/.ansible/plugins/module_utils/* && rm -fr ~/.ansible/roles/*
+    rm -fr ~/.ansible/content/*
 }
 
 display() {

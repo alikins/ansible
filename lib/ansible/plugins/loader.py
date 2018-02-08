@@ -232,6 +232,21 @@ class PluginLoader:
                 self._paths = None
                 display.debug('Added %s to loader search path' % (directory))
 
+    def add_galaxy_content_paths(self):
+        """
+        Add Galaxy Content path(s) to the plugin loader search path
+
+        :param content_type: str, the type of content so we can map the correct paths
+        """
+        if self.subdir == "library":
+            # We have to handle modules special because it's sub_dir isn't what
+            # is expected for Galaxy Content
+            for path in C.DEFAULT_CONTENT_PATH:
+                self.add_directory(os.path.join(path, "modules"))
+        else:
+            for path in C.DEFAULT_CONTENT_PATH:
+                self.add_directory(path, with_subdir=True)
+
     def find_plugin(self, name, mod_type='', ignore_deprecated=False, check_aliases=False):
         ''' Find a plugin named name '''
 
@@ -665,6 +680,7 @@ module_loader = PluginLoader(
     C.DEFAULT_MODULE_PATH,
     'library',
 )
+module_loader.add_galaxy_content_paths()
 
 module_utils_loader = PluginLoader(
     '',
@@ -672,6 +688,7 @@ module_utils_loader = PluginLoader(
     C.DEFAULT_MODULE_UTILS_PATH,
     'module_utils',
 )
+module_utils_loader.add_galaxy_content_paths()
 
 # NB: dedicated loader is currently necessary because PS module_utils expects "with subdir" lookup where
 # regular module_utils doesn't. This can be revisited once we have more granular loaders.

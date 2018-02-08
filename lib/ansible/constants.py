@@ -101,6 +101,18 @@ TREE_DIR = None
 VAULT_VERSION_MIN = 1.0
 VAULT_VERSION_MAX = 1.0
 
+# Galaxy Content Constants
+CONTENT_PLUGIN_TYPES = (
+    'module', 'module_util', 'action_plugin', 'filter_plugin',
+    'connection_plugin', 'inventory_plugin', 'lookup_plugin',
+    'shell_plugin', 'strategy_plugin', 'netconf_plugin'
+
+)
+CONTENT_TYPES = CONTENT_PLUGIN_TYPES + ('role',)
+# This is used to determine install location
+CONTENT_TYPE_DIR_MAP = { k : "%ss" % k for k in CONTENT_TYPES}
+
+
 # FIXME: remove once play_context mangling is removed
 # the magic variable mapping dictionary below is used to translate
 # host/inventory variables to fields in the PlayContext

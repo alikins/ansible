@@ -645,7 +645,13 @@ class CLI(with_metaclass(ABCMeta, object)):
             cpath = "Default w/o overrides"
         else:
             cpath = C.DEFAULT_MODULE_PATH
+        if C.DEFAULT_CONTENT_PATH is None:
+            conpath = "Default w/o overrides"
+        else:
+            conpath = C.DEFAULT_CONTENT_PATH
+
         result = result + "\n  configured module search path = %s" % cpath
+        result = result + "\n  configured galaxy content search path = %s" % conpath
         result = result + "\n  ansible python module location = %s" % ':'.join(ansible.__path__)
         result = result + "\n  executable location = %s" % sys.argv[0]
         result = result + "\n  python version = %s" % ''.join(sys.version.splitlines())

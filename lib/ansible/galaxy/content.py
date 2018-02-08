@@ -42,8 +42,6 @@ from ansible.playbook.role.requirement import RoleRequirement
 from ansible.galaxy.api import GalaxyAPI
 from ansible.galaxy import Galaxy
 
-import q
-
 try:
     from __main__ import display
 except ImportError:
@@ -71,18 +69,6 @@ class GalaxyContent(object):
     GALAXY_FILE = os.path.join('ansible-galaxy.yml')
     META_INSTALL = os.path.join('meta', '.galaxy_install_info')
     ROLE_DIRS = ('defaults', 'files', 'handlers', 'meta', 'tasks', 'templates', 'vars', 'tests')
-
-    PLUGIN_TYPES = (
-        'module', 'module_util', 'action_plugin', 'filter_plugin',
-        'connection_plugin', 'inventory_plugin', 'lookup_plugin',
-        'shell_plugin', 'strategy_plugin', 'netconf_plugin'
-
-    )
-
-    CONTENT_TYPES = PLUGIN_TYPES + ('role',)
-
-    # This is used to determine install location
-    CONTENT_TYPE_DIR_MAP = { k : "%ss" % k for k in CONTENT_TYPES}
 
     def __init__(self, galaxy, name, src=None, version=None, scm=None, path=None, type="role"):
         """
@@ -126,7 +112,7 @@ class GalaxyContent(object):
 
         self._set_type(type)
 
-        if self.type not in self.CONTENT_TYPES and self.type != "all":
+        if self.type not in C.CONTENT_TYPES and self.type != "all":
             raise AnsibleError("%s is not a valid Galaxy Content Type" % self.type)
 
         # Set original path, needed to determine what action to take in order to
@@ -210,10 +196,9 @@ class GalaxyContent(object):
             # singular of type between the contants vars read in from the config
             # file and the subdirectories
             if self.type != "all":
-                try:
-                    self.galaxy.content_paths = getattr(C, "DEFAULT_%s_PATH" % self.CONTENT_TYPE_DIR_MAP[self.type].upper())
-                except AttributeError:
-                    self.galaxy.content_paths = getattr(C, "DEFAULT_%s_PATH" % self.type.upper())
+                self.galaxy.content_paths = [os.path.join(p, C.CONTENT_TYPE_DIR_MAP[self.type]) for p in C.DEFAULT_CONTENT_PATH]
+            else:
+                self.galaxy.content_paths = C.DEFAULT_CONTENT_PATH
 
             # use the first path by default
             if self.type == "role":
@@ -307,7 +292,6 @@ class GalaxyContent(object):
 
         return True
 
-    @q.t
     def _write_archived_files(self, tar_file, parent_dir, file_name=None):
         """
         Extract and write out files from the archive, this is a common operation
@@ -348,8 +332,8 @@ class GalaxyContent(object):
                             # archive directory name and we don't need/want that
                             plugin_found = parent_dir.lstrip(self.name)
 
-                    elif len(parts_list) > 1 and parts_list[-2] == self.CONTENT_TYPE_DIR_MAP[self.type]:
-                        plugin_found = self.CONTENT_TYPE_DIR_MAP[self.type]
+                    elif len(parts_list) > 1 and parts_list[-2] == C.CONTENT_TYPE_DIR_MAP[self.type]:
+                        plugin_found = C.CONTENT_TYPE_DIR_MAP[self.type]
                     if not plugin_found:
                         continue
 
@@ -378,14 +362,13 @@ class GalaxyContent(object):
                         final_parts.append(part)
                 member.name = os.path.join(*final_parts)
 
-                if self.type in self.PLUGIN_TYPES:
-                    q.q(os.path.join(self.path, member.name))
+                if self.type in C.CONTENT_PLUGIN_TYPES:
                     display.display(
                         "-- extracting %s %s from %s into %s" %
                         (self.type, member.name, self.name, os.path.join(self.path, member.name))
                     )
                 if os.path.exists(os.path.join(self.path, member.name)) and not getattr(self.options, "force", False):
-                    if self.type in self.PLUGIN_TYPES:
+                    if self.type in C.CONTENT_PLUGIN_TYPES:
                         message = (
                             "the specified Galaxy Content %s appears to already exist." % os.path.join(self.path, member.name),
                             "Use of --force for non-role Galaxy Content Type is not yet supported"
@@ -404,8 +387,6 @@ class GalaxyContent(object):
                             raise AnsibleError(message)
 
                 # Alright, *now* actually write the file
-                q.q(member.name)
-                q.q(self.path)
                 tar_file.extract(member, self.path)
 
                 # Reset the name so we're on equal playing field for the sake of
@@ -591,7 +572,7 @@ class GalaxyContent(object):
                                 parent_dir_found = True
                                 break
                         else:
-                            for plugin_dir in self.CONTENT_TYPE_DIR_MAP.values():
+                            for plugin_dir in C.CONTENT_TYPE_DIR_MAP.values():
                                 if plugin_dir in member.name:
                                     archive_parent_dir = os.path.dirname(member.name)
                                     parent_dir_found = True
@@ -600,7 +581,7 @@ class GalaxyContent(object):
                                 break
 
                     if not parent_dir_found:
-                        if self.type in self.PLUGIN_TYPES:
+                        if self.type in C.CONTENT_PLUGIN_TYPES:
                             raise AnsibleError("No content metadata provided, nor content directories found for type: %s" % self.type)
 
                 if not meta_file and not galaxy_file and self.type == "role":
@@ -700,7 +681,6 @@ class GalaxyContent(object):
                                 elif content == "modules":
                                     self._set_type("module")
                                     self._set_content_paths()
-                                    q.q(content)
                                     for module in self.galaxy_metadata[content]:
                                         if len(module["path"].split(os.sep)) > 1:
                                             if module["path"].split(os.sep)[-1] in ['/', '*']:
@@ -724,14 +704,12 @@ class GalaxyContent(object):
                                                 dep_content_info = GalaxyContent.yaml_parse(dep['src'])
                                                 # FIXME - Should we assume this to be true for module deps?
                                                 dep_content_info["type"] = "module_util"
-                                                q.q(dep_content_info)
 
                                                 display.display('- processing dependency: %s' % dep_content_info["src"])
 
                                                 # This is an external dep, treat it as such
                                                 if dep_content_info["scm"]:
                                                     dep_content = GalaxyContent(self.galaxy, **dep_content_info)
-                                                    q.q(dep_content.path)
                                                     try:
                                                         installed = dep_content.install()
                                                     except AnsibleError as e:
@@ -787,7 +765,7 @@ class GalaxyContent(object):
                                     os.path.join(m.name.split(os.sep)[1:])[0]
                                         for m in members
                                             if len(os.path.join(m.name.split(os.sep)[1:])) > 1
-                                            and os.path.join(m.name.split(os.sep)[1:])[0] in self.CONTENT_TYPE_DIR_MAP.values()
+                                            and os.path.join(m.name.split(os.sep)[1:])[0] in C.CONTENT_TYPE_DIR_MAP.values()
                                 ]
 
                                 if plugin_subdirs:
@@ -803,7 +781,7 @@ class GalaxyContent(object):
                                         self._write_archived_files(content_tar_file, archive_parent_dir)
                                         installed = True
                                 else:
-                                    raise AnsibleError("This Galaxy Content does not contain valid content subdirectories, expected any of: %s " % self.CONTENT_TYPES)
+                                    raise AnsibleError("This Galaxy Content does not contain valid content subdirectories, expected any of: %s " % C.CONTENT_TYPES)
 
                     except OSError as e:
                         error = True
@@ -894,7 +872,6 @@ class GalaxyContent(object):
         return temp_file.name
 
     @staticmethod
-    @q.t
     def yaml_parse(content):
 
         if isinstance(content, string_types):
