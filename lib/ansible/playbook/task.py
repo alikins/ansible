@@ -487,3 +487,6 @@ class Task(Base, Conditional, Taggable, Become):
                 return self._parent
             return self._parent.get_first_parent_include()
         return None
+
+from __main__ import tr
+tr.track_class(Task)

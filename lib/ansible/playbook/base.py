@@ -45,6 +45,7 @@ except ImportError:
 from akl import alogging
 import autologging
 log = alogging.get_logger()
+from __main__ import tr
 
 def _generic_g(prop_name, self):
     try:
@@ -201,6 +202,8 @@ class Base(with_metaclass(BaseMeta, object)):
 
         # and init vars, avoid using defaults in field declaration as it lives across plays
         self.vars = dict()
+        tr.track_class(self.__class__)
+
 
     def dump_me(self, depth=0):
         ''' this is never called from production code, it is here to be used when debugging as a 'complex print' '''

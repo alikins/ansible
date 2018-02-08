@@ -688,3 +688,6 @@ class PlayContext(Base):
             self.connection = conn_type
 
         return self._attributes['connection']
+
+from __main__ import tr
+tr.track_class(PlayContext)

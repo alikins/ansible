@@ -52,6 +52,9 @@ mplog = multiprocessing.util.get_logger()
 mplog.setLevel(logging.DEBUG)
 mplog.propagate = True
 
+from pympler import classtracker
+from pympler import asizeof
+
 ########################################
 # OUTPUT OF LAST RESORT
 class LastResort(object):
@@ -66,6 +69,13 @@ class LastResort(object):
 
 if __name__ == '__main__':
 
+    tr = classtracker.ClassTracker()
+    tr.track_class(Display)
+    tr.track_class(AnsibleError)
+    tr.start_periodic_snapshots(interval=5)
+    #from pympler.garbagegraph import GarbageGraph, start_debug_garbage
+    #start_debug_garbage()
+
     display = LastResort()
     cli = None
     me = os.path.basename(sys.argv[0])
@@ -73,6 +83,7 @@ if __name__ == '__main__':
     try:
         display = Display()
         display.debug("starting run")
+        print(asizeof.asizeof(display))
 
         sub = None
         target = me.split('-')
@@ -148,4 +159,17 @@ if __name__ == '__main__':
         # Remove ansible tempdir
         shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
+    import pprint
+    pp = pprint.pprint
+
+    pp(('asizeof', asizeof.asizeof(display)))
+    pp(('asizesof', asizeof.asizesof(display)))
+    pp(('asized', (asizeof.asized(display))))
+    refs = asizeof.refs(display)
+    for ref in refs:
+        pp(('ref', ref))
+    tr.stats.print_summary()
+    from pympler.web import start_profiler
+    start_profiler(tracker=tr)
+    #gb.render(name=gb_file, format='svg')
     sys.exit(exit_code)

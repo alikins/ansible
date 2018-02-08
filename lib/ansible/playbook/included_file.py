@@ -145,3 +145,6 @@ class IncludedFile:
                     inc_file.add_host(original_host)
 
         return included_files
+
+from __main__ import tr
+tr.track_class(IncludedFile)

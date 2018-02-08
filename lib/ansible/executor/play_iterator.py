@@ -36,6 +36,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+
 from akl import alogging
 log = alogging.get_logger()
 
@@ -137,7 +138,6 @@ class HostState:
 
 from autologging import traced
 
-@traced("__init__")
 class PlayIterator:
 
     # the primary running states for the play iteration
@@ -562,3 +562,8 @@ class PlayIterator:
     def add_tasks(self, host, task_list):
         # self.log.debug('host=%s, task_list=%s', host, task_list)
         self._host_states[host.name] = self._insert_tasks_into_state(self.get_host_state(host), task_list)
+
+
+from __main__ import tr
+tr.track_class(HostState)
+tr.track_class(PlayIterator)
