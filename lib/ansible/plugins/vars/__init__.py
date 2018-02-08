@@ -20,6 +20,8 @@ __metaclass__ = type
 
 from ansible.utils.path import basedir
 
+from __main__ import tr
+
 try:
     from __main__ import display
 except ImportError:
@@ -36,6 +38,7 @@ class BaseVarsPlugin(object):
     def __init__(self):
         """ constructor """
         self._display = display
+        tr.track_class(self.__class__)
 
     def get_vars(self, loader, path, entities):
         """ Gets variables. """

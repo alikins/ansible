@@ -690,4 +690,4 @@ class PlayContext(Base):
         return self._attributes['connection']
 
 from __main__ import tr
-tr.track_class(PlayContext)
+tr.track_class(PlayContext, resolution_level=2)

@@ -28,6 +28,8 @@ from ansible.playbook.play import Play
 from ansible.playbook.playbook_include import PlaybookInclude
 from ansible.plugins.loader import get_all_plugin_loaders
 
+from __main__ import tr
+
 try:
     from __main__ import display
 except ImportError:
@@ -47,6 +49,7 @@ class Playbook:
         self._basedir = to_text(os.getcwd(), errors='surrogate_or_strict')
         self._loader = loader
         self._file_name = None
+        tr.track_class(self.__class__)
 
     @staticmethod
     def load(file_name, variable_manager=None, loader=None):

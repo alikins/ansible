@@ -41,6 +41,7 @@ DEFINED_REGEX = re.compile(r'(hostvars\[.+\]|[\w_]+)\s+(not\s+is|is|is\s+not)\s+
 LOOKUP_REGEX = re.compile(r'lookup\s*\(')
 VALID_VAR_REGEX = re.compile("^[_A-Za-z][_a-zA-Z0-9]*$")
 
+from __main__ import tr
 
 class Conditional:
 
@@ -61,6 +62,7 @@ class Conditional:
             else:
                 self._loader = loader
         super(Conditional, self).__init__()
+        tr.track_class(self.__class__)
 
     def _validate_when(self, attr, name, value):
         if not isinstance(value, list):

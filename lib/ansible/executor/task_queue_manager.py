@@ -39,6 +39,7 @@ from ansible.utils.helpers import pct_to_int
 from ansible.vars.hostvars import HostVars
 from ansible.vars.reserved import warn_if_reserved
 
+from __main__ import tr
 try:
     from __main__ import display
 except ImportError:
@@ -106,6 +107,8 @@ class TaskQueueManager:
         # A temporary file (opened pre-fork) used by connection
         # plugins for inter-process locking.
         self._connection_lockfile = tempfile.TemporaryFile()
+
+        tr.track_class(self.__class__)
 
     def _initialize_processes(self, num):
         self._workers = []

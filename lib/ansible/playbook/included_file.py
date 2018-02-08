@@ -25,6 +25,8 @@ from ansible.playbook.task_include import TaskInclude
 from ansible.playbook.role_include import IncludeRole
 from ansible.template import Templar
 
+from __main__ import tr
+
 try:
     from __main__ import display
 except ImportError:

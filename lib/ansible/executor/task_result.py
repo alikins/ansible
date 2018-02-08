@@ -24,6 +24,10 @@ from copy import deepcopy
 from ansible.parsing.dataloader import DataLoader
 from ansible.vars.manager import strip_internal_keys
 
+
+from __main__ import tr
+
+
 _IGNORE = ('failed', 'skipped')
 _PRESERVE = ('attempts', 'changed', 'retries')
 
@@ -48,6 +52,8 @@ class TaskResult:
             self._task_fields = dict()
         else:
             self._task_fields = task_fields
+
+        tr.track_class(self.__class__)
 
     @property
     def task_name(self):

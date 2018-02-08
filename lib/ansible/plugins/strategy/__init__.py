@@ -46,6 +46,9 @@ from ansible.template import Templar
 from ansible.utils.vars import combine_vars
 from ansible.vars.manager import strip_internal_keys
 
+
+from __main__ import tr
+
 import logging
 log = logging.getLogger('ansible.plugins.strategy')
 
@@ -77,6 +80,8 @@ class SharedPluginLoaderObj:
         self.test_loader = test_loader
         self.lookup_loader = lookup_loader
         self.module_loader = module_loader
+        tr.track_class(self.__class__)
+
 
 _sentinel = StrategySentinel()
 
@@ -158,6 +163,7 @@ class StrategyBase:
 
         self._results = deque()
         self._results_lock = threading.Condition(threading.Lock())
+        tr.track_class(self.__class__, resolution_level=2)
 
         # create the result processing thread for reading results in the background
         self._results_thread = threading.Thread(target=results_thread_main, args=(self,))

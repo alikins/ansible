@@ -403,5 +403,5 @@ class Block(Base, Become, Conditional, Taggable):
             return self._parent.get_first_parent_include()
         return None
 
-from __main__ import tr
-tr.track_class(Block)
+#from __main__ import tr
+#tr.track_class(Block)

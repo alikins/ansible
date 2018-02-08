@@ -202,7 +202,7 @@ class Base(with_metaclass(BaseMeta, object)):
 
         # and init vars, avoid using defaults in field declaration as it lives across plays
         self.vars = dict()
-        tr.track_class(self.__class__)
+        tr.track_class(self.__class__, resolution_level=2)
 
 
     def dump_me(self, depth=0):

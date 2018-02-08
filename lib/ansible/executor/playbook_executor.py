@@ -30,7 +30,7 @@ from ansible.utils.helpers import pct_to_int
 from ansible.module_utils.parsing.convert_bool import boolean
 from ansible.utils.path import makedirs_safe
 from ansible.utils.ssh_functions import check_for_controlpersist
-
+from __main__ import tr
 try:
     from __main__ import display
 except ImportError:
@@ -66,6 +66,8 @@ class PlaybookExecutor:
         # where it is used (in task_executor) because that is post-fork and
         # therefore would be discarded after every task.
         check_for_controlpersist(C.ANSIBLE_SSH_EXECUTABLE)
+
+        tr.track_class(self.__class__)
 
     def run(self):
 

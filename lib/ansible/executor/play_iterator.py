@@ -565,5 +565,5 @@ class PlayIterator:
 
 
 from __main__ import tr
-tr.track_class(HostState)
-tr.track_class(PlayIterator)
+tr.track_class(HostState, resolution_level=2)
+tr.track_class(PlayIterator, resolution_level=2)

@@ -169,6 +169,8 @@ if __name__ == '__main__':
     for ref in refs:
         pp(('ref', ref))
     tr.stats.print_summary()
+    tr.stop_periodic_snapshots()
+    tr.create_snapshot(description='ansible run totals')
     from pympler.web import start_profiler
     start_profiler(tracker=tr)
     #gb.render(name=gb_file, format='svg')
