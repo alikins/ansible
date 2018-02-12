@@ -180,7 +180,8 @@ class Base(with_metaclass(BaseMeta, object)):
 
     def __init__(self):
         self.log = alogging.get_class_logger(self)
-        self.log.debug('class init')
+        # self.log.debug('class init')
+        # self.log.debug('class init', extra=self._get_extra())
         # initialize the data loader and variable manager, which will be provided
         # later when the object is actually loaded
         self._loader = None
@@ -204,6 +205,9 @@ class Base(with_metaclass(BaseMeta, object)):
         self.vars = dict()
         tr.track_class(self.__class__, resolution_level=2)
 
+    def __eq__(self, other):
+        '''object comparison based on _uuid'''
+        return self._uuid == other._uuid
 
     def dump_me(self, depth=0):
         ''' this is never called from production code, it is here to be used when debugging as a 'complex print' '''
@@ -348,11 +352,16 @@ class Base(with_metaclass(BaseMeta, object)):
                 self._attributes[name] = getattr(self, name)
             self._squashed = True
 
+    def _get_extra(self):
+        stack_size = alogging.get_stack_size()
+        extra = {'stack_depth': '%s %s' % ('-'*stack_size, stack_size)}
+        return extra
+
     def copy(self):
         '''
         Create a copy of this object and return it.
         '''
-
+        # self.log.debug('copy', extra=self._get_extra())
         lines = self.dumps_me([])
         self.log.debug('dumps_me: \n%s', '\n'.join(lines))
         #self.log.debug('dump_me: \n%s', self.dump_me())
@@ -380,6 +389,7 @@ class Base(with_metaclass(BaseMeta, object)):
         any _post_validate_<foo> functions.
         '''
 
+        self.log.debug('post_validate', extra=self._get_extra())
         # save the omit value for later checking
         omit_value = templar._available_variables.get('omit')
 

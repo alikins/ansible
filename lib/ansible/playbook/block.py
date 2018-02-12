@@ -52,6 +52,7 @@ class Block(Base, Become, Conditional, Taggable):
         self._dep_chain = None
         self._use_handlers = use_handlers
         self._implicit = implicit
+        # self.log.debug('class init', extra=self._get_extra())
 
         # end of role flag
         self._eor = False
@@ -62,9 +63,11 @@ class Block(Base, Become, Conditional, Taggable):
             self._parent = parent_block
 
         super(Block, self).__init__()
+        self.log.debug('class init', extra=self._get_extra())
 
     def __repr__(self):
-        return "BLOCK(name=%s, uuid=%s, id=%s, implicit=%s)" % (self.name, self._uuid, id(self), self._implicit)
+        # return 'SomeBlock'
+        return "BLOCK(name=%s, uuid=%s, id=%s, implicit=%s)" % (self._name, self._uuid, id(self), self._implicit)
 
     def get_vars(self):
         '''
@@ -164,6 +167,7 @@ class Block(Base, Become, Conditional, Taggable):
             return self._dep_chain[:]
 
     def copy(self, exclude_parent=False, exclude_tasks=False):
+        self.log.debug('block copy', extra=self._get_extra())
         def _dupe_task_list(task_list, new_block):
             new_task_list = []
             for task in task_list:
@@ -175,8 +179,18 @@ class Block(Base, Become, Conditional, Taggable):
                     # block their parent
                     cur_obj = new_task
                     while cur_obj._parent:
+                        if cur_obj._parent:
+                            prev_obj = cur_obj
                         cur_obj = cur_obj._parent
-                    cur_obj._parent = new_block
+                    # cur_obj._parent = new_block
+
+                    # Ensure that we don't make the new_block the parent of itself
+                    if cur_obj != new_block:
+                        cur_obj._parent = new_block
+                    else:
+                        # prev_obj._parent is cur_obj, to allow for mutability we need to use prev_obj
+                        prev_obj._parent = new_block
+
                 else:
                     new_task._parent = new_block
                 new_task_list.append(new_task)
@@ -285,6 +299,7 @@ class Block(Base, Become, Conditional, Taggable):
         Generic logic to get the attribute or parent attribute for a block value.
         '''
 
+        # self.log.debug('attr=%s', repr(attr), extra=self._get_extra())
         extend = self._valid_attrs[attr].extend
         prepend = self._valid_attrs[attr].prepend
         try:

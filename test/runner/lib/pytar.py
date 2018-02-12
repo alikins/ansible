@@ -4,6 +4,7 @@ from __future__ import absolute_import, print_function
 
 import abc
 import tarfile
+import time
 import os
 
 from lib.util import (
@@ -96,9 +97,13 @@ def create_tarfile(dst_path, src_path, tar_filter):
     :type src_path: str
     :type tar_filter: TarFilter
     """
-    display.info('Creating a compressed tar archive of path: %s' % src_path, verbosity=1)
+    start_time = time.time()
+    display.info('Creating a compressed tar archive of path: %s (%s)' % (src_path, os.path.realpath(src_path)), verbosity=1)
 
     with tarfile.TarFile.gzopen(dst_path, mode='w', compresslevel=4) as tar:
         tar.add(src_path, filter=tar_filter.ignore)
 
-    display.info('Resulting archive is %d bytes.' % os.path.getsize(dst_path), verbosity=1)
+    display.info('Resulting archive is %d bytes. Took %s seconds to generate tarfile %s' % (os.path.getsize(dst_path),
+                                                                                            time.time() - start_time,
+                                                                                            os.path.abspath(os.path.relpath(dst_path))),
+                 verbosity=1)
