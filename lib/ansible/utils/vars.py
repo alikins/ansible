@@ -86,7 +86,7 @@ class DisplayDict(dict):
     def __init__(self, *args, **kw):
         super(DisplayDict, self).__init__(*args, **kw)
 
-        print('kw: %s' % repr(kw))
+        # print('kw: %s' % repr(kw))
 
         if not kw:
             import traceback
