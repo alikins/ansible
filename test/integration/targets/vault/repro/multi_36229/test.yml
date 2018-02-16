@@ -1,0 +1,19 @@
+- hosts: testhost
+  # become: yes
+  gather_facts: false
+  vars_files:
+    - vars/mgmt.yml
+    - vars/mgmt_vault.yml
+
+     #  roles:
+      #    - external/geerlingguy.mysql
+      #    - external/geerlingguy.gogs
+      #
+  tasks:
+    - name: show mysql pass
+      debug:
+        var: vault_mysql_root_password
+
+    - name: show gogs vars
+      debug:
+        var: vault_gogs_db_password

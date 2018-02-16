@@ -1,0 +1,16 @@
+---
+# Vault File
+vault_password_file: /etc/ansible/vault-files/mgmt.txt
+
+# MySQL Variables
+mysql_packages:
+  - mariadb-client
+  - mariadb-server
+  - python-mysqldb
+mysql_root_password: "{{ vault_mysql_root_password }}"
+
+# gogs Variables
+gogs_use_mysql: true
+gogs_db_name: gogs
+gogs_db_username: gogs
+gogs_db_password: "{{ vault_gogs_db_password }}"
