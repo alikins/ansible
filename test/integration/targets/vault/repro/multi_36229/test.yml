@@ -10,10 +10,14 @@
       #    - external/geerlingguy.gogs
       #
   tasks:
-    - name: show mysql pass
+    - name: show vault_mysql_root_password var
       debug:
         var: vault_mysql_root_password
 
-    - name: show gogs vars
+    - name: show vault_gogs_db_password password var
       debug:
         var: vault_gogs_db_password
+
+    - name: show vault_some_other_password_encrypted_with_hunter42 var
+      debug:
+        var: vault_some_other_password_encrypted_with_hunter42
