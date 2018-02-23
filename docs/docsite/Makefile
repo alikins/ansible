@@ -1,3 +1,4 @@
+DOCDIR ?= .
 OS := $(shell uname -s)
 SITELIB = $(shell python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"):
 FORMATTER=../bin/plugin_formatter.py
@@ -10,6 +11,9 @@ CPUS ?= $(shell sysctl hw.ncpu|awk '{print $$2}')
 else
 CPUS ?= $(shell nproc)
 endif
+
+BUILD_DIR ?= _build
+BUILD_DIR_FULL_PATH ?= $(DOCDIR)/$(BUILD_DIR)
 
 MODULE_ARGS=
 ifdef MODULES
@@ -34,29 +38,26 @@ docs: clean htmldocs
 
 generate_rst: staticmin config cli keywords modules plugins testing
 
-htmldocs: generate_rst
-	CPUS=$(CPUS) $(MAKE) -f Makefile.sphinx html
+html:
+	CPUS=$(CPUS) BUILDDIR=$(BUILD_DIR_FULL_PATH) $(MAKE) -f Makefile.sphinx html
+
+htmldocs: generate_rst html
 
 singlehtmldocs: generate_rst
-	CPUS=$(CPUS) $(MAKE) -f Makefile.sphinx singlehtml
+	CPUS=$(CPUS) BUILDDIR=$(BUILD_DIR_FULL_PATH) $(MAKE) -f Makefile.sphinx singlehtml
 
 webdocs: docs
 
-#TODO: leaving htmlout removal for those having older versions, should eventually be removed also
-clean:
-	-rm -rf htmlout
-	-rm -rf module_docs
-	-rm -rf _build
-	-rm -f .buildinfo
-	-rm -f objects.inv
-	-rm -rf *.doctrees
-	@echo "Cleaning up minified css files"
-	find . -type f -name "*.min.css" -delete
-	@echo "Cleaning up byte compiled python stuff"
-	find . -regex ".*\.py[co]$$" -delete
-	@echo "Cleaning up editor backup files"
-	find . -type f \( -name "*~" -or -name "#*" \) -delete
-	find . -type f \( -name "*.swp" \) -delete
+clean_html:
+	-rm -rf $(BUILD_DIR_FULL_PATH)/html
+
+clean_htmlout:
+	-rm -rf $(BUILD_DIR_FULL_PATH)/htmlout
+
+clean_build:
+	-rm -rf $(BUILD_DIR_FULL_PATH)
+
+clean_generated_rst:
 	@echo "Cleaning up generated rst"
 	-rm rst/cli/ansible-*.rst
 	-rm rst/cli/ansible.rst
@@ -70,7 +71,21 @@ clean:
 	-rm rst/reference_appendices/config.rst
 	-rm rst/reference_appendices/playbooks_keywords.rst
 
-.PHONY: docs clean
+#TODO: leaving htmlout removal for those having older versions, should eventually be removed also
+clean: clean_build clean_generated_rst
+	-rm -rf module_docs
+	-rm -f .buildinfo
+	-rm -f objects.inv
+	-rm -rf *.doctrees
+	@echo "Cleaning up minified css files"
+	find . -type f -name "*.min.css" -delete
+	@echo "Cleaning up byte compiled python stuff"
+	find . -regex ".*\.py[co]$$" -delete
+	@echo "Cleaning up editor backup files"
+	find . -type f \( -name "*~" -or -name "#*" \) -delete
+	find . -type f \( -name "*.swp" \) -delete
+
+.PHONY: docs clean clean_html clean_htmlout clean_build clean_generated_rst
 
 # TODO: make generate_man output dir cli option
 cli: $(GENERATE_CLI)
@@ -103,5 +118,5 @@ epub:
 	(CPUS=$(CPUS) make -f Makefile.sphinx epub)
 
 htmlsingle: assertrst
-	sphinx-build -j $(CPUS) -b html -d _build/doctrees ./rst _build/html rst/$(rst)
-	@echo "Output is in _build/html/$(rst:.rst=.html)"
+	sphinx-build -j $(CPUS) -b html -d $(BUILD_DIR_FULL_PATH)/doctrees ./rst $(BUILD_DIR_FULL_PATH)/html rst/$(rst)
+	@echo "Output is in $(BUILD_DIR_FULL_PATH)/html/$(rst:.rst=.html)"
