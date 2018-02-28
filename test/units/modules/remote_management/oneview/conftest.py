@@ -3,7 +3,11 @@
 import pytest
 
 from mock import Mock, patch
+
+pytest.importorskip('oneview_module_loader')
+
 from oneview_module_loader import ONEVIEW_MODULE_UTILS_PATH
+
 from hpOneView.oneview_client import OneViewClient
 
 

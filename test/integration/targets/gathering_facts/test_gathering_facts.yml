@@ -11,6 +11,10 @@
            - "!hardware"
       register: not_hardware_facts
 
+- name: foo
+  when: ansible_virtualization_role|default("UNDEF")
+  ignore_errors: true
+  
 - name: min and network test for platform added
   hosts: facthost21
   tags: [ 'fact_network' ]
