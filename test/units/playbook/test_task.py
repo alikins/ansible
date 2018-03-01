@@ -23,8 +23,10 @@ from ansible.compat.tests import unittest
 from ansible.compat.tests.mock import patch
 from ansible.playbook.task import Task
 from ansible.parsing.yaml import objects
+from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible import errors
 
+from units.mock.yaml_helper import YamlTestUtils
 
 basic_command_task = dict(
     name='Test Task',
@@ -38,6 +40,13 @@ kv_command_task = dict(
 # See #36848
 kv_bad_args_str = '- apk: sdfs sf sdf 37'
 kv_bad_args_ds = {'apk': 'sdfs sf sdf 37'}
+
+task_dict_that_is_not_a_dict = [{'not_a_task_dict': True}]
+
+
+def dump_string(obj):
+    ydump = YamlTestUtils()
+    return ydump._dump_string(obj, dumper=AnsibleDumper)
 
 
 class TestTask(unittest.TestCase):
@@ -67,6 +76,14 @@ class TestTask(unittest.TestCase):
         self.assertEqual(t.action, 'command')
         self.assertEqual(t.args, dict(_raw_params='echo hi'))
 
+    @patch.object(errors.AnsibleError, '_get_error_lines_from_file')
+    def test_load_task_not_a_dict(self, mock_get_err_lines):
+        ds = objects.AnsibleSequence(task_dict_that_is_not_a_dict)
+        ds_str = dump_string(ds)
+        ds.ansible_pos = ('test_task_not_a_dict.yml', 1, 1)
+        mock_get_err_lines.return_value = (ds_str, '')
+        t = Task.load(ds)
+
     def test_load_task_kv_form(self):
         t = Task.load(kv_command_task)
         self.assertEqual(t.action, 'command')
@@ -76,7 +93,8 @@ class TestTask(unittest.TestCase):
     def test_load_task_kv_form_error_36848(self, mock_get_err_lines):
         ds = objects.AnsibleMapping(kv_bad_args_ds)
         ds.ansible_pos = ('test_task_faux_playbook.yml', 1, 1)
-        mock_get_err_lines.return_value = (kv_bad_args_str, '')
+        ds_str = dump_string(ds)
+        mock_get_err_lines.return_value = (ds_str, '')
 
         with self.assertRaises(errors.AnsibleParserError) as cm:
             Task.load(ds)
@@ -85,7 +103,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual(cm.exception._obj, ds)
         self.assertEqual(cm.exception._obj, kv_bad_args_ds)
         self.assertIn("The error appears to have been in 'test_task_faux_playbook.yml", cm.exception.message)
-        self.assertIn(kv_bad_args_str, cm.exception.message)
+        self.assertIn(ds_str, cm.exception.message)
         self.assertIn('apk', cm.exception.message)
         self.assertEquals(cm.exception.message.count('The offending line'), 1)
         self.assertEquals(cm.exception.message.count('The error appears to have been in'), 1)

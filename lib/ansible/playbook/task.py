@@ -168,7 +168,7 @@ class Task(Base, Conditional, Taggable, Become):
         '''
 
         if not isinstance(ds, dict):
-            raise AnsibleAssertionError('ds (%s) should be a dict but was a %s' % (ds, type(ds)))
+            raise AnsibleAssertionError('ds (%s) should be a dict but was a %s' % (ds, type(ds)), obj=ds)
 
         # the new, cleaned datastructure, which will have legacy
         # items reduced to a standard structure suitable for the
