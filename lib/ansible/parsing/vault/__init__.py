@@ -930,6 +930,58 @@ class VaultEditor:
 
         self._edit_file_helper(filename, secret, vault_id=vault_id)
 
+    def _edit_file_vaulted_vars(self, filename):
+        '''Open a file, figureout if it is all vault or yaml with vault strings, edit.
+
+        if yaml with vault strings, parse the yaml with AnsibleYaml and secret. Replace
+        with '!vault-plaintext vault-id' and plaintext. Save, open editor. On save/reencrypt,
+        reparse the file with AnsibleYaml, get the plaintext of the to be reencrypted
+        vaulted string, encrypt it (!vault-plaintext -> !vault, AnsibleVaultUnencryptedUnicode ->
+        AnsibleVaultEncryptedUnicode).
+
+        And then, things get complicated... we can't just AnsibleYaml.dumps() the data structure
+        out.
+            1. Comments and comment placement is not preserved which is kind of annoying
+
+            2. AnsibleYaml can loads things into data structures that it can not dumps() out.
+               Ie, we can't serialize a bunch of stuff we can deserialize.
+
+            So just AnsibleYaml.dumps'ing the datastructure back to a file will usually either
+            fail or do the wrong thing.
+
+            #2 above is unlikely to get fixed soon if ever.
+
+            #1 is mostly a limitiation of the PyYaml yaml module ansible uses. Other implementations
+            like Rueyaml can do this, but it is unlikely for ansible to change this any time soon.
+
+
+        So, since we can't just serialize to yaml, we likely need to do some string manipulation
+        to replace the '!vault ' blob. We should know exactly what the before string looked like
+        and where in the file it is, and what the new !vault will look like.
+
+        But we don't really know what the new  !vault-plaintext string will look like. For that
+        matter, we don't know if it be in the same place, or if it will exist at all, or if it
+        will be at the same path in the datastructure. We could limit edit to only try to work
+        in cases where those aren't changed. We also have no idea what the plaintext will look like.
+
+
+        ideas:
+
+        !vault-plaintext is a compound yaml type, with fields for the vault id to use, and for
+        the plaintext. Could also possibly include some idtifying info for what the !vault it
+        replaced looked like.
+
+        some_var: !vault-plaintext:
+                    vault_id: 'dev'
+                    decrypted_from: |
+                                    $ANSIBLE_VAULT;1.1;AES256
+                                    66393964663765613335633461643334393234346231666665306635323635333137306339356232
+                    plaintext: |
+                                The new plaintext to replace decrypted_from with
+
+        That would give vault-edit enough enough to do a reliable job of replacing the previous content.
+
+        '''
     def edit_file(self, filename):
 
         # follow the symlink

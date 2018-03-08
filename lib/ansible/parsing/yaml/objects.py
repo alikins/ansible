@@ -17,6 +17,7 @@
 
 # Make coding more python3-ish
 from __future__ import (absolute_import, division, print_function)
+from passlib.handlers.misc import plaintext
 __metaclass__ = type
 
 import yaml
@@ -67,7 +68,38 @@ class AnsibleSequence(AnsibleBaseYAMLObject, list):
     ''' sub class for lists '''
     pass
 
+class AnsibleVaultPlaintextUnicode(yaml.YAMLObject, AnsibleBaseYAMLObject):
+    __UNSAFE__ = True
+    yaml_tag = u"!vault-plaintext"
+    
+    def __init__(self, plaintext, vault_id=None, decrypted_from=None):
+        super(AnsibleVaultPlaintextUnicode, self).__init__()
+        self._vault = None
+        self._data = {}
+        self._plaintext = plaintext
+        self._decrypted_from = decrypted_from
+        self._vault_id = vault_id
+        self._data['plaintext'] = plaintext
+        self._data['vault_id'] = vault_id
+        self._data['decrypted_from'] = decrypted_from
+        
+    def __str__(self):
+        return str(self._plaintext)
+    
+    def __repr__(self):
+        return repr(self._plaintext)
+    
+    def _repr(self):
+        return 'AnsibleVaultPlaintextUnicode(plaintext="%s", vault_id="%s", decrypted_from="%s")' % (self._data['plaintext'],
+                                                                                                     self._data['vault_id'],
+                                                                                                     self._data['decrypted_from'])
+        
+    def __eq__(self, other):
+        return other == self._plaintext
 
+    def __ne__(self, other):
+        return other != self._plaintext
+    
 # Unicode like object that is not evaluated (decrypted) until it needs to be
 # TODO: is there a reason these objects are subclasses for YAMLObject?
 class AnsibleVaultEncryptedUnicode(yaml.YAMLObject, AnsibleBaseYAMLObject):

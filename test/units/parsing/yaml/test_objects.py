@@ -17,6 +17,7 @@
 
 # Make coding more python3-ish
 from __future__ import (absolute_import, division, print_function)
+from sphinx.builders._epub_base import NavPoint
 __metaclass__ = type
 
 from ansible.compat.tests import unittest
@@ -67,6 +68,26 @@ class TestAnsibleVaultUnicodeNoVault(unittest.TestCase, YamlTestUtils):
         seq = 'some letters'.encode('utf8')
         self.assert_values(seq)
 
+class TestAnsibleVaultPlaintextUnicode(unittest.TestCase, YamlTestUtils):
+    def setUp(self):
+        self.good_vault_password = "hunter42"
+        good_vault_secret = TextVaultSecret(self.good_vault_password)
+        self.good_vault_secrets = [('good_vault_password', good_vault_secret)]
+        self.good_vault = vault.VaultLib(self.good_vault_secrets)
+        
+        self.vault = self.good_vault
+        self.vault_secrets = self.good_vault_secrets
+        
+    def _loader(self, stream):
+        return AnsibleLoader(stream, vault_secrets=self.vault_secrets)
+    
+    def test(self):
+        avp = objects.AnsibleVaultPlaintextUnicode("some plaintext")
+        print(avp)
+        print(dir(avp))
+        print(avp.__dict__)
+        print(repr(avp))
+        self.assertEqual(avp, "some plaintext")
 
 class TestAnsibleVaultEncryptedUnicode(unittest.TestCase, YamlTestUtils):
     def setUp(self):

@@ -24,7 +24,7 @@ from yaml.nodes import MappingNode
 
 from ansible.module_utils._text import to_bytes
 from ansible.parsing.yaml.objects import AnsibleMapping, AnsibleSequence, AnsibleUnicode
-from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
+from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode, AnsibleVaultPlaintextUnicode
 from ansible.utils.unsafe_proxy import wrap_var
 from ansible.parsing.vault import VaultLib
 
@@ -109,6 +109,22 @@ class AnsibleConstructor(SafeConstructor):
         ret.vault = vault
         return ret
 
+    def construct_vault_plaintext_unicode(self, node):
+        value = self.construct_mapping(node)
+        ret = AnsibleVaultPlaintextUnicode(value['plaintext'],
+                                            value['vault_id'],
+                                            value['decrypted_from'])
+        # FIXME: dont need this
+        vault = self._vaults['default']
+        if vault.secrets is None:
+            raise ConstructorError(context=None, context_mark=None,
+                                   problem="found !vault but no vault password provided",
+                                   problem_mark=node.start_mark,
+                                   note=None)
+        ret.vault = vault
+        return ret
+        
+    
     def construct_yaml_seq(self, node):
         data = AnsibleSequence()
         yield data
@@ -161,4 +177,10 @@ AnsibleConstructor.add_constructor(
     u'!vault',
     AnsibleConstructor.construct_vault_encrypted_unicode)
 
-AnsibleConstructor.add_constructor(u'!vault-encrypted', AnsibleConstructor.construct_vault_encrypted_unicode)
+AnsibleConstructor.add_constructor(
+    u'!vault-encrypted',
+    AnsibleConstructor.construct_vault_encrypted_unicode)
+
+AnsibleConstructor.add_constructor(
+    u'!vault-plaintext',
+    AnsibleConstructor.construct_vault_plaintext_unicode)

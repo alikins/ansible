@@ -30,7 +30,7 @@ from ansible import errors
 from ansible.module_utils.six import text_type, binary_type
 from ansible.parsing.yaml.loader import AnsibleLoader
 from ansible.parsing import vault
-from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode
+from ansible.parsing.yaml.objects import AnsibleVaultEncryptedUnicode, AnsibleVaultPlaintextUnicode
 from ansible.parsing.yaml.dumper import AnsibleDumper
 
 from units.mock.yaml_helper import YamlTestUtils
@@ -262,6 +262,15 @@ class TestAnsibleLoaderVault(unittest.TestCase, YamlTestUtils):
         # verify we can dump the object again
         self._dump_stream(data_from_yaml, stream2, dumper=AnsibleDumper)
 
+    def test_embedded_vault_plaintext(self):
+        yaml_text = u"""---\nsome_var: !vault-plaintext {"plaintext": "foo", "vault_id": "dev", "decrypted_from": "$ANSIBLE_VAULTsdfsdfsdf"}"""
+        data_from_yaml = self._load_yaml(yaml_text, self.vault_password)
+        import pprint
+        pprint.pprint(data_from_yaml)
+        print(type(data_from_yaml['some_var']))
+        37/0
+
+        
     def test_embedded_vault(self):
         plaintext_var = u"""This is the plaintext string."""
         tagged_vaulted_var = self._encrypt_plaintext(plaintext_var)
