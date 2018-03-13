@@ -35,7 +35,7 @@ from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleParserError, AnsibleUndefinedVariable, AnsibleFileNotFound, AnsibleAssertionError
 from ansible.inventory.host import Host
 from ansible.inventory.helpers import sort_groups, get_group_vars
-from ansible.module_utils._text import to_native
+from ansible.module_utils._text import to_native, to_text
 from ansible.module_utils.six import iteritems, text_type
 from ansible.plugins.loader import lookup_loader, vars_loader
 from ansible.plugins.cache import FactCache
@@ -101,8 +101,8 @@ class VariableManager:
         # At high verbosity, use TrackingDict for all_vars so we keep track of where
         # the items come from
         if display.verbosity > 4:
-            # self._vars_dict_class = TrackingDict
-            self._vars_dict_class = DisplayDict
+            self._vars_dict_class = TrackingDict
+            #self._vars_dict_class = DisplayDict
         else:
             self._vars_dict_class = dict
 
@@ -517,6 +517,24 @@ class VariableManager:
             # has to be copy, otherwise recursive ref
             all_vars['vars'] = all_vars.copy()
 
+        import pprint
+        # pprint.pprint(all_vars.as_dict())
+        try:
+            repr(all_vars)
+        except UnicodeEncodeError as e:
+
+            import epdb; epdb.st()
+            print(e)
+            for blip in all_vars:
+                try:
+                    repr(blip)
+                except Exception as e2:
+                    print(2)
+                    print(blip)
+                    sys.exit(1)
+            raise Exception("fooo %s" % e)
+
+        print('%s' % to_text(repr(all_vars)))
         display.debug("done with get_vars()")
         return all_vars
 

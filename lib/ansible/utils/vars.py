@@ -148,6 +148,9 @@ class DisplayDict(dict):
                 continue
             scopes = []
             for idx, level in enumerate(self.meta[key]):
+                if not level:
+                    print('WARNING %s: %s' % (idx, level))
+                    continue
                 scopes.append({'rank': idx,
                                'scope': level[0],
                                'info': level[2],
@@ -202,6 +205,8 @@ class TrackingDict(dict):
             lines.append('var: %s' % key)
             lines.append('    scopes:')
             for idx, level in enumerate(reversed(self.meta[key])):
+                if level is None:
+                    print("WARNING: idx: %s level: %s key: %s self.meta[key]: %s" % (idx, level, key, self.meta[key]))
                 # lines.append('  level %s: %s' % (idx, repr(level)))
                 scope_info_blurb = ''
                 scope_info = level[2]
@@ -220,7 +225,15 @@ class TrackingDict(dict):
         for key in self:
             if self._is_ignored(key):
                 continue
-            data[key] = self[key]
+            scopes = []
+            for idx, level in enumerate(self.meta[key]):
+                scopes.append({'rank': idx,
+                               'scope': level[0],
+                               'info': level[2],
+                               'value': level[1]})
+            data[key] = {'scopes': scopes,
+                         'final': self[key]}
+            # data[key] = self[key]
         return data
 
 
