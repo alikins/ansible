@@ -181,7 +181,8 @@ class Conditional:
                     result = self._check_conditional(conditional, templar, all_vars)
                     conditional_results.append(result)
                 except AnsibleUndefinedVariable as e:
-                    raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" % (to_native(conditional), to_native(e)), obj=ds)
+                    raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
+                                       (to_native(conditional), to_native(e)), obj=ds)
 
             undefined_errors = []
             for conditional_result in conditional_results:
@@ -191,8 +192,8 @@ class Conditional:
 
             print('undefined_errors: %s' % undefined_errors)
             if any(undefined_errors):
-                raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" % (to_native(undefined_errors), [x.undefined for x in undefined_errors]), obj=ds)
-
+                raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
+                                   (to_native(undefined_errors), [x.undefined for x in undefined_errors]), obj=ds)
 
         return conditional_results
 
