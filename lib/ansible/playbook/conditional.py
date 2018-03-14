@@ -118,7 +118,7 @@ class ConditionalResult:
                 'templated_expr': self.templated_expr,
                 # may need to repr/serialize  returning
                 'templating_error_msg': self.templating_error_msg,
-                'jinja_exp': self.jinja_exp
+    #            'jinja_exp': self.jinja_exp
                 }
 
 
