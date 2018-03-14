@@ -208,10 +208,12 @@
 # proper booleanification tests (issue #8629)
 
 - name: set fact to string 'false'
-  set_fact: bool_test1=false
+  set_fact:
+    bool_test1: false
 
 - name: set fact to string 'False'
-  set_fact: bool_test2=False
+  set_fact:
+    bool_test2: False
 
 - name: set fact to a proper boolean using complex args
   set_fact:
@@ -225,7 +227,7 @@
 - name: assert that the task did not run for 'false'
   assert:
     that:
-    - "result.skipped == true"
+      - "'skipped' not in result"
 
 - name: "test boolean value 'false' string using 'when: not var'"
   command: echo 'hi'
@@ -245,7 +247,7 @@
 - name: assert that the task did not run for 'False'
   assert:
     that:
-    - "result.skipped == true"
+      - "'skipped' not in result"
 
 - name: "test boolean value 'False' string using 'when: not var'"
   command: echo 'hi'
@@ -265,7 +267,7 @@
 - name: assert that the task did not run for proper boolean false
   assert:
     that:
-    - "result.skipped == true"
+      - "'skipped' not in result"
 
 - name: "test proper boolean value of complex arg using 'when: not var'"
   command: echo 'hi'
@@ -322,7 +324,7 @@
   - name: assert the task was skipped
     assert:
       that:
-      - skipped_bad_attribute
+        - skipped_bad_attribute
   when: cond_bad_attribute is defined and 'results' in cond_bad_attribute
 
 - name: test a with_items loop skipping a single item
@@ -336,8 +338,8 @@
 - name: assert only a single item was skipped
   assert:
     that:
-    - result.results|length == 3
-    - result.results[1].skipped
+      - result.results|length == 3
+      - result.results[1].skipped
 
 - name: test complex templated condition
   debug: msg="it works"
@@ -369,7 +371,7 @@
 - name: assert the task was skipped
   assert:
     that:
-    - "result.skipped == true"
+      - "result.skipped == true"
 
 - name: test list with invalid element does not run with conditional is defined
   vars:
@@ -381,7 +383,7 @@
 - name: assert the task was skipped
   assert:
     that:
-    - "result.skipped == true"
+      - "result.skipped == true"
 
 - name: test list with invalid element is undefined
   vars:

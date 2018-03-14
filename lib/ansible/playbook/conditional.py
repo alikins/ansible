@@ -27,7 +27,7 @@ from jinja2.exceptions import UndefinedError
 
 from ansible.errors import AnsibleError, AnsibleUndefinedVariable
 from ansible.module_utils.six import text_type
-from ansible.module_utils._text import to_native
+from ansible.module_utils._text import to_native, to_text
 from ansible.playbook.attribute import FieldAttribute
 
 try:
@@ -41,9 +41,46 @@ DEFINED_REGEX = re.compile(r'(hostvars\[.+\]|[\w_]+)\s+(not\s+is|is|is\s+not)\s+
 LOOKUP_REGEX = re.compile(r'lookup\s*\(')
 VALID_VAR_REGEX = re.compile("^[_A-Za-z][_a-zA-Z0-9]*$")
 
+from akl import alogging
+log = alogging.get_logger()
 
 class AnsibleInvalidConditional(AnsibleError):
     pass
+
+
+# First, we do some low-level jinja2 parsing involving the AST format of the
+# statement to ensure we don't do anything unsafe (using the disable_lookup flag above)
+class CleansingNodeVisitor(ast.NodeVisitor):
+    def __init__(self, conditional, disable_lookups):
+        super(CleansingNodeVisitor, self).__init__()
+        self.conditional = conditional
+        self.disable_lookups = disable_lookups
+
+    def generic_visit(self, node, inside_call=False, inside_yield=False):
+        if isinstance(node, ast.Call):
+            inside_call = True
+        elif isinstance(node, ast.Yield):
+            inside_yield = True
+        elif isinstance(node, ast.Str):
+            if self.disable_lookups:
+                if inside_call and node.s.startswith("__"):
+                    # calling things with a dunder is generally bad at this point...
+                    raise AnsibleError(
+                        "Invalid access found in the conditional: '%s'" % self.conditional
+                    )
+                elif inside_yield:
+                    # we're inside a yield, so recursively parse and traverse the AST
+                    # of the result to catch forbidden syntax from executing
+                    parsed = ast.parse(node.s, mode='exec')
+                    cnv = CleansingNodeVisitor(self.conditional, self.disable_lookups)
+                    cnv.visit(parsed)
+        # iterate over all child nodes
+        for child_node in ast.iter_child_nodes(node):
+            self.generic_visit(
+                child_node,
+                inside_call=inside_call,
+                inside_yield=inside_yield
+            )
 
 
 # FIXME: any ideas for a better repr?
@@ -53,31 +90,36 @@ class ConditionalResult:
 
     def __init__(self, value=None, conditional=None,
                  templated_expr=None, undefined=None,
-                 jinja_exp=None):
+                 jinja_exp=None, templating_error_msg=None):
         self.conditional = conditional
         self.value = value or False
         self.templated_expr = templated_expr
         self.undefined = undefined
         self.jinja_exp = jinja_exp
+        self.templating_error_msg = templating_error_msg
 
     def __bool__(self):
         return self.value
     __nonzero__ = __bool__
 
     def __repr__(self):
-        return "'%s' is %s expanded_to [%s] undefined=%s jinja_exp=%s" % (self.conditional,
-                                                                          self.value,
+        return "'%s' is %s expanded_to [%s]" % (self.conditional,
+                                                self.value,
 
-                                                                          self.templated_expr,
-                                                                          self.undefined,
-                                                                          self.jinja_exp)
+                                                self.templated_expr,
+                                                # self.undefined,
+                                                #             self.jinja_exp
+                                                )
 
     def __getstate__(self):
         return {'conditional': self.conditional,
                 'value': self.value,
-                'undefined': self.undefined,
+                # 'undefined': self.undefined,
                 'templated_expr': self.templated_expr,
-                'jinja_exp': self.jinja_exp}
+                # may need to repr/serialize  returning
+                'templating_error_msg': self.templating_error_msg,
+                'jinja_exp': self.jinja_exp
+                }
 
 
 class ConditionalResults:
@@ -172,25 +214,39 @@ class Conditional:
 
         conditional_results = ConditionalResults(when=self.when)
 
+        log.debug("self.when=%s", self.when)
         # this allows for direct boolean assignments to conditionals "when: False"
         if isinstance(self.when, bool):
             conditional_results.append(ConditionalResult(self.when, self.when))
         else:
+            undefined_errors = []
             for conditional in self.when:
+                log.debug("about to _check_conditional for conditional=%s", conditional)
+
+                # FIXME:
+                # NOTE: this does not short circuit on first fail, but tries all the 'when' items
+                #       It probably should short circuit (ideally by just raising an excep), but that might break compat
                 try:
                     result = self._check_conditional(conditional, templar, all_vars)
                     conditional_results.append(result)
                 except AnsibleUndefinedVariable as e:
+                    # FIXME:  I think we could rm this check now
+                    log.debug("auv on initial _check_conditional, before iterating over results")
+                    # log.exception(e)
+                    # FIXME: really need a ConditionalError
                     raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
-                                       (to_native(conditional), to_native(e)), obj=ds)
+                                       (to_native(conditional), to_native(e)), obj=ds) from e
 
-            undefined_errors = []
-            for conditional_result in conditional_results:
-                print('cr: %s' % conditional_result)
-                if conditional_result.undefined:
-                    undefined_errors.append(conditional_result)
+                # if we short circuit then we wont need to track true/false and undefined separately
+                if result.undefined:
+                    undefined_errors.append(result)
 
-            print('undefined_errors: %s' % undefined_errors)
+                # return the falsey results when we hit the first false
+                if conditional_results is False:
+                    return conditional_results
+
+
+            log.debug('undefined_errors: %s', undefined_errors)
             if any(undefined_errors):
                 raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
                                    (to_native(undefined_errors), [x.undefined for x in undefined_errors]), obj=ds)
@@ -227,8 +283,10 @@ class Conditional:
         templar.set_available_variables(variables=all_vars)
 
         try:
-            # if the conditional is "unsafe", disable lookups
             disable_lookups = hasattr(conditional, '__UNSAFE__')
+
+            # FIXME: extract to method args: disable_lookups, conditional
+            # bleah, wtf... clobbering conditional?
             conditional = templar.template(conditional, disable_lookups=disable_lookups)
             if not isinstance(conditional, text_type) or conditional == "":
                 return ConditionalResult(True, conditional=conditional)
@@ -237,69 +295,80 @@ class Conditional:
             # and we don't want future templating calls to do unsafe things
             disable_lookups |= hasattr(conditional, '__UNSAFE__')
 
-            # First, we do some low-level jinja2 parsing involving the AST format of the
-            # statement to ensure we don't do anything unsafe (using the disable_lookup flag above)
-            class CleansingNodeVisitor(ast.NodeVisitor):
-                def generic_visit(self, node, inside_call=False, inside_yield=False):
-                    if isinstance(node, ast.Call):
-                        inside_call = True
-                    elif isinstance(node, ast.Yield):
-                        inside_yield = True
-                    elif isinstance(node, ast.Str):
-                        if disable_lookups:
-                            if inside_call and node.s.startswith("__"):
-                                # calling things with a dunder is generally bad at this point...
-                                raise AnsibleError(
-                                    "Invalid access found in the conditional: '%s'" % conditional
-                                )
-                            elif inside_yield:
-                                # we're inside a yield, so recursively parse and traverse the AST
-                                # of the result to catch forbidden syntax from executing
-                                parsed = ast.parse(node.s, mode='exec')
-                                cnv = CleansingNodeVisitor()
-                                cnv.visit(parsed)
-                    # iterate over all child nodes
-                    for child_node in ast.iter_child_nodes(node):
-                        self.generic_visit(
-                            child_node,
-                            inside_call=inside_call,
-                            inside_yield=inside_yield
-                        )
             try:
-                e = templar.environment.overlay()
-                e.filters.update(templar._get_filters())
-                e.tests.update(templar._get_tests())
+                # FIXME: extract to method
+                # ffs, 'e' in a try block as var name?
+                env = templar.environment.overlay()
+                env.filters.update(templar._get_filters())
+                env.tests.update(templar._get_tests())
 
-                res = e._parse(conditional, None, None)
-                res2 = generate(res, e, None, None)
+                res = env._parse(conditional, None, None)
+                res2 = generate(res, env, None, None)
                 parsed = ast.parse(res2, mode='exec')
 
-                cnv = CleansingNodeVisitor()
+                cnv = CleansingNodeVisitor(conditional, disable_lookups)
                 cnv.visit(parsed)
             except Exception as e:
-                raise AnsibleInvalidConditional("Invalid conditional detected: %s" % to_native(e))
+                log.exception(e)
+                raise AnsibleInvalidConditional("Invalid conditional detected: %s" % to_native(e)) from e
 
-            # and finally we generate and template the presented string and look at the resulting string
+            # TODO: verify that conditional can be templated
+            #       then verify the presented conditional fixture can be templated
+            #       then if they dont fail, then
+
+            # test the conditional first
+            # FIXME: are there cases where conditional alone would not be templateable but the whole exp is?
+            try:
+                conditional_val = templar.template(conditional, disable_lookups=disable_lookups).strip()
+            except (AnsibleUndefinedVariable, UndefinedError) as e:
+                # log.exception(" undefined when templating the conditional %s", conditional)
+                raise
+            except Exception as e:
+                log.exception(e)
+                # return a falsey result, but because it failed to template not because of how it eval'ed
+                return ConditionalResult(False, conditional=conditional,
+                                         templating_error_msg=to_text(e))
+
             presented = "{%% if %s %%} True {%% else %%} False {%% endif %%}" % conditional
-            val = templar.template(presented, disable_lookups=disable_lookups).strip()
-            conditional_val = templar.template(conditional, disable_lookups=disable_lookups).strip()
+
+            # not template the presented predicate
+            try:
+                val = templar.template(presented, disable_lookups=disable_lookups).strip()
+            except (AnsibleUndefinedVariable, UndefinedError) as e:
+                # log.exception(" undefined when templating the presented predicate %s", presented)
+                raise
+            except Exception as e:
+                log.exception(e)
+                return ConditionalResult(False, conditional=conditional,
+                                         # templated_expr=conditional_val,
+                                         templating_error_msg=to_text(e))
+
+            log.debug("val=%s conditional=%s", val, conditional)
             if val == "True":
                 return ConditionalResult(True, conditional=conditional,
-                                         templated_expr=conditional_val,
-                                         jinja_exp=repr((res, e, res2)))
+                                         templated_expr=conditional_val)
             elif val == "False":
-                return ConditionalResult(False, conditional=conditional,
-                                         templated_expr=conditional_val,
-                                         undefined='bbbb',
-                                         jinja_exp=repr((res, e, res2)))
+                return ConditionalResult(False, conditional=original,
+                                         templated_expr=conditional_val)
             else:
                 raise AnsibleError("unable to evaluate conditional: %s" % original)
         except (AnsibleUndefinedVariable, UndefinedError) as e:
+            # FIXME: extract to method
+            # log.exception(e)
             # the templating failed, meaning most likely a variable was undefined. If we happened
             # to be looking for an undefined variable, return True, otherwise fail
             try:
                 # first we extract the variable name from the error message
-                var_name = re.compile(r"'(hostvars\[.+\]|[\w_]+)' is undefined").search(str(e)).groups()[0]
+
+                undef_re = re.compile(r"'(hostvars\[.+\]|[\w_]+)' is undefined").search(str(e))
+                if undef_re is None:
+                    log.debug('got an undefined exception but we are not checking for "is undefined"')
+                    # could return result here with explain
+                    raise
+
+                re_groups = undef_re.groups()
+                var_name = re_groups[0]
+
                 # next we extract all defined/undefined tests from the conditional string
                 def_undef = self.extract_defined_undefined(conditional)
                 # then we loop through these, comparing the error variable name against
@@ -314,7 +383,7 @@ class Conditional:
                         # against the state (defined or undefined)
                         should_exist = ('not' in logic) != (state == 'defined')
                         if should_exist:
-                            return ConditionalResult(False, conditional=conditional, undefined='ssss')
+                            return ConditionalResult(False, conditional=conditional)
                         else:
                             return ConditionalResult(True, conditional=conditional, undefined='xxxx')
 
@@ -322,12 +391,19 @@ class Conditional:
                 # return ConditionalResult(False, conditional=conditional, undefined='ccccc')
                 # as nothing above matched the failed var name, re-raise here to
                 # trigger the AnsibleUndefinedVariable exception again below
+                log.debug("how did we get here?")
                 raise
             # we dont except as e to avoid clobbering existing e exception
             except Exception as new_e:
-                print('new_e: %s type: %s' % (new_e, type(new_e)))
-                print('e: %s type: %s' % (e, type(e)))
-                return ConditionalResult(False, conditional=conditional, undefined='ffffff')
+                log.exception(new_e)
+                log.debug('last ditch new_e: %s type: %s', new_e, type(new_e))
+                log.debug('last ditch e: %s type: %s', e, type(e))
+
+                # return ConditionalResult(False, conditional=conditional, undefined='ffffff')
+                return ConditionalResult(False, conditional=conditional,
+                                         templated_expr=conditional_val,
+                                         templating_error_msg=to_text(new_e))
+
                 raise AnsibleUndefinedVariable(
                     "error2 while evaluating conditional (%s): %s" % (original, e)
-                )
+                ) from new_e

@@ -73,6 +73,9 @@ if __name__ == '__main__':
     cli = None
     me = os.path.basename(sys.argv[0])
 
+    from akl import alogging
+    log = alogging.default_setup("ansible")
+
     try:
         display = Display()
         display.debug("starting run")
