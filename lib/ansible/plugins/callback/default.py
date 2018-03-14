@@ -23,6 +23,9 @@ from ansible.playbook.task_include import TaskInclude
 from ansible.plugins.callback import CallbackBase
 from ansible.utils.color import colorize, hostcolor
 
+from akl import alogging
+log = alogging.get_logger()
+import pprint
 
 class CallbackModule(CallbackBase):
 
@@ -112,6 +115,8 @@ class CallbackModule(CallbackBase):
                 msg = "skipping: [%s]" % result._host.get_name()
                 if (self._display.verbosity >= 0 or '_ansible_verbose_always' in result._result) and '_ansible_verbose_override' not in result._result:
                     reasons = self._dump_skipped_reasons(result._result)
+
+
                     if reasons:
                         msg += " because:\n"
                         for reason in reasons:
