@@ -396,3 +396,103 @@
   assert:
     that:
       - "result.failed == false"
+
+
+# FIXME: cleanup these test cases
+
+- set_fact:
+    a_defined_thing: "bloop"
+    thing_a: 42
+    blippy: "thing_a"
+
+- set_fact:
+    lower_words: "my shift key doesnt work please send help"
+    result: {"rc": 31, "stdout": "ddddddsfsd"}
+    some_cond: "{{blippy}} {{a_defined_thing}}"
+
+- name: when when is a list of whens with many many falses
+  debug:
+    msg: 'I was truthy.'
+  when:
+    - "True == False"
+    - False
+    - "'blippy' == 'sdfblippy'"
+    - "result.rc >= 37"
+    - "a_defined_thing == some_cond"
+    - blippy
+    - "result.stdout == 'Some value that is different from stdout'"
+
+- name: a debug to be conditional about some undefined stuff
+  debug:
+    msg: "whatever I guess, what does it even mean"
+  when:
+    - this_is_not_a_thing
+    - another_undef_thing == third_undef_thing
+
+- name: a debug to be conditional about
+  debug:
+    msg: "whatever"
+  when:
+    - whatever is defined
+    - "someattribute in whatever"
+
+- name: a debug to be conditional about with the single templating error someattribute
+  debug:
+    msg: "whatever I guess"
+  when:
+      "someattribute in whatever"
+
+- name: a debug to be conditional about the single some_undefined_thing is defined
+  debug:
+    msg: "everything is meaningless"
+  when:
+    - some_undefined_thing is defined
+
+- name: a debug to be conditional about the single some_undefined_thing references
+  debug:
+    msg: "nameless void"
+  when:
+    - some_undefined_thing
+
+- name: a normal cond that evals to false
+  debug:
+    msg: "meaningless lies"
+  when:
+    - "a_defined_thing == asdfadf"
+
+- name: a normal cond that evals to true
+  debug:
+    msg: "truth in error"
+  when:
+    - true
+
+- set_fact:
+    borp: true
+    bad_template: thing_undefined1
+    a_list:
+      - foo1
+      - foo2
+      - larry
+      - foo3
+    stuff: green
+
+- name: try templates
+  debug:
+    msg: 'I was truthy about templates.'
+  when:
+    - "True == '{{borp}}'"
+    - False
+    - "'blippy' == 'sdfblippy'"
+    - "result.rc >= 37"
+    - "'{{ lower_words | upper}}'  == some_cond"
+    - "'{{ bad_template }}' == 'sdfsdf'"
+    - '{{bad_template}}'
+    - "'{{bad_template}}'"
+    - "bad_template"
+    - bad_template
+    - bad_template == 31
+    - blippy
+    - "foo in borp"
+    - "'bar' in a_list"
+    - "'{{stuff}}' in a_list"
+    - "result.stdout == 'Some value that is different from stdout'"
