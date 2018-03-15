@@ -410,7 +410,7 @@
     result: {"rc": 31, "stdout": "ddddddsfsd"}
     some_cond: "{{blippy}} {{a_defined_thing}}"
 
-- name: when when is a list of whens with many many falses
+- name: "when when is a list of whens with many many falses"
   debug:
     msg: 'I was truthy.'
   when:
@@ -421,50 +421,99 @@
     - "a_defined_thing == some_cond"
     - blippy
     - "result.stdout == 'Some value that is different from stdout'"
+  register: result
 
-- name: a debug to be conditional about some undefined stuff
+- name: "assert task 'when when is a list of whens with many many falses' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- name: "a debug to be conditional about some undefined stuff"
   debug:
     msg: "whatever I guess, what does it even mean"
   when:
     - this_is_not_a_thing
     - another_undef_thing == third_undef_thing
+  register: result
 
-- name: a debug to be conditional about
+- name: "assert task 'a debug to be conditional about some undefined stuff' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- name: "a debug to be conditional about"
   debug:
     msg: "whatever"
   when:
     - whatever is defined
     - "someattribute in whatever"
+  register: result
 
-- name: a debug to be conditional about with the single templating error someattribute
+- name: "assert task 'a debug to be conditional about' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- name: "a debug to be conditional about with the single templating error someattribute"
   debug:
     msg: "whatever I guess"
   when:
-      "someattribute in whatever"
+    - "someattribute in whatever"
+  register: result
 
-- name: a debug to be conditional about the single some_undefined_thing is defined
+- name: "assert task 'a debug to be conditional about with the single templating error someattribute' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- name: "a debug to be conditional about the single some_undefined_thing is defined"
   debug:
     msg: "everything is meaningless"
   when:
     - some_undefined_thing is defined
+  register: result
 
-- name: a debug to be conditional about the single some_undefined_thing references
+- name: "assert task 'a debug to be conditional about the single some_undefined_thing is defined' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- name: "a debug to be conditional about the single some_undefined_thing references"
   debug:
     msg: "nameless void"
   when:
     - some_undefined_thing
+  register: result
 
-- name: a normal cond that evals to false
+- name: "assert task 'a debug to be conditional about the single some_undefined_thing references' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- name: "a normal cond that evals to false"
   debug:
     msg: "meaningless lies"
   when:
     - "a_defined_thing == asdfadf"
+  register: result
 
-- name: a normal cond that evals to true
+- name: "assert task 'a normal cond that evals to false' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- name: "a normal cond that evals to true"
   debug:
     msg: "truth in error"
   when:
     - true
+  register: result
+
+
+- name: "assert task 'a normal cond that evals to true' was ok"
+  assert:
+    that:
+      - "result.failed == false"
 
 - set_fact:
     borp: true
@@ -476,7 +525,7 @@
       - foo3
     stuff: green
 
-- name: try templates
+- name: "misc template abuse in when"
   debug:
     msg: 'I was truthy about templates.'
   when:
@@ -496,3 +545,22 @@
     - "'bar' in a_list"
     - "'{{stuff}}' in a_list"
     - "result.stdout == 'Some value that is different from stdout'"
+  register: result
+
+- name: "assert task 'misc template abuse in when' was skipped"
+  assert:
+    that:
+      - "result.skipped == true"
+
+- debug:
+    var: result
+
+- debug:
+    var: result.skip_reason
+
+- name: "assert task 'misc template abuse in when' returned only the first failed condition"
+  assert:
+    that:
+      # - "result.skip_reason == false"
+      - "result.skip_reason.failed_conditions|length == 1"
+

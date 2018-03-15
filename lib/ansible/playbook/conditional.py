@@ -101,6 +101,11 @@ class ConditionalResult:
     __nonzero__ = __bool__
 
     def __repr__(self):
+        return "ConditionalResult(value=%s, conditional='%s')" % \
+            (self.value,
+             self.conditional)
+
+    def __x_repr__(self):
         return "'%s' is %s expanded_to [%s]" % (self.conditional,
                                                 self.value,
 
@@ -112,11 +117,8 @@ class ConditionalResult:
     def __getstate__(self):
         return {'conditional': self.conditional,
                 'value': self.value,
-                # 'undefined': self.undefined,
                 'templated_expr': self.templated_expr,
-                # may need to repr/serialize  returning
                 'templating_error_msg': self.templating_error_msg,
-    #            'jinja_exp': self.jinja_exp
                 }
 
 
@@ -139,14 +141,14 @@ class ConditionalResults:
         return iter(self.conditional_results)
 
     def __repr__(self):
-        return "%s(%s)" % (bool(self), self.conditional_results)
+        buf = '%s(' % self.__class__.__name__
+        buf += 'result=%s' % bool(self)
 
-    def _x_repr__(self):
-        failed_msg = ''
-        return '%s(when=%s, conditional_results=%s %s)' % (self.__class__.__name__,
-                                                           self.when,
-                                                           self.conditional_results,
-                                                           failed_msg)
+        buf += ', conditional_results=['
+        for cond_result in self.conditional_results:
+            buf += '%s,' % cond_result
+        buf += '])'
+        return buf
 
     @property
     def failed_conditions(self):
@@ -216,7 +218,7 @@ class Conditional:
         if isinstance(self.when, bool):
             conditional_results.append(ConditionalResult(self.when, self.when))
         else:
-            undefined_errors = []
+            # undefined_errors = []
             for conditional in self.when:
 
                 # FIXME:
@@ -232,16 +234,18 @@ class Conditional:
                                        (to_native(conditional), to_native(e)), obj=ds)
 
                 # if we short circuit then we wont need to track true/false and undefined separately
-                if result.undefined:
-                    undefined_errors.append(result)
+                #if result.undefined:
+                    # could add a ConditionalResult(false) here to trigger short circuit on first undefined
+                #    undefined_errors.append(result)
+                    #return conditional_results
 
                 # return the falsey results when we hit the first false
-                if conditional_results is False:
+                if not result:
                     return conditional_results
 
-            if any(undefined_errors):
-                raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
-                                   (to_native(undefined_errors), [x.undefined for x in undefined_errors]), obj=ds)
+            #if any(undefined_errors):
+            #    raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
+            #                    (to_native(undefined_errors), [x.undefined for x in undefined_errors]), obj=ds)
 
         return conditional_results
 
@@ -327,7 +331,7 @@ class Conditional:
                 raise
             except Exception as e:
                 return ConditionalResult(False, conditional=conditional,
-                                         # templated_expr=conditional_val,
+                                         templated_expr=conditional_val,
                                          templating_error_msg=to_text(e))
 
             if val == "True":
@@ -378,11 +382,9 @@ class Conditional:
                 raise
             # we dont except as e to avoid clobbering existing e exception
             except Exception as new_e:
-                # return ConditionalResult(False, conditional=conditional, undefined='ffffff')
+                # to get here, a conditional has cause an Undefined error and then in the except
+                # block above we've verif'ed that the statement isn't checking for 'is undefined'
+                # so we return a failed conditional results with some info about the undefined
                 return ConditionalResult(False, conditional=conditional,
-                                         templated_expr=conditional_val,
+                                         undefined=to_text(new_e),
                                          templating_error_msg=to_text(new_e))
-
-                raise AnsibleUndefinedVariable(
-                    "error2 while evaluating conditional (%s): %s" % (original, e)
-                )
