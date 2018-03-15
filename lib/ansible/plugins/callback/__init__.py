@@ -58,9 +58,6 @@ class AnsibleJSONEncoder(json.JSONEncoder):
 
 
 class CallbackBase:
-        return super(AnsibleJSONEncoder, self).default(obj)
-
-
     '''
     This is a base ansible callback class that does nothing. New callbacks should
     use this class as a base and override any callback methods they wish to execute
