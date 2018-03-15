@@ -229,7 +229,7 @@ class Conditional:
                     # FIXME:  I think we could rm this check now
                     # FIXME: really need a ConditionalError
                     raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
-                                       (to_native(conditional), to_native(e)), obj=ds) from e
+                                       (to_native(conditional), to_native(e)), obj=ds)
 
                 # if we short circuit then we wont need to track true/false and undefined separately
                 if result.undefined:
@@ -301,7 +301,7 @@ class Conditional:
                 cnv = CleansingNodeVisitor(conditional, disable_lookups)
                 cnv.visit(parsed)
             except Exception as e:
-                raise AnsibleInvalidConditional("Invalid conditional detected: %s" % to_native(e)) from e
+                raise AnsibleInvalidConditional("Invalid conditional detected: %s" % to_native(e))
 
             # TODO: verify that conditional can be templated
             #       then verify the presented conditional fixture can be templated
@@ -385,4 +385,4 @@ class Conditional:
 
                 raise AnsibleUndefinedVariable(
                     "error2 while evaluating conditional (%s): %s" % (original, e)
-                ) from new_e
+                )
