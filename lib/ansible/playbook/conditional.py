@@ -41,8 +41,6 @@ DEFINED_REGEX = re.compile(r'(hostvars\[.+\]|[\w_]+)\s+(not\s+is|is|is\s+not)\s+
 LOOKUP_REGEX = re.compile(r'lookup\s*\(')
 VALID_VAR_REGEX = re.compile("^[_A-Za-z][_a-zA-Z0-9]*$")
 
-from akl import alogging
-log = alogging.get_logger()
 
 class AnsibleInvalidConditional(AnsibleError):
     pass
@@ -214,14 +212,12 @@ class Conditional:
 
         conditional_results = ConditionalResults(when=self.when)
 
-        log.debug("self.when=%s", self.when)
         # this allows for direct boolean assignments to conditionals "when: False"
         if isinstance(self.when, bool):
             conditional_results.append(ConditionalResult(self.when, self.when))
         else:
             undefined_errors = []
             for conditional in self.when:
-                log.debug("about to _check_conditional for conditional=%s", conditional)
 
                 # FIXME:
                 # NOTE: this does not short circuit on first fail, but tries all the 'when' items
@@ -231,8 +227,6 @@ class Conditional:
                     conditional_results.append(result)
                 except AnsibleUndefinedVariable as e:
                     # FIXME:  I think we could rm this check now
-                    log.debug("auv on initial _check_conditional, before iterating over results")
-                    # log.exception(e)
                     # FIXME: really need a ConditionalError
                     raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
                                        (to_native(conditional), to_native(e)), obj=ds) from e
@@ -245,8 +239,6 @@ class Conditional:
                 if conditional_results is False:
                     return conditional_results
 
-
-            log.debug('undefined_errors: %s', undefined_errors)
             if any(undefined_errors):
                 raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
                                    (to_native(undefined_errors), [x.undefined for x in undefined_errors]), obj=ds)
@@ -309,7 +301,6 @@ class Conditional:
                 cnv = CleansingNodeVisitor(conditional, disable_lookups)
                 cnv.visit(parsed)
             except Exception as e:
-                log.exception(e)
                 raise AnsibleInvalidConditional("Invalid conditional detected: %s" % to_native(e)) from e
 
             # TODO: verify that conditional can be templated
@@ -321,10 +312,8 @@ class Conditional:
             try:
                 conditional_val = templar.template(conditional, disable_lookups=disable_lookups).strip()
             except (AnsibleUndefinedVariable, UndefinedError) as e:
-                # log.exception(" undefined when templating the conditional %s", conditional)
                 raise
             except Exception as e:
-                log.exception(e)
                 # return a falsey result, but because it failed to template not because of how it eval'ed
                 return ConditionalResult(False, conditional=conditional,
                                          templating_error_msg=to_text(e))
@@ -335,15 +324,12 @@ class Conditional:
             try:
                 val = templar.template(presented, disable_lookups=disable_lookups).strip()
             except (AnsibleUndefinedVariable, UndefinedError) as e:
-                # log.exception(" undefined when templating the presented predicate %s", presented)
                 raise
             except Exception as e:
-                log.exception(e)
                 return ConditionalResult(False, conditional=conditional,
                                          # templated_expr=conditional_val,
                                          templating_error_msg=to_text(e))
 
-            log.debug("val=%s conditional=%s", val, conditional)
             if val == "True":
                 return ConditionalResult(True, conditional=conditional,
                                          templated_expr=conditional_val)
@@ -354,7 +340,6 @@ class Conditional:
                 raise AnsibleError("unable to evaluate conditional: %s" % original)
         except (AnsibleUndefinedVariable, UndefinedError) as e:
             # FIXME: extract to method
-            # log.exception(e)
             # the templating failed, meaning most likely a variable was undefined. If we happened
             # to be looking for an undefined variable, return True, otherwise fail
             try:
@@ -362,7 +347,6 @@ class Conditional:
 
                 undef_re = re.compile(r"'(hostvars\[.+\]|[\w_]+)' is undefined").search(str(e))
                 if undef_re is None:
-                    log.debug('got an undefined exception but we are not checking for "is undefined"')
                     # could return result here with explain
                     raise
 
@@ -391,14 +375,9 @@ class Conditional:
                 # return ConditionalResult(False, conditional=conditional, undefined='ccccc')
                 # as nothing above matched the failed var name, re-raise here to
                 # trigger the AnsibleUndefinedVariable exception again below
-                log.debug("how did we get here?")
                 raise
             # we dont except as e to avoid clobbering existing e exception
             except Exception as new_e:
-                log.exception(new_e)
-                log.debug('last ditch new_e: %s type: %s', new_e, type(new_e))
-                log.debug('last ditch e: %s type: %s', e, type(e))
-
                 # return ConditionalResult(False, conditional=conditional, undefined='ffffff')
                 return ConditionalResult(False, conditional=conditional,
                                          templated_expr=conditional_val,

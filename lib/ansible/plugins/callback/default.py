@@ -23,9 +23,6 @@ from ansible.playbook.task_include import TaskInclude
 from ansible.plugins.callback import CallbackBase
 from ansible.utils.color import colorize, hostcolor
 
-from akl import alogging
-log = alogging.get_logger()
-import pprint
 
 class CallbackModule(CallbackBase):
 
