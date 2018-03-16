@@ -582,7 +582,11 @@ class TaskExecutor:
                 if self._task.changed_when is not None and self._task.changed_when:
                     cond = Conditional(loader=self._loader)
                     cond.when = self._task.changed_when
-                    result['changed'] = cond.evaluate_conditional(templar, vars_copy)
+                    # result['changed'] = cond.evaluate_conditional(templar, vars_copy)
+                    cond_when_result = cond.evaluate_conditional(templar, vars_copy)
+                    if not cond_when_result:
+                        result['changed'] = False
+                        result['changed_reason'] = cond_when_result
 
             def _evaluate_failed_when_result(result):
                 if self._task.failed_when:

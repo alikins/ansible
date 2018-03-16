@@ -46,6 +46,20 @@ class AnsibleInvalidConditional(AnsibleError):
     pass
 
 
+import json
+
+
+class AnsibleJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        # Handle ConditionalResult and ConditionalResults
+        if hasattr(obj, '_conditional_result'):
+            return obj.__getstate__()
+        if hasattr(obj, '_conditional_results'):
+            return obj.__getstate__()
+
+        return super(AnsibleJSONEncoder, self).default(obj)
+
+
 # First, we do some low-level jinja2 parsing involving the AST format of the
 # statement to ensure we don't do anything unsafe (using the disable_lookup flag above)
 class CleansingNodeVisitor(ast.NodeVisitor):
@@ -88,22 +102,30 @@ class ConditionalResult:
 
     def __init__(self, value=None, conditional=None,
                  templated_expr=None, undefined=None,
-                 jinja_exp=None, templating_error_msg=None):
+                 jinja_exp=None, templating_error_msg=None,
+                 val=None):
         self.conditional = conditional
         self.value = value or False
         self.templated_expr = templated_expr
         self.undefined = undefined
         self.jinja_exp = jinja_exp
         self.templating_error_msg = templating_error_msg
+        self.val = val
 
     def __bool__(self):
         return self.value
     __nonzero__ = __bool__
 
     def __repr__(self):
-        return "ConditionalResult(value=%s, conditional='%s')" % \
-            (self.value,
-             self.conditional)
+        return json.dumps(self.__getstate__(), indent=4, ensure_ascii=False,
+                          sort_keys=True, cls=AnsibleJSONEncoder)
+        #return repr(bool(self))
+
+    def __not_repr__(self):
+        return "'%s' is %s" % (self.conditional, self.value)
+        # return "ConditionalResult(value=%s, conditional='%s')" % \
+        #    (self.value,
+        #     self.conditional)
 
     def __x_repr__(self):
         return "'%s' is %s expanded_to [%s]" % (self.conditional,
@@ -119,6 +141,8 @@ class ConditionalResult:
                 'value': self.value,
                 'templated_expr': self.templated_expr,
                 'templating_error_msg': self.templating_error_msg,
+                'jinja_exp': self.jinja_exp,
+                'val': self.val
                 }
 
 
@@ -141,9 +165,19 @@ class ConditionalResults:
         return iter(self.conditional_results)
 
     def __repr__(self):
+        return json.dumps(self.__getstate__(), indent=4, ensure_ascii=False,
+                          sort_keys=True, cls=AnsibleJSONEncoder)
+    # def __repr__(self):
+    #    return repr(bool(self))
+
+    def __not_repr__(self):
         buf = '%s(' % self.__class__.__name__
         buf += 'result=%s' % bool(self)
+        buf += ', when=['
+        for when_item in self.when:
+            buf += '%s, ' % when_item
 
+        buf += ']'
         buf += ', conditional_results=['
         for cond_result in self.conditional_results:
             buf += '%s,' % cond_result
@@ -336,10 +370,14 @@ class Conditional:
 
             if val == "True":
                 return ConditionalResult(True, conditional=conditional,
-                                         templated_expr=conditional_val)
+                                         templated_expr=conditional_val,
+                                         jinja_exp=presented,
+                                         val=val)
             elif val == "False":
                 return ConditionalResult(False, conditional=original,
-                                         templated_expr=conditional_val)
+                                         templated_expr=conditional_val,
+                                         jinja_exp=presented,
+                                         val=val)
             else:
                 raise AnsibleError("unable to evaluate conditional: %s" % original)
         except (AnsibleUndefinedVariable, UndefinedError) as e:

@@ -34,6 +34,21 @@
 
 - debug: var=shell_result
 
+- debug:
+    var: shell_result.changed
+
+- name: changed if changed
+  debug:
+    var: shell_result.changed
+  changed_when:
+    - "shell_result.changed"
+
+- name: changed if not changed
+  debug:
+    var: shell_result.changed
+  changed_when:
+    - "not shell_result.changed"
+
 - name: changed should be false
   assert:
     that:
