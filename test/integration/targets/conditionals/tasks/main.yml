@@ -404,6 +404,7 @@
     a_defined_thing: "bloop"
     thing_a: 42
     blippy: "thing_a"
+    some_var: "some_value"
 
 - set_fact:
     lower_words: "my shift key doesnt work please send help"
@@ -435,11 +436,13 @@
     - this_is_not_a_thing
     - another_undef_thing == third_undef_thing
   register: result
+  ignore_errors: true
 
 - name: "assert task 'a debug to be conditional about some undefined stuff' was skipped"
   assert:
     that:
-      - "result.skipped == true"
+      # - "result.skipped == true"
+      - "result.failed == true"
 
 - name: "a debug to be conditional about"
   debug:
@@ -460,11 +463,13 @@
   when:
     - "someattribute in whatever"
   register: result
+  ignore_errors: true
 
 - name: "assert task 'a debug to be conditional about with the single templating error someattribute' was skipped"
   assert:
     that:
-      - "result.skipped == true"
+      # - "result.skipped == true"
+      - "result.failed == true"
 
 - name: "a debug to be conditional about the single some_undefined_thing is defined"
   debug:
@@ -484,17 +489,19 @@
   when:
     - some_undefined_thing
   register: result
+  ignore_errors: true
 
 - name: "assert task 'a debug to be conditional about the single some_undefined_thing references' was skipped"
   assert:
     that:
-      - "result.skipped == true"
+      # - "result.skipped == true"
+      - "result.failed == true"
 
 - name: "a normal cond that evals to false"
   debug:
     msg: "meaningless lies"
   when:
-    - "a_defined_thing == asdfadf"
+    - "a_defined_thing == some_var"
   register: result
 
 - name: "assert task 'a normal cond that evals to false' was skipped"
@@ -502,13 +509,25 @@
     that:
       - "result.skipped == true"
 
+- name: "a normal cond comparing to something undefined"
+  debug:
+    msg: "a_defined_thing == some_undefined_thing"
+  when:
+    - true
+  register: result
+  ignore_errors: true
+
+- name: "assert task 'a normal cond comparing to something undefined' was failed"
+  assert:
+    that:
+      - "result.failed == true"
+
 - name: "a normal cond that evals to true"
   debug:
     msg: "truth in error"
   when:
     - true
   register: result
-
 
 - name: "assert task 'a normal cond that evals to true' was ok"
   assert:

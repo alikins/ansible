@@ -35,6 +35,9 @@ class TestConditional(unittest.TestCase):
 
     def test_undefined(self):
         when = [u"{{ some_undefined_thing }}"]
+        #res = self._eval_con(when, {})
+        #import pprint
+        #pprint.pprint(res)
         self.assertRaisesRegexp(errors.AnsibleError, "The conditional check '{{ some_undefined_thing }}' failed",
                                 self._eval_con, when, {})
 

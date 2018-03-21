@@ -264,8 +264,8 @@ class Conditional:
                 except AnsibleUndefinedVariable as e:
                     # FIXME:  I think we could rm this check now
                     # FIXME: really need a ConditionalError
-                    raise AnsibleError("The conditional undefined check '%s' failed. The error was: %s" %
-                                       (to_native(conditional), to_native(e)), obj=ds)
+                    raise AnsibleError("The conditional check '%s' failed. The error was: %s" %
+                                       (to_native(conditional), to_native(e)), obj=ds) from e
 
                 # if we short circuit then we wont need to track true/false and undefined separately
                 #if result.undefined:
@@ -423,6 +423,7 @@ class Conditional:
                 # to get here, a conditional has cause an Undefined error and then in the except
                 # block above we've verif'ed that the statement isn't checking for 'is undefined'
                 # so we return a failed conditional results with some info about the undefined
+                raise
                 return ConditionalResult(False, conditional=conditional,
                                          undefined=to_text(new_e),
                                          templating_error_msg=to_text(new_e))
