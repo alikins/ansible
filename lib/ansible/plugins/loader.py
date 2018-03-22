@@ -530,9 +530,7 @@ def _load_plugin_filter():
 class JinjaPluginLoader(PluginLoader):
     # This could override all() but all() already does way too much (path_only/class_only should
     # be separate methods if not classes.
-    def jinja_filter_plugins(self, *args, **kwargs):
-        ''' instantiates all plugins with the same arguments '''
-
+    def jinja_filter_plugins(self):
         all_plugins = super(JinjaPluginLoader, self).all()
         for plugin in all_plugins:
             filter_items = plugin.filters()

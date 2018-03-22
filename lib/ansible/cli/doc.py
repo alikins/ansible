@@ -29,7 +29,7 @@ from ansible.module_utils._text import to_native
 from ansible.module_utils.six import string_types
 from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible.plugins.loader import module_loader, action_loader, lookup_loader, callback_loader, cache_loader, \
-    vars_loader, connection_loader, strategy_loader, inventory_loader, shell_loader, fragment_loader
+    vars_loader, connection_loader, strategy_loader, inventory_loader, shell_loader, fragment_loader, filter_loader
 from ansible.utils.plugin_docs import BLACKLIST, get_docstring
 
 try:
@@ -72,7 +72,7 @@ class DocCLI(CLI):
                                help='**For internal testing only** Show documentation for all plugins.')
         self.parser.add_option("-t", "--type", action="store", default='module', dest='type', type='choice',
                                help='Choose which plugin type (defaults to "module")',
-                               choices=['cache', 'callback', 'connection', 'inventory', 'lookup', 'module', 'shell', 'strategy', 'vars'])
+                               choices=['cache', 'callback', 'connection', 'filter', 'inventory', 'lookup', 'module', 'shell', 'strategy', 'vars'])
 
         super(DocCLI, self).parse()
 
@@ -104,6 +104,8 @@ class DocCLI(CLI):
             loader = inventory_loader
         elif plugin_type == 'shell':
             loader = shell_loader
+        elif plugin_type == 'filter':
+            loader = filter_loader
         else:
             loader = module_loader
 
