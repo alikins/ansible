@@ -90,9 +90,7 @@ def safe_eval(expr, locals=None, include_exceptions=False):
             )
         )
 
-    filter_list = []
-    for filter in filter_loader.all():
-        filter_list.extend(filter.filters().keys())
+    filter_list = [filter_plugin.filter_name for filter_plugin in filter_loader.jinja_filter_plugins()]
 
     test_list = []
     for test in test_loader.all():

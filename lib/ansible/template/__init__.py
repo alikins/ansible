@@ -300,11 +300,11 @@ class Templar:
         if self._filters is not None:
             return self._filters.copy()
 
-        plugins = [x for x in self._filter_loader.all()]
+        jinja_filters_dict = self._filter_loader.jinja_filters()
 
         self._filters = dict()
-        for fp in plugins:
-            self._filters.update(fp.filters())
+        for filter_name, filter_method in jinja_filters_dict.items():
+            self._filters[filter_name] = filter_method
 
         # TODO: Remove registering tests as filters in 2.9
         for name, func in self._get_tests().items():

@@ -20,7 +20,7 @@ from ansible import constants as C
 from ansible.errors import AnsibleError
 from ansible.module_utils._text import to_text
 from ansible.parsing.utils.yaml import from_yaml
-from ansible.plugins import get_plugin_class, MODULE_CACHE, PATH_CACHE, PLUGIN_PATH_CACHE
+from ansible.plugins import get_plugin_class, MODULE_CACHE, PATH_CACHE, PLUGIN_PATH_CACHE, FilterPlugin
 from ansible.utils.plugin_docs import get_docstring
 
 try:
@@ -527,6 +527,29 @@ def _load_plugin_filter():
     return filters
 
 
+class JinjaPluginLoader(PluginLoader):
+    # This could override all() but all() already does way too much (path_only/class_only should
+    # be separate methods if not classes.
+    def jinja_filter_plugins(self, *args, **kwargs):
+        ''' instantiates all plugins with the same arguments '''
+
+        all_plugins = super(JinjaPluginLoader, self).all()
+        for plugin in all_plugins:
+            filter_items = plugin.filters()
+
+            for key in filter_items:
+                filter_name = key
+                filter_method = filter_items[key]
+                filter_plugin_obj = FilterPlugin(filter_method=filter_method, filter_name=filter_name)
+                yield filter_plugin_obj
+
+    def jinja_filters(self):
+        filter_plugins = {}
+        # if we wanted more advanced ordering, add relevant atts to FilterPlugin and sort/compare/filter here
+        for filter_plugin in self.jinja_filter_plugins():
+            filter_plugins[filter_plugin.filter_name] = filter_plugin.filter_method
+        return filter_plugins
+
 # TODO: All of the following is initialization code   It should be moved inside of an initialization
 # function which is called at some point early in the ansible and ansible-playbook CLI startup.
 
@@ -610,7 +633,7 @@ lookup_loader = PluginLoader(
     required_base_class='LookupBase',
 )
 
-filter_loader = PluginLoader(
+filter_loader = JinjaPluginLoader(
     'FilterModule',
     'ansible.plugins.filter',
     C.DEFAULT_FILTER_PLUGIN_PATH,

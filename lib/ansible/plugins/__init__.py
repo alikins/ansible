@@ -88,3 +88,10 @@ class AnsiblePlugin(with_metaclass(ABCMeta, object)):
     def _check_required(self):
         # FIXME: standarize required check based on config
         pass
+
+
+class FilterPlugin(AnsiblePlugin):
+    def __init__(self, filter_method=None, filter_name=None):
+        super(FilterPlugin, self).__init__()
+        self.filter_method = filter_method
+        self.filter_name = filter_name
