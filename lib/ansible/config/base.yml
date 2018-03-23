@@ -760,6 +760,23 @@ DEFAULT_MODULE_COMPRESSION:
   - {key: module_compression, section: defaults}
 # vars:
 #   - name: ansible_module_compression
+DEFAULT_MODULE_INTROSPECT:
+  name: If module returns should include introspection data.
+  default: false
+  description:
+    - "If module returns should include introspection data."
+  type: boolean
+  env: [{name: ANSIBLE_MODULE_INTROSPECT}]
+  ini:
+  - {key: module_introspect, sections: defaults}
+DEFAULT_MODULE_INTROSPECT_ONLY:
+  name: If module only returns should include introspection data.
+  default: false
+  description:
+    - "If module only returns should include introspection data."
+  env: [{name: ANSIBLE_MODULE_INTROSPECT_ONLY}]
+  ini:
+  - {key: module_introspect_only, sections: defaults}
 DEFAULT_MODULE_LANG:
   name: Target language environment
   default: "{{ CONTROLLER_LANG }}"

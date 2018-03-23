@@ -50,11 +50,11 @@ PASS_VARS = {
     'tmpdir': 'tmpdir',
     'verbosity': '_verbosity',
     'version': 'ansible_version',
-    'introspect': '_module_introspect',
-    'introspect_only': '_module_introspect_only',
+    'module_introspect': 'introspect',
+    'module_introspect_only': 'introspect_only',
 }
 
-PASS_BOOLS = ('no_log', 'debug', 'diff', 'introspect', 'introspect_only')
+PASS_BOOLS = ('no_log', 'debug', 'diff', 'module_introspect', 'module_introspect_only')
 
 # Ansible modules can be written in any language.
 # The functions available here can be used to do many common tasks,
@@ -857,6 +857,7 @@ class AnsibleModule(object):
 
         self.aliases = {}
         self._legal_inputs = ['_ansible_%s' % k for k in PASS_VARS]
+        self._public_legal_inputs = {}
         self._options_context = list()
 
         if add_file_common_args:
@@ -1678,7 +1679,6 @@ class AnsibleModule(object):
             legal_inputs = self._legal_inputs
 
         for (k, v) in list(param.items()):
-
             if check_invalid_arguments and k not in legal_inputs:
                 unsupported_parameters.add(k)
             elif k.startswith('_ansible_'):
