@@ -857,7 +857,7 @@ class AnsibleModule(object):
 
         self.aliases = {}
         self._legal_inputs = ['_ansible_%s' % k for k in PASS_VARS]
-        self._public_legal_inputs = {}
+        self._public_legal_inputs = []
         self._options_context = list()
 
         if add_file_common_args:
@@ -1630,6 +1630,7 @@ class AnsibleModule(object):
             spec = self.argument_spec
         for (k, v) in spec.items():
             self._legal_inputs.append(k)
+            self._public_legal_inputs.append(k)
             aliases = v.get('aliases', None)
             default = v.get('default', None)
             required = v.get('required', False)
@@ -1642,6 +1643,7 @@ class AnsibleModule(object):
                 raise Exception('internal error: aliases must be a list or tuple')
             for alias in aliases:
                 self._legal_inputs.append(alias)
+                self._public_legal_inputs.append(alias)
                 aliases_results[alias] = k
                 if alias in param:
                     param[k] = param[alias]
