@@ -32,6 +32,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+from akl import alogging
+log = alogging.get_logger()
 
 __all__ = ['TaskExecutor']
 
@@ -521,17 +523,45 @@ class TaskExecutor:
         # get handler
         self._handler = self._get_action_handler(connection=self._connection, templar=templar)
 
+        import pprint
+        log.debug('self._task.module_defaults: %s', self._task.module_defaults)
+        log.debug("self._task.defaults_name: %s", self._task.defaults_name)
+
         # Apply default params for action/module, if present
         # These are collected as a list of dicts, so we need to merge them
         module_defaults = {}
-        for default in self._task.module_defaults:
-            module_defaults.update(default)
+        module_defaults_name = self._task.defaults_name or self._task.action
+
+        preset_name = module_defaults_name or "default"
+        log.debug("module_defaults_name: %s", module_defaults_name)
+
+        # ? make more sense to do templating before selecting the task/default_name specific
+        # info or after it? before means templating more often but also more flexible
+        task_module_defaults = []
+        if self._task.module_defaults:
+            task_module_defaults = self._task.module_defaults.get(module_defaults_name, {})
+
+        log.debug('task_module_defaults: %s', pprint.pformat(task_module_defaults))
+        defaults = task_module_defaults.get(preset_name, [])
+        log.debug("defaults: %s", defaults)
+        log.debug('type(defaults): %s', type(defaults))
+        module_defaults.update(defaults)
+        log.debug('module_defaults1: %s', pprint.pformat(module_defaults))
+        #for default in defaults:
+        #    log.debug('the "default" for %s is: %s', module_defaults_name, default)
+
         if module_defaults:
             module_defaults = templar.template(module_defaults)
-        if self._task.action in module_defaults:
-            tmp_args = module_defaults[self._task.action].copy()
-            tmp_args.update(self._task.args)
-            self._task.args = tmp_args
+
+        log.debug('module_defaults: %s', pprint.pformat(module_defaults))
+        tmp_args = module_defaults.copy()
+        tmp_args.update(self._task.args)
+        self._task.args = tmp_args
+
+        log.debug('_task.args: %s', self._task.args)
+        # if self._task.action in module_defaults:
+        #    tmp_args = module_defaults[self._task.action].copy()
+        #    self._task.args = tmp_args
 
         # And filter out any fields which were set to default(omit), and got the omit token value
         omit_token = variables.get('omit')

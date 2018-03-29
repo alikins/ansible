@@ -63,6 +63,10 @@ if __name__ == '__main__':
 
     display = LastResort()
 
+    from akl import alogging
+    log = alogging.default_setup('ansible')
+    log.debug('log init')
+
     try:  # bad ANSIBLE_CONFIG or config options can force ugly stacktrace
         import ansible.constants as C
         from ansible.utils.display import Display
