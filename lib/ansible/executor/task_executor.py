@@ -32,9 +32,6 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
-from akl import alogging
-log = alogging.get_logger()
-
 __all__ = ['TaskExecutor']
 
 
@@ -523,56 +520,31 @@ class TaskExecutor:
         # get handler
         self._handler = self._get_action_handler(connection=self._connection, templar=templar)
 
-        import pprint
-        log.debug('self._task.module_defaults: %s', self._task.module_defaults)
-        log.debug("self._task.defaults_name: %s", self._task.defaults_name)
-
         # Apply default params for action/module, if present
         # These are collected as a list of dicts, so we need to merge them
         module_defaults = {}
         task_action_name = self._task.action
-        task_preset_name = self._task.defaults_name
+        task_preset_name = self._task.preset_name
 
         preset_name = task_preset_name or "default"
-        log.debug("task_action_name: %s", task_action_name)
-        log.debug("task_preset_name: %s", task_preset_name)
-        log.debug("preset_name: %s", preset_name)
 
         # ? make more sense to do templating before selecting the task/default_name specific
         # info or after it? before means templating more often but also more flexible
         task_module_defaults = []
-        task_combined_defaults = {}
         if self._task.module_defaults:
-            pprint.pprint(self._task.module_defaults)
-            log.debug('self._task.module_defaults.get(%s): %s', task_action_name, self._task.module_defaults.get(task_action_name))
             task_module_defaults = self._task.module_defaults.get(task_action_name, {})
 
-            log.debug('task_module_defaults: %s', pprint.pformat(task_module_defaults))
             if task_module_defaults:
-                log.debug('task_module_defaults.get(%s): %s', preset_name, task_module_defaults.get(preset_name))
                 task_preset_defaults = task_module_defaults.get(preset_name, {})
                 module_defaults.update(task_preset_defaults)
-
-        # task_preset_defaults
-        # defaults = task_module_defaults.get(preset_name, [])
-        log.debug("task_preset_defaults: %s", task_preset_defaults)
-        log.debug('type(task_preset_defaults): %s', type(task_preset_defaults))
-
-        #module_defaults.update(task_preset_defaults)
-        # module_defaults.update(task_module_defaults)
-        log.debug('module_defaults1: %s', pprint.pformat(module_defaults))
-        #for default in defaults:
-        #    log.debug('the "default" for %s is: %s', module_defaults_name, default)
 
         if module_defaults:
             module_defaults = templar.template(module_defaults)
 
-        log.debug('module_defaults: %s', pprint.pformat(module_defaults))
         tmp_args = module_defaults.copy()
         tmp_args.update(self._task.args)
         self._task.args = tmp_args
 
-        log.debug('_task.args: %s', self._task.args)
         # if self._task.action in module_defaults:
         #    tmp_args = module_defaults[self._task.action].copy()
         #    self._task.args = tmp_args
