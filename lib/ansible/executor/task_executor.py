@@ -530,22 +530,36 @@ class TaskExecutor:
         # Apply default params for action/module, if present
         # These are collected as a list of dicts, so we need to merge them
         module_defaults = {}
-        module_defaults_name = self._task.defaults_name or self._task.action
+        task_action_name = self._task.action
+        task_preset_name = self._task.defaults_name
 
-        preset_name = module_defaults_name or "default"
-        log.debug("module_defaults_name: %s", module_defaults_name)
+        preset_name = task_preset_name or "default"
+        log.debug("task_action_name: %s", task_action_name)
+        log.debug("task_preset_name: %s", task_preset_name)
+        log.debug("preset_name: %s", preset_name)
 
         # ? make more sense to do templating before selecting the task/default_name specific
         # info or after it? before means templating more often but also more flexible
         task_module_defaults = []
+        task_combined_defaults = {}
         if self._task.module_defaults:
-            task_module_defaults = self._task.module_defaults.get(module_defaults_name, {})
+            pprint.pprint(self._task.module_defaults)
+            log.debug('self._task.module_defaults.get(%s): %s', task_action_name, self._task.module_defaults.get(task_action_name))
+            task_module_defaults = self._task.module_defaults.get(task_action_name, {})
 
-        log.debug('task_module_defaults: %s', pprint.pformat(task_module_defaults))
-        defaults = task_module_defaults.get(preset_name, [])
-        log.debug("defaults: %s", defaults)
-        log.debug('type(defaults): %s', type(defaults))
-        module_defaults.update(defaults)
+            log.debug('task_module_defaults: %s', pprint.pformat(task_module_defaults))
+            if task_module_defaults:
+                log.debug('task_module_defaults.get(%s): %s', preset_name, task_module_defaults.get(preset_name))
+                task_preset_defaults = task_module_defaults.get(preset_name, {})
+                module_defaults.update(task_preset_defaults)
+
+        # task_preset_defaults
+        # defaults = task_module_defaults.get(preset_name, [])
+        log.debug("task_preset_defaults: %s", task_preset_defaults)
+        log.debug('type(task_preset_defaults): %s', type(task_preset_defaults))
+
+        #module_defaults.update(task_preset_defaults)
+        # module_defaults.update(task_module_defaults)
         log.debug('module_defaults1: %s', pprint.pformat(module_defaults))
         #for default in defaults:
         #    log.debug('the "default" for %s is: %s', module_defaults_name, default)
