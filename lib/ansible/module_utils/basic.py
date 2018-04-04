@@ -2946,12 +2946,13 @@ class AnsibleModule(object):
             rc = cmd.returncode
         except (OSError, IOError) as e:
             self.log("Error Executing CMD:%s Exception:%s" % (self._clean_args(args), to_native(e)))
-            self.logger.error("Error Executing CMD:%s Exception:%s", self._clean_args(args), to_native(e)))
+            self.logger.error("Error Executing CMD:%s Exception:%s", self._clean_args(args), to_native(e))
             self.logger.exception(e)
             self.fail_json(rc=e.errno, msg=to_native(e), cmd=self._clean_args(args))
         except Exception as e:
             self.log("Error Executing CMD:%s Exception:%s" % (self._clean_args(args), to_native(traceback.format_exc())))
-            self.logger.error("Error Executing CMD:%s Exception:%s", self._clean_args(args), to_native(traceback.format_exc())))
+            self.logger.error("Error Executing CMD:%s Exception:%s", self._clean_args(args),
+                              to_native(traceback.format_exc()))
             self.logger.exception(e)
             self.fail_json(rc=257, msg=to_native(e), exception=traceback.format_exc(), cmd=self._clean_args(args))
 
