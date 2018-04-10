@@ -39,7 +39,7 @@ cleanup
 
 display "module_utils from git+https WITHOUT galaxyfile"
 
-ansible-galaxy content-install -t module-util git+https://github.com/maxamillion/test-galaxy-content $verbosity
+ansible-galaxy content-install -t module_util git+https://github.com/maxamillion/test-galaxy-content $verbosity
 
 cleanup
 
