@@ -43,6 +43,7 @@ from ansible.module_utils._text import to_text
 import logging
 
 from akl import alogging
+alogging.STACK_INFO = True
 log = alogging.default_setup('ansible')
 
 # Used for determining if the system is running a new enough python version

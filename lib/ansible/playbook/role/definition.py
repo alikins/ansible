@@ -96,7 +96,7 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         # and then use that to determine the role path (which may
         # result in a new role name, if it was a file path)
         role_name = self._load_role_name(ds)
-        (role_name, role_path) = self._load_role_path(role_name)
+        (role_name, role_path) = self._load_role_path(role_name, installed_role_spec=ds)
 
         # next, we split the role params out from the valid role
         # attributes and update the new datastructure with that
@@ -142,7 +142,7 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         self.log.debug('using role_name=%s from ds=%s', role_name, ds)
         return role_name
 
-    def _load_role_path(self, role_name):
+    def _load_role_path(self, role_name, installed_role_spec=None):
         '''
         the 'role', as specified in the ds (or as a bare string), can either
         be a simple name or a full path. If it is a full path, we use the
@@ -150,7 +150,9 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         append it to the default role path
         '''
 
-        log.debug('role_name: %s', role_name)
+        log.debug('role_name: %s', role_name, stack_info=True)
+        log.debug('installed_role_spec: %s', installed_role_spec)
+
 
         # we always start the search for roles in the base directory of the playbook
         role_search_paths = [
@@ -185,9 +187,34 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         templar = Templar(loader=self._loader, variables=all_vars)
         role_name = templar.template(role_name)
 
+        # try the galaxy content paths
+        if installed_role_spec:
+            if isinstance(installed_role_spec, string_types):
+
+                # FIXME: more robust
+                namespace, repo, name = installed_role_spec.split('.', 2)
+                ds = {'namespace': namespace, 'repository': repo, 'name': name}
+            else:
+                ds = installed_role_spec
+
+            content_rel_role_path = os.path.join(ds['namespace'], ds['repository'], 'roles', ds['name'])
+
+            role_search_paths = ["~/.ansible/content"]
+            for role_search_path in role_search_paths:
+                search_path = templar.template(role_search_path)
+                fq_role_path = os.path.join(search_path, content_rel_role_path)
+                fq_role_path = unfrackpath(fq_role_path)
+                log.debug('fq_role_path: %s', fq_role_path)
+                if self._loader.path_exists(fq_role_path):
+                    log.debug('FOUND role_name=%s at fq_role_path=%s', role_name, fq_role_path)
+                    return (role_name, fq_role_path)
+
+                    
         # now iterate through the possible paths and return the first one we find
         for path in role_search_paths:
             path = templar.template(path)
+
+            # fq_role_name = resolve_role_name(role_name)
             role_path = unfrackpath(os.path.join(path, role_name))
             log.debug('search for role=%s in path: %s (role_path=%s)', role_name, path, role_path)
             if self._loader.path_exists(role_path):
