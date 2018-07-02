@@ -40,6 +40,10 @@ import traceback
 from ansible.errors import AnsibleError, AnsibleOptionsError, AnsibleParserError
 from ansible.module_utils._text import to_text
 
+import logging
+
+from akl import alogging
+log = alogging.default_setup('ansible')
 
 # Used for determining if the system is running a new enough python version
 # and should only restrict on our documented minimum versions

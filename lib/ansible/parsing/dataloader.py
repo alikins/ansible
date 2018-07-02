@@ -28,6 +28,8 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+from akl import alogging
+log = alogging.get_logger()
 
 # Tries to determine if a path is inside a role, last dir must be 'tasks'
 # this is not perfect but people should really avoid 'tasks' dirs outside roles when using Ansible.
@@ -65,6 +67,8 @@ class DataLoader:
         self._vaults = {}
         self._vault = VaultLib()
         self.set_vault_secrets(None)
+        self.log = alogging.get_class_logger(self)
+        self.log.debug('loader init')
 
     # TODO: since we can query vault_secrets late, we could provide this to DataLoader init
     def set_vault_secrets(self, vault_secrets):
@@ -77,8 +81,13 @@ class DataLoader:
     def load_from_file(self, file_name, cache=True, unsafe=False):
         ''' Loads data from a file, which can contain either JSON or YAML.  '''
 
+        # self.log.debug('file_name: %s', file_name)
+        # self.log.debug('cache: %s', cache)
+
         file_name = self.path_dwim(file_name)
+
         display.debug("Loading data from %s" % file_name)
+        # self.log.debug('dwim file_name: %s', file_name)
 
         # if the file has already been read in and cached, we'll
         # return those results to avoid more file/vault operations
@@ -149,8 +158,13 @@ class DataLoader:
         '''
         if not file_name or not isinstance(file_name, (binary_type, text_type)):
             raise AnsibleParserError("Invalid filename: '%s'" % to_native(file_name))
-
+        
+        # self.log.debug('file_name: %s', file_name)
+        
         b_file_name = to_bytes(self.path_dwim(file_name))
+        
+        self.log.debug('b_file_name: %s', b_file_name)
+
         # This is what we really want but have to fix unittests to make it pass
         # if not os.path.exists(b_file_name) or not os.path.isfile(b_file_name):
         if not self.path_exists(b_file_name):

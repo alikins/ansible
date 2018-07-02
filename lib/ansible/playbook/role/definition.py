@@ -33,6 +33,9 @@ from ansible.playbook.taggable import Taggable
 from ansible.template import Templar
 from ansible.utils.path import unfrackpath
 
+from akl import alogging
+log = alogging.get_logger()
+
 try:
     from __main__ import display
 except ImportError:
@@ -58,6 +61,7 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         self._role_path = None
         self._role_basedir = role_basedir
         self._role_params = dict()
+        self.log = alogging.get_class_logger(self)
 
     # def __repr__(self):
     #     return 'ROLEDEF: ' + self._attributes.get('role', '<no name set>')
@@ -117,8 +121,10 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         the role definition, or (when the role definition is a simple
         string), just that string
         '''
+        
 
         if isinstance(ds, string_types):
+            self.log.debug('using role_name=%s from ds=%s', ds, ds)
             return ds
 
         role_name = ds.get('role', ds.get('name'))
@@ -132,7 +138,8 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
             templar = Templar(loader=self._loader, variables=all_vars)
             if templar._contains_vars(role_name):
                 role_name = templar.template(role_name)
-
+        
+        self.log.debug('using role_name=%s from ds=%s', role_name, ds)
         return role_name
 
     def _load_role_path(self, role_name):
@@ -143,6 +150,8 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         append it to the default role path
         '''
 
+        log.debug('role_name: %s', role_name)
+
         # we always start the search for roles in the base directory of the playbook
         role_search_paths = [
             os.path.join(self._loader.get_basedir(), u'roles'),
@@ -151,6 +160,8 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         # also search in the configured roles path
         if C.DEFAULT_ROLES_PATH:
             role_search_paths.extend(C.DEFAULT_ROLES_PATH)
+
+    
 
         # next, append the roles basedir, if it was set, so we can
         # search relative to that directory for dependent roles
@@ -161,7 +172,9 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         # in the loader (which should be the playbook dir itself) but without
         # the roles/ dir appended
         role_search_paths.append(self._loader.get_basedir())
-
+        
+        log.debug('role_search_paths: %s', role_search_paths)
+        
         # create a templar class to template the dependency names, in
         # case they contain variables
         if self._variable_manager is not None:
@@ -176,12 +189,16 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         for path in role_search_paths:
             path = templar.template(path)
             role_path = unfrackpath(os.path.join(path, role_name))
+            log.debug('search for role=%s in path: %s (role_path=%s)', role_name, path, role_path)
             if self._loader.path_exists(role_path):
+                log.debug('FOUND role_name=%s at role_path=%s', role_name, role_path)
                 return (role_name, role_path)
 
         # if not found elsewhere try to extract path from name
         role_path = unfrackpath(role_name)
+        log.debug('trying role_name=%s as a path: %s ', role_name, role_path)
         if self._loader.path_exists(role_path):
+            log.debug('FOUND file path role role_name=%s at path=%s', role_name, role_path)
             role_name = os.path.basename(role_name)
             return (role_name, role_path)
 

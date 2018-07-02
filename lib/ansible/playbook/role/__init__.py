@@ -34,6 +34,11 @@ from ansible.playbook.taggable import Taggable
 from ansible.plugins.loader import get_all_plugin_loaders
 from ansible.utils.vars import combine_vars
 
+from ansible import constants as C
+
+import logging
+from akl import alogging
+log = logging.getLogger(__name__)
 
 __all__ = ['Role', 'hash_params']
 
@@ -117,7 +122,11 @@ class Role(Base, Become, Conditional, Taggable):
             from_files = {}
         self._from_files = from_files
 
+        self.log = alogging.get_class_logger(self)
+        self.log.debug('Role __init__, play=%s, from_files=%s', play, from_files)
         super(Role, self).__init__()
+        # self.log.debug('Role post super init, loader: %s', self._loader)
+        self.log.debug('DEFAULT_ROLES_PATH: %s', C.DEFAULT_ROLES_PATH)
 
     def __repr__(self):
         return self.get_name()
@@ -127,6 +136,10 @@ class Role(Base, Become, Conditional, Taggable):
 
     @staticmethod
     def load(role_include, play, parent_role=None, from_files=None):
+        log.debug('role_include: %s', role_include)
+        # log.debug('play: %s', play)
+        log.debug('parent_role: %s', parent_role)
+        # log.debug('from_files: %s', from_files)
 
         if from_files is None:
             from_files = {}
@@ -236,7 +249,14 @@ class Role(Base, Become, Conditional, Taggable):
                                          obj=handler_data, orig_exc=e)
 
     def _load_role_yaml(self, subdir, main=None, allow_dir=False):
+        # self.log.debug('subdir: %s', subdir)
+        # self.log.debug('main: %s', main)
+        # self.log.debug('allow_dir: %s', allow_dir)
+
         file_path = os.path.join(self._role_path, subdir)
+
+        self.log.debug('(%s) file_path: %s', self._role_name, file_path)
+
         if self._loader.path_exists(file_path) and self._loader.is_directory(file_path):
             # Valid extensions and ordering for roles is hard-coded to maintain
             # role portability
