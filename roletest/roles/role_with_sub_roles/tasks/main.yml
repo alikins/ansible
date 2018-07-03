@@ -1,0 +1,5 @@
+---
+# tasks file for role_with_sub_roles
+- name: role_with_sub_roles task
+  debug:
+    msg: "role with sub roles task"

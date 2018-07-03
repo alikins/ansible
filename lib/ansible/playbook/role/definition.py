@@ -187,27 +187,52 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         templar = Templar(loader=self._loader, variables=all_vars)
         role_name = templar.template(role_name)
 
-        # try the galaxy content paths
-        if installed_role_spec:
-            if isinstance(installed_role_spec, string_types):
+        # default to assume the role spec is just a string
+        ds = role_name
 
-                # FIXME: more robust
+        # try the galaxy content paths
+        # IDEA: since paths work, something like 'geerlingguy/nginx/role/nginx' could work
+        #       or nginx@geerlingguy:role/nginx 
+        #          ansible_testing_content@testing:role/test-role-a
+        #          ansible_testing_content@testing:role/test-role-b
+        #          ansible_testing_content@testing:apb/some-apb
+        #
+        # TODO: this is where a 'role spec resolver' could be plugged into.
+        #       The resolver would be responsible parsing/understanding the role spec
+        #       (a formatted string or a dict), and figuring out the approriate galaxy
+        #       namespace, repo name, and role name.
+        #
+        #       The next step would be finding that role on the fs.
+        #       If there are conflicts or ambiquity, the resolver would apply
+        #       any rules or convention or precedence to choose the correct role.
+        #       For ex, if namespace isnt provided, and 2 or more namespaces have a
+        #       role that matches, the resolver would choose. 
+        # FIXME: mv to method, deindent, return early, etc
+        if isinstance(installed_role_spec, string_types):
+            content_rel_role_path = None
+            # FIXME: more robust
+            try:
+                # rough split on namespaces
+                # TODO: decide if something like 'geerlingguy.nginx' is sufficient
+                
                 namespace, repo, name = installed_role_spec.split('.', 2)
                 ds = {'namespace': namespace, 'repository': repo, 'name': name}
-            else:
-                ds = installed_role_spec
-
-            content_rel_role_path = os.path.join(ds['namespace'], ds['repository'], 'roles', ds['name'])
-
-            role_search_paths = ["~/.ansible/content"]
-            for role_search_path in role_search_paths:
-                search_path = templar.template(role_search_path)
-                fq_role_path = os.path.join(search_path, content_rel_role_path)
-                fq_role_path = unfrackpath(fq_role_path)
-                log.debug('fq_role_path: %s', fq_role_path)
-                if self._loader.path_exists(fq_role_path):
-                    log.debug('FOUND role_name=%s at fq_role_path=%s', role_name, fq_role_path)
-                    return (role_name, fq_role_path)
+                content_rel_role_path = os.path.join(ds['namespace'], ds['repository'], 'roles', ds['name'])
+            except ValueError as e:
+                log.exception(e)
+            
+            
+            log.debug('content_rel_role_path: %s', content_rel_role_path)
+            if content_rel_role_path:
+                role_search_paths = ["~/.ansible/content"]
+                for role_search_path in role_search_paths:
+                    search_path = templar.template(role_search_path)
+                    fq_role_path = os.path.join(search_path, content_rel_role_path)
+                    fq_role_path = unfrackpath(fq_role_path)
+                    log.debug('fq_role_path: %s', fq_role_path)
+                    if self._loader.path_exists(fq_role_path):
+                        log.debug('FOUND role_name=%s at fq_role_path=%s', role_name, fq_role_path)
+                        return (role_name, fq_role_path)
 
                     
         # now iterate through the possible paths and return the first one we find

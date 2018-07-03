@@ -1,0 +1,10 @@
+---
+- name: bad_role test task
+  debug:
+    msg: "foooo bar"
+
+- debug:
+    var: motd_value
+
+- ping:
+# tasks file for bad_role

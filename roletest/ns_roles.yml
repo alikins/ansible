@@ -1,0 +1,28 @@
+---
+- name: The first play
+  hosts: local_test
+  roles:
+    - geerlingguy.nginx.nginx
+    - testing.ansible_testing_content.test-role-a
+    # - bad_role
+    # - myrole
+    # - role2
+      # - some_required_role1
+      # - role_with_sub_roles
+      # - role_with_deps
+      # - ROLEA
+      # - ../../../somerole
+      # - ROLEB
+      # - ROLEC
+      # gather_facts: false
+  vars:
+    baz: "BAZZZZZZZZZZZZZZZ"
+  tasks:
+    - name: import the role called geerlingguy.apache.apache
+      include_role:
+        name: geerlingguy.apache.apache
+      register: include_role_result
+
+    - name: show include_role result
+      debug:
+        var: include_role_result

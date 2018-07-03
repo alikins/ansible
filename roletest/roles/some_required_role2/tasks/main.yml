@@ -1,0 +1,5 @@
+---
+# tasks file for some_required_role2
+- name: sub_required_role 2 debug task
+  debug:
+    msg: "sub role 2 debug task"

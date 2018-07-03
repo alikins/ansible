@@ -1,0 +1,12 @@
+---
+
+
+- debug:
+    msg: "We are in role: ROLEA, file main.yml"
+
+
+- name: include roleB
+  include_role:
+    name: ROLEB
+
+

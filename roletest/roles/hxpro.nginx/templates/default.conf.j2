@@ -1,0 +1,28 @@
+{{ ansible_managed | comment() }}
+
+server {
+    listen       80 default_server;
+{% if nginx_ipv6 %}
+    listen       [::]:80 default_server;
+{% endif %}
+    server_name  _;
+    root         /var/www/html;
+    index        index.html index.htm index.php;
+
+{% if le_payload_root is defined %}
+    include /etc/nginx/acme_snippet.conf;
+
+{% endif %}
+    # Load configuration files for the default server block.
+    include /etc/nginx/default.d/*.conf;
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        include fastcgi.conf;
+        fastcgi_index index.php;
+        fastcgi_pass {{ phpfpm_default_listen | default('127.0.0.1:9000') }};
+    }
+
+    location / {
+    }
+}

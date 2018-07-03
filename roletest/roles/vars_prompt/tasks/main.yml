@@ -1,0 +1,3 @@
+vars_prompt:
+  - name: 'prompt_role1_foo1'
+    prompt: 'tell me about prompt_role1_foo1'

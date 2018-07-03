@@ -1,0 +1,91 @@
+---
+- name: The first play
+  hosts: local_test
+  # hosts: all
+  # strategy: free
+  # hosts: localhost
+  # become: yes
+  # hosts: local_ssh
+  roles:
+    - geerlingguy.nginx.nginx
+    - testing.ansible_testing_content.test-role-a
+    - bad_role
+    # - myrole
+    # - role2
+      # - some_required_role1
+      # - role_with_sub_roles
+    - role_with_deps
+    - ROLEA
+      # - ../../../somerole
+      # - ROLEB
+      # - ROLEC
+  tags:
+    - the_play_tag
+  gather_facts: false
+  vars:
+    baz: "BAZZZZZZZZZZZZZZZ"
+  tasks:
+    - name: import the role called 'a_role_to_include'
+      include_role:
+        name: a_role_to_include
+      register: include_role_result
+
+    - name: show include_role result
+      debug:
+        var: include_role_result
+
+    - name: import the role called 'a_role_to_include_by_path'
+      include_role:
+        name: local-not-a-roles-path/a_role_to_include_by_path
+      register: include_role_by_path_result
+
+    - name: show include_role_by_path result
+      debug:
+        var: include_role_by_path_result
+
+    - name: blip
+      tags:
+        - the_task_tag
+      debug:
+        var: baz
+
+    - name: try to find git_config2 in first play
+      git_config2:
+        name: alias.ci
+        scope: global
+      register: git_config_result
+
+    - name: show git_config result
+      debug:
+        var: git_config_result
+
+
+- name: the second second play
+  hosts: local_test
+  tags:
+    - the_second_second_play_tag
+    - blippy
+    - baz
+  roles:
+    # full path to role
+    - /home/adrian/not-a-roles-path/role1
+    # a playbook/cwd relative path to a role in a dir not on role path
+    - local-not-a-roles-path/role2
+    - .
+    - ..
+    - /
+    - ../../../
+    - ../../../somerole
+    - role_with_deps_included
+      # - geerlingguy.nginx
+    - geerlingguy.nginx/roles
+      # - test-role-b
+      # - doesntexistrole
+  gather_facts: false
+  tasks:
+    - name: release
+      shell: cat /etc/os-release
+      register: release_result
+
+    - debug:
+        var: release_result.cmd

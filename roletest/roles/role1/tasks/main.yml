@@ -1,0 +1,5 @@
+---
+- name: just a debug in role1
+  debug:
+    msg: "hello from sunny role1"
+# tasks file for role1

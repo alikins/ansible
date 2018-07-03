@@ -1,0 +1,2 @@
+---
+motd_value: "{{ lookup('somelookup2', '/etc/motd') }}"

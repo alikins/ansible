@@ -1,0 +1,4 @@
+---
+- name: a task loaded from cwd/tasks/main.yml
+  debug:
+    msg: "It seems weird that I can load a role called ."

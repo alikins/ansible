@@ -1,0 +1,3 @@
+---
+dependencies:
+  - { role: ROLEC, pm2: "{{pm2job_user}}" , pm2_group: "{{pm2job_user}}", pm2_pass: "{{pm2job_user}}" }

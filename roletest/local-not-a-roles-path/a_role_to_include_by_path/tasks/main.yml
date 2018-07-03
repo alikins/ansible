@@ -1,0 +1,5 @@
+---
+# tasks file for a_role_to_include
+- name: debug a_role_to_include_by_path
+  debug:
+    msg: "hello world from a_role_to_include_by_path"

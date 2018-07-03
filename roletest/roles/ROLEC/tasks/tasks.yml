@@ -1,0 +1,7 @@
+---
+
+- debug:
+    msg: "We are in role: ROLEC, file tasks.yml"
+
+
+
