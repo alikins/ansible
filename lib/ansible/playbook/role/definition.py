@@ -21,11 +21,12 @@ __metaclass__ = type
 
 import os
 
-from ansible import constants as C
+from ansible import constants as C  # noqa
 from ansible.errors import AnsibleError, AnsibleAssertionError
 from ansible.module_utils.six import iteritems, string_types
 from ansible.parsing.yaml.objects import AnsibleBaseYAMLObject, AnsibleMapping
-from ansible.playbook.attribute import Attribute, FieldAttribute
+# from ansible.playbook.attribute import Attribute
+from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.base import Base
 from ansible.playbook.become import Become
 from ansible.playbook.conditional import Conditional
@@ -121,7 +122,6 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         the role definition, or (when the role definition is a simple
         string), just that string
         '''
-        
 
         if isinstance(ds, string_types):
             self.log.debug('using role_name=%s from ds=%s', ds, ds)
@@ -138,7 +138,7 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
             templar = Templar(loader=self._loader, variables=all_vars)
             if templar._contains_vars(role_name):
                 role_name = templar.template(role_name)
-        
+
         self.log.debug('using role_name=%s from ds=%s', role_name, ds)
         return role_name
 
@@ -150,9 +150,8 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         append it to the default role path
         '''
 
-        log.debug('role_name: %s', role_name, stack_info=True)
+        log.debug('role_name: %s', role_name)
         log.debug('installed_role_spec: %s', installed_role_spec)
-
 
         # we always start the search for roles in the base directory of the playbook
         role_search_paths = [
@@ -163,8 +162,6 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         if C.DEFAULT_ROLES_PATH:
             role_search_paths.extend(C.DEFAULT_ROLES_PATH)
 
-    
-
         # next, append the roles basedir, if it was set, so we can
         # search relative to that directory for dependent roles
         if self._role_basedir:
@@ -174,9 +171,8 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         # in the loader (which should be the playbook dir itself) but without
         # the roles/ dir appended
         role_search_paths.append(self._loader.get_basedir())
-        
         log.debug('role_search_paths: %s', role_search_paths)
-        
+
         # create a templar class to template the dependency names, in
         # case they contain variables
         if self._variable_manager is not None:
@@ -192,7 +188,7 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
 
         # try the galaxy content paths
         # IDEA: since paths work, something like 'geerlingguy/nginx/role/nginx' could work
-        #       or nginx@geerlingguy:role/nginx 
+        #       or nginx@geerlingguy:role/nginx
         #          ansible_testing_content@testing:role/test-role-a
         #          ansible_testing_content@testing:role/test-role-b
         #          ansible_testing_content@testing:apb/some-apb
@@ -206,7 +202,7 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         #       If there are conflicts or ambiquity, the resolver would apply
         #       any rules or convention or precedence to choose the correct role.
         #       For ex, if namespace isnt provided, and 2 or more namespaces have a
-        #       role that matches, the resolver would choose. 
+        #       role that matches, the resolver would choose.
         # FIXME: mv to method, deindent, return early, etc
         if isinstance(installed_role_spec, string_types):
             content_rel_role_path = None
@@ -214,14 +210,15 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
             try:
                 # rough split on namespaces
                 # TODO: decide if something like 'geerlingguy.nginx' is sufficient
-                
+
                 namespace, repo, name = installed_role_spec.split('.', 2)
                 ds = {'namespace': namespace, 'repository': repo, 'name': name}
                 content_rel_role_path = os.path.join(ds['namespace'], ds['repository'], 'roles', ds['name'])
             except ValueError as e:
-                log.exception(e)
-            
-            
+                if False:
+                    log.debug(e, exc_info=True)
+                log.debug('Could not . split "%s", going to assume it is a valid old style role name', installed_role_spec)
+
             log.debug('content_rel_role_path: %s', content_rel_role_path)
             if content_rel_role_path:
                 role_search_paths = ["~/.ansible/content"]
@@ -231,10 +228,9 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
                     fq_role_path = unfrackpath(fq_role_path)
                     log.debug('fq_role_path: %s', fq_role_path)
                     if self._loader.path_exists(fq_role_path):
-                        log.debug('FOUND role_name=%s at fq_role_path=%s', role_name, fq_role_path)
+                        log.info('FOUND role_name=%s at fq_role_path=%s', role_name, fq_role_path)
                         return (role_name, fq_role_path)
 
-                    
         # now iterate through the possible paths and return the first one we find
         for path in role_search_paths:
             path = templar.template(path)
@@ -243,7 +239,7 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
             role_path = unfrackpath(os.path.join(path, role_name))
             log.debug('search for role=%s in path: %s (role_path=%s)', role_name, path, role_path)
             if self._loader.path_exists(role_path):
-                log.debug('FOUND role_name=%s at role_path=%s', role_name, role_path)
+                log.info('FOUND role_name=%s at role_path=%s', role_name, role_path)
                 return (role_name, role_path)
 
         # if not found elsewhere try to extract path from name
@@ -254,6 +250,9 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
             role_name = os.path.basename(role_name)
             return (role_name, role_path)
 
+        log.info('Failed to find the role "%s" in content path "~/.ansible/content"', role_name)
+        log.info('Failed to find the role "%s" in any of the roles paths: %s',
+                 role_name, ":".join(role_search_paths))
         raise AnsibleError("the role '%s' was not found in %s" % (role_name, ":".join(role_search_paths)), obj=self._ds)
 
     def _split_role_params(self, ds):
