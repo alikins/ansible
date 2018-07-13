@@ -7,41 +7,58 @@
   # become: yes
   # hosts: local_ssh
   roles:
-    - geerlingguy.nginx.nginx
-    - testing.ansible_testing_content.test-role-a
-    - bad_role
+    # expect to load from ~/.ansible/content
+    - GROG.debug-variable.debug-variable
+    - ansible_core.source_control.source_control
+    # expect to install from playbook relative roles/
+    - bad_role_playbook_relative
     # - myrole
     # - role2
-      # - some_required_role1
-      # - role_with_sub_roles
-    - role_with_deps
-    - ROLEA
-      # - ../../../somerole
-      # - ROLEB
-      # - ROLEC
+    # - some_required_role1
+    # - role_with_sub_roles
+    # - role_with_deps
+    # - ROLEA
+    # - ../../../somerole
+    # - ROLEB
+    # - ROLEC
   tags:
     - the_play_tag
-  gather_facts: false
   vars:
     baz: "BAZZZZZZZZZZZZZZZ"
   tasks:
-    - name: import the role called 'a_role_to_include'
+    - block:
+        - name: Include a role that will fail
+          include_role:
+            name: a_role_to_include
+            #            tasks_from: fail.yml
+
+      rescue:
+        - name: import the role called 'a_role_to_include' without the namespace FAILED
+          debug:
+            msg: "a_role_to_include failed to import"
+
+            #       always:
+
+    - block:
+        - name: import the role called 'alikins.a_role_to_include' with namespace but without repo name
+          include_role:
+            name: alikins.a_role_to_include
+            # register: include_role_result
+      rescue:
+        - name: import the role called 'alikins.a_role_to_include' with namespace but without repo name FAILED
+          debug:
+            msg: "import the role called 'alikins.a_role_to_include' with namespace but without repo name FAILED"
+
+    - name: import the role called 'alikins.multiple_roles.a_role_to_include' with namespace and repo name and role name
       include_role:
-        name: a_role_to_include
+        name: alikins.multiple_roles.a_role_to_include
       register: include_role_result
+      # ignore_errors: True
 
     - name: show include_role result
       debug:
         var: include_role_result
 
-    - name: import the role called 'a_role_to_include_by_path'
-      include_role:
-        name: local-not-a-roles-path/a_role_to_include_by_path
-      register: include_role_by_path_result
-
-    - name: show include_role_by_path result
-      debug:
-        var: include_role_by_path_result
 
     - name: blip
       tags:
@@ -62,26 +79,10 @@
 
 - name: the second second play
   hosts: local_test
-  tags:
-    - the_second_second_play_tag
-    - blippy
-    - baz
   roles:
-    # full path to role
-    - /home/adrian/not-a-roles-path/role1
-    # a playbook/cwd relative path to a role in a dir not on role path
-    - local-not-a-roles-path/role2
-    - .
-    - ..
-    - /
-    - ../../../
-    - ../../../somerole
-    - role_with_deps_included
-      # - geerlingguy.nginx
-    - geerlingguy.nginx/roles
-      # - test-role-b
-      # - doesntexistrole
-  gather_facts: false
+    # from ~/.ansible/content
+    - testing.ansible_testing_content.test-role-a
+  gather_facts: true
   tasks:
     - name: release
       shell: cat /etc/os-release
@@ -89,3 +90,12 @@
 
     - debug:
         var: release_result.cmd
+
+    - name: import the role called 'geerlingguy.apache' from ~/.ansible/content
+      include_role:
+        name: geerlingguy.apache.apache
+      register: include_role_apache_result
+
+    - name: show include_role_apache_result
+      debug:
+        var: include_role_apache_result
