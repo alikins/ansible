@@ -92,11 +92,12 @@ def _(the_arg):
 
 # FIXME: remove once 'ported' from awx
 #        Likely will just some sort of SurveyValidationError
-class Response(object):
+class ErrorResponse(object):
     def __init__(self, response_dict):
         self.response = response_dict
 
 
+# NOTE: all the ErrorResponse objects returned here indicate errors (replace with exception)
 def _validate_spec_data(new_spec, old_spec):
         schema_errors = {}
         for field, expect_type, type_label in [
@@ -113,7 +114,7 @@ def _validate_spec_data(new_spec, old_spec):
             schema_errors['error'] = _("'spec' doesn't contain any items.")
 
         if schema_errors:
-            return Response(schema_errors, status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(schema_errors, status=status.HTTP_400_BAD_REQUEST)
 
         variable_set = set()
         old_spec_dict = JobTemplate.pivot_spec(old_spec)
@@ -121,24 +122,24 @@ def _validate_spec_data(new_spec, old_spec):
         # NOTE: changing the survey_item while iterating over the list of question specs (for the encryption cases)
         for idx, survey_item in enumerate(new_spec["spec"]):
             if not isinstance(survey_item, dict):
-                return Response(dict(error=_("Survey question %s is not a json object.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
+                return ErrorResponse(dict(error=_("Survey question %s is not a json object.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
             if "type" not in survey_item:
-                return Response(dict(error=_("'type' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
+                return ErrorResponse(dict(error=_("'type' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
             if "question_name" not in survey_item:
-                return Response(dict(error=_("'question_name' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
+                return ErrorResponse(dict(error=_("'question_name' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
             if "variable" not in survey_item:
-                return Response(dict(error=_("'variable' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
+                return ErrorResponse(dict(error=_("'variable' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
             if survey_item['variable'] in variable_set:
-                return Response(dict(error=_("'variable' '%(item)s' duplicated in survey question %(survey)s.") % {
+                return ErrorResponse(dict(error=_("'variable' '%(item)s' duplicated in survey question %(survey)s.") % {
                     'item': survey_item['variable'], 'survey': str(idx)}), status=status.HTTP_400_BAD_REQUEST)
             else:
                 variable_set.add(survey_item['variable'])
             if "required" not in survey_item:
-                return Response(dict(error=_("'required' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
+                return ErrorResponse(dict(error=_("'required' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
 
             if survey_item["type"] == "password" and "default" in survey_item:
                 if not isinstance(survey_item['default'], string_types):
-                    return Response(dict(error=_(
+                    return ErrorResponse(dict(error=_(
                         "Value {question_default} for '{variable_name}' expected to be a string."
                     ).format(
                         question_default=survey_item["default"], variable_name=survey_item["variable"])
@@ -148,7 +149,7 @@ def _validate_spec_data(new_spec, old_spec):
                     survey_item['default'].startswith('$encrypted$')):
                 # Submission expects the existence of encrypted DB value to replace given default
                 if survey_item["type"] != "password":
-                    return Response(dict(error=_(
+                    return ErrorResponse(dict(error=_(
                         "$encrypted$ is a reserved keyword for password question defaults, "
                         "survey question {question_position} is type {question_type}."
                     ).format(
@@ -164,7 +165,7 @@ def _validate_spec_data(new_spec, old_spec):
                         elif old_default == "":  # unencrypted blank string is allowed as DB value as special case
                             encryptedish_default_exists = True
                 if not encryptedish_default_exists:
-                    return Response(dict(error=_(
+                    return ErrorResponse(dict(error=_(
                         "$encrypted$ is a reserved keyword, may not be used for new default in position {question_position}."
                     ).format(question_position=str(idx))), status=status.HTTP_400_BAD_REQUEST)
                 survey_item['default'] = old_element['default']
