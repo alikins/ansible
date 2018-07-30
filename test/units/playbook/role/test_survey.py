@@ -31,3 +31,32 @@ def test_survey_init_empty():
     assert isinstance(survey.description, string_types)
     assert isinstance(survey.name, string_types)
 
+
+def test_survey_load_data_empty():
+    survey = Survey()
+
+    survey_ = survey.load_data({})
+
+    assert isinstance(survey_, Survey)
+
+    assert survey == survey_
+
+
+def test_survey_load_data():
+    survey = Survey()
+
+    name = 'some_survey'
+    description = 'This is the survey used for unit tests'
+    questions = ['foo']
+
+    data = {'name': name,
+            'description': description,
+            'questions': questions}
+    survey2 = survey.load_data(data)
+
+    log.debug('survey2: %s', survey2)
+    log.debug('survey2.dump_attrs: %s', survey2.dump_attrs())
+
+    assert survey2.name == name
+    assert survey2.description == description
+    assert survey2.questions == questions
