@@ -8,7 +8,7 @@ __metaclass__ = type
 import logging
 
 import pytest
-from ansible.playbook.role.survey import Survey, Question
+from ansible.playbook.role.survey import Survey, Question, _validate_spec_data, _survey_element_validation
 
 from ansible.module_utils.six import string_types
 
@@ -193,6 +193,30 @@ def test_question_load_data(data, default_data):
                                                           default_data.get(field_name))
 
 
+def test_question_serialize():
+    question_data = {"type": "text",
+                     "question_name": "cantbelong",
+                     "question_description": "What is a short answer",
+                     "variable": "short_answer",
+                     "choices": "",
+                     "min": "",
+                     "max": 5,
+                     "required": False,
+                     "default": "yes"
+                     }
+
+    question = Question()
+    question2 = question.load_data(question_data)
+
+    log.debug('question2: %s', question2)
+    log.debug('question2.dump_attrs: %s', question2.dump_attrs())
+
+    res = question2.serialize()
+    log.debug('question2.serialize res: %s', res)
+
+    assert isinstance(res, dict)
+
+
 def test_survey_load_with_questions():
     questions = [{
         "type": "float",
@@ -236,3 +260,69 @@ def test_survey_load_with_questions():
 
         spec_data.append(qdata)
     assert spec_data == data['spec']
+
+
+def test_survey_validate_data():
+    questions = [{
+        "type": "float",
+        "question_name": "float",
+        "question_description": "I need a float here",
+        "variable": "float_answer",
+        "choices": "",
+        "min": 2,
+        "max": 5,
+        "required": False,
+        "default": ""
+    }]
+    data = {'name': 'some_survey_with_questions',
+            'description': 'A survey spec that includes questions',
+            # The list of survey questions is found in the 'spec' value
+            'spec': questions}
+
+    res = _validate_spec_data(data)
+
+    log.debug('res: %s', res)
+
+
+def test_survey_validate_data_no_question_name():
+    questions = [{
+        "type": "float",
+        # "question_name": "float",
+        "question_description": "I need a float here",
+        "variable": "float_answer",
+        "choices": "",
+        "min": 2,
+        "max": 5,
+        "required": False,
+        "default": ""
+    }]
+    data = {'name': 'some_survey_with_questions',
+            'description': 'A survey spec that includes questions',
+            # The list of survey questions is found in the 'spec' value
+            'spec': questions}
+
+    res = _validate_spec_data(data)
+
+    log.debug('res: %s', res)
+    log.debug('res.response: %s', res.response)
+
+
+def test_survey_element_validation():
+    question = {
+        "type": "float",
+        # "question_name": "float",
+        "question_description": "I need a float here",
+        "variable": "float_answer",
+        "choices": "",
+        "min": 2,
+        "max": 5,
+        "required": False,
+        "default": ""
+    }
+    data = {'float_answer': 0.0}
+    exp_errors = ["'float_answer' value 0.0 is too small (must be at least 2)."]
+
+    errors = _survey_element_validation(question, data, validate_required=True)
+
+    log.debug('errors: %s', errors)
+    assert errors == exp_errors
