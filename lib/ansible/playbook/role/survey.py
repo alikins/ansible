@@ -5,8 +5,12 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
+
 from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.base import Base
+
+log = logging.getLogger(__name__)
 
 
 # QuestionSpec? SurveyQuestion?
@@ -63,5 +67,18 @@ class Survey(Base):
     # The description of the survey spec
     _description = FieldAttribute(isa='string', default='')
 
-    # The list of questions in the survey
-    _questions = FieldAttribute(isa='list', required=True, default=[])
+    # The list of question specs in the survey
+    _spec = FieldAttribute(isa='list', required=True, default=[], alias='spec')
+
+    def _load_spec(self, attr, ds):
+        '''Loads a list of Questions from the 'spec' field.'''
+        log.debug('attr: %s', attr)
+        log.debug('ds: %s', ds)
+        spec = []
+
+        for spec_ds in ds:
+            question = Question()
+            question.load_data(spec_ds)
+            spec.append(question)
+
+        return spec
