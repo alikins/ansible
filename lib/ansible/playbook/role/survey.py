@@ -97,6 +97,18 @@ class ErrorResponse(object):
         self.response = response_dict
 
 
+# FIXME: we don't have any code in ansible/ansible to do Fernat so we just dont
+#        do anything at the moment. Not sure if it makes sense to encrypt as a side
+#        effect of validation.
+def encrypt_value(some_value):
+
+    print('FIXME: survey validation is not actually ENCRYPTING anything')
+
+    log.info('FIXME: survey validation is not actually ENCRYPTING anything')
+
+    return some_value
+
+
 # NOTE: all the ErrorResponse objects returned here indicate errors (replace with exception)
 def _validate_spec_data(new_spec, old_spec):
         schema_errors = {}
