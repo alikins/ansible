@@ -5,6 +5,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import copy
 import logging
 
 from ansible.module_utils.six import string_types
@@ -109,6 +110,92 @@ def encrypt_value(some_value):
     return some_value
 
 
+# from https://github.com/ansible/awx/blob/devel/awx/main/models/mixins.py#L185-L265
+# master, 1ba6073569358e81e69a3e2f8406d3f96c21663c
+def _survey_element_validation(survey_element, data, validate_required=True):
+    # Don't apply validation to the `$encrypted$` placeholder; the decrypted
+    # default (if any) will be validated against instead
+    errors = []
+
+    if (survey_element['type'] == "password"):
+        password_value = data.get(survey_element['variable'])
+        if (
+            isinstance(password_value, string_types) and
+            password_value == '$encrypted$'
+        ):
+            if survey_element.get('default') is None and survey_element['required']:
+                if validate_required:
+                    errors.append("'%s' value missing" % survey_element['variable'])
+            return errors
+
+    if survey_element['variable'] not in data and survey_element['required']:
+        if validate_required:
+            errors.append("'%s' value missing" % survey_element['variable'])
+    elif survey_element['type'] in ["textarea", "text", "password"]:
+        if survey_element['variable'] in data:
+            if not isinstance(data[survey_element['variable']], string_types):
+                errors.append("Value %s for '%s' expected to be a string." % (data[survey_element['variable']],
+                                                                              survey_element['variable']))
+                return errors
+
+            if 'min' in survey_element and survey_element['min'] not in ["", None] and len(data[survey_element['variable']]) < int(survey_element['min']):
+                errors.append("'%s' value %s is too small (length is %s must be at least %s)." %
+                              (survey_element['variable'], data[survey_element['variable']], len(data[survey_element['variable']]), survey_element['min']))
+            if 'max' in survey_element and survey_element['max'] not in ["", None] and len(data[survey_element['variable']]) > int(survey_element['max']):
+                errors.append("'%s' value %s is too large (must be no more than %s)." %
+                              (survey_element['variable'], data[survey_element['variable']], survey_element['max']))
+
+    elif survey_element['type'] == 'integer':
+        if survey_element['variable'] in data:
+            if type(data[survey_element['variable']]) != int:
+                errors.append("Value %s for '%s' expected to be an integer." % (data[survey_element['variable']],
+                                                                                survey_element['variable']))
+                return errors
+            if 'min' in survey_element and survey_element['min'] not in ["", None] and survey_element['variable'] in data and \
+                    data[survey_element['variable']] < int(survey_element['min']):
+                errors.append("'%s' value %s is too small (must be at least %s)." %
+                              (survey_element['variable'], data[survey_element['variable']], survey_element['min']))
+                if 'max' in survey_element and survey_element['max'] not in ["", None] and survey_element['variable'] in data and \
+                        data[survey_element['variable']] > int(survey_element['max']):
+                    errors.append("'%s' value %s is too large (must be no more than %s)." %
+                                  (survey_element['variable'], data[survey_element['variable']], survey_element['max']))
+    elif survey_element['type'] == 'float':
+        if survey_element['variable'] in data:
+            if type(data[survey_element['variable']]) not in (float, int):
+                errors.append("Value %s for '%s' expected to be a numeric type." % (data[survey_element['variable']],
+                                                                                    survey_element['variable']))
+                return errors
+            if 'min' in survey_element and survey_element['min'] not in ["", None] and data[survey_element['variable']] < float(survey_element['min']):
+                errors.append("'%s' value %s is too small (must be at least %s)." %
+                              (survey_element['variable'], data[survey_element['variable']], survey_element['min']))
+            if 'max' in survey_element and survey_element['max'] not in ["", None] and data[survey_element['variable']] > float(survey_element['max']):
+                errors.append("'%s' value %s is too large (must be no more than %s)." %
+                              (survey_element['variable'], data[survey_element['variable']], survey_element['max']))
+    elif survey_element['type'] == 'multiselect':
+        if survey_element['variable'] in data:
+            if type(data[survey_element['variable']]) != list:
+                errors.append("'%s' value is expected to be a list." % survey_element['variable'])
+            else:
+                choice_list = copy.copy(survey_element['choices'])
+                if isinstance(choice_list, string_types):
+                    choice_list = choice_list.split('\n')
+                for val in data[survey_element['variable']]:
+                    if val not in choice_list:
+                        errors.append("Value %s for '%s' expected to be one of %s." % (val, survey_element['variable'],
+                                                                                       choice_list))
+    elif survey_element['type'] == 'multiplechoice':
+        choice_list = copy.copy(survey_element['choices'])
+        if isinstance(choice_list, string_types):
+            choice_list = choice_list.split('\n')
+        if survey_element['variable'] in data:
+            if data[survey_element['variable']] not in choice_list:
+                errors.append("Value %s for '%s' expected to be one of %s." % (data[survey_element['variable']],
+                                                                               survey_element['variable'],
+                                                                               choice_list))
+    return errors
+
+
+# TODO: hook this up to Survey.load_data
 # NOTE: all the ErrorResponse objects returned here indicate errors (replace with exception)
 def _validate_spec_data(new_spec):
     schema_errors = {}
@@ -118,15 +205,12 @@ def _validate_spec_data(new_spec):
             ('spec', list, 'list of items')]:
         if field not in new_spec:
             schema_errors['error'] = _("Field '{}' is missing from survey spec.").format(field)
-        elif not isinstance(getattr(new_spec, field), expect_type):
+        elif not isinstance(new_spec[field], expect_type):
             schema_errors['error'] = _("Expected {} for field '{}', received {} type.").format(
-                type_label, field, type(getattr(new_spec, field)).__name__)
+                type_label, field, type(new_spec[field]).__name__)
 
-    if not new_spec.spec:
+    if isinstance(new_spec.get('spec', None), list) and len(new_spec["spec"]) < 1:
         schema_errors['error'] = _("'spec' doesn't contain any items.")
-
-    # if isinstance(new_spec.get('spec', None), list) and len(new_spec["spec"]) < 1:
-    #    schema_errors['error'] = _("'spec' doesn't contain any items.")
 
     if schema_errors:
         return ErrorResponse(schema_errors)
@@ -139,8 +223,8 @@ def _validate_spec_data(new_spec):
     old_spec_dict = {}
 
     # NOTE: changing the survey_item while iterating over the list of question specs (for the encryption cases)
-    for idx, survey_item in enumerate(new_spec.spec):
-        if not isinstance(survey_item, Question):
+    for idx, survey_item in enumerate(new_spec['spec']):
+        if not isinstance(survey_item, dict):
             return ErrorResponse(dict(error=_("Survey question %s is not a json object.") % str(idx)))
 
         # For these cases, we should get an error when we try Survey.load_data().
