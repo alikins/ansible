@@ -129,7 +129,11 @@ def _validate_spec_data(new_spec, old_spec):
             return ErrorResponse(schema_errors)
 
         variable_set = set()
-        old_spec_dict = JobTemplate.pivot_spec(old_spec)
+
+        # client will not have the old survey spec, so can't do any of the logic that needs it.
+        # Assume the old_spec_dict is empty for now.
+        # old_spec_dict = JobTemplate.pivot_spec(old_spec)
+        old_spec_dict = {}
 
         # NOTE: changing the survey_item while iterating over the list of question specs (for the encryption cases)
         for idx, survey_item in enumerate(new_spec["spec"]):
