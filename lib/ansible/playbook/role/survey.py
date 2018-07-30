@@ -84,6 +84,11 @@ class Survey(Base):
 
         return spec
 
+
+def _(the_arg):
+    return the_arg
+
+
 def _validate_spec_data(new_spec, old_spec):
         schema_errors = {}
         for field, expect_type, type_label in [
