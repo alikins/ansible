@@ -7,6 +7,7 @@ __metaclass__ = type
 
 import logging
 
+from ansible.module_utils.six import string_types
 from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.base import Base
 
@@ -86,8 +87,8 @@ class Survey(Base):
 def _validate_spec_data(new_spec, old_spec):
         schema_errors = {}
         for field, expect_type, type_label in [
-                ('name', six.string_types, 'string'),
-                ('description', six.string_types, 'string'),
+                ('name', string_types, 'string'),
+                ('description', string_types, 'string'),
                 ('spec', list, 'list of items')]:
             if field not in new_spec:
                 schema_errors['error'] = _("Field '{}' is missing from survey spec.").format(field)
@@ -121,14 +122,14 @@ def _validate_spec_data(new_spec, old_spec):
                 return Response(dict(error=_("'required' missing from survey question %s.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
 
             if survey_item["type"] == "password" and "default" in survey_item:
-                if not isinstance(survey_item['default'], six.string_types):
+                if not isinstance(survey_item['default'], string_types):
                     return Response(dict(error=_(
                         "Value {question_default} for '{variable_name}' expected to be a string."
                     ).format(
                         question_default=survey_item["default"], variable_name=survey_item["variable"])
                     ), status=status.HTTP_400_BAD_REQUEST)
 
-            if ("default" in survey_item and isinstance(survey_item['default'], six.string_types) and
+            if ("default" in survey_item and isinstance(survey_item['default'], string_types) and
                     survey_item['default'].startswith('$encrypted$')):
                 # Submission expects the existence of encrypted DB value to replace given default
                 if survey_item["type"] != "password":
@@ -142,7 +143,7 @@ def _validate_spec_data(new_spec, old_spec):
                 encryptedish_default_exists = False
                 if 'default' in old_element:
                     old_default = old_element['default']
-                    if isinstance(old_default, six.string_types):
+                    if isinstance(old_default, string_types):
                         if old_default.startswith('$encrypted$'):
                             encryptedish_default_exists = True
                         elif old_default == "":  # unencrypted blank string is allowed as DB value as special case
