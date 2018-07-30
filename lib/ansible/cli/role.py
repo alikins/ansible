@@ -40,4 +40,4 @@ class RoleCLI(CLI):
         if self.options.foobar:
             display.display('%s%s%s' % ('foo', self.options.foobar, 'bar'))
 
-        exit(0)
+        return os.EX_OK
