@@ -24,11 +24,11 @@ def test_survey_init_empty():
     import pprint
     log.debug('dir(Survey): %s', pprint.pformat(dir(survey)))
 
-    log.debug('survey.questions: %s', survey.questions)
+    log.debug('survey.spec: %s', survey.spec)
     log.debug('survey.description: %s', survey.description)
     log.debug('survey.name: %s', survey.name)
 
-    assert isinstance(survey.questions, list)
+    assert isinstance(survey.spec, list)
     assert isinstance(survey.description, string_types)
     assert isinstance(survey.name, string_types)
 
@@ -48,11 +48,14 @@ def test_survey_load_data():
 
     name = 'some_survey'
     description = 'This is the survey used for unit tests'
-    questions = ['foo']
+    questions = [{'type': 'text',
+                  'question_name': 'some_question_name',
+                  'question_description': 'some_question_description',
+                  'required': True}]
 
     data = {'name': name,
             'description': description,
-            'questions': questions}
+            'spec': questions}
     survey2 = survey.load_data(data)
 
     log.debug('survey2: %s', survey2)
@@ -60,7 +63,11 @@ def test_survey_load_data():
 
     assert survey2.name == name
     assert survey2.description == description
-    assert survey2.questions == questions
+
+    assert isinstance(survey2.spec[0], Question)
+    assert survey2.spec[0].type == questions[0]['type']
+    assert survey2.spec[0].question_name == questions[0]['question_name']
+    assert survey2.spec[0].question_description == questions[0]['question_description']
 
 
 def test_question_init_empty():
@@ -184,3 +191,48 @@ def test_question_load_data(data, default_data):
         # data, verify they match the expected defaults from default_data
         assert getattr(question2, field_name) == data.get(field_name,
                                                           default_data.get(field_name))
+
+
+def test_survey_load_with_questions():
+    questions = [{
+        "type": "float",
+        "question_name": "float",
+        "question_description": "I need a float here",
+        "variable": "float_answer",
+        "choices": "",
+        "min": 2,
+        "max": 5,
+        "required": False,
+        "default": ""
+    }]
+    data = {'name': 'some_survey_with_questions',
+            'description': 'A survey spec that includes questions',
+            # The list of survey questions is found in the 'spec' value
+            'spec': questions}
+
+    survey = Survey()
+    survey2 = survey.load_data(data)
+
+    log.debug('survey2: %s', survey2)
+    log.debug('survey2.dump_attrs: %s', survey2.dump_attrs())
+
+    assert survey2.name == data['name']
+    assert survey2.description == data['description']
+    spec_data = []
+    for spec_obj in survey2.spec:
+        log.debug('spec_obj: %s', spec_obj)
+        log.debug('spec_obj.dump_attrs: %s', spec_obj.dump_attrs())
+
+        # the starting expected data
+        qdata = {}
+
+        # the data after loading a survey with questions and gettings its attrs dict
+        sdata = spec_obj.dump_attrs()
+
+        # use the first question to find the fields/keys we care about (and not all
+        # the assorted playbook base object stuff)
+        for dkey in questions[0]:
+            qdata[dkey] = sdata[dkey]
+
+        spec_data.append(qdata)
+    assert spec_data == data['spec']
