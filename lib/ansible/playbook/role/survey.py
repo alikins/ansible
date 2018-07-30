@@ -110,7 +110,7 @@ def encrypt_value(some_value):
 
 
 # NOTE: all the ErrorResponse objects returned here indicate errors (replace with exception)
-def _validate_spec_data(new_spec, old_spec):
+def _validate_spec_data(new_spec):
     schema_errors = {}
     for field, expect_type, type_label in [
             ('name', string_types, 'string'),
@@ -118,12 +118,15 @@ def _validate_spec_data(new_spec, old_spec):
             ('spec', list, 'list of items')]:
         if field not in new_spec:
             schema_errors['error'] = _("Field '{}' is missing from survey spec.").format(field)
-        elif not isinstance(new_spec[field], expect_type):
+        elif not isinstance(getattr(new_spec, field), expect_type):
             schema_errors['error'] = _("Expected {} for field '{}', received {} type.").format(
-                type_label, field, type(new_spec[field]).__name__)
+                type_label, field, type(getattr(new_spec, field)).__name__)
 
-    if isinstance(new_spec.get('spec', None), list) and len(new_spec["spec"]) < 1:
+    if not new_spec.spec:
         schema_errors['error'] = _("'spec' doesn't contain any items.")
+
+    # if isinstance(new_spec.get('spec', None), list) and len(new_spec["spec"]) < 1:
+    #    schema_errors['error'] = _("'spec' doesn't contain any items.")
 
     if schema_errors:
         return ErrorResponse(schema_errors)
@@ -136,9 +139,13 @@ def _validate_spec_data(new_spec, old_spec):
     old_spec_dict = {}
 
     # NOTE: changing the survey_item while iterating over the list of question specs (for the encryption cases)
-    for idx, survey_item in enumerate(new_spec["spec"]):
-        if not isinstance(survey_item, dict):
+    for idx, survey_item in enumerate(new_spec.spec):
+        if not isinstance(survey_item, Question):
             return ErrorResponse(dict(error=_("Survey question %s is not a json object.") % str(idx)))
+
+        # For these cases, we should get an error when we try Survey.load_data().
+        # TODO: decide if we need to support these checks for Survey() created without a load_data() or any
+        #       post_validate() step
         if "type" not in survey_item:
             return ErrorResponse(dict(error=_("'type' missing from survey question %s.") % str(idx)))
         if "question_name" not in survey_item:
