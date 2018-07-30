@@ -85,8 +85,16 @@ class Survey(Base):
         return spec
 
 
+# FIXME: remove once 'ported' from awx
 def _(the_arg):
     return the_arg
+
+
+# FIXME: remove once 'ported' from awx
+#        Likely will just some sort of SurveyValidationError
+class Response(object):
+    def __init__(self, response_dict):
+        self.response = response_dict
 
 
 def _validate_spec_data(new_spec, old_spec):
@@ -109,6 +117,8 @@ def _validate_spec_data(new_spec, old_spec):
 
         variable_set = set()
         old_spec_dict = JobTemplate.pivot_spec(old_spec)
+
+        # NOTE: changing the survey_item while iterating over the list of question specs (for the encryption cases)
         for idx, survey_item in enumerate(new_spec["spec"]):
             if not isinstance(survey_item, dict):
                 return Response(dict(error=_("Survey question %s is not a json object.") % str(idx)), status=status.HTTP_400_BAD_REQUEST)
