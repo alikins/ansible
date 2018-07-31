@@ -341,6 +341,21 @@ def test_survey_validate_data_no_question_name():
     (
         {
             "type": "text",
+            "question_name": "text_but_answer_not_text",
+            "question_description": "Need text but answer is not text",
+            "variable": "text_but_answer_not_text_answer",
+            "choices": "",
+            "min": "",
+            "max": "",
+            "required": True,
+            "default": "yes"
+        },
+        {'text_but_answer_not_text_answer': 37.37},
+        ["Value 37.37 for 'text_but_answer_not_text_answer' expected to be a string."]
+    ),
+    (
+        {
+            "type": "text",
             "question_name": "not_provided_not_required",
             "question_description": "Not provided and not required",
             "variable": "not_provided_not_required_answer",
@@ -383,6 +398,172 @@ def test_survey_validate_data_no_question_name():
         },
         {"provided_not_required_answer": "some answer"},
         []
+    ),
+    (
+        {
+            "type": "multiselect",
+            "question_name": "mselect_answer_not_a_list",
+            "question_description": "Can have multiples of these but answer is not a list",
+            "variable": "multi_select_not_list_answer",
+            "choices": ["one", "two", "three"],
+            "min": "",
+            "max": "",
+            "required": False,
+            "default": "yes"
+        },
+        {"multi_select_not_list_answer": "not_a_list"},
+        ["'multi_select_not_list_answer' value is expected to be a list."],
+    ),
+    (
+        {
+            "type": "multiselect",
+            "question_name": "mselect_answer",
+            "question_description": "Can have multiples of these",
+            "variable": "multi_select_answer",
+            "choices": ["one", "two", "three"],
+            "min": "",
+            "max": "",
+            "required": False,
+            "default": "yes"
+        },
+        {"multi_select_answer": ["one", "three"]},
+        [],
+    ),
+    (
+        {
+            "type": "multiselect",
+            "question_name": "mchoice_answer_not_a_choice",
+            "question_description": "multiselect",
+            "variable": "multi_choice_answer",
+            "choices": ["a", "b", "c"],
+            "min": "",
+            "max": "",
+            "required": False,
+            "default": "yes"
+        },
+        {"multi_choice_answer": ["a", "b", "D"]},
+        ["Value D for 'multi_choice_answer' expected to be one of ['a', 'b', 'c']."],
+    ),
+    (
+        {
+            "type": "integer",
+            "question_name": "int_answer_not_int",
+            "question_description": "I need an int here but answer is not an int",
+            "variable": "int_answer_not_int",
+            "choices": "",
+            "min": 1,
+            "max": 5,
+            "required": True,
+            "default": ""
+        },
+        {'int_answer_not_int': "in the gear"},
+        ["Value in the gear for 'int_answer_not_int' expected to be an integer."],
+    ),
+    (
+        {
+            "type": "integer",
+            "question_name": "integerchoicieovermax",
+            "question_description": "I need an int here but answer is too big",
+            "variable": "int_over_max_answer",
+            "choices": "",
+            "min": 1,
+            "max": 5,
+            "required": True,
+            "default": ""
+        },
+        {'int_over_max_answer': 7},
+        ["'int_over_max_answer' value 7 is too large (must be no more than 5)."]
+    ),
+    (
+        {
+            "type": "integer",
+            "question_name": "int_same_min_max",
+            "question_description": "I need an int here larger than 5 but smaller than 5",
+            "variable": "int_same_min_max_answer",
+            "choices": "",
+            "min": 5,
+            "max": 5,
+            "required": True,
+            "default": ""
+        },
+        {'int_same_min_max_answer': 5},
+        [],
+    ),
+    (
+        {
+            "type": "multiplechoice",
+            "question_name": "multiple_choice_answer_one_of_choices",
+            "question_description": "Multiple select with answer one of the choices",
+            "variable": "single_choice",
+            "choices": ["one", "two"],
+            "min": "",
+            "max": "",
+            "required": True,
+            "default": "yes"
+        },
+        {'single_choice': 'two'},
+        []
+    ),
+    (
+        {
+            "type": "multiplechoice",
+            "question_name": "multiple_choice_answer_not_one_of_choices",
+            "question_description": "Multiple select with answer not one of the choices",
+            "variable": "chose_poorly",
+            "choices": ["chalice one", "chalice two"],
+            "min": "",
+            "max": "",
+            "required": True,
+            "default": "yes"
+        },
+        {'chose_poorly': 'the shiny one'},
+        ["Value the shiny one for 'chose_poorly' expected to be one of ['chalice one', 'chalice two']."]
+    ),
+    (
+        {
+            "type": "multiplechoice",
+            "question_name": "multiple_choice_choices_newline",
+            "question_description": "Multiple select with choices newline separated",
+            "variable": "multiple_choice_newline_answer",
+            "choices": '''It was the best of dark and story times\nIt was the worse of dark and stormy times''',
+            "min": "",
+            "max": "",
+            "required": True,
+            "default": "yes"
+        },
+        {'multiple_choice_newline_answer': 'It was the worse of dark and stormy times'},
+        [],
+    ),
+    # NOTE: will probably remove the 'password' support
+    (
+        {
+            "type": "password",
+            "question_name": "password_encrypted",
+            "question_description": "Password encrypted",
+            "variable": "password_encrypted_answer",
+            "choices": "",
+            "min": "",
+            "max": "",
+            "required": True,
+            "default": "yes"
+        },
+        {'password_encrypted_answer': '$encrypted$'},
+        [],
+    ),
+    (
+        {
+            "type": "password",
+            "question_name": "password_required_encrypted",
+            "question_description": "Password required but not provided",
+            "variable": "password_required_encrypted",
+            "choices": "",
+            "min": "",
+            "max": "",
+            "required": True,
+            "default": None
+        },
+        {'password_required_encrypted': '$encrypted$'},
+        ["'password_required_encrypted' value missing"],
     ),
 ])
 def test_survey_element_validation(survey_element, answer, expected):
