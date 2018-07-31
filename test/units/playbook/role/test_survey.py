@@ -307,22 +307,86 @@ def test_survey_validate_data_no_question_name():
     log.debug('res.response: %s', res.response)
 
 
-def test_survey_element_validation():
-    question = {
-        "type": "float",
-        # "question_name": "float",
-        "question_description": "I need a float here",
-        "variable": "float_answer",
-        "choices": "",
-        "min": 2,
-        "max": 5,
-        "required": False,
-        "default": ""
-    }
-    data = {'float_answer': 0.0}
-    exp_errors = ["'float_answer' value 0.0 is too small (must be at least 2)."]
+@pytest.mark.parametrize("survey_element,answer,expected", [
+    (
+        {
+            "type": "float",
+            "question_name": "some_question_name",
+            "question_description": "some_question_description",
+            "variable": "some_float",
+            "choices": "",
+            "min": 2,
+            "max": 5,
+            "required": True,
+            "default": "yes"
+        },
+        {'some_float': 1.0},
+        ["'some_float' value 1.0 is too small (must be at least 2)."]
+    ),
+    (
+        {
+            "type": "multiplechoice",
+            "question_name": "achoice",
+            "question_description": "Need one of these",
+            "variable": "single_choice",
+            "choices": ["one", "two"],
+            "min": "",
+            "max": "",
+            "required": False,
+            "default": "yes"
+        },
+        {'single_choice': 'three'},
+        ["Value three for 'single_choice' expected to be one of ['one', 'two']."],
+    ),
+    (
+        {
+            "type": "text",
+            "question_name": "not_provided_not_required",
+            "question_description": "Not provided and not required",
+            "variable": "not_provided_not_required_answer",
+            "choices": "",
+            "min": "",
+            "max": 5,
+            "required": False,
+            "default": "yes"
+        },
+        {},
+        []
+    ),
+    (
+        {
+            "type": "text",
+            "question_name": "not_provided_required",
+            "question_description": "Not provided but is required",
+            "variable": "not_provided_required_answer",
+            "choices": "",
+            "min": "",
+            "max": 5,
+            "required": True,
+            "default": "yes"
+        },
+        {},
+        ["'not_provided_required_answer' value missing"]
+    ),
+    # NOTE: for type text, min/max is the min/max length of the string, not the min/max values
+    (
+        {
+            "type": "text",
+            "question_name": "provided_not_required",
+            "question_description": "Provided and not required",
+            "variable": "provided_not_required_answer",
+            "choices": "",
+            "min": "",
+            "max": 255,
+            "required": False,
+            "default": "yes"
+        },
+        {"provided_not_required_answer": "some answer"},
+        []
+    ),
+])
+def test_survey_element_validation(survey_element, answer, expected):
+    res = _survey_element_validation(survey_element, answer, validate_required=True)
 
-    errors = _survey_element_validation(question, data, validate_required=True)
-
-    log.debug('errors: %s', errors)
-    assert errors == exp_errors
+    log.debug('res: %s', res)
+    assert res == expected
