@@ -155,10 +155,10 @@ def _survey_element_validation(survey_element, data, validate_required=True):
                     data[survey_element['variable']] < int(survey_element['min']):
                 errors.append("'%s' value %s is too small (must be at least %s)." %
                               (survey_element['variable'], data[survey_element['variable']], survey_element['min']))
-                if 'max' in survey_element and survey_element['max'] not in ["", None] and survey_element['variable'] in data and \
-                        data[survey_element['variable']] > int(survey_element['max']):
-                    errors.append("'%s' value %s is too large (must be no more than %s)." %
-                                  (survey_element['variable'], data[survey_element['variable']], survey_element['max']))
+            if 'max' in survey_element and survey_element['max'] not in ["", None] and survey_element['variable'] in data and \
+                    data[survey_element['variable']] > int(survey_element['max']):
+                errors.append("'%s' value %s is too large (must be no more than %s)." %
+                              (survey_element['variable'], data[survey_element['variable']], survey_element['max']))
     elif survey_element['type'] == 'float':
         if survey_element['variable'] in data:
             if type(data[survey_element['variable']]) not in (float, int):
