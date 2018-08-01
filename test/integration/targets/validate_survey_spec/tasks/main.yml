@@ -1,8 +1,4 @@
 ---
-- name: debug vars
-  debug:
-    var: vars
-
 - name: validate some survey specs
   validate_survey_spec:
     survey_spec: "{{ survey_spec1 }}"
@@ -22,7 +18,15 @@
       survey1_int_answer: "not_an_integer_but_a_string"
       survey1_question2_text_answer: "blippy"
   register: survey_spec1_results
+  ignore_errors: true
 
 - name: debug survey_spec1_results
   debug:
     var: survey_spec1_results
+
+- name: check that validate some survey specs with wrong types failed
+  assert:
+    that:
+      - survey_spec1_results is failed
+      - survey_spec1_results.msg
+      - survey_spec1_results is not changed
