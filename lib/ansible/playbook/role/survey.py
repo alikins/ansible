@@ -117,6 +117,9 @@ def _survey_element_validation(survey_element, data, validate_required=True):
     # default (if any) will be validated against instead
     errors = []
 
+    log.debug('survey_element: %s', survey_element)
+    log.debug('data: %s', data)
+
     if (survey_element['type'] == "password"):
         password_value = data.get(survey_element['variable'])
         if (
