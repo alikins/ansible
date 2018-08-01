@@ -1,0 +1,28 @@
+---
+- name: debug vars
+  debug:
+    var: vars
+
+- name: validate some survey specs
+  validate_survey_spec:
+    survey_spec: "{{ survey_spec1 }}"
+    survey_answers:
+      survey1_int_answer: 7
+      survey1_question2_text_answer: "blippy"
+  register: survey_spec1_results
+
+- name: debug survey_spec1_results
+  debug:
+    var: survey_spec1_results
+
+- name: validate some survey specs with wrong types
+  validate_survey_spec:
+    survey_spec: "{{ survey_spec1 }}"
+    survey_answers:
+      survey1_int_answer: "not_an_integer_but_a_string"
+      survey1_question2_text_answer: "blippy"
+  register: survey_spec1_results
+
+- name: debug survey_spec1_results
+  debug:
+    var: survey_spec1_results
