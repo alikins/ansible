@@ -67,4 +67,5 @@ class ActionModule(ActionBase):
 
         result['changed'] = False
         result['msg'] = 'The survey validation passed'
+        result['valid_survey_answers'] = survey_answers
         return result
