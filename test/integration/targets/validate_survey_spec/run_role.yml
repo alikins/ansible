@@ -1,0 +1,45 @@
+---
+- name: "Running role {{ role_name|default('unknown role name') }}"
+  hosts: "{{ role_host }}"
+  gather_facts: false
+  tasks:
+    - name: debug vars
+      debug:
+        var: vars
+
+    - name: Validate the role survey answers
+      validate_survey_spec:
+        survey_spec: "{{ role_survey_spec }}"
+        survey_answers: "{{ role_survey_answers }}"
+      register: role_survey_validation_results
+
+    - name: debug role_survey_validation_results
+      debug:
+        var: role_survey_validation_results
+
+    - name: role_survey_answers
+      debug:
+        var: role_survey_answers
+
+    - name: creating import_role args
+      set_fact:
+        import_role_args: "{{ role_survey_answers|combine({'name': role_name }) }}"
+
+    - debug:
+        var: import_role_args
+
+    - name: "Run the role role_name "
+      # include_role: import_role_args
+      #  name: "F500.dumpall"
+      # include_role: role_survey_validation_results.valid_survey_answers
+      import_role:
+        name: "{{ role_name }}"
+        # vars: import_role_args
+        #   name: "{{ role_name }}"
+        # args: "{{ role_survey_validation_results.valid_survey_answers }}"
+      register: import_role_results
+        #      when: false
+
+    - name: "Results of running role {{ role_name }}"
+      debug:
+        var: import_role_results
