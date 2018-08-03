@@ -282,3 +282,5 @@ def _validate_spec_data(new_spec):
         elif survey_item["type"] == "password" and 'default' in survey_item:
             # Submission provides new encrypted default
             survey_item['default'] = encrypt_value(survey_item['default'])
+
+# TODO: method to populate the results, based on provided answers and any 'defaults' provided
