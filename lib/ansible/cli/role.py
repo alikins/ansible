@@ -57,6 +57,11 @@ def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, 
 
     _vars = role_args
 
+    # TODO: use varman here? probably at least merge_dict
+    role_params = {}
+    role_params.update(role_args)
+    role_params.update(survey_answers)
+
     return {'name': "Ansible Role",
             'hosts': pattern,
             'gather_facts': 'no',
@@ -70,7 +75,7 @@ def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, 
                 {'action': {'module': 'include_role',
                             'name': role_name,
                             },
-                 'vars': role_args,
+                 'vars': role_params,
                  'async_val': async_val,
                  'poll': poll}
             ]
