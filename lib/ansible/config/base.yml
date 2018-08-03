@@ -935,6 +935,14 @@ DEFAULT_REMOTE_USER:
   env: [{name: ANSIBLE_REMOTE_USER}]
   ini:
   - {key: remote_user, section: defaults}
+DEFAULT_ROLE_ARGS:
+  name: ansible-role default role arguments
+  default: ''
+  description:
+    - This sets the default arguments to pass to the ``ansible-role`` binary if no ``-a`` is specified.
+  env: [{name: ANSIBLE_ROLE_ARGS}]
+  ini:
+  - {key: role_args, section: defaults}
 DEFAULT_ROLES_PATH:
   name: Roles path
   default: ~/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles
