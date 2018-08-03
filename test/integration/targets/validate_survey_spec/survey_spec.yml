@@ -5,7 +5,7 @@ spec:
     question_name: "survey3_question1"
     question_description: "The things I need from survey2 are..."
     variable: "survey3_multiselect_answer"
-    required: true
+    required: false
     default: "this paddle game"
     choices:
       - "this paddle game"
@@ -13,14 +13,14 @@ spec:
       - "this remote control"
       - "the chair"
   - type: "text"
-    question_name: "survey3_tidy_path"
-    question_description: "What path should we tidy?"
-    variable: "tidy_path"
+    question_name: "test1_survey_test1_var1"
+    question_description: "What is the value of test1_var1"
+    variable: "test1_var1"
     required: true
-    default: "/dev/null/not/a/path"
+    default: "THIS IS THE DEFAULT SURVEY ANSWER FOR test1_survey_test1_var1"
   - type: "list"
     question_name: "survey3_tidy_expected"
     question_description: "What files should be in tidy_path"
     variable: "tidy_expected"
-    required: true
+    required: false
     default: None
