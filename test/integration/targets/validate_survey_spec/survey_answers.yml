@@ -1,0 +1,12 @@
+survey3_float_answer: 37.37
+survey3_multiple_choice_answer: "old grail"
+survey3_multiselect_answer:
+  - "this paddle game"
+  - "the astray"
+  - "this remote control"
+  - "the chair"
+name: "testing.whatever"
+tidy_path: "/tmp/tidy-stuff"
+tidy_expected:
+  - "keep.txt"
+  - "foo.text"

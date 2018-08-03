@@ -30,7 +30,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def _play_ds(pattern, role_name, role_args_string, async_val, poll):
+def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, async_val, poll):
     # check_raw = module_name in ('command', 'win_command', 'shell', 'win_shell', 'script', 'raw')
     # role_args['name'] = role_name
     log.debug('role_name: %s', role_name)
@@ -39,6 +39,8 @@ def _play_ds(pattern, role_name, role_args_string, async_val, poll):
     role_args = parse_kv(role_args_string, check_raw=False)
     log.debug('role_args: %s', role_args)
 
+    log.debug('survey_spec: %s', survey_spec)
+    log.debug('survey_answers: %s', survey_answers)
     module_args = {}
     _vars = {}
 
@@ -60,8 +62,8 @@ def _play_ds(pattern, role_name, role_args_string, async_val, poll):
             'gather_facts': 'no',
             'tasks': [
                 {'action': {'module': 'validate_survey_spec',
-                            'survey_spec': {},
-                            'survey_answers': {}},
+                            'survey_spec': survey_spec,
+                            'survey_answers': survey_answers},
                  # 'vars': {'survey_spec': []},
                  'async_val': async_val,
                  'poll': poll},
@@ -132,8 +134,11 @@ class RoleCLI(CLI):
 
         loader, inventory, variable_manager = self._play_prereqs(self.options)
 
+        survey_spec = loader.load_from_file('survey_spec.yml')
+        survey_answers = loader.load_from_file('survey_answers.yml')
+
         play_ds = _play_ds(pattern, self.options.role_name, self.options.role_args_string,
-                           self.options.seconds, self.options.poll_interval)
+                           survey_spec, survey_answers, self.options.seconds, self.options.poll_interval)
 
         log.debug('play_ds: %s', pprint.pformat(play_ds))
         play = Play().load(play_ds, variable_manager=variable_manager, loader=loader)
