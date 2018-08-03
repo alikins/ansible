@@ -6,7 +6,6 @@ __metaclass__ = type
 
 import logging
 import os
-import pprint
 import sys
 
 from ansible import constants as C
@@ -96,7 +95,6 @@ class RoleCLI(CLI):
         )
 
         # common
-        self.parser.add_option('-F', '--foobar', dest='foobar', default=None, help='Just a placeholder option. Used to bar the foo and foo the bar')
         self.parser.add_option('-a', '--args', dest='role_args_string',
                                help="role arguments", default=C.DEFAULT_ROLE_ARGS)
         self.parser.add_option('-r', '--role', dest='role_name',
@@ -108,13 +106,11 @@ class RoleCLI(CLI):
         if not self.options.role_name:
             raise AnsibleOptionsError("-r/--role requires a role name")
 
+        display.verbosity = self.options.verbosity
         self.validate_conflicts(runas_opts=True, vault_opts=True, fork_opts=True)
 
     def run(self):
         super(RoleCLI, self).run()
-
-        if self.options.foobar:
-            display.display('%s%s%s' % ('foo', self.options.foobar, 'bar'))
 
         # only thing left should be host pattern
         pattern = to_text(self.args[0], errors='surrogate_or_strict')
@@ -161,7 +157,12 @@ class RoleCLI(CLI):
         playbook._entries.append(play)
         playbook._file_name = '__role_playbook__'
 
-        cb = self.callback or C.DEFAULT_STDOUT_CALLBACK or 'minimal'
+        # cb = self.callback or C.DEFAULT_STDOUT_CALLBACK or 'minimal'
+        cb = C.DEFAULT_STDOUT_CALLBACK
+        if self.callback:
+            cb = self.callback
+        # cb = 'dense'
+        log.debug('CB: %s self.callback: %s', cb, self.callback)
 
         # now create a task queue manager to execute the play
         self._tqm = None
