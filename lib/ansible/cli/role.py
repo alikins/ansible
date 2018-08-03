@@ -11,12 +11,10 @@ import sys
 
 from ansible import constants as C
 from ansible.cli import CLI
-from ansible.errors import AnsibleOptionsError, AnsibleError
+from ansible.errors import AnsibleOptionsError
 from ansible.module_utils._text import to_text
 from ansible.playbook import Playbook
 from ansible.playbook.play import Play
-from ansible.playbook.block import Block
-from ansible.playbook.task import Task
 from ansible.plugins.loader import get_all_plugin_loaders
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.parsing.splitter import parse_kv
@@ -29,8 +27,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# TODO: based on cli provided role_name, find the role on disk, and load the survey info from it.
+# TODO: method for applying the defaults in surveyspec + extra vars + cli role args
+# TODO: take extravars from cli (for combining with cli -a args and spec defaults)
 
-def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, async_val, poll):
+
+def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, extra_vars, async_val, poll):
     # check_raw = module_name in ('command', 'win_command', 'shell', 'win_shell', 'script', 'raw')
     # role_args['name'] = role_name
     log.debug('role_name: %s', role_name)
@@ -41,17 +43,19 @@ def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, 
 
     log.debug('survey_spec: %s', survey_spec)
     log.debug('survey_answers: %s', survey_answers)
+    log.debug('extra_vars: %s', extra_vars)
+
     module_args = {}
     _vars = {}
 
-    #if role_name:
+    # if role_name:
     #    module_args['name'] = role_name
-    module_args['vars'] = role_args
-    module_args.update(role_args)
+    # module_args['vars'] = role_args
+    # module_args.update(role_args)
 
     log.debug('role_args (with name): %s', role_args)
 
-    log.debug('module_args: %s', module_args)
+    # log.debug('module_args: %s', module_args)
 
     log.debug('_vars: %s', _vars)
 
@@ -59,8 +63,9 @@ def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, 
 
     # TODO: use varman here? probably at least merge_dict
     role_params = {}
-    role_params.update(role_args)
     role_params.update(survey_answers)
+    role_params.update(extra_vars)
+    role_params.update(role_args)
 
     return {'name': "Ansible Role",
             'hosts': pattern,
@@ -142,8 +147,10 @@ class RoleCLI(CLI):
         survey_spec = loader.load_from_file('survey_spec.yml')
         survey_answers = loader.load_from_file('survey_answers.yml')
 
+        extra_vars = variable_manager.extra_vars
+
         play_ds = _play_ds(pattern, self.options.role_name, self.options.role_args_string,
-                           survey_spec, survey_answers, self.options.seconds, self.options.poll_interval)
+                           survey_spec, survey_answers, extra_vars, self.options.seconds, self.options.poll_interval)
 
         log.debug('play_ds: %s', pprint.pformat(play_ds))
         play = Play().load(play_ds, variable_manager=variable_manager, loader=loader)
