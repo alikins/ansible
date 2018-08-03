@@ -11,7 +11,7 @@ import sys
 
 from ansible import constants as C
 from ansible.cli import CLI
-from ansible.errors import AnsibleOptionsError, AnsibleParserError
+from ansible.errors import AnsibleOptionsError, AnsibleParserError, AnsibleFileNotFound
 from ansible.module_utils._text import to_text
 from ansible.playbook import Playbook
 from ansible.playbook.helpers import load_list_of_roles
@@ -34,8 +34,6 @@ log = logging.getLogger(__name__)
 
 
 def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, extra_vars, async_val, poll):
-    # check_raw = module_name in ('command', 'win_command', 'shell', 'win_shell', 'script', 'raw')
-    # role_args['name'] = role_name
     log.debug('role_name: %s', role_name)
     # log.debug('role_args_string: %s', role_args_string)
 
@@ -135,36 +133,28 @@ class RoleCLI(CLI):
 
         survey_spec = {}
         survey_answers = {}
-#        survey_spec = loader.load_from_file('survey_spec.yml')
-#        survey_answers = loader.load_from_file('survey_answers.yml')
 
         try:
             role_includes = load_list_of_roles([self.options.role_name], play=None, variable_manager=variable_manager, loader=loader)
         except AssertionError as e:
+            log.exception(e)
             raise AnsibleParserError("A malformed role declaration was encountered.", obj=self._ds, orig_exc=e)
 
         for role_include in role_includes:
             log.debug('role_include: %s', role_include)
-            log.debug('dir(role_include): %s', dir(role_include))
 
-#        log.debug('role_include._survey: %s', role_include._survey)
-#        survey_spec = role_include._survey
-        survey_spec = loader.load_from_file(os.path.join(role_include.get_role_path(), 'meta/survey.yml'))
-        # log.debug('survey: %s', survey)
-        #survey_spec = survey['spec']
-        log.debug('survey_spec: %s', survey_spec)
+        try:
+            survey_spec = loader.load_from_file(os.path.join(role_include.get_role_path(), 'meta/survey.yml'))
+        except AnsibleFileNotFound as e:
+            # It is expected that a role may not have a meta/survey.yml
+            log.exception(e)
 
         extra_vars = variable_manager.extra_vars
 
         play_ds = _play_ds(pattern, self.options.role_name, self.options.role_args_string,
                            survey_spec, survey_answers, extra_vars, self.options.seconds, self.options.poll_interval)
 
-        # log.debug('play_ds: %s', pprint.pformat(play_ds))
         play = Play().load(play_ds, variable_manager=variable_manager, loader=loader)
-
-        # task = Task()
-        # log.debug('task: %s', task)
-        # log.debug('play.tasks: %s', play.tasks)
 
         # used in start callback
         playbook = Playbook(loader)
