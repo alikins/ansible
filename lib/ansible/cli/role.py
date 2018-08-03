@@ -59,6 +59,12 @@ def _play_ds(pattern, role_name, role_args_string, async_val, poll):
             'hosts': pattern,
             'gather_facts': 'no',
             'tasks': [
+                {'action': {'module': 'validate_survey_spec',
+                            'survey_spec': {},
+                            'survey_answers': {}},
+                 # 'vars': {'survey_spec': []},
+                 'async_val': async_val,
+                 'poll': poll},
                 {'action': {'module': 'include_role',
                             'name': role_name,
                             },
