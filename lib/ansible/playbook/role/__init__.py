@@ -31,7 +31,6 @@ from ansible.playbook.become import Become
 from ansible.playbook.conditional import Conditional
 from ansible.playbook.helpers import load_list_of_blocks
 from ansible.playbook.role.metadata import RoleMetadata
-from ansible.playbook.role.survey import Survey
 from ansible.playbook.taggable import Taggable
 from ansible.plugins.loader import get_all_plugin_loaders
 from ansible.utils.vars import combine_vars
@@ -220,21 +219,11 @@ class Role(Base, Become, Conditional, Taggable):
 
         # load the role's other files, if they exist
         metadata = self._load_role_yaml('meta')
-        import pprint
-        log.debug('metadata: %s', pprint.pformat(metadata))
         if metadata:
             self._metadata = RoleMetadata.load(metadata, owner=self, variable_manager=self._variable_manager, loader=self._loader)
             self._dependencies = self._load_dependencies()
         else:
             self._metadata = RoleMetadata()
-
-        survey_ds = self._load_role_yaml('meta', main='survey')
-        log.debug('survey_ds: %s', survey_ds)
-
-        self._survey = Survey()
-        if survey_ds:
-            self._survey.load_data(ds=survey_ds, variable_manager=self._variable_manager, loader=self._loader)
-            log.debug('self._survey: %s', self._survey)
 
         task_data = self._load_role_yaml('tasks', main=self._from_files.get('tasks'))
         if task_data:
