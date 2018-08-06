@@ -12,6 +12,8 @@ import pytest
 
 from ansible.cli.role import RoleCLI
 
+from ansible.errors import AnsibleOptionsError
+
 log = logging.getLogger(__name__)
 
 
@@ -29,15 +31,16 @@ def test_role_cli_empty_args():
 def test_parse_empty_args():
     args = []
     cli = RoleCLI(args=args)
-    cli.parse()
+    with pytest.raises(AnsibleOptionsError):
+        cli.parse()
 
     log.debug('cli.parser: %s', cli.parser)
 
     assert cli.parser is not None
 
 
-def test_parse_foobar():
-    args = ['ansible-role', '--foobar', 'blip']
+def test_parse():
+    args = ['ansible-role', 'localhost', '-r', 'somenamespace.somerepo', '-a', 'some_arg=some_value']
     cli = RoleCLI(args=args)
     cli.parse()
 
@@ -46,11 +49,16 @@ def test_parse_foobar():
     assert cli.parser is not None
 
     log.debug('cli.options: %s', cli.options)
-    log.debug('cli.options.foobar: %s', cli.options.foobar)
+    log.debug('cli.options.role_name: %s', cli.options.role_name)
+    log.debug('cli.options.role_args_string: %s', cli.options.role_args_string)
+    assert cli.options.role_args_string == 'some_arg=some_value'
 
 
-def test_run_foobar():
-    args = ['ansible-role', '--foobar', 'blip']
+def test_run(mocker):
+
+    mocker.patch('ansible.playbook.role.include.RoleInclude._load_role_path',
+                 return_value=('somenamespace.somerepo', '/dev/null/not/a/path'))
+    args = ['ansible-role', 'localhost', '-r', 'somenamespace.somerepo']
     cli = RoleCLI(args=args)
     cli.parse()
 
