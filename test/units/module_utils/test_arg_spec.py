@@ -72,6 +72,26 @@ def test_complex_argspec1(complex_argspec, arg_spec_modifiers):
     log.debug('argspec: %s', argspec)
     log.debug('argspec._as_dict: %s', pf(argspec._as_dict()))
 
-    res = argspec.do_stuff(**arg_spec_modifiers)
+    res = argspec.validate(**arg_spec_modifiers)
 
     log.debug('res: %s', res)
+
+
+def test_complex_argspec_mutex_conflict(complex_argspec, arg_spec_modifiers):
+    log.debug('complex_argspec: %s', complex_argspec)
+    log.debug('arg_spec_modifiers: %s', arg_spec_modifiers)
+
+    kwargs = {}
+    kwargs.update(complex_argspec)
+    params = kwargs.pop('params')
+    params.update({'bar': 'Bar_value', 'bam': 'Bam_value'})
+    kwargs['params'] = params
+    argspec = arg_spec.ArgSpec(**kwargs)
+    log.debug('argspec: %s', argspec)
+    log.debug('argspec._as_dict: %s', pf(argspec._as_dict()))
+
+    with pytest.raises(arg_spec.AnsibleArgSpecError,
+                       match='parameters are mutually exclusive: bar, bam') as exc_info:
+        argspec.validate(**arg_spec_modifiers)
+
+    log.debug('exc_info: %s', exc_info)
