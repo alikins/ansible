@@ -109,6 +109,10 @@ class AnsibleArgSpecError(Exception):
     pass
 
 
+class AnsibleArgSpecMutuallyExclusiveError(AnsibleArgSpecError):
+    pass
+
+
 def env_fallback(*args, **kwargs):
     ''' Load value from environment '''
     for arg in args:
@@ -176,7 +180,7 @@ class ArgSpec(object):
         # ???
         # check_invalid_arguments - deprecated already... shrug
 
-    def do_stuff(self,
+    def validate(self,
                  check_invalid_arguments=None,
                  bypass_checks=False,
                  mutually_exclusive=None,
@@ -351,7 +355,7 @@ class ArgSpec(object):
                 msg = "parameters are mutually exclusive: %s" % ', '.join(check)
                 if self._options_context:
                     msg += " found in %s" % " -> ".join(self._options_context)
-                raise AnsibleArgSpecError(msg)
+                raise AnsibleArgSpecMutuallyExclusiveError(msg)
 
     def _check_required_one_of(self, spec, param=None):
         if spec is None:
