@@ -69,3 +69,17 @@ class ActionModule(ActionBase):
         result['msg'] = 'The survey validation passed'
         result['valid_survey_answers'] = survey_answers
         return result
+
+    def validate_args(self, spec_elements, answers):
+        '''Validate the role arg spec and raise AnsibleModuleError if it fails
+
+        Return: void?
+        '''
+        # build arg spec
+        # dump it as ansiballz/AnsibleModuleish arg format
+        # monkeypath module_utils.basic _ANSIBLE_ARGS, AnsibleModule.fail_json (???)
+        # build faux-ish AnsibleModule
+        # monkeypath AnsibleModule
+        #  call AnsibleModule(**spec) to do it's arg validation and fail_json
+        # raise from fail_json if called
+        pass
