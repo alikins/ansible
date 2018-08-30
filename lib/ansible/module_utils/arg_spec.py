@@ -604,6 +604,66 @@ class ArgSpec(object):
         except ValueError:
             raise TypeError('%s cannot be converted to a Bit value' % type(value))
 
+    def _handle_options(self, argument_spec=None, params=None):
+        ''' deal with options to create sub spec '''
+        if argument_spec is None:
+            argument_spec = self.argument_spec
+        if params is None:
+            params = self.params
+
+        for (k, v) in argument_spec.items():
+            wanted = v.get('type', None)
+            if wanted == 'dict' or (wanted == 'list' and v.get('elements', '') == 'dict'):
+                spec = v.get('options', None)
+                if v.get('apply_defaults', False):
+                    if spec is not None:
+                        if params.get(k) is None:
+                            params[k] = {}
+                    else:
+                        continue
+                elif spec is None or k not in params or params[k] is None:
+                    continue
+
+                self._options_context.append(k)
+
+                if isinstance(params[k], dict):
+                    elements = [params[k]]
+                else:
+                    elements = params[k]
+
+                for param in elements:
+                    if not isinstance(param, dict):
+                        self.fail_json(msg="value of %s must be of type dict or list of dict" % k)
+
+                    self._set_fallbacks(spec, param)
+                    options_aliases = self._handle_aliases(spec, param)
+
+                    self._handle_no_log_values(spec, param)
+                    options_legal_inputs = list(spec.keys()) + list(options_aliases.keys())
+
+                    self._check_arguments(self.check_invalid_arguments, spec, param, options_legal_inputs)
+
+                    # check exclusive early
+                    if not self.bypass_checks:
+                        self._check_mutually_exclusive(v.get('mutually_exclusive', None), param)
+
+                    self._set_defaults(pre=True, spec=spec, param=param)
+
+                    if not self.bypass_checks:
+                        self._check_required_arguments(spec, param)
+                        self._check_argument_types(spec, param)
+                        self._check_argument_values(spec, param)
+
+                        self._check_required_together(v.get('required_together', None), param)
+                        self._check_required_one_of(v.get('required_one_of', None), param)
+                        self._check_required_if(v.get('required_if', None), param)
+
+                    self._set_defaults(pre=False, spec=spec, param=param)
+
+                    # handle multi level options (sub argspec)
+                    self._handle_options(spec, param)
+                self._options_context.pop()
+
     def _check_argument_types(self, spec=None, param=None):
         ''' ensure all arguments have the requested type '''
 

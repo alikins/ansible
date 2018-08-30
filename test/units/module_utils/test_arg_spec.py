@@ -4,12 +4,15 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 import logging
+import pprint
 
 import pytest
 
 from ansible.module_utils import arg_spec
 
 log = logging.getLogger(__name__)
+
+pf = pprint.pformat
 
 
 # FIXME: copied from test_argument_spec
@@ -34,7 +37,7 @@ def complex_argspec():
         no_log=True,
         add_file_common_args=True,
         # supports_check_mode=True,
-        params={},
+        params={'foo': 'Fu'},
     )
     return kwargs
 
@@ -58,6 +61,7 @@ def test_init():
     argspec = arg_spec.ArgSpec(params=params, argument_spec=argument_spec)
 
     log.debug('argspec: %s', argspec)
+    log.debug('argspec._as_dict: %s', pf(argspec._as_dict()))
 
 
 def test_complex_argspec1(complex_argspec, arg_spec_modifiers):
@@ -66,6 +70,7 @@ def test_complex_argspec1(complex_argspec, arg_spec_modifiers):
 
     argspec = arg_spec.ArgSpec(**complex_argspec)
     log.debug('argspec: %s', argspec)
+    log.debug('argspec._as_dict: %s', pf(argspec._as_dict()))
 
     res = argspec.do_stuff(**arg_spec_modifiers)
 
