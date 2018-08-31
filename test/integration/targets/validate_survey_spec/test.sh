@@ -1,4 +1,5 @@
 #!/bin/bash
 
-ANSIBLE_ROLES_PATH=../ ansible-playbook -i ../../inventory -e @../../integration_config.yml -vvv test.yml
+ANSIBLE_PLAYBOOK=ansible-playbook-alog
+ANSIBLE_ROLES_PATH=../ "$ANSIBLE_PLAYBOOK" -i ../../inventory -e @../../integration_config.yml -vvv test.yml
 

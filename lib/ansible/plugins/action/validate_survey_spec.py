@@ -5,11 +5,14 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import logging
-log = logging.getLogger(__name__)
+import pprint
 
 from ansible.errors import AnsibleError
 from ansible.plugins.action import ActionBase
 from ansible.playbook.role import survey
+
+log = logging.getLogger(__name__)
+pf = pprint.pformat
 
 
 class ActionModule(ActionBase):
@@ -23,8 +26,8 @@ class ActionModule(ActionBase):
 
         :arg tmp: Deprecated. Do not use.
         :arg dict task_vars: A dict of task variables.
-            Valid args include 'survey_spec', 'survey_answers'
-        :return: An action result dict, including a 'survey_errors' key with a
+            Valid args include 'argument_spec', 'supplied_arguments'
+        :return: An action result dict, including a 'argument_errors' key with a
             list of validation errors found.
         '''
         if task_vars is None:
@@ -33,41 +36,46 @@ class ActionModule(ActionBase):
         result = super(ActionModule, self).run(tmp, task_vars)
         del tmp  # tmp no longer has any effect
 
-        if 'survey_spec' not in self._task.args:
-            raise AnsibleError('"survey_spec" arg is required in args')
+        if 'argument_spec' not in self._task.args:
+            raise AnsibleError('"argument_spec" arg is required in args')
 
-        survey_spec = self._task.args.get('survey_spec')
-        log.debug('survey_spec: %s', survey_spec)
+        argument_spec = self._task.args.get('argument_spec')
+        log.debug('argument_spec: %s', argument_spec)
 
-        survey_spec_elements = survey_spec.get('spec', [])
-        log.debug('survey_spec_elements: %s', survey_spec_elements)
+        argument_spec_elements = argument_spec.get('spec', [])
+        log.debug('argument_spec_elements: %s', argument_spec_elements)
 
+        log.debug('self._task.args: %s', pf(self._task.args))
         survey_answers = self._task.args.get('survey_answers', {})
+        provided_arguments = self._task.args.get('provided_arguments', {})
 
+        log.debug('provided_arguments: %s', provided_arguments)
         log.debug('survey_answers: %s', survey_answers)
 
-        if not isinstance(survey_spec, dict):
-            raise AnsibleError('Incorrect type for survey_spec, expected dict and got %s' % type(survey_spec))
+        if not isinstance(argument_spec, dict):
+            raise AnsibleError('Incorrect type for argument_spec, expected dict and got %s' % type(argument_spec))
 
-        if not isinstance(survey_answers, dict):
-            raise AnsibleError('Incorrect type for survey_data, expected dict and got %s' % type(survey_answers))
+        if not isinstance(provided_arguments, dict):
+            raise AnsibleError('Incorrect type for survey_data, expected dict and got %s' % type(provided_arguments))
 
-        survey_errors = []
-        for survey_item in survey_spec_elements:
-            res = survey._survey_element_validation(survey_item, survey_answers, validate_required=True)
-            survey_errors.extend(res)
+        argument_errors = []
+        for argument_spec_item in argument_spec_elements:
+            res = survey._survey_element_validation(argument_spec_item,
+                                                    provided_arguments,
+                                                    validate_required=True)
+            argument_errors.extend(res)
 
         result['_ansible_verbose_always'] = True
-        if survey_errors:
+        if argument_errors:
             result['failed'] = True
-            result['survey_errors'] = survey_errors
+            result['argument_errors'] = argument_errors
 
             result['msg'] = 'There were validation errors in the survey'
             return result
 
         result['changed'] = False
         result['msg'] = 'The survey validation passed'
-        result['valid_survey_answers'] = survey_answers
+        result['valid_supplied_arguments'] = provided_arguments
         return result
 
     def validate_args(self, spec_elements, answers):
