@@ -25,6 +25,61 @@ survey3_spec:
       variable: "tidy_expected"
       required: true
       default: None
+argument_spec_1:
+  argument_spec: {}
+  no_log: false
+  check_invalid_arguments: true
+  mutually_exclusive: []
+  required_together: []
+  required_one_of: []
+  add_file_common_args: false
+  supports_check_mode: false
+  required_if: []
+provided_arguments_1: {}
+bad_provided_arguments_1:
+  # some_unknown_arg: [1, 2, 3]
+  required_arg: 'some_required_value'
+  int_arg: 37
+  bool_arg: true
+  optional_arg: 345345.34
+  no_log_arg: SHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+  choices_arg: cake
+  some_unknown_arg: [1, 2, 3]
+
+argument_spec_network_engine:
+  argument_spec:
+    required_arg:
+      required: true
+    int_arg:
+      type: int
+    bool_arg:
+      type: bool
+    default_arg:
+      default: test
+    no_log_arg:
+      no_log: true
+      required: false
+    optional_arg:
+    choices_arg:
+      choices:
+        - evil
+        - pie
+      required: false
+
+  mutually_exclusive:
+    - ['int_arg', 'missing_arg']
+  required_together:
+    - ['default_arg', 'optional_arg']
+
+provided_arguments_network_engine:
+  required_arg: 'some_required_value'
+  int_arg: 37
+  bool_arg: true
+
+required_arg: 'some_required_arg_value'
+int_arg: 37
+bool_arg: true
+
 survey3_answers:
   survey3_float_answer: 37.37
   survey3_multiple_choice_answer: "old grail"
@@ -60,3 +115,9 @@ role_name: "bcoca.tidy"
 role_host: localhost
 role_survey_spec: "{{ survey3_spec }}"
 role_survey_answers: "{{ survey3_answers }}"
+# role_argument_spec: "{{ argument_spec_1 }}"
+role_argument_spec: "{{ argument_spec_network_engine }}"
+# role_provided_arguments: "{{ provided_arguments_1 }}"
+role_provided_arguments: "{{ provided_arguments_network_engine }}"
+role_provided_arguments_bad:
+
