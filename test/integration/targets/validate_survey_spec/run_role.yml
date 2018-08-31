@@ -7,10 +7,13 @@
       debug:
         var: vars
 
+    - name: debug role_survey_answers
+      debug:
+        var: role_survey_answers
     - name: Validate the role survey answers
       validate_survey_spec:
-        survey_spec: "{{ role_survey_spec }}"
-        survey_answers: "{{ role_survey_answers }}"
+        argument_spec: "{{ role_survey_spec }}"
+        provided_arguments: "{{ role_survey_answers }}"
       register: role_survey_validation_results
 
     - name: debug role_survey_validation_results

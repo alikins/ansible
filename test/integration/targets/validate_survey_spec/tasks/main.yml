@@ -1,8 +1,8 @@
 ---
 - name: validate some survey specs
   validate_survey_spec:
-    survey_spec: "{{ survey_spec1 }}"
-    survey_answers:
+    argument_spec: "{{ survey_spec1 }}"
+    provided_arguments:
       survey1_int_answer: 7
       survey1_question2_text_answer: "blippy"
   register: survey_spec1_results
@@ -13,8 +13,8 @@
 
 - name: validate some survey specs with wrong types
   validate_survey_spec:
-    survey_spec: "{{ survey_spec1 }}"
-    survey_answers:
+    argument_spec: "{{ survey_spec1 }}"
+    provided_arguments:
       survey1_int_answer: "not_an_integer_but_a_string"
       survey1_question2_text_answer: "blippy"
   register: survey_spec1_results
