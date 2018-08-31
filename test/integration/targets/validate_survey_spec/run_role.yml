@@ -3,22 +3,37 @@
   hosts: "{{ role_host }}"
   gather_facts: false
   tasks:
-    - name: debug vars
-      debug:
-        var: vars
+    # - name: debug vars
+    #   debug:
+    #     var: vars
 
-    - name: debug role_survey_answers
+    - name: debug role_provided_arguments
       debug:
-        var: role_survey_answers
-    - name: Validate the role survey answers
+        var: role_provided_arguments
+
+    - name: Validate the role provided arguments
       validate_survey_spec:
-        argument_spec: "{{ role_survey_spec }}"
-        provided_arguments: "{{ role_survey_answers }}"
+        argument_spec: "{{ role_argument_spec }}"
+        provided_arguments: "{{ role_provided_arguments }}"
       register: role_survey_validation_results
 
     - name: debug role_survey_validation_results
       debug:
         var: role_survey_validation_results
+
+    - name: debug  bad_provided_arguments_1
+      debug:
+        var: bad_provided_arguments_1
+
+    - name: Validate the role provided arguments
+      validate_survey_spec:
+        argument_spec: "{{ role_argument_spec }}"
+        provided_arguments: "{{ bad_provided_arguments_1 }}"
+      register: role_spec_validation_results_bad
+
+    - name: debug role_spec_validation_results_bad
+      debug:
+        var: role_spec_validation_results_bad
 
     - name: role_survey_answers
       debug:
@@ -26,7 +41,7 @@
 
     - name: creating import_role args
       set_fact:
-        import_role_args: "{{ role_survey_answers|combine({'name': role_name }) }}"
+        import_role_args: "{{ role_provided_arguments|combine({'name': role_name }) }}"
 
     - debug:
         var: import_role_args
