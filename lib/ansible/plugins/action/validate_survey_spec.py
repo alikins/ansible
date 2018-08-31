@@ -36,8 +36,6 @@ class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
         msg = kwargs.pop('msg', 'Unknown arg spec validation error')
         log.debug('Arg spec validation caused fail_json() to be called')
         log.error('Arg spec validation error: %s', msg)
-        # log.debug('fail_json args: %s', repr(args))
-        # log.debug('fail_json kwargs: %s', repr(kwargs))
         self.arg_validation_errors.append(msg)
 
     def check_for_errors(self):
@@ -50,6 +48,7 @@ class ActionModule(ActionBase):
 
     TRANSFERS_FILES = False
 
+    # WARNING: modifies argument_spec
     def build_args(self, argument_spec, task_vars):
         args = {}
         for key, attrs in iteritems(argument_spec):
@@ -90,19 +89,13 @@ class ActionModule(ActionBase):
         if 'argument_spec' not in self._task.args:
             raise AnsibleError('"argument_spec" arg is required in args')
 
-        log.debug('self._task.args: %s', pf(self._task.args))
-
         # get the task var called argument_spec
         argument_spec_data = self._task.args.get('argument_spec')
-        log.debug('argument_spec_data: %s', argument_spec_data)
 
         # then get the 'argument_spec' item from the dict in the argument_spec task var
         argument_spec = argument_spec_data.get('argument_spec', [])
-        log.debug('argument_spec: %s', argument_spec)
 
         provided_arguments = self._task.args.get('provided_arguments', {})
-
-        log.debug('provided_arguments: %s', provided_arguments)
 
         if not isinstance(argument_spec_data, dict):
             raise AnsibleError('Incorrect type for argument_spec, expected dict and got %s' % type(argument_spec_data))
@@ -112,12 +105,11 @@ class ActionModule(ActionBase):
 
         module_params = provided_arguments
 
-        log.debug('argument_spec_data: %s', pf(argument_spec_data))
-        log.debug('argument_spec: %s', pf(argument_spec))
+        # TODO: sep handling None/default values from build_args
+        # TODO: drop build_args
+        self.build_args(argument_spec, task_vars)
 
-        built_args = self.build_args(argument_spec, task_vars)
-
-        log.debug('built_args: %s', pf(built_args))
+#         log.debug('built_args: %s', pf(built_args))
 
         module_args = {}
         module_args['argument_spec'] = argument_spec
