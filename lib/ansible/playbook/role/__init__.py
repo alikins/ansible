@@ -22,6 +22,7 @@ __metaclass__ = type
 import collections
 import os
 import logging
+import pprint
 
 from ansible.errors import AnsibleError, AnsibleParserError, AnsibleAssertionError
 from ansible.module_utils.six import iteritems, binary_type, text_type
@@ -36,6 +37,7 @@ from ansible.plugins.loader import get_all_plugin_loaders
 from ansible.utils.vars import combine_vars
 
 log = logging.getLogger(__name__)
+pf = pprint.pformat
 
 __all__ = ['Role', 'hash_params']
 
@@ -233,14 +235,44 @@ class Role(Base, Become, Conditional, Taggable):
 
         self.log.debug('loading role "meta/argument_specs"')
 
-        argument_specs = self._load_role_yaml('meta', main='argument_specs')
+        # The argument_specs file will contain a dict, and can have multiple keys,
+        # included a 'default' item. But set one up explicitly if the yaml doesnt provide
+        # one. Could also do things like 'pick the first one' or try to match role name or
+        # 'from_tasks' filename to argument_spec keys, etc
+        argument_specs = {'default': {}}
+        try:
+            argument_specs = self._load_role_yaml('meta', main='argument_specs')
+        except AnsibleParserError as e:
+            log.warning(e)
 
-        import pprint
         self.log.debug('argument_specs from _load_role_yaml: %s', pprint.pformat(argument_specs))
+
         # TODO: need a playbook.base.Base derived object here?
+        # TODO: do we want a Role (or Task or Base) object to have a arg_spec attribute?
+        #       Seems like it would be handy for introspection and error reporting...
         self._argument_specs = argument_specs
 
         task_data = self._load_role_yaml('tasks', main=self._from_files.get('tasks'))
+
+        log.debug('task_data: %s', pf(task_data))
+
+        argument_spec = argument_specs.get('default', None)
+        if argument_spec:
+            arg_spec_validation_task = self._create_arg_spec_validation_task_data(argument_spec, role_params=self._role_params)
+
+            self.log.debug('arg_spec_validation_task: %s', arg_spec_validation_task)
+
+            # Prepend our validate_arg_spec action to happen before any tasks provided by the role.
+            # 'any tasks' can and does include 0 or None tasks, in which cases we create a list of tasks and add our
+            # validate_arg_spec task
+
+            if not task_data:
+                task_data = []
+
+            task_data.insert(0, arg_spec_validation_task)
+
+            self.log.debug('task_data(with arg_spec validation): %s', pf(task_data))
+
         if task_data:
             try:
                 self._task_blocks = load_list_of_blocks(task_data, play=self._play, role=self, loader=self._loader, variable_manager=self._variable_manager)
@@ -277,7 +309,7 @@ class Role(Base, Become, Conditional, Taggable):
             found_files = self._loader.find_vars_files(file_path, _main, extensions, allow_dir)
             if found_files:
                 data = {}
-                self.log.debug('found_files: %s', found_files)
+                # self.log.debug('found_files: %s', found_files)
                 for found in found_files:
                     new_data = self._loader.load_from_file(found)
                     if new_data and allow_dir:
@@ -302,6 +334,16 @@ class Role(Base, Become, Conditional, Taggable):
                 deps.append(r)
 
         return deps
+
+    def _create_arg_spec_validation_task_data(self, argument_spec, role_params):
+        arg_spec_task = {'action': {'module': 'validate_arg_spec',
+                                    'argument_spec': argument_spec,
+                                    'provided_arguments': role_params},
+                         # 'vars': {'argument_spec': []},
+                         # 'async_val': async_val,
+                         # 'poll': poll},
+                         }
+        return arg_spec_task
 
     # other functions
 
@@ -431,7 +473,7 @@ class Role(Base, Become, Conditional, Taggable):
         with each task, so tasks know by which route they were found, and
         can correctly take their parent's tags/conditionals into account.
         '''
-
+        self.log.debug('compile play: %s', play)
         block_list = []
 
         # update the dependency chain here
@@ -440,6 +482,7 @@ class Role(Base, Become, Conditional, Taggable):
         new_dep_chain = dep_chain + [self]
 
         deps = self.get_direct_dependencies()
+        self.log.debug('deps: %s', deps)
         for dep in deps:
             dep_blocks = dep.compile(play=play, dep_chain=new_dep_chain)
             block_list.extend(dep_blocks)
