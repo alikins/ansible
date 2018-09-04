@@ -2,7 +2,7 @@ default:
   name: "test1_arg_spec"
   description: "survey3 descriptions"
   argument_spec:
-    survey2_multiselect_answer:
+    test1_choices:
       required: false
       choices:
         - "this paddle game"
@@ -29,6 +29,7 @@ default:
       required: false
       default: "This IS THE DEFAULT fake band name / test1_var2 answer from survey_spec.yml"
       type: "str"
+
 
 simple_preset:
   name: "test1_simple_preset_arg_spec"

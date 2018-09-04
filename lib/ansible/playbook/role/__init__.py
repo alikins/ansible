@@ -258,7 +258,8 @@ class Role(Base, Become, Conditional, Taggable):
 
         argument_spec = argument_specs.get('default', None)
         if argument_spec:
-            arg_spec_validation_task = self._create_arg_spec_validation_task_data(argument_spec, role_params=self._role_params)
+            arg_spec_validation_task = self._create_arg_spec_validation_task_data(argument_spec,
+                                                                                  role_params=self._role_params)
 
             self.log.debug('arg_spec_validation_task: %s', arg_spec_validation_task)
 
@@ -291,8 +292,6 @@ class Role(Base, Become, Conditional, Taggable):
 
     def _load_role_yaml(self, subdir, main=None, allow_dir=False):
         file_path = os.path.join(self._role_path, subdir)
-
-        self.log.debug('load_role_yaml subdir=%s file_path=%s', subdir, file_path)
 
         if self._loader.path_exists(file_path) and self._loader.is_directory(file_path):
             # Valid extensions and ordering for roles is hard-coded to maintain
