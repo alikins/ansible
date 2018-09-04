@@ -18,7 +18,9 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
+import pprint
 
 from ansible import constants as C
 from ansible.errors import AnsibleParserError, AnsibleUndefinedVariable, AnsibleFileNotFound, AnsibleAssertionError
@@ -32,6 +34,9 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
+pf = pprint.pformat
+
 
 def load_list_of_blocks(ds, play, parent_block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None):
     '''
@@ -42,6 +47,9 @@ def load_list_of_blocks(ds, play, parent_block=None, role=None, task_include=Non
 
     # we import here to prevent a circular dependency with imports
     from ansible.playbook.block import Block
+
+    log.debug('play: %s', play)
+    log.debug('block ds: %s', pf(ds))
 
     if not isinstance(ds, (list, type(None))):
         raise AnsibleAssertionError('%s should be a list or None but is %s' % (ds, type(ds)))
@@ -98,6 +106,9 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
     from ansible.playbook.role_include import IncludeRole
     from ansible.playbook.handler_task_include import HandlerTaskInclude
     from ansible.template import Templar
+
+    log.debug('play: %s', play)
+    log.debug('block ds: %s', pf(ds))
 
     if not isinstance(ds, list):
         raise AnsibleAssertionError('The ds (%s) should be a list but was a %s' % (ds, type(ds)))
@@ -318,6 +329,8 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                     task_list.append(t)
 
             elif action in ('include_role', 'import_role'):
+                log.debug('Creating an IncludeRole for role=%s', role)
+
                 ir = IncludeRole.load(
                     task_ds,
                     block=block,
@@ -379,6 +392,8 @@ def load_list_of_roles(ds, play, current_role_path=None, variable_manager=None, 
 
     # we import here to prevent a circular dependency with imports
     from ansible.playbook.role.include import RoleInclude
+
+    log.debug('play=%s, current_role_path=%s', play, current_role_path)
 
     if not isinstance(ds, list):
         raise AnsibleAssertionError('ds (%s) should be a list but was a %s' % (ds, type(ds)))
