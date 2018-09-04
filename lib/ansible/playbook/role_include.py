@@ -19,7 +19,9 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 from os.path import basename
+
 
 from ansible.errors import AnsibleParserError
 from ansible.playbook.attribute import FieldAttribute
@@ -35,6 +37,8 @@ except ImportError:
     display = Display()
 
 __all__ = ['IncludeRole']
+
+log = logging.getLogger(__name__)
 
 
 class IncludeRole(TaskInclude):
@@ -66,11 +70,16 @@ class IncludeRole(TaskInclude):
         self._role_name = None
         self._role_path = None
 
+        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
+
+        self.log.debug('init role=%s', role)
+
     def get_name(self):
         ''' return the name of the task '''
         return self.name or "%s : %s" % (self.action, self._role_name)
 
     def get_block_list(self, play=None, variable_manager=None, loader=None):
+        self.log.debug('get_block_list self._role_name: %s', self._role_name)
 
         # only need play passed in when dynamic
         if play is None:
@@ -115,6 +124,7 @@ class IncludeRole(TaskInclude):
 
     @staticmethod
     def load(data, block=None, role=None, task_include=None, variable_manager=None, loader=None):
+        log.debug('IncludeRole.load, role=%s', role)
 
         ir = IncludeRole(block, role, task_include=task_include).load_data(data, variable_manager=variable_manager, loader=loader)
 

@@ -50,8 +50,8 @@ class ActionModule(ActionBase):
 
     # WARNING: modifies argument_spec
     def build_args(self, argument_spec, task_vars):
-        log.debug('argument_spec: %s', pf(argument_spec))
-        log.debug('task_vars: %s', pf(task_vars))
+        # log.debug('argument_spec: %s', pf(argument_spec))
+        # log.debug('task_vars: %s', pf(task_vars))
 
         args = {}
         for key, attrs in iteritems(argument_spec):
@@ -89,11 +89,11 @@ class ActionModule(ActionBase):
         result = super(ActionModule, self).run(tmp, task_vars)
         del tmp  # tmp no longer has any effect
 
-        log.debug('self._task.args: %s', pprint.pformat(self._task.args))
+        # log.debug('self._task.args: %s', pprint.pformat(self._task.args))
         if 'argument_spec' not in self._task.args:
             raise AnsibleError('"argument_spec" arg is required in args: %s' % self._task.args)
 
-        log.debug('argument_spec: %s', pf(self._task.args['argument_spec']))
+        # log.debug('argument_spec: %s', pf(self._task.args['argument_spec']))
 
         # get the task var called argument_spec
         argument_spec_data = self._task.args.get('argument_spec')
@@ -121,7 +121,7 @@ class ActionModule(ActionBase):
         module_args['argument_spec'] = argument_spec
         module_args['params'] = module_params
 
-        log.debug('module_args: %s', pf(module_args))
+        log.debug('validate_arg_spec called with module_args: %s', pf(module_args))
 
         try:
             validating_module = ArgSpecValidatingAnsibleModule(**module_args)

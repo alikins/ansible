@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 
 from ansible import constants as C
@@ -39,6 +40,7 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+log = logging.getLogger(__name__)
 
 __all__ = ['RoleDefinition']
 
@@ -58,6 +60,9 @@ class RoleDefinition(Base, Become, Conditional, Taggable):
         self._role_path = None
         self._role_basedir = role_basedir
         self._role_params = dict()
+
+        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
+        self.log.debug('init play=%s', play)
 
     # def __repr__(self):
     #     return 'ROLEDEF: ' + self._attributes.get('role', '<no name set>')
