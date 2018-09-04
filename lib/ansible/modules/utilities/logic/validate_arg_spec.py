@@ -15,10 +15,10 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 
 DOCUMENTATION = '''
 ---
-module: validate_survey_spec
-short_description: Validate Survey Specs
+module: validate_arg_spec
+short_description: Validate Arg Specs
 description:
-     - This module validate survey specs
+     - This module validate args specs
 version_added: "2.7"
 options:
   survey_spec:
