@@ -7,10 +7,12 @@ __metaclass__ = type
 import logging
 import os
 import sys
+import pprint
 
 from ansible import constants as C
 from ansible.cli import CLI
-from ansible.errors import AnsibleOptionsError, AnsibleParserError, AnsibleFileNotFound
+from ansible.errors import AnsibleOptionsError, AnsibleParserError, AnsibleFileNotFound, \
+    AnsibleError
 from ansible.module_utils._text import to_text
 from ansible.playbook import Playbook
 from ansible.playbook.helpers import load_list_of_roles
@@ -26,20 +28,21 @@ except ImportError:
     display = Display()
 
 log = logging.getLogger(__name__)
+pf = pprint.pformat
 
 # TODO: based on cli provided role_name, find the role on disk, and load the survey info from it.
 # TODO: method for applying the defaults in surveyspec + extra vars + cli role args
 # TODO: take extravars from cli (for combining with cli -a args and spec defaults)
 
 
-def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, extra_vars, async_val, poll):
+def _play_ds(pattern, role_name, role_args_string, argument_spec, survey_answers, extra_vars, async_val, poll):
     log.debug('role_name: %s', role_name)
     # log.debug('role_args_string: %s', role_args_string)
 
     role_args = parse_kv(role_args_string, check_raw=False)
     log.debug('role_args: %s', role_args)
 
-    log.debug('survey_spec: %s', survey_spec)
+    log.debug('arguement_spec: %s', argument_spec)
     # log.debug('survey_answers: %s', survey_answers)
     # log.debug('extra_vars: %s', extra_vars)
 
@@ -50,17 +53,23 @@ def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, 
     # TODO: use varman here? probably at least merge_dict
     role_params = {}
     role_params.update(survey_answers)
-    role_params.update(extra_vars)
+    for extra_var in extra_vars:
+        if extra_var in argument_spec:
+            role_params[extra_var] = extra_vars[extra_var]
+    # role_params.update(extra_vars)
+
     role_params.update(role_args)
+
+    log.debug('role_params: %s', pf(role_params))
 
     return {'name': "Ansible Role",
             'hosts': pattern,
             'gather_facts': 'no',
             'tasks': [
                 {'action': {'module': 'validate_arg_spec',
-                            'survey_spec': survey_spec,
-                            'survey_answers': role_params},
-                 # 'vars': {'survey_spec': []},
+                            'argument_spec': argument_spec,
+                            'provided_arguments': role_params},
+                 # 'vars': {'argument_spec': []},
                  'async_val': async_val,
                  'poll': poll},
                 {'action': {'module': 'include_role',
@@ -97,6 +106,8 @@ class RoleCLI(CLI):
         # common
         self.parser.add_option('-a', '--args', dest='role_args_string',
                                help="role arguments", default=C.DEFAULT_ROLE_ARGS)
+        self.parser.add_option('-A', '--arg-spec-name', dest='arg_spec_name',
+                               help="The name of a argument_spec to use", default=C.DEFAULT_ARG_SPEC_NAME)
         self.parser.add_option('-r', '--role', dest='role_name',
                                help="role name to execute",
                                default=None)
@@ -127,7 +138,7 @@ class RoleCLI(CLI):
 
         loader, inventory, variable_manager = self._play_prereqs(self.options)
 
-        survey_spec = {}
+        argument_spec = {}
         survey_answers = {}
 
         try:
@@ -140,15 +151,28 @@ class RoleCLI(CLI):
             log.debug('role_include: %s', role_include)
 
         try:
-            survey_spec = loader.load_from_file(os.path.join(role_include.get_role_path(), 'meta/survey.yml'))
+            argument_specs_map = loader.load_from_file(os.path.join(role_include.get_role_path(), 'meta/argument_specs.yml'))
         except AnsibleFileNotFound as e:
             # It is expected that a role may not have a meta/survey.yml
             log.exception(e)
 
+        argument_spec_name = self.options.arg_spec_name
+
+        log.debug('argument_spec_name: %s', argument_spec_name)
+        log.debug('argument_specs_map: %s', pf(argument_specs_map))
+
+        argument_spec = {}
+        try:
+            argument_spec = argument_specs_map[argument_spec_name]
+        except KeyError as e:
+            log.exception(e)
+            raise AnsibleError('No arg_spec was found by arg_spec_name of "%s". Valid names: %s' %
+                               (argument_spec_name, ', '.join(argument_specs_map)))
+
         extra_vars = variable_manager.extra_vars
 
         play_ds = _play_ds(pattern, self.options.role_name, self.options.role_args_string,
-                           survey_spec, survey_answers, extra_vars, self.options.seconds, self.options.poll_interval)
+                           argument_spec, survey_answers, extra_vars, self.options.seconds, self.options.poll_interval)
 
         play = Play().load(play_ds, variable_manager=variable_manager, loader=loader)
 
