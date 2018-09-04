@@ -943,6 +943,15 @@ DEFAULT_ROLE_ARGS:
   env: [{name: ANSIBLE_ROLE_ARGS}]
   ini:
   - {key: role_args, section: defaults}
+DEFAULT_ARG_SPEC_NAME:
+  name: Default argument spec name
+  default: "default"
+  description:
+    - The arg spec name to use if one isnt specified.
+    - The default value is "default"
+  env: [{name: ANSIBLE_ARG_SPEC_NAME}]
+  ini:
+  - {key: default_arg_spec_name, sections: defaults}
 DEFAULT_ROLES_PATH:
   name: Roles path
   default: ~/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles
