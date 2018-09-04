@@ -2,4 +2,4 @@
 - hosts: testhost
   gather_facts: true
   roles:
-    - {role: validate_survey_spec}
+    - {role: validate_arg_spec}

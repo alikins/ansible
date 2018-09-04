@@ -12,7 +12,7 @@
         var: role_provided_arguments
 
     - name: Validate the role provided arguments
-      validate_survey_spec:
+      validate_arg_spec:
         argument_spec: "{{ role_argument_spec }}"
         provided_arguments: "{{ role_provided_arguments }}"
       register: role_survey_validation_results
@@ -26,7 +26,7 @@
         var: bad_provided_arguments_1
 
     - name: Validate the role provided arguments
-      validate_survey_spec:
+      validate_arg_spec:
         argument_spec: "{{ role_argument_spec }}"
         provided_arguments: "{{ bad_provided_arguments_1 }}"
       register: role_spec_validation_results_bad
