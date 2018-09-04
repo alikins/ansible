@@ -120,11 +120,14 @@ class Role(Base, Become, Conditional, Taggable):
             from_files = {}
         self._from_files = from_files
 
+        self._argument_specs = dict()
+
         # Indicates whether this role was included via include/import_role
         self.from_include = from_include
 
         super(Role, self).__init__()
-        log.debug('Role init, play=%s, from_files=%s, from_include=%s', play, from_files, from_include)
+        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
+        self.log.debug('Role init, play=%s, from_files=%s, from_include=%s', play, from_files, from_include)
 
     def __repr__(self):
         return self.get_name()
@@ -174,6 +177,8 @@ class Role(Base, Become, Conditional, Taggable):
                                obj=role_include._ds)
 
     def _load_role_data(self, role_include, parent_role=None):
+        self.log.debug('_load_role_data')
+
         self._role_name = role_include.role
         self._role_path = role_include.get_role_path()
         self._role_params = role_include.get_role_params()
@@ -218,12 +223,22 @@ class Role(Base, Become, Conditional, Taggable):
             raise AnsibleParserError("The defaults/main.yml file for role '%s' must contain a dictionary of variables" % self._role_name)
 
         # load the role's other files, if they exist
+        self.log.debug('loading role "meta"')
         metadata = self._load_role_yaml('meta')
         if metadata:
             self._metadata = RoleMetadata.load(metadata, owner=self, variable_manager=self._variable_manager, loader=self._loader)
             self._dependencies = self._load_dependencies()
         else:
             self._metadata = RoleMetadata()
+
+        self.log.debug('loading role "meta/argument_specs"')
+
+        argument_specs = self._load_role_yaml('meta', main='argument_specs')
+
+        import pprint
+        self.log.debug('argument_specs from _load_role_yaml: %s', pprint.pformat(argument_specs))
+        # TODO: need a playbook.base.Base derived object here?
+        self._argument_specs = argument_specs
 
         task_data = self._load_role_yaml('tasks', main=self._from_files.get('tasks'))
         if task_data:
@@ -244,6 +259,9 @@ class Role(Base, Become, Conditional, Taggable):
 
     def _load_role_yaml(self, subdir, main=None, allow_dir=False):
         file_path = os.path.join(self._role_path, subdir)
+
+        self.log.debug('load_role_yaml subdir=%s file_path=%s', subdir, file_path)
+
         if self._loader.path_exists(file_path) and self._loader.is_directory(file_path):
             # Valid extensions and ordering for roles is hard-coded to maintain
             # role portability
@@ -259,6 +277,7 @@ class Role(Base, Become, Conditional, Taggable):
             found_files = self._loader.find_vars_files(file_path, _main, extensions, allow_dir)
             if found_files:
                 data = {}
+                self.log.debug('found_files: %s', found_files)
                 for found in found_files:
                     new_data = self._loader.load_from_file(found)
                     if new_data and allow_dir:

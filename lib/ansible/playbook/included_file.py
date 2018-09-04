@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 
 from ansible.playbook.task_include import TaskInclude
@@ -40,6 +41,9 @@ class IncludedFile:
         self._task = task
         self._hosts = []
         self._is_role = is_role
+
+        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
+        self.log.debug('init filename=%s args=%s is_role=%s', filename, args, is_role)
 
     def add_host(self, host):
         if host not in self._hosts:

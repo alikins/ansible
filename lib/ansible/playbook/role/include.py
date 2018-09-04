@@ -19,6 +19,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os
 
 from ansible.errors import AnsibleError, AnsibleParserError
@@ -45,6 +46,9 @@ class RoleInclude(RoleDefinition):
 
     def __init__(self, play=None, role_basedir=None, variable_manager=None, loader=None):
         super(RoleInclude, self).__init__(play=play, role_basedir=role_basedir, variable_manager=variable_manager, loader=loader)
+
+        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
+        self.log.debug('init play=%s', play)
 
     @staticmethod
     def load(data, play, current_role_path=None, parent_role=None, variable_manager=None, loader=None):
