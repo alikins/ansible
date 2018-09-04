@@ -57,7 +57,7 @@ def _play_ds(pattern, role_name, role_args_string, survey_spec, survey_answers, 
             'hosts': pattern,
             'gather_facts': 'no',
             'tasks': [
-                {'action': {'module': 'validate_survey_spec',
+                {'action': {'module': 'validate_arg_spec',
                             'survey_spec': survey_spec,
                             'survey_answers': role_params},
                  # 'vars': {'survey_spec': []},
