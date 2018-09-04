@@ -55,8 +55,12 @@ class ActionModule(ActionBase):
 
         args = {}
         for key, attrs in iteritems(argument_spec):
+            # log.debug('looking for key=%s, attrs=%s', key, attrs)
             if attrs is None:
                 argument_spec[key] = {'type': 'str'}
+
+            # log.debug('task_vars.get(%s): %s', key, task_vars.get(key))
+
             if key in task_vars:
                 if isinstance(task_vars[key], string_types):
                     value = self._templar.do_template(task_vars[key])
@@ -89,7 +93,7 @@ class ActionModule(ActionBase):
         result = super(ActionModule, self).run(tmp, task_vars)
         del tmp  # tmp no longer has any effect
 
-        # log.debug('self._task.args: %s', pprint.pformat(self._task.args))
+        log.debug('self._task.args: %s', pprint.pformat(self._task.args))
         if 'argument_spec' not in self._task.args:
             raise AnsibleError('"argument_spec" arg is required in args: %s' % self._task.args)
 
@@ -113,11 +117,13 @@ class ActionModule(ActionBase):
 
         # TODO: sep handling None/default values from build_args
         # TODO: drop build_args
-        self.build_args(argument_spec, task_vars)
+        built_args = self.build_args(argument_spec, task_vars)
 
-#         log.debug('built_args: %s', pf(built_args))
+        log.debug('built_args: %s', pf(built_args))
+        module_params.update(built_args)
 
         module_args = {}
+        # module_args.update(built_args)
         module_args['argument_spec'] = argument_spec
         module_args['params'] = module_params
 
@@ -125,7 +131,6 @@ class ActionModule(ActionBase):
 
         try:
             validating_module = ArgSpecValidatingAnsibleModule(**module_args)
-            log.debug('validating_module: %s', validating_module)
             validating_module.check_for_errors()
         except AnsibleArgSpecError as e:
             log.exception(e)

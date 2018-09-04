@@ -107,9 +107,6 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
     from ansible.playbook.handler_task_include import HandlerTaskInclude
     from ansible.template import Templar
 
-    log.debug('play: %s', play)
-    log.debug('block ds: %s', pf(ds))
-
     if not isinstance(ds, list):
         raise AnsibleAssertionError('The ds (%s) should be a list but was a %s' % (ds, type(ds)))
 
@@ -392,8 +389,6 @@ def load_list_of_roles(ds, play, current_role_path=None, variable_manager=None, 
 
     # we import here to prevent a circular dependency with imports
     from ansible.playbook.role.include import RoleInclude
-
-    log.debug('play=%s, current_role_path=%s', play, current_role_path)
 
     if not isinstance(ds, list):
         raise AnsibleAssertionError('ds (%s) should be a list but was a %s' % (ds, type(ds)))
