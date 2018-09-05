@@ -35,15 +35,13 @@ pf = pprint.pformat
 # TODO: take extravars from cli (for combining with cli -a args and spec defaults)
 
 
-def _play_ds(pattern, role_name, role_args_string, argument_spec, survey_answers, extra_vars, async_val, poll):
+def _play_ds(pattern, role_name, role_args_string, extra_vars, async_val, poll):
     log.debug('role_name: %s', role_name)
     # log.debug('role_args_string: %s', role_args_string)
 
     role_args = parse_kv(role_args_string, check_raw=False)
     log.debug('role_args: %s', role_args)
 
-    log.debug('arguement_spec: %s', argument_spec)
-    # log.debug('survey_answers: %s', survey_answers)
     # log.debug('extra_vars: %s', extra_vars)
 
     log.debug('role_args (with name): %s', role_args)
@@ -52,11 +50,6 @@ def _play_ds(pattern, role_name, role_args_string, argument_spec, survey_answers
 
     # TODO: use varman here? probably at least merge_dict
     role_params = {}
-    role_params.update(survey_answers)
-    for extra_var in extra_vars:
-        if extra_var in argument_spec:
-            role_params[extra_var] = extra_vars[extra_var]
-    # role_params.update(extra_vars)
 
     role_params.update(role_args)
 
@@ -66,12 +59,10 @@ def _play_ds(pattern, role_name, role_args_string, argument_spec, survey_answers
             'hosts': pattern,
             'gather_facts': 'no',
             'tasks': [
-                {'action': {'module': 'validate_arg_spec',
-                            'argument_spec': argument_spec,
-                            'provided_arguments': role_params},
-                 # 'vars': {'argument_spec': []},
-                 'async_val': async_val,
-                 'poll': poll},
+                # TODO: is there anything that would be useful to run
+                #       before or after a role? Maybe something to format
+                #       the invocation and/or results (if it could make for
+                #       better uxd that just the default callback handling)
                 {'action': {'module': 'include_role',
                             'name': role_name,
                             },
@@ -138,9 +129,6 @@ class RoleCLI(CLI):
 
         loader, inventory, variable_manager = self._play_prereqs(self.options)
 
-        argument_spec = {}
-        survey_answers = {}
-
         try:
             role_includes = load_list_of_roles([self.options.role_name], play=None, variable_manager=variable_manager, loader=loader)
         except AssertionError as e:
@@ -150,29 +138,10 @@ class RoleCLI(CLI):
         for role_include in role_includes:
             log.debug('role_include: %s', role_include)
 
-        try:
-            argument_specs_map = loader.load_from_file(os.path.join(role_include.get_role_path(), 'meta/argument_specs.yml'))
-        except AnsibleFileNotFound as e:
-            # It is expected that a role may not have a meta/survey.yml
-            log.exception(e)
-
-        argument_spec_name = self.options.arg_spec_name
-
-        log.debug('argument_spec_name: %s', argument_spec_name)
-        log.debug('argument_specs_map: %s', pf(argument_specs_map))
-
-        argument_spec = {}
-        try:
-            argument_spec = argument_specs_map[argument_spec_name]
-        except KeyError as e:
-            log.exception(e)
-            raise AnsibleError('No arg_spec was found by arg_spec_name of "%s". Valid names: %s' %
-                               (argument_spec_name, ', '.join(argument_specs_map)))
-
         extra_vars = variable_manager.extra_vars
 
         play_ds = _play_ds(pattern, self.options.role_name, self.options.role_args_string,
-                           argument_spec, survey_answers, extra_vars, self.options.seconds, self.options.poll_interval)
+                           extra_vars, self.options.seconds, self.options.poll_interval)
 
         play = Play().load(play_ds, variable_manager=variable_manager, loader=loader)
 
@@ -181,12 +150,9 @@ class RoleCLI(CLI):
         playbook._entries.append(play)
         playbook._file_name = '__role_playbook__'
 
-        # cb = self.callback or C.DEFAULT_STDOUT_CALLBACK or 'minimal'
         cb = C.DEFAULT_STDOUT_CALLBACK
         if self.callback:
             cb = self.callback
-        # cb = 'dense'
-        log.debug('CB: %s self.callback: %s', cb, self.callback)
 
         # now create a task queue manager to execute the play
         self._tqm = None
