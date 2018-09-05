@@ -19,8 +19,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import logging
-
 from ansible.errors import AnsibleParserError
 from ansible.playbook.attribute import FieldAttribute
 from ansible.playbook.block import Block
@@ -33,9 +31,6 @@ except ImportError:
     display = Display()
 
 __all__ = ['TaskInclude']
-
-
-log = logging.getLogger(__name__)
 
 
 class TaskInclude(Task):
@@ -57,15 +52,11 @@ class TaskInclude(Task):
     def __init__(self, block=None, role=None, task_include=None):
         super(TaskInclude, self).__init__(block=block, role=role, task_include=task_include)
         self.statically_loaded = False
-        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
-        self.log.debug('init block=%s role=%s', block, role)
 
     @staticmethod
     def load(data, block=None, role=None, task_include=None, variable_manager=None, loader=None):
         ti = TaskInclude(block=block, role=role, task_include=task_include)
         task = ti.load_data(data, variable_manager=variable_manager, loader=loader)
-
-        log.debug('task: %s', task)
 
         # Validate options
         my_arg_names = frozenset(task.args.keys())
