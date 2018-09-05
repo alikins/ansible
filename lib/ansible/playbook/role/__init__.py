@@ -256,7 +256,10 @@ class Role(Base, Become, Conditional, Taggable):
 
         log.debug('task_data: %s', pf(task_data))
 
-        argument_spec = argument_specs.get('default', None)
+        argument_spec = None
+        if argument_specs:
+            argument_spec = argument_specs.get('default', None)
+
         if argument_spec:
             arg_spec_validation_task = self._create_arg_spec_validation_task_data(argument_spec,
                                                                                   role_params=self._role_params)
