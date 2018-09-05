@@ -19,7 +19,7 @@ module: validate_arg_spec
 short_description: Validate Arg Specs
 description:
      - This module validate args specs
-version_added: "2.7"
+version_added: "2.8"
 options:
   argument_spec:
     description:
