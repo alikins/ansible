@@ -94,7 +94,7 @@ class RoleCLI(CLI):
         self.parser.add_option('-a', '--args', dest='role_args_string',
                                help="role arguments", default=C.DEFAULT_ROLE_ARGS)
         self.parser.add_option('-A', '--arg-spec-name', dest='arg_spec_name',
-                               help="The name of a argument_spec to use", default=C.DEFAULT_ARG_SPEC_NAME)
+                               help="The name of a argument_spec to use", default='main')
         self.parser.add_option('-r', '--role', dest='role_name',
                                help="role name to execute",
                                default=None)
