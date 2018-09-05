@@ -21,8 +21,6 @@ __metaclass__ = type
 
 import collections
 import os
-import logging
-import pprint
 
 from ansible.errors import AnsibleError, AnsibleParserError, AnsibleAssertionError
 from ansible.module_utils.six import iteritems, binary_type, text_type
@@ -35,9 +33,6 @@ from ansible.playbook.role.metadata import RoleMetadata
 from ansible.playbook.taggable import Taggable
 from ansible.plugins.loader import get_all_plugin_loaders
 from ansible.utils.vars import combine_vars
-
-log = logging.getLogger(__name__)
-pf = pprint.pformat
 
 __all__ = ['Role', 'hash_params']
 
@@ -128,8 +123,6 @@ class Role(Base, Become, Conditional, Taggable):
         self.from_include = from_include
 
         super(Role, self).__init__()
-        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
-        self.log.debug('Role init, play=%s, from_files=%s, from_include=%s', play, from_files, from_include)
 
     def __repr__(self):
         return self.get_name()
@@ -179,8 +172,6 @@ class Role(Base, Become, Conditional, Taggable):
                                obj=role_include._ds)
 
     def _load_role_data(self, role_include, parent_role=None):
-        self.log.debug('_load_role_data')
-
         self._role_name = role_include.role
         self._role_path = role_include.get_role_path()
         self._role_params = role_include.get_role_params()
@@ -225,15 +216,12 @@ class Role(Base, Become, Conditional, Taggable):
             raise AnsibleParserError("The defaults/main.yml file for role '%s' must contain a dictionary of variables" % self._role_name)
 
         # load the role's other files, if they exist
-        self.log.debug('loading role "meta"')
         metadata = self._load_role_yaml('meta')
         if metadata:
             self._metadata = RoleMetadata.load(metadata, owner=self, variable_manager=self._variable_manager, loader=self._loader)
             self._dependencies = self._load_dependencies()
         else:
             self._metadata = RoleMetadata()
-
-        self.log.debug('loading role "meta/argument_specs"')
 
         # The argument_specs file will contain a dict, and can have multiple keys,
         # included a 'main' item. But set one up explicitly if the yaml doesnt provide
@@ -243,9 +231,7 @@ class Role(Base, Become, Conditional, Taggable):
         try:
             argument_specs = self._load_role_yaml('meta', main='argument_specs')
         except AnsibleParserError as e:
-            log.warning(e)
-
-        self.log.debug('argument_specs from _load_role_yaml: %s', pprint.pformat(argument_specs))
+            pass
 
         # TODO: need a playbook.base.Base derived object here?
         # TODO: do we want a Role (or Task or Base) object to have a arg_spec attribute?
@@ -253,8 +239,6 @@ class Role(Base, Become, Conditional, Taggable):
         self._argument_specs = argument_specs
 
         task_data = self._load_role_yaml('tasks', main=self._from_files.get('tasks'))
-
-        log.debug('task_data: %s', pf(task_data))
 
         argument_spec = None
         if argument_specs:
@@ -264,8 +248,6 @@ class Role(Base, Become, Conditional, Taggable):
             arg_spec_validation_task = self._create_arg_spec_validation_task_data(argument_spec,
                                                                                   role_params=self._role_params)
 
-            self.log.debug('arg_spec_validation_task: %s', arg_spec_validation_task)
-
             # Prepend our validate_arg_spec action to happen before any tasks provided by the role.
             # 'any tasks' can and does include 0 or None tasks, in which cases we create a list of tasks and add our
             # validate_arg_spec task
@@ -274,8 +256,6 @@ class Role(Base, Become, Conditional, Taggable):
                 task_data = []
 
             task_data.insert(0, arg_spec_validation_task)
-
-            self.log.debug('task_data(with arg_spec validation): %s', pf(task_data))
 
         if task_data:
             try:
@@ -311,7 +291,6 @@ class Role(Base, Become, Conditional, Taggable):
             found_files = self._loader.find_vars_files(file_path, _main, extensions, allow_dir)
             if found_files:
                 data = {}
-                # self.log.debug('found_files: %s', found_files)
                 for found in found_files:
                     new_data = self._loader.load_from_file(found)
                     if new_data and allow_dir:
@@ -461,7 +440,6 @@ class Role(Base, Become, Conditional, Taggable):
         Returns true if this role has been iterated over completely and
         at least one task was run
         '''
-        self.log.debug('has_run play=%s,  role=%s', self._play, self._role_name)
         return host.name in self._completed and not self._metadata.allow_duplicates
 
     def compile(self, play, dep_chain=None):
@@ -474,7 +452,6 @@ class Role(Base, Become, Conditional, Taggable):
         with each task, so tasks know by which route they were found, and
         can correctly take their parent's tags/conditionals into account.
         '''
-        self.log.debug('compile play: %s', play)
         block_list = []
 
         # update the dependency chain here
@@ -483,7 +460,6 @@ class Role(Base, Become, Conditional, Taggable):
         new_dep_chain = dep_chain + [self]
 
         deps = self.get_direct_dependencies()
-        self.log.debug('deps: %s', deps)
         for dep in deps:
             dep_blocks = dep.compile(play=play, dep_chain=new_dep_chain)
             block_list.extend(dep_blocks)
