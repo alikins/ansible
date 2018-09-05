@@ -390,7 +390,6 @@ class Role(Base, Become, Conditional, Taggable):
             for parent in dep_chain:
                 params = combine_vars(params, parent._role_params)
         params = combine_vars(params, self._role_params)
-        log.debug('params: %s', params)
         return params
 
     def get_vars(self, dep_chain=None, include_params=True):
@@ -462,7 +461,7 @@ class Role(Base, Become, Conditional, Taggable):
         Returns true if this role has been iterated over completely and
         at least one task was run
         '''
-
+        self.log.debug('has_run play=%s,  role=%s', self._play, self._role_name)
         return host.name in self._completed and not self._metadata.allow_duplicates
 
     def compile(self, play, dep_chain=None):
