@@ -236,10 +236,10 @@ class Role(Base, Become, Conditional, Taggable):
         self.log.debug('loading role "meta/argument_specs"')
 
         # The argument_specs file will contain a dict, and can have multiple keys,
-        # included a 'default' item. But set one up explicitly if the yaml doesnt provide
+        # included a 'main' item. But set one up explicitly if the yaml doesnt provide
         # one. Could also do things like 'pick the first one' or try to match role name or
         # 'from_tasks' filename to argument_spec keys, etc
-        argument_specs = {'default': {}}
+        argument_specs = {'main': {}}
         try:
             argument_specs = self._load_role_yaml('meta', main='argument_specs')
         except AnsibleParserError as e:
@@ -258,7 +258,7 @@ class Role(Base, Become, Conditional, Taggable):
 
         argument_spec = None
         if argument_specs:
-            argument_spec = argument_specs.get('default', None)
+            argument_spec = argument_specs.get('main', None)
 
         if argument_spec:
             arg_spec_validation_task = self._create_arg_spec_validation_task_data(argument_spec,
