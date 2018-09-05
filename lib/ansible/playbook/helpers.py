@@ -18,9 +18,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import logging
 import os
-import pprint
 
 from ansible import constants as C
 from ansible.errors import AnsibleParserError, AnsibleUndefinedVariable, AnsibleFileNotFound, AnsibleAssertionError
@@ -34,9 +32,6 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
-log = logging.getLogger(__name__)
-pf = pprint.pformat
-
 
 def load_list_of_blocks(ds, play, parent_block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None):
     '''
@@ -47,9 +42,6 @@ def load_list_of_blocks(ds, play, parent_block=None, role=None, task_include=Non
 
     # we import here to prevent a circular dependency with imports
     from ansible.playbook.block import Block
-
-    log.debug('play: %s', play)
-    log.debug('block ds: %s', pf(ds))
 
     if not isinstance(ds, (list, type(None))):
         raise AnsibleAssertionError('%s should be a list or None but is %s' % (ds, type(ds)))
@@ -326,8 +318,6 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
                     task_list.append(t)
 
             elif action in ('include_role', 'import_role'):
-                log.debug('Creating an IncludeRole for role=%s', role)
-
                 ir = IncludeRole.load(
                     task_ds,
                     block=block,
