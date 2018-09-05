@@ -93,7 +93,7 @@ class ActionModule(ActionBase):
         result = super(ActionModule, self).run(tmp, task_vars)
         del tmp  # tmp no longer has any effect
 
-        log.debug('self._task.args: %s', pprint.pformat(self._task.args))
+        # log.debug('self._task.args: %s', pprint.pformat(self._task.args))
         if 'argument_spec' not in self._task.args:
             raise AnsibleError('"argument_spec" arg is required in args: %s' % self._task.args)
 
