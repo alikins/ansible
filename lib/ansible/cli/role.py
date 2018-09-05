@@ -30,10 +30,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 pf = pprint.pformat
 
-# TODO: based on cli provided role_name, find the role on disk, and load the survey info from it.
-# TODO: method for applying the defaults in surveyspec + extra vars + cli role args
-# TODO: take extravars from cli (for combining with cli -a args and spec defaults)
-
 
 def _play_ds(pattern, role_name, role_args_string, extra_vars, async_val, poll):
     log.debug('role_name: %s', role_name)

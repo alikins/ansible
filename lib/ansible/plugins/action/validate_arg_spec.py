@@ -44,7 +44,7 @@ class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
 
 
 class ActionModule(ActionBase):
-    ''' Validate a Role survey spec and answers to it's questions '''
+    ''' Validate a arg spec'''
 
     TRANSFERS_FILES = False
 
@@ -79,11 +79,11 @@ class ActionModule(ActionBase):
 
     def run(self, tmp=None, task_vars=None):
         '''
-        Validate a survey spec
+        Validate an arg spec
 
         :arg tmp: Deprecated. Do not use.
         :arg dict task_vars: A dict of task variables.
-            Valid args include 'argument_spec', 'supplied_arguments'
+            Valid args include 'argument_spec', 'provided_arguments'
         :return: An action result dict, including a 'argument_errors' key with a
             list of validation errors found.
         '''
@@ -111,7 +111,7 @@ class ActionModule(ActionBase):
             raise AnsibleError('Incorrect type for argument_spec, expected dict and got %s' % type(argument_spec_data))
 
         if not isinstance(provided_arguments, dict):
-            raise AnsibleError('Incorrect type for survey_data, expected dict and got %s' % type(provided_arguments))
+            raise AnsibleError('Incorrect type for provided_arguments, expected dict and got %s' % type(provided_arguments))
 
         module_params = provided_arguments
 
@@ -135,9 +135,9 @@ class ActionModule(ActionBase):
         except AnsibleArgSpecError as e:
             log.exception(e)
             # log.exception(sys.exc_info)
-            log.error('role arg spec validation failed')
+            log.error('Arg spec validation failed')
             for error in e.argument_errors:
-                log.error('role arg validation error: %s', error)
+                log.error('Arg spec validation error: %s', error)
 
             # log.exception(e)
             result['_ansible_verbose_always'] = True
@@ -152,7 +152,7 @@ class ActionModule(ActionBase):
         result['_ansible_verbose_always'] = True
 
         result['changed'] = False
-        result['msg'] = 'The survey validation passed'
+        result['msg'] = 'The arg spec validation passed'
         result['valid_provided_arguments'] = provided_arguments
 
         return result
