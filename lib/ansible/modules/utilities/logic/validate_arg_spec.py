@@ -21,9 +21,9 @@ description:
      - This module validate args specs
 version_added: "2.7"
 options:
-  survey_spec:
+  argument_spec:
     required: true
-  survey_answers:
+  provided_arguments:
 author:
     - "Ansible Core Team"
     - "Adrian Likins"
