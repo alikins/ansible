@@ -22,8 +22,12 @@ description:
 version_added: "2.7"
 options:
   argument_spec:
+    description:
+        - A dictionary like AnsibleModule argument_spec
     required: true
   provided_arguments:
+    description:
+        - A dictionary of the arguments that will be validated according to argument_spec
 author:
     - "Ansible Core Team"
     - "Adrian Likins"
