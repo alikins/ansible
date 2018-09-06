@@ -1,0 +1,32 @@
+---
+- name: "Running include_role test1 }}"
+  hosts: localhost
+  gather_facts: false
+  pre_tasks:
+    - name: debug pre_task
+      debug:
+        msg: "hello from pre_task"
+
+  tasks:
+    - name: include_role test1 since it has a arg_spec.yml
+      include_role:
+        name: test1
+      vars:
+        tidy_expected:
+          some_key: some_value
+        blip: dfgdfg
+        test1_var1: 37.4
+        test1_choices: "My Dog"
+        bust_some_stuff: "some_string_that_is_not_an_int"
+        peanut_butter: "smooth"
+        secret_choices: "secret_ballot_choice4"
+      register: results_include_role_test1
+
+    - name: show results_include_role_test1
+      debug:
+        var: results_include_role_test1
+
+  post_tasks:
+    - name: debug post_task
+      debug:
+        msg: "hello from post_task"
