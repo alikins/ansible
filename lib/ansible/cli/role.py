@@ -84,6 +84,11 @@ class RoleCLI(CLI):
 
         super(RoleCLI, self).parse()
 
+        if len(self.args) < 1:
+            raise AnsibleOptionsError("Missing target hosts")
+        elif len(self.args) > 1:
+            raise AnsibleOptionsError("Extraneous options or arguments")
+
         if not self.options.role_name:
             raise AnsibleOptionsError("-r/--role requires a role name")
 
