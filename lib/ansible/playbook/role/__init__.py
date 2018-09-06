@@ -34,6 +34,9 @@ from ansible.playbook.taggable import Taggable
 from ansible.plugins.loader import get_all_plugin_loaders
 from ansible.utils.vars import combine_vars
 
+import logging
+log = logging.getLogger(__name__)
+
 __all__ = ['Role', 'hash_params']
 
 # TODO: this should be a utility function, but can't be a member of
@@ -227,12 +230,19 @@ class Role(Base, Become, Conditional, Taggable):
         # included a 'main' item. But set one up explicitly if the yaml doesnt provide
         # one. Could also do things like 'pick the first one' or try to match role name or
         # 'from_tasks' filename to argument_spec keys, etc
-        argument_specs = {'main': {}}
+
+        # argument_specs = {'main': {}}
+        # force validate_arg_spec to run
+        argument_specs = {'main': {'argument_spec': {}}}
+
         try:
             argument_specs = self._load_role_yaml('meta', main='argument_specs')
         except AnsibleParserError as e:
+            log.exception(e)
             pass
 
+        import pprint
+        log.debug('arg_specs: %s', pprint.pformat(argument_specs))
         # TODO: need a playbook.base.Base derived object here?
         # TODO: do we want a Role (or Task or Base) object to have a arg_spec attribute?
         #       Seems like it would be handy for introspection and error reporting...
@@ -240,10 +250,18 @@ class Role(Base, Become, Conditional, Taggable):
 
         task_data = self._load_role_yaml('tasks', main=self._from_files.get('tasks'))
 
-        argument_spec_name = 'main'
+        # Look for the right section/key in argument_specs.yml, starting with the one matching
+        # the role name, then 'main'
+        argument_spec_names = [self._role_name, 'main']
         argument_spec = None
         if argument_specs:
-            argument_spec = argument_specs.get(argument_spec_name, None)
+            for argument_spec_name in argument_spec_names:
+                log.debug('looking for arg_spec_name: %s', argument_spec_name)
+                argument_spec = argument_specs.get(argument_spec_name, None)
+                if argument_spec:
+                    log.debug('found %s', argument_spec_name)
+                    break
+                log.debug('did not find %s', argument_spec_name)
 
         if argument_spec:
             arg_spec_validation_task = \

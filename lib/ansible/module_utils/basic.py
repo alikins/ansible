@@ -2335,6 +2335,16 @@ class AnsibleModule(object):
         if self._deprecations:
             kwargs['deprecations'] = self._deprecations
 
+        kwargs['argument_spec'] = {'main': {'argument_spec': self.argument_spec,
+                                            'required_together': self.required_together,
+                                            'mutually_exclusive': self.mutually_exclusive,
+                                            'required_if': self.required_if,
+                                            'required_one_of': self.required_one_of,
+                                            'check_invalid_arguments': self.check_invalid_arguments,
+                                            'no_log': self.no_log,
+                                            'bypass_checks': self.bypass_checks}}
+        # kwargs['t_argument_spec'] = self.argument_spec
+        kwargs['t_params'] = self.params
         kwargs = remove_values(kwargs, self.no_log_values)
         print('\n%s' % self.jsonify(kwargs))
 
