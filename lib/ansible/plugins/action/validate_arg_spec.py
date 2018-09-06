@@ -14,13 +14,12 @@ class AnsibleArgSpecError(AnsibleModuleError):
     def __init__(self, *args, **kwargs):
         self.argument_errors = kwargs.pop('argument_errors', [])
         super(AnsibleArgSpecError, self).__init__(*args, **kwargs)
-        self.message = "Validation of arguments failed."
 
 
 class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
     '''AnsibleModule but with overridden _load_params so it doesnt read from stdin/ANSIBLE_ARGS'''
     def __init__(self, *args, **kwargs):
-        self.params = kwargs.pop('params', {})
+        self._params = kwargs.pop('params', {})
         # remove meta fields that aren't valid AnsibleModule args
         self.arg_spec_name = kwargs.pop('name', None)
         self.arg_spec_description = kwargs.pop('description', None)
@@ -31,7 +30,7 @@ class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
     # AnsibleModule._load_params sets self.params from a global, so neuter it here
     # so our passed in 'params' kwarg is used instead
     def _load_params(self):
-        pass
+        self.params = self._params
 
     def fail_json(self, *args, **kwargs):
         msg = kwargs.pop('msg', 'Unknown arg spec validation error')
@@ -41,8 +40,11 @@ class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
         self.arg_validation_errors.append(clean_msg)
 
     def check_for_errors(self):
-        if self.arg_validation_errors:
-            raise AnsibleArgSpecError(argument_errors=self.arg_validation_errors)
+        if not self.arg_validation_errors:
+            return
+
+        msg = 'Validation of arguments failed:\n%s' % '\n'.join(self.arg_validation_errors)
+        raise AnsibleArgSpecError(msg, argument_errors=self.arg_validation_errors)
 
 
 class ActionModule(ActionBase):
@@ -131,7 +133,7 @@ class ActionModule(ActionBase):
             validating_module = ArgSpecValidatingAnsibleModule(**module_args)
             validating_module.check_for_errors()
         except AnsibleArgSpecError as e:
-            result['_ansible_verbose_always'] = True
+            # result['_ansible_verbose_always'] = True
             result['failed'] = True
             result['msg'] = e.message
             result['argument_spec_data'] = orig_argument_spec_data
