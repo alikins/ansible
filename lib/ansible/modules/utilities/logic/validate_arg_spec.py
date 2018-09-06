@@ -37,14 +37,6 @@ EXAMPLES = '''
 '''
 
 RETURN = '''
-valid_provided_arguments:
-    description: A dict of provided_arguments that were valid and their values
-    returned: success
-    type: dict
-    sample:
-        - some_int_arg: 37
-          some_str_arg: "the value of some_str_arg"
-          some_arg_with_choices: "this paddle game"
 argument_errors:
     description: A list of arg validation errors
     returned: failure
@@ -55,7 +47,7 @@ argument_errors:
         - "value of secret_ballot must be one of: secret_choice1, secret_choice2, got: ********"
 argument_spec_data:
     description: A dict of the data from the 'argument_spec' arg
-    returned: always
+    returned: failure
     type: dict
     sample:
         argument_spec:
