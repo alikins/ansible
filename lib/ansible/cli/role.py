@@ -4,15 +4,12 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import logging
 import os
 import sys
-import pprint
 
 from ansible import constants as C
 from ansible.cli import CLI
-from ansible.errors import AnsibleOptionsError, AnsibleParserError, AnsibleFileNotFound, \
-    AnsibleError
+from ansible.errors import AnsibleOptionsError, AnsibleParserError
 from ansible.module_utils._text import to_text
 from ansible.playbook import Playbook
 from ansible.playbook.helpers import load_list_of_roles
@@ -27,33 +24,19 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
-log = logging.getLogger(__name__)
-pf = pprint.pformat
-
 
 def _play_ds(pattern, role_name, role_args_string, extra_vars, async_val, poll):
-    log.debug('role_name: %s', role_name)
-    # log.debug('role_args_string: %s', role_args_string)
-
     role_args = parse_kv(role_args_string, check_raw=False)
-    log.debug('role_args: %s', role_args)
-
-    # log.debug('extra_vars: %s', extra_vars)
-
-    log.debug('role_args (with name): %s', role_args)
-
-    # log.debug('module_args: %s', module_args)
 
     # TODO: use varman here? probably at least merge_dict
     role_params = {}
 
     role_params.update(role_args)
 
-    log.debug('role_params: %s', pf(role_params))
-
+    # TODO: cli flag to set gather_facts ?
     return {'name': "Ansible Role",
             'hosts': pattern,
-            'gather_facts': 'no',
+            # 'gather_facts': 'no',
             'tasks': [
                 # TODO: is there anything that would be useful to run
                 #       before or after a role? Maybe something to format
@@ -128,11 +111,10 @@ class RoleCLI(CLI):
         try:
             role_includes = load_list_of_roles([self.options.role_name], play=None, variable_manager=variable_manager, loader=loader)
         except AssertionError as e:
-            log.exception(e)
             raise AnsibleParserError("A malformed role declaration was encountered.", obj=self._ds, orig_exc=e)
 
         for role_include in role_includes:
-            log.debug('role_include: %s', role_include)
+            display.debug('cli.role.run loaded role_include: %s' % role_include)
 
         extra_vars = variable_manager.extra_vars
 
@@ -175,4 +157,3 @@ class RoleCLI(CLI):
                 loader.cleanup_all_tmp_files()
 
         return result
-        # return os.EX_OK
