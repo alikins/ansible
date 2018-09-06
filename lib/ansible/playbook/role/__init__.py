@@ -240,13 +240,18 @@ class Role(Base, Become, Conditional, Taggable):
 
         task_data = self._load_role_yaml('tasks', main=self._from_files.get('tasks'))
 
+        argument_spec_name = 'main'
         argument_spec = None
         if argument_specs:
-            argument_spec = argument_specs.get('main', None)
+            argument_spec = argument_specs.get(argument_spec_name, None)
 
         if argument_spec:
-            arg_spec_validation_task = self._create_arg_spec_validation_task_data(argument_spec,
-                                                                                  role_params=self._role_params)
+            arg_spec_validation_task = \
+                self._create_arg_spec_validation_task_data(argument_spec,
+                                                           argument_spec_name,
+                                                           role_name=self._role_name,
+                                                           role_path=self._role_path,
+                                                           role_params=self._role_params)
 
             # Prepend our validate_arg_spec action to happen before any tasks provided by the role.
             # 'any tasks' can and does include 0 or None tasks, in which cases we create a list of tasks and add our
@@ -316,10 +321,17 @@ class Role(Base, Become, Conditional, Taggable):
 
         return deps
 
-    def _create_arg_spec_validation_task_data(self, argument_spec, role_params):
+    def _create_arg_spec_validation_task_data(self, argument_spec, argument_spec_name,
+                                              role_name, role_path, role_params):
         arg_spec_task = {'action': {'module': 'validate_arg_spec',
                                     'argument_spec': argument_spec,
-                                    'provided_arguments': role_params},
+                                    'provided_arguments': role_params,
+                                    'validate_args_context': {'type': 'role',
+                                                              'name': role_name,
+                                                              'path': role_path},
+                                    },
+                         # TODO: use ignore_error from include_role for the validate task?
+                         # 'ignore_errors': ignore_errors,
                          # 'vars': {'argument_spec': []},
                          # 'async_val': async_val,
                          # 'poll': poll},
