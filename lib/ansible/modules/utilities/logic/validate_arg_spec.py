@@ -35,3 +35,48 @@ author:
 
 EXAMPLES = '''
 '''
+
+RETURN = '''
+valid_provided_arguments:
+    description: A dict of provided_arguments that were valid and their values
+    returned: success
+    type: dict
+    sample:
+        - some_int_arg: 37
+          some_str_arg: "the value of some_str_arg"
+          some_arg_with_choices: "this paddle game"
+argument_errors:
+    description: A list of arg validation errors
+    returned: failure
+    type: list
+    sample:
+        - "parameters are mutually exclusive: bust_some_stuff, tidy_expected"
+        - "value of things_i_need must be one of: this paddle game, the astray, this remote control, the chair, got: my dog"
+        - "value of secret_ballot must be one of: secret_choice1, secret_choice2, got: ********"
+argument_spec_data:
+    description: A dict of the data from the 'argument_spec' arg
+    returned: always
+    type: dict
+    sample:
+        argument_spec:
+            some_arg:
+                required: true
+                default: 37
+                type: "int"
+            secret_ballot:
+                required: false
+                choices:
+                    - secret_choice1
+                    - secret_choice2
+                type: "str"
+        required_together:
+            - ["peanut_butter", "jelly"]
+validate_args_context:
+    description: A dict of info about where validate_args_spec was used
+    type: dict
+    returned: success, failure
+    sample:
+        name: my_role
+        type: role
+        path: /home/user/roles/my_role/
+'''
