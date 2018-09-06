@@ -1,6 +1,6 @@
 main:
-  name: "test1_arg_spec"
-  description: "survey3 descriptions"
+  name: "test1_argspec"
+  description: "Argument spec for the 'test1' role"
   argument_spec:
     test1_choices:
       required: false
@@ -12,20 +12,14 @@ main:
         - "the chair"
       type: "str"
       default: "this paddle game"
-      # question_name: "survey3_question1"
-      # question_description: "The things I need from survey2 are..."
     tidy_expected:
       required: false
       default: none
       type: "list"
-      # question_name: "survey3_tidy_expected"
-      # question_description: "What files should be in tidy_path"
     test1_var1:
       # required: true
       default: "THIS IS THE DEFAULT SURVEY ANSWER FOR test1_survey_test1_var1"
       type: "str"
-      # question_name: "test1_survey_test1_var1"
-      # question_description: "What is the value of test1_var1 (maybe a fake band name)?"
     test1_var2:
       required: false
       default: "This IS THE DEFAULT fake band name / test1_var2 answer from survey_spec.yml"
@@ -33,6 +27,26 @@ main:
     bust_some_stuff:
       required: false
       type: "int"
+    peanut_butter:
+      required: false
+      type: "str"
+    jelly:
+      required: false
+      type: "str"
+    secret_choices:
+      choices:
+        - "secret_ballot_choice1"
+        - "secret_ballot_choice2"
+      required: false
+      type: "str"
+      no_log: true
+  check_invalid_arguments: true
+  required_together:
+    - ['peanut_butter', 'jelly']
+  mutually_exclusive:
+    - ['bust_some_stuff', 'tidy_expected']
+    # no_log: true
+    # some_random_other_field: "blippppppppppppppp"
 
 other:
   name: "test1_simple_preset_arg_spec_other"
