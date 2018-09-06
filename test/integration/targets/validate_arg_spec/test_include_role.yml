@@ -21,6 +21,26 @@
       debug:
         var: results_include_role_test1
 
+    - name: set some facts for task vars
+      set_fact:
+        peanut_butter: "crunchyfacts"
+        test1_var1: "some value set from set_facts"
+
+    - name: include_role test1 but now with some facts set
+      include_role:
+        name: test1
+      vars:
+        tidy_expected:
+          - foo
+        blip: dfgdfgfacts
+        jelly: "grape"
+      register: results_include_role_test1_with_facts
+
+    - name: debug include_role with facts
+      debug:
+        var: results_include_role_test1_with_facts
+
+
   post_tasks:
     - name: debug post_task
       debug:
