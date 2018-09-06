@@ -34,17 +34,16 @@ class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
         self.arg_validation_errors = []
         super(ArgSpecValidatingAnsibleModule, self).__init__(*args, **kwargs)
 
+    # AnsibleModule._load_params sets self.params from a global, so neuter it here
+    # so our passed in 'params' kwarg is used instead
     def _load_params(self):
         pass
 
     def fail_json(self, *args, **kwargs):
         msg = kwargs.pop('msg', 'Unknown arg spec validation error')
-        log.error('Arg spec validation error: %s', msg)
-        # log.debug('args: %s', args)
-        # log.debug('kwargs: %s', kwargs)
-        # log.debug('self.no_log_values: %s', self.no_log_values)
+
         clean_msg = basic.remove_values(msg, self.no_log_values)
-        # log.debug('clean_msg: %s', clean_msg)
+
         self.arg_validation_errors.append(clean_msg)
 
     def check_for_errors(self):
@@ -115,14 +114,13 @@ class ActionModule(ActionBase):
 
         # include arg spec data dict in return, use a copy since we 'pop' from it
         # and modify it in place later.
-        result['argument_spec_data'] = argument_spec_data.copy()
+        orig_argument_spec_data = argument_spec_data.copy()
 
         # then get the 'argument_spec' item from the dict in the argument_spec task var
+        # everything left in argument_spec_data is modifiers
         argument_spec = argument_spec_data.pop('argument_spec', [])
 
-        # everything left in argument_spec_data is modifiers
-        log.debug('argument_spec_data after: %s', argument_spec_data)
-        # argument_spec_modifiers = argument_spec_data.
+        # the values that were passed in and will be checked against argument_spec
         provided_arguments = self._task.args.get('provided_arguments', {})
 
         if not isinstance(argument_spec_data, dict):
@@ -133,45 +131,43 @@ class ActionModule(ActionBase):
 
         module_params = provided_arguments
 
-        # TODO: sep handling None/default values from build_args
-        # TODO: drop build_args
+        # apply any defaults from the arg spec and setup aliases
         built_args = self.build_args(argument_spec, task_vars)
-
-        log.debug('built_args: %s', pf(built_args))
         module_params.update(built_args)
 
         module_args = {}
         module_args.update(argument_spec_data)
-        # module_args.update(built_args)
         module_args['argument_spec'] = argument_spec
         module_args['params'] = module_params
 
-        log.debug('validate_arg_spec called with module_args: %s', pf(module_args))
+        # log.debug('validate_arg_spec called with module_args: %s', pf(module_args))
 
         try:
             validating_module = ArgSpecValidatingAnsibleModule(**module_args)
             validating_module.check_for_errors()
         except AnsibleArgSpecError as e:
-            log.exception(e)
-            # log.exception(sys.exc_info)
-            log.error('Arg spec validation failed')
-            for error in e.argument_errors:
-                log.error('Arg spec validation error: %s', error)
-
             # log.exception(e)
+            # log.error('Arg spec validation failed')
+            # for error in e.argument_errors:
+            #    log.error('Arg spec validation error: %s', error)
+
             result['_ansible_verbose_always'] = True
             result['failed'] = True
             result['msg'] = e.message
+            result['argument_spec_data'] = orig_argument_spec_data
 
             # does this need to check no_log?
             result['argument_errors'] = e.argument_errors
 
-            return result
+            # TODO: we could return the passed in params which didn't meet arg spec,
+            #       but they likely need to have no_log applied to them...
+            # result['provided_arguments'] = provided_arguments
 
-        result['_ansible_verbose_always'] = True
+            return result
 
         result['changed'] = False
         result['msg'] = 'The arg spec validation passed'
-        result['valid_provided_arguments'] = provided_arguments
+
+        # result['valid_provided_arguments'] = provided_arguments
 
         return result
