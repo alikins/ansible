@@ -20,12 +20,17 @@ class AnsibleArgSpecError(AnsibleModuleError):
     def __init__(self, *args, **kwargs):
         self.argument_errors = kwargs.pop('argument_errors', [])
         super(AnsibleArgSpecError, self).__init__(*args, **kwargs)
+        self.message = "Validation of arguments failed."
 
 
 class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
     '''AnsibleModule but with overridden _load_params so it doesnt read from stdin/ANSIBLE_ARGS'''
     def __init__(self, *args, **kwargs):
         self.params = kwargs.pop('params', {})
+        # remove meta fields that aren't valid AnsibleModule args
+        self.arg_spec_name = kwargs.pop('name', None)
+        self.arg_spec_description = kwargs.pop('description', None)
+
         self.arg_validation_errors = []
         super(ArgSpecValidatingAnsibleModule, self).__init__(*args, **kwargs)
 
@@ -34,9 +39,13 @@ class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
 
     def fail_json(self, *args, **kwargs):
         msg = kwargs.pop('msg', 'Unknown arg spec validation error')
-        log.debug('Arg spec validation caused fail_json() to be called')
         log.error('Arg spec validation error: %s', msg)
-        self.arg_validation_errors.append(msg)
+        # log.debug('args: %s', args)
+        # log.debug('kwargs: %s', kwargs)
+        # log.debug('self.no_log_values: %s', self.no_log_values)
+        clean_msg = basic.remove_values(msg, self.no_log_values)
+        # log.debug('clean_msg: %s', clean_msg)
+        self.arg_validation_errors.append(clean_msg)
 
     def check_for_errors(self):
         if self.arg_validation_errors:
@@ -93,18 +102,27 @@ class ActionModule(ActionBase):
         result = super(ActionModule, self).run(tmp, task_vars)
         del tmp  # tmp no longer has any effect
 
+        # This action can be called from anywhere, so pass in some info about what it is
+        # validating args for so the error results make some sense
+        result['validate_args_context'] = self._task.args.get('validate_args_context', {})
+
         # log.debug('self._task.args: %s', pprint.pformat(self._task.args))
         if 'argument_spec' not in self._task.args:
             raise AnsibleError('"argument_spec" arg is required in args: %s' % self._task.args)
 
-        # log.debug('argument_spec: %s', pf(self._task.args['argument_spec']))
-
         # get the task var called argument_spec
         argument_spec_data = self._task.args.get('argument_spec')
 
-        # then get the 'argument_spec' item from the dict in the argument_spec task var
-        argument_spec = argument_spec_data.get('argument_spec', [])
+        # include arg spec data dict in return, use a copy since we 'pop' from it
+        # and modify it in place later.
+        result['argument_spec_data'] = argument_spec_data.copy()
 
+        # then get the 'argument_spec' item from the dict in the argument_spec task var
+        argument_spec = argument_spec_data.pop('argument_spec', [])
+
+        # everything left in argument_spec_data is modifiers
+        log.debug('argument_spec_data after: %s', argument_spec_data)
+        # argument_spec_modifiers = argument_spec_data.
         provided_arguments = self._task.args.get('provided_arguments', {})
 
         if not isinstance(argument_spec_data, dict):
@@ -123,6 +141,7 @@ class ActionModule(ActionBase):
         module_params.update(built_args)
 
         module_args = {}
+        module_args.update(argument_spec_data)
         # module_args.update(built_args)
         module_args['argument_spec'] = argument_spec
         module_args['params'] = module_params
