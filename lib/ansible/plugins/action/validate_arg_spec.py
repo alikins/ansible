@@ -4,16 +4,10 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-import logging
-import pprint
-
 from ansible.errors import AnsibleError, AnsibleModuleError
 from ansible.plugins.action import ActionBase
 from ansible.module_utils import basic
 from ansible.module_utils.six import iteritems, string_types
-
-log = logging.getLogger(__name__)
-pf = pprint.pformat
 
 
 class AnsibleArgSpecError(AnsibleModuleError):
@@ -58,16 +52,10 @@ class ActionModule(ActionBase):
 
     # WARNING: modifies argument_spec
     def build_args(self, argument_spec, task_vars):
-        # log.debug('argument_spec: %s', pf(argument_spec))
-        # log.debug('task_vars: %s', pf(task_vars))
-
         args = {}
         for key, attrs in iteritems(argument_spec):
-            # log.debug('looking for key=%s, attrs=%s', key, attrs)
             if attrs is None:
                 argument_spec[key] = {'type': 'str'}
-
-            # log.debug('task_vars.get(%s): %s', key, task_vars.get(key))
 
             if key in task_vars:
                 if isinstance(task_vars[key], string_types):
@@ -105,7 +93,6 @@ class ActionModule(ActionBase):
         # validating args for so the error results make some sense
         result['validate_args_context'] = self._task.args.get('validate_args_context', {})
 
-        # log.debug('self._task.args: %s', pprint.pformat(self._task.args))
         if 'argument_spec' not in self._task.args:
             raise AnsibleError('"argument_spec" arg is required in args: %s' % self._task.args)
 
@@ -140,23 +127,14 @@ class ActionModule(ActionBase):
         module_args['argument_spec'] = argument_spec
         module_args['params'] = module_params
 
-        # log.debug('validate_arg_spec called with module_args: %s', pf(module_args))
-
         try:
             validating_module = ArgSpecValidatingAnsibleModule(**module_args)
             validating_module.check_for_errors()
         except AnsibleArgSpecError as e:
-            # log.exception(e)
-            # log.error('Arg spec validation failed')
-            # for error in e.argument_errors:
-            #    log.error('Arg spec validation error: %s', error)
-
             result['_ansible_verbose_always'] = True
             result['failed'] = True
             result['msg'] = e.message
             result['argument_spec_data'] = orig_argument_spec_data
-
-            # does this need to check no_log?
             result['argument_errors'] = e.argument_errors
 
             # TODO: we could return the passed in params which didn't meet arg spec,
