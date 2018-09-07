@@ -79,7 +79,8 @@
         - name: assert stuff failed as expected
           assert:
             that:
-              - ansible_failed_result["argument_errors"] | sort() == expected["test1_1"]["argument_errors"] | sort()
+              - "{{ item in ansible_failed_result.argument_errors }}"
+          loop: "{{ expected.test1_1.argument_errors | sort() }}"
   post_tasks:
     - name: debug post_task
       debug:
