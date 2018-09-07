@@ -2,6 +2,23 @@
 - name: "Running include_role test1 }}"
   hosts: localhost
   gather_facts: false
+  vars:
+    expected:
+      test1_1:
+        argument_errors: ["parameters are mutually exclusive: bust_some_stuff, tidy_expected",
+                          "argument tidy_expected is of type <class 'ansible.parsing.yaml.objects.AnsibleMapping'> and we were unable to convert to list: <class 'ansible.parsing.yaml.objects.AnsibleMapping'> cannot be converted to a list",
+                          "argument bust_some_stuff is of type <class 'str'> and we were unable to convert to int: invalid literal for int() with base 10: 'some_string_that_is_not_an_int'",
+                          "argument some_list is of type <class 'ansible.parsing.yaml.objects.AnsibleMapping'> and we were unable to convert to list: <class 'ansible.parsing.yaml.objects.AnsibleMapping'> cannot be converted to a list",
+                          "argument some_dict is of type <class 'ansible.parsing.yaml.objects.AnsibleSequence'> and we were unable to convert to dict: <class 'ansible.parsing.yaml.objects.AnsibleSequence'> cannot be converted to a dict",
+                          "argument some_int is of type <class 'float'> and we were unable to convert to int: <class 'float'> cannot be converted to an int",
+                          "argument some_float is of type <class 'str'> and we were unable to convert to float: could not convert string to float: 'notafloatisit'",
+                          "argument some_bytes is of type <class 'bytes'> and we were unable to convert to bytes: <class 'bytes'> cannot be converted to a Byte value",
+                          "argument some_bits is of type <class 'str'> and we were unable to convert to bits: <class 'str'> cannot be converted to a Bit value",
+                          "value of test1_choices must be one of: this paddle game, the astray, this remote control, the chair, got: My Dog",
+                          "value of secret_choices must be one of: secret_ballot_choice1, secret_ballot_choice2, got: ********",
+                          "parameters are required together: peanut_butter, jelly",
+                          "one of the following is required: hostname, ip_address"]
+
   pre_tasks:
     - name: debug pre_task
       debug:
@@ -9,55 +26,60 @@
 
   tasks:
     - name: include_role test1 since it has a arg_spec.yml
-      include_role:
-        name: test1
-      vars:
-        tidy_expected:
-          some_key: some_value
-        blip: dfgdfg
-        test1_var1: 37.4
-        test1_choices: "My Dog"
-        bust_some_stuff: "some_string_that_is_not_an_int"
-        peanut_butter: "smooth"
-        secret_choices: "secret_ballot_choice4"
-        some_str: 37.5
-        some_list: {'a': false}
-        some_dict:
-          - "foo"
-          - "bar"
-        some_int: 37.6
-        some_float: "notafloatisit"
-        some_path: "anything_is_a_valid_path"
-        some_raw: {"anything_can_be": "a_raw_type"}
-        # not sure what would be an invalid jsonarg
-        # some_jsonarg: "not sure what this does yet"
-        some_json: |
-          '{[1, 3, 3] 345345|45v<#!}'
-        some_jsonarg: |
-          {"foo": [1, 3, 3]}
-        # not sure we can load binary in safe_load
-        some_bytes: !!binary |
-          R0lGODlhDAAMAIQAAP//9/X17unp5WZmZgAAAOfn515eXvPz7Y6OjuDg4J+fn5
-          OTk6enp56enmlpaWNjY6Ojo4SEhP/++f/++f/++f/++f/++f/++f/++f/++f/+
-          +f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC
-          AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs=
-        some_bits: "foo"
-        # some_str_nicknames: []
-        # some_str_akas: {}
-        some_str_removed_in: "foo"
-        # required_if doesnt seem to do what I expect...
-        do_something_to_some_tmp_path: true
-        # force/selevel is a common file arg
-        # not sure these are getting validated properly
-        force: -31.37
-        selevel: ["blip", {}]
-        group:
-      register: results_include_role_test1
+      block:
+        - include_role:
+            name: test1
+          vars:
+            tidy_expected:
+              some_key: some_value
+            blip: dfgdfg
+            test1_var1: 37.4
+            test1_choices: "My Dog"
+            bust_some_stuff: "some_string_that_is_not_an_int"
+            peanut_butter: "smooth"
+            secret_choices: "secret_ballot_choice4"
+            some_str: 37.5
+            some_list: {'a': false}
+            some_dict:
+              - "foo"
+              - "bar"
+            some_int: 37.6
+            some_float: "notafloatisit"
+            some_path: "anything_is_a_valid_path"
+            some_raw: {"anything_can_be": "a_raw_type"}
+            # not sure what would be an invalid jsonarg
+            # some_jsonarg: "not sure what this does yet"
+            some_json: |
+              '{[1, 3, 3] 345345|45v<#!}'
+            some_jsonarg: |
+              {"foo": [1, 3, 3]}
+            # not sure we can load binary in safe_load
+            some_bytes: !!binary |
+              R0lGODlhDAAMAIQAAP//9/X17unp5WZmZgAAAOfn515eXvPz7Y6OjuDg4J+fn5
+              OTk6enp56enmlpaWNjY6Ojo4SEhP/++f/++f/++f/++f/++f/++f/++f/++f/+
+              +f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC
+              AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs=
+            some_bits: "foo"
+            # some_str_nicknames: []
+            # some_str_akas: {}
+            some_str_removed_in: "foo"
+            # required_if doesnt seem to do what I expect...
+            do_something_to_some_tmp_path: true
+            # force/selevel is a common file arg
+            # not sure these are getting validated properly
+            force: -31.37
+            selevel: ["blip", {}]
+            group:
+          register: results_include_role_test1
+      rescue:
+        - name: show failed
+          debug:
+            var: ansible_failed_result
 
-    - name: show results_include_role_test1
-      debug:
-        var: results_include_role_test1
-
+        - name: assert stuff failed as expected
+          assert:
+            that:
+              - ansible_failed_result["argument_errors"] == expected["test1_1"]["argument_errors"]
   post_tasks:
     - name: debug post_task
       debug:
