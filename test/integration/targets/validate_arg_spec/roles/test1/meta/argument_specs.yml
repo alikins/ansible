@@ -33,6 +33,10 @@ main:
     jelly:
       required: false
       type: "str"
+    hostname:
+      type: "str"
+    ip_address:
+      type: "str"
     secret_choices:
       choices:
         - "secret_ballot_choice1"
@@ -40,11 +44,65 @@ main:
       required: false
       type: "str"
       no_log: true
+    some_str:
+      type: "str"
+    some_list:
+      type: "list"
+      elements: "float"
+    some_dict:
+      type: "dict"
+    some_bool:
+      type: "bool"
+    some_int:
+      type: "int"
+    some_float:
+      type: "float"
+    some_path:
+      type: "path"
+    some_raw:
+      type: "raw"
+    some_jsonarg:
+      type: "jsonarg"
+      required: true
+    some_json:
+      type: "json"
+      required: true
+    some_bytes:
+      type: "bytes"
+    some_bits:
+      type: "bits"
+    some_str_aliases:
+      type: "str"
+      aliases:
+        - "some_str_nicknames"
+        - "some_str_akas"
+        - "some_str_formerly_known_as"
+    some_dict_options:
+      type: "dict"
+      options:
+        some_second_level:
+          type: "bool"
+          default: true
+    some_str_removed_in:
+      type: "str"
+      removed_in: 2.10
+    do_something_to_some_tmp_path:
+      type: "bool"
+    some_tmp_path:
+      type: "path"
+
   check_invalid_arguments: true
   required_together:
     - ['peanut_butter', 'jelly']
   mutually_exclusive:
     - ['bust_some_stuff', 'tidy_expected']
+  required_one_of:
+    - ["hostname", "ip_address"]
+  # if you want crunchy peanut butter, you must provide a hostname... sure.
+  required_if:
+    - ["peanut_butter", "crunchy", ["jelly", "hostname"]]
+    - ["do_something_to_some_path", true, ["some_tmp_path"]]
+  add_file_common_args: true
     # no_log: true
     # some_random_other_field: "blippppppppppppppp"
 

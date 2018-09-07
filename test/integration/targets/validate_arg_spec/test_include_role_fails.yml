@@ -20,6 +20,38 @@
         bust_some_stuff: "some_string_that_is_not_an_int"
         peanut_butter: "smooth"
         secret_choices: "secret_ballot_choice4"
+        some_str: 37.5
+        some_list: {'a': false}
+        some_dict:
+          - "foo"
+          - "bar"
+        some_int: 37.6
+        some_float: "notafloatisit"
+        some_path: "anything_is_a_valid_path"
+        some_raw: {"anything_can_be": "a_raw_type"}
+        # not sure what would be an invalid jsonarg
+        # some_jsonarg: "not sure what this does yet"
+        some_json: |
+          '{[1, 3, 3] 345345|45v<#!}'
+        some_jsonarg: |
+          {"foo": [1, 3, 3]}
+        # not sure we can load binary in safe_load
+        some_bytes: !!binary |
+          R0lGODlhDAAMAIQAAP//9/X17unp5WZmZgAAAOfn515eXvPz7Y6OjuDg4J+fn5
+          OTk6enp56enmlpaWNjY6Ojo4SEhP/++f/++f/++f/++f/++f/++f/++f/++f/+
+          +f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC
+          AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs=
+        some_bits: "foo"
+        # some_str_nicknames: []
+        # some_str_akas: {}
+        some_str_removed_in: "foo"
+        # required_if doesnt seem to do what I expect...
+        do_something_to_some_tmp_path: true
+        # force/selevel is a common file arg
+        # not sure these are getting validated properly
+        force: -31.37
+        selevel: ["blip", {}]
+        group:
       register: results_include_role_test1
 
     - name: show results_include_role_test1

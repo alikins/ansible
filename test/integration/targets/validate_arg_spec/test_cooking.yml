@@ -1,0 +1,20 @@
+---
+- name: "computer help me Im hungry"
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: "include_role cooking"
+      include_role:
+        name: cooking
+      vars:
+        salt: true
+        port: 37.42
+        pepper: "green"
+        oil: true
+        water: true
+      register: results_include_role_cooking
+
+    - name: show results_include_role_cooking
+      debug:
+        var: results_include_role_cooking

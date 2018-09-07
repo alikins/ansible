@@ -1,0 +1,61 @@
+---
+# The name of the argspec.
+# Multiple arg specs can be defined in argument_specs.yml
+# 'main' is used by default if not otherwise specified.
+main:
+    # A dictionary of the same form as the
+    # 'argument_spec' dictionary passed to AnsibleModule.
+    # It defines the names of the arguments,
+    # and details about the argument.
+    argument_spec:
+
+        # The key here is the name of the argument.
+        # It's value is a dict.
+        # This is equilivent to
+        # hostname=dict(type='str', required=True)
+        # in a AnsibleModule call
+        hostname:
+            type: "str"
+            required: true
+
+        # port is an optional int arg, defaulting to 8000
+        port:
+            type: "int"
+            default: 8000
+
+        request:
+            type: "str"
+            choices:
+                - "GET"
+                - "POST"
+                - "PUT"
+            required: true
+
+        token:
+            type: "str"
+            default: null
+            no_log: true
+
+        salt:
+            type: "str"
+            default: "Himalayan"
+
+        pepper:
+            type: "str"
+            choices:
+                - "Tellicherry"
+                - "those little packets"
+
+        oil:
+            type: "bool"
+            required: false
+        water:
+            type: "bool"
+            required: false
+
+    # Other arg spec modifiers, also analog to AnsibleModule args
+    mutually_exclusive:
+        - ["oil", "water"]
+
+    required_together:
+        - ["salt", "pepper"]
