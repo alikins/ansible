@@ -113,6 +113,7 @@ def test_validate_arg_spec():
     assert isinstance(res, dict)
     assert res['failed']
     assert 'Validation of arguments failed' in res['msg']
-    assert 'missing required arguments: some_int, some_required_str' in res['argument_errors']
+    assert 'missing required arguments: some_int, some_required_str' in res['argument_errors'] or \
+        'missing required arguments: some_required_str, some_int' in res['argument_errors']
     assert "argument some_float is of type <class 'str'> and we were unable to convert to float:"
     "could not convert string to float: 'this_is_not_a_float'" in res['argument_errors']
