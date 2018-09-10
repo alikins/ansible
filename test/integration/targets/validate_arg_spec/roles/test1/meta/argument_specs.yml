@@ -13,8 +13,8 @@ main:
       type: "str"
       default: "this paddle game"
     tidy_expected:
-      required: false
-      default: none
+      # required: false
+      # default: none
       type: "list"
     test1_var1:
       # required: true
@@ -25,7 +25,7 @@ main:
       default: "This IS THE DEFAULT fake band name / test1_var2 answer from survey_spec.yml"
       type: "str"
     bust_some_stuff:
-      required: false
+      # required: false
       type: "int"
     peanut_butter:
       required: false
