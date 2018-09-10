@@ -1,4 +1,3 @@
----
 main:
   argument_spec:
     required_arg:
@@ -12,7 +11,7 @@ main:
     optional_arg:
 
   mutually_exclusive:
-    - ['int_arg', 'missing_arg']
+    - ["int_arg", "missing_arg"]
 
   required_together:
-    - ['default_arg', 'optional_arg']
+    - ["default_arg", "optional_arg"]
