@@ -323,6 +323,10 @@ class Role(Base, Become, Conditional, Taggable):
 
     def _create_arg_spec_validation_task_data(self, argument_spec, argument_spec_name,
                                               role_name, role_path, role_params):
+        # If the arg spec provides a name and/or description, use it to created the validation task name
+        task_name = '%s %s' % (argument_spec.get('name', 'Validating the role arguments'),
+                               argument_spec.get('description', ''))
+
         arg_spec_task = {'action': {'module': 'validate_arg_spec',
                                     'argument_spec': argument_spec,
                                     'provided_arguments': role_params,
@@ -330,6 +334,7 @@ class Role(Base, Become, Conditional, Taggable):
                                                               'name': role_name,
                                                               'path': role_path},
                                     },
+                         'name': task_name,
                          # TODO: use ignore_error from include_role for the validate task?
                          # 'ignore_errors': ignore_errors,
                          # 'vars': {'argument_spec': []},
