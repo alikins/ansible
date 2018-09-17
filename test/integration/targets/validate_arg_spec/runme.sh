@@ -14,5 +14,7 @@ ANSIBLE_PLAYBOOK=${ANSIBLE_PLAYBOOK:-"ansible-playbook"}
 
 # not sure what is going on here, multiple import_role tasks seem to clobber each others vars:
 # "$ANSIBLE_PLAYBOOK" -i ../../inventory -v "$@" -e @../../integration_config.yml test_import_role.yml
-
 "$ANSIBLE_PLAYBOOK" -i ../../inventory -v "$@" -e @../../integration_config.yml test_play_level_role.yml
+
+# test calling validate_arge_spec as a task directly
+"$ANSIBLE_PLAYBOOK" -i ../../inventory -v "$@" -e @../../integration_config.yml test_validate_arg_spec_task.yml
