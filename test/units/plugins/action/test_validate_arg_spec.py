@@ -77,7 +77,9 @@ def test_validate_arg_spec():
                                                 'aliases': ['some_array']},
                                   }
                 }
-    task.args = {'argument_spec': arg_spec}
+    task.args = {'argument_spec': arg_spec,
+                 'name': 'the_test_validate_arg_spec_unit_test',
+                 'description': 'swampy with tannin undertones and a hint of despair'}
     task.async_val = False
 
     connection = MagicMock()
