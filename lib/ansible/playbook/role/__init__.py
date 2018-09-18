@@ -323,15 +323,18 @@ class Role(Base, Become, Conditional, Taggable):
 
     def _create_arg_spec_validation_task_data(self, argument_spec, argument_spec_name,
                                               role_name, role_path, role_params):
-        # If the arg spec provides a name and/or description, use it to created the validation task name
-        task_name = '%s %s' % (argument_spec.get('name', 'Validating the role arguments'),
-                               argument_spec.get('description', ''))
+        # If the arg spec provides a description, use it to flesh out the validation task name
+        task_name_parts = ["Validating arguments against arg spec '%s'" % argument_spec_name]
+        if 'description' in argument_spec:
+            task_name_parts.append(argument_spec['description'])
+        task_name = ' - '.join(task_name_parts)
 
         arg_spec_task = {'action': {'module': 'validate_arg_spec',
                                     'argument_spec': argument_spec,
                                     'provided_arguments': role_params,
                                     'validate_args_context': {'type': 'role',
                                                               'name': role_name,
+                                                              'argument_spec_name': argument_spec_name,
                                                               'path': role_path},
                                     },
                          'name': task_name,
