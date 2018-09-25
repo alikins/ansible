@@ -53,18 +53,31 @@ class ActionModule(ActionBase):
         # that value now
         cond = Conditional(loader=self._loader)
         result['_ansible_verbose_always'] = True
-        for that in thats:
-            cond.when = [that]
-            test_result = cond.evaluate_conditional(templar=self._templar, all_vars=task_vars)
-            if not test_result:
-                result['failed'] = True
-                result['evaluated_to'] = test_result
-                result['assertion'] = that
 
-                if msg:
-                    result['msg'] = msg
+        cond.when = thats
+        test_result = cond.evaluate_conditional(templar=self._templar, all_vars=task_vars)
+        if not test_result:
+            result['failed'] = True
+            result['evaluated_to'] = test_result
+            result['assertion'] = thats
 
-                return result
+            if msg:
+                result['msg'] = msg
+
+            return result
+
+#        for that in thats:
+#            cond.when = [that]
+#            test_result = cond.evaluate_conditional(templar=self._templar, all_vars=task_vars)
+#            if not test_result:
+#                result['failed'] = True
+#                result['evaluated_to'] = test_result
+#                result['assertion'] = that
+
+#                if msg:
+#                    result['msg'] = msg
+
+#                return result
 
         result['changed'] = False
         result['msg'] = 'All assertions passed'

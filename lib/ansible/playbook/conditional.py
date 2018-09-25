@@ -274,7 +274,8 @@ class Conditional:
                     #return conditional_results
 
                 # return the falsey results when we hit the first false
-                if not result:
+                # if not result:
+                if conditional_results is False:
                     return conditional_results
 
             #if any(undefined_errors):

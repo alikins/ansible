@@ -28,6 +28,43 @@
     - "result.stdout == 'testing'"
     - "result.rc == 0"
 
+- set_fact:
+    truthy_var: true
+    falsey_var: false
+    onesie_var: 1
+    floaty_var: 37.42
+    mmmpi: 3.14
+
+- set_fact:
+    list_of_floats:
+      - "{{ onesie_var }}"
+      - "{{ mmmpi }}"
+
+- name: some asserts
+  assert:
+    that:
+      - "'blip' in ['blip', 'baz']"
+      - "3.14 in {{ list_of_floats }}"
+      - "{{ falsey_var }} == False"
+      - "False == {{ truthy_var }}"
+      - "1.9999 in {{ list_of_floats }}"
+
+- name: some asserts
+  block:
+    - assert:
+        that:
+          - "'blip' in ['blip', 'baz']"
+          - "3.14 in {{ list_of_floats }}"
+          - "False == False"
+          - "False == True"
+  rescue:
+    - debug:
+        var: ansible_failed_result
+    - assert:
+        that:
+          - "ansible_failed_result.evaluated_to.failed_conditions[0]"
+  when: false
+
 - name: test bad conditional '=='
   shell: echo 'testing'
   when: 0 == 1
