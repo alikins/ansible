@@ -8,6 +8,10 @@ from ansible.errors import AnsibleError, AnsibleModuleError
 from ansible.plugins.action import ActionBase
 from ansible.module_utils import basic
 from ansible.module_utils.six import iteritems, string_types
+import logging
+
+import pprint
+log = logging.getLogger(__name__)
 
 
 class AnsibleArgSpecError(AnsibleModuleError):
@@ -23,6 +27,8 @@ class ArgSpecValidatingAnsibleModule(basic.AnsibleModule):
         # remove meta fields that aren't valid AnsibleModule args
         self.arg_spec_name = kwargs.pop('name', None)
         self.arg_spec_description = kwargs.pop('description', None)
+        self.arg_spec_short_description = kwargs.pop('short_description', None)
+        self.arg_spec_docs = kwargs.pop('docs', {})
 
         self.arg_validation_errors = []
         super(ArgSpecValidatingAnsibleModule, self).__init__(*args, **kwargs)
@@ -54,6 +60,8 @@ class ActionModule(ActionBase):
 
     # WARNING: modifies argument_spec
     def build_args(self, argument_spec, task_vars):
+        # log.debug('argument_spec: %s', argument_spec)
+        # log.debug('task_vars: %s', pprint.pformat(task_vars))
         args = {}
         for key, attrs in iteritems(argument_spec):
             if attrs is None:
@@ -107,7 +115,7 @@ class ActionModule(ActionBase):
 
         # then get the 'argument_spec' item from the dict in the argument_spec task var
         # everything left in argument_spec_data is modifiers
-        argument_spec = argument_spec_data.pop('argument_spec', [])
+        argument_spec = argument_spec_data.pop('argument_spec', {})
 
         # the values that were passed in and will be checked against argument_spec
         provided_arguments = self._task.args.get('provided_arguments', {})
@@ -120,6 +128,7 @@ class ActionModule(ActionBase):
 
         module_params = provided_arguments
 
+        # log.debug('argument_spec: %s', argument_spec)
         # apply any defaults from the arg spec and setup aliases
         built_args = self.build_args(argument_spec, task_vars)
         module_params.update(built_args)
@@ -128,6 +137,8 @@ class ActionModule(ActionBase):
         module_args.update(argument_spec_data)
         module_args['argument_spec'] = argument_spec
         module_args['params'] = module_params
+
+        log.debug('module_args: %s', pprint.pformat(module_args))
 
         try:
             validating_module = ArgSpecValidatingAnsibleModule(**module_args)

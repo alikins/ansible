@@ -34,6 +34,11 @@ from ansible.playbook.taggable import Taggable
 from ansible.plugins.loader import get_all_plugin_loaders
 from ansible.utils.vars import combine_vars
 
+import logging
+log = logging.getLogger(__name__)
+import pprint
+pf = pprint.pformat
+
 __all__ = ['Role', 'hash_params']
 
 
@@ -123,6 +128,9 @@ class Role(Base, Become, Conditional, Taggable):
         # Indicates whether this role was included via include/import_role
         self.from_include = from_include
 
+        self.log = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
+        self.log.debug('init _role_name=%s _role_path=%s from_files=%s',
+                       self._role_name, self._role_path, from_files)
         super(Role, self).__init__()
 
     def __repr__(self):
@@ -158,9 +166,12 @@ class Role(Base, Become, Conditional, Taggable):
                             role_obj.add_parent(parent_role)
                         return role_obj
 
+            log.debug('from_files: %s', from_files)
             r = Role(play=play, from_files=from_files, from_include=from_include)
             r._load_role_data(role_include, parent_role=parent_role)
 
+            log.debug('r: %s', r)
+            # log.debug('r.__dict__: %s', pf(r.__dict__))
             if role_include.role not in play.ROLE_CACHE:
                 play.ROLE_CACHE[role_include.role] = dict()
 
@@ -223,6 +234,7 @@ class Role(Base, Become, Conditional, Taggable):
         else:
             self._metadata = RoleMetadata()
 
+        log.debug('self._metadata: %s', self._metadata)
         # The argument_specs file will contain a dict, and can have multiple keys,
         # included a 'main' item. But set one up explicitly if the yaml doesnt provide
         # one. Could also do things like 'pick the first one' or try to match role name or
@@ -230,30 +242,46 @@ class Role(Base, Become, Conditional, Taggable):
         argument_specs = {'main': {}}
         try:
             argument_specs = self._load_role_yaml('meta', main='argument_specs')
+            log.debug('argument_specs1: %s', pf(argument_specs))
         except AnsibleParserError as e:
-            pass
+            log.exception(e)
+            log.debug('wtf?')
+            raise
+            #pass
 
+        log.debug('argument_specs2: %s', pf(argument_specs))
         # TODO: need a playbook.base.Base derived object here?
         # TODO: do we want a Role (or Task or Base) object to have a arg_spec attribute?
         #       Seems like it would be handy for introspection and error reporting and copy()
         self._argument_specs = argument_specs
 
         task_data = self._load_role_yaml('tasks', main=self._from_files.get('tasks'))
+        log.debug('task_data: %s', pf(task_data))
 
         # If the the include role is from a task in a from_tasks file,
         # try to use the argument_spec named based on the from_tasks file file name
         # first, then fallback to trying 'main'
         argument_spec_names = []
+
+        log.debug('self._from_files: %s', self._from_files)
+
         if self._from_files.get('tasks'):
             argument_spec_names.append(self._from_files.get('tasks'))
         argument_spec_names.append('main')
+
+        log.debug('argument_spec_names: %s', argument_spec_names)
 
         argument_spec = None
         if argument_specs:
             for argument_spec_name in argument_spec_names:
                 argument_spec = argument_specs.get(argument_spec_name, None)
                 if argument_spec:
+                    log.debug('using argument_spec_name: %s', argument_spec_name)
                     break
+
+        argument_spec_docs = argument_spec.pop('docs', {})
+
+        log.debug('argument_spec_docs: %s', pf(argument_spec_docs))
 
         if argument_spec:
             arg_spec_validation_task = \
@@ -271,6 +299,8 @@ class Role(Base, Become, Conditional, Taggable):
                 task_data = []
 
             task_data.insert(0, arg_spec_validation_task)
+
+        log.debug('task_data: %s', task_data)
 
         if task_data:
             try:
@@ -338,6 +368,8 @@ class Role(Base, Become, Conditional, Taggable):
         if 'description' in argument_spec:
             task_name_parts.append(argument_spec['description'])
         task_name = ' - '.join(task_name_parts)
+
+        log.debug('provided_arguments: %s', pf(role_params))
 
         arg_spec_task = {'action': {'module': 'validate_arg_spec',
                                     'argument_spec': argument_spec,

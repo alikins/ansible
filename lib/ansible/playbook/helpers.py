@@ -32,6 +32,11 @@ except ImportError:
     from ansible.utils.display import Display
     display = Display()
 
+import logging
+log = logging.getLogger(__name__)
+import pprint
+pf = pprint.pformat
+
 
 def load_list_of_blocks(ds, play, parent_block=None, role=None, task_include=None, use_handlers=False, variable_manager=None, loader=None):
     '''
@@ -39,6 +44,8 @@ def load_list_of_blocks(ds, play, parent_block=None, role=None, task_include=Non
     return a list of Block() objects, where implicit blocks
     are created for each bare Task.
     '''
+
+    # log.debug('block ds: %s', pf(ds))
 
     # we import here to prevent a circular dependency with imports
     from ansible.playbook.block import Block
@@ -101,6 +108,8 @@ def load_list_of_tasks(ds, play, block=None, role=None, task_include=None, use_h
 
     if not isinstance(ds, list):
         raise AnsibleAssertionError('The ds (%s) should be a list but was a %s' % (ds, type(ds)))
+
+    # log.debug('tasks ds: %s', pf(ds))
 
     task_list = []
     for task_ds in ds:
