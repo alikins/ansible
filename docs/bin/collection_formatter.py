@@ -34,6 +34,9 @@ from copy import deepcopy
 from distutils.version import LooseVersion
 from functools import partial
 from pprint import PrettyPrinter
+import pprint
+import logging
+import shutil
 
 try:
     from html import escape as html_escape
@@ -59,6 +62,10 @@ from ansible.utils.display import Display
 from ansible.utils._build_helpers import update_file_if_different
 
 
+log = logging.getLogger(__name__)
+import alogging
+# alogging.STACK_INFO = True
+log = alogging.default_setup('plugin_formatter')
 #####################################################################################
 # constants and paths
 
@@ -292,6 +299,8 @@ def get_plugin_info(module_dir, limit_to=None, verbose=False):
         if module_categories:
             primary_category = module_categories[0]
 
+        doc = doc or {'no_docs': True}
+
         if 'options' in doc and doc['options'] is None:
             display.error("*** ERROR: DOCUMENTATION.options must be a dictionary/hash when used. ***")
             pos = getattr(doc, "ansible_pos", None)
@@ -369,6 +378,8 @@ def jinja2_environment(template_dir, typ, plugin_type):
         env.filters['xline'] = rst_xline
         env.tests['list'] = test_list
         templates['plugin'] = env.get_template('plugin.rst.j2')
+        templates['galaxy.yml'] = env.get_template('galaxy.yml.j2')
+        templates['plugin_README.md'] = env.get_template('plugin_README.md.j2')
 
         if plugin_type == 'module':
             name = 'modules'
@@ -522,12 +533,41 @@ def process_plugins(module_map, templates, outputname, output_dir, ansible_versi
 
         display.v('about to template %s' % module)
         display.vvvvv(pp.pformat(doc))
-        text = templates['plugin'].render(doc)
-        if LooseVersion(jinja2.__version__) < LooseVersion('2.10'):
-            # jinja2 < 2.10's indent filter indents blank lines.  Cleanup
-            text = re.sub(' +\n', '\n', text)
+#         text = templates['plugin'].render(doc)
+#        if LooseVersion(jinja2.__version__) < LooseVersion('2.10'):
+#            # jinja2 < 2.10's indent filter indents blank lines.  Cleanup
+#            text = re.sub(' +\n', '\n', text)
 
-        write_data(text, output_dir, outputname, module)
+        log.debug('doc: %s', pprint.pformat(doc))
+
+        collection_namespace = 'ansible'
+        collection_name = '%s_%s' % (plugin_type, module)
+        doc['collection_namespace'] = collection_namespace
+        doc['collection_name'] = collection_name
+        doc['collection_version'] = '2.8.0'
+        doc['collection_description'] = doc['short_description']
+
+        collection_dir = os.path.join(output_dir,
+                                      collection_name)
+        os.makedirs(collection_dir, exist_ok=True)
+
+        plugin_collection_dir = os.path.join(collection_dir, 'plugins', plugin_type)
+        os.makedirs(plugin_collection_dir, exist_ok=True)
+
+        log.debug('collection_dir: %s, collection_name: %s', collection_dir, collection_name)
+
+#         write_data(text, output_dir, outputname, module)
+
+        log.debug('writing galaxy.yml from template')
+        galaxy_yml_text = templates['galaxy.yml'].render(doc)
+        write_data(galaxy_yml_text, collection_dir, 'galaxy.yml')
+
+        readme_text = templates['plugin_README.md'].render(doc)
+        write_data(readme_text, collection_dir, 'README.md')
+
+        # copy a version of the python/etc file
+        log.debug('copying %s to %s', doc['filename'], plugin_collection_dir)
+        shutil.copy(doc['filename'], plugin_collection_dir)
 
 
 def process_categories(plugin_info, categories, templates, output_dir, output_name, plugin_type):
@@ -639,9 +679,11 @@ def validate_options(options):
     ''' validate option parser options '''
 
     if not options.module_dir:
-        sys.exit("--module-dir is required", file=sys.stderr)
+        sys.stderr.write("--module-dir is required")
+        sys.exit(1)
     if not os.path.exists(options.module_dir):
-        sys.exit("--module-dir does not exist: %s" % options.module_dir, file=sys.stderr)
+        sys.stderr.write("--module-dir does not exist: %s" % options.module_dir)
+        sys.exit(1)
     if not options.template_dir:
         sys.exit("--template-dir must be specified")
 
@@ -651,9 +693,13 @@ def main():
     # INIT
     p = generate_parser()
     (options, args) = p.parse_args()
+    log.debug('options: %s', pprint.pformat(options))
+    log.debug('args: %s', pprint.pformat(args))
     validate_options(options)
     display.verbosity = options.verbosity
     plugin_type = options.plugin_type
+
+    collection_namespace = 'ansible'
 
     # prep templating
     templates = jinja2_environment(options.template_dir, options.type, plugin_type)
@@ -666,7 +712,10 @@ def main():
     else:
         # for plugins, just use 'ssh.rst' vs 'ssh_module.rst'
         outputname = '%s.rst'
-        output_dir = '%s/plugins/%s' % (options.output_dir, plugin_type)
+        # output_dir = '%s/plugins/%s' % (options.output_dir, plugin_type)
+        os.makedirs('%s/content/%s' % (options.output_dir, collection_namespace), exist_ok=True)
+        output_dir = '%s/content/%s' % (options.output_dir, collection_namespace)
+        # output_dir = '%s/content/ansible/%s' % (options.output_dir, plugin_type)
 
     display.vv('output name: %s' % outputname)
     display.vv('output dir: %s' % output_dir)
@@ -689,10 +738,11 @@ def main():
             display.vv(key)
             display.vvvvv(pp.pformat(('record', record)))
             if record.get('doc', None):
-                short_desc = record['doc']['short_description'].rstrip('.')
+                short_desc = record['doc'].get('short_description')
                 if short_desc is None:
                     display.warning('short_description for %s is None' % key)
                     short_desc = ''
+                short_desc = short_desc.rstrip('.')
                 record['doc']['short_description'] = rst_ify(short_desc)
 
     if plugin_type == 'module':

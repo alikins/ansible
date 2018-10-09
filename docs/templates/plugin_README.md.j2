@@ -1,0 +1,54 @@
+# Ansible @{ plugin_type }@: @{ collection_namespace }@.@{ collection_name }@
+
+
+@{ short_description }@
+
+{% if description %}
+## Description
+
+{% for desc_line in description %}
+@{ desc_line }@
+{% endfor %}
+{% endif %}
+
+## Requirements
+
+TODO
+
+## Arguments
+
+{% if options %}
+``` json
+{
+{% for key, value in options|dictsort recursive %}
+    "@{ key }@": "@{ value }@",
+{% endfor %}
+{% endif %}
+}
+```
+
+## Examples
+
+{%   for example in examples %}
+{%     if example['description'] %}@{ example['description'] }@{% endif %}
+``` yaml
+@{ example['code'] | escape }@
+```
+{%   endfor %}
+
+{%   if plainexamples %}
+``` yaml
+@{ plainexamples }@
+```
+{% endif %}
+
+## License
+
+TODO
+
+{% if author %}
+## Author Information
+{% for auth in author %}  - @{ author }@
+{% endfor %}
+{% endif %}
+
