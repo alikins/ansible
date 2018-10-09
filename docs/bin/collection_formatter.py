@@ -56,18 +56,20 @@ from ansible.errors import AnsibleError
 from ansible.module_utils._text import to_bytes, to_text
 from ansible.module_utils.common.collections import is_sequence
 from ansible.module_utils.parsing.convert_bool import boolean
-from ansible.plugins.loader import fragment_loader
+from ansible.plugins.loader import fragment_loader, filter_loader
 from ansible.utils import plugin_docs
 from ansible.utils.display import Display
 from ansible.utils._build_helpers import update_file_if_different
 
 
-log = logging.getLogger(__name__)
+# log = logging.getLogger(__name__)
 import alogging
 # alogging.STACK_INFO = True
 log = alogging.default_setup('plugin_formatter')
 #####################################################################################
 # constants and paths
+
+ANSIBLE_GALAXY_NAMESPACE = 'ansible'
 
 # if a module is added in a version of Ansible older than this, don't print the version added information
 # in the module documentation because everyone is assumed to be running something newer than this already.
@@ -371,11 +373,20 @@ def jinja2_environment(template_dir, typ, plugin_type):
         env.filters['max'] = do_max
 
     templates = {}
+
+    filter_plugins = {}
+    for fp in filter_loader.all():
+        filter_plugins.update(fp.filters())
+
+    # log.debug('filter_plugins: %s', pprint.pformat(filter_plugins))
+
     if typ == 'rst':
         env.filters['convert_symbols_to_format'] = rst_ify
         env.filters['html_ify'] = html_ify
         env.filters['fmt'] = rst_fmt
         env.filters['xline'] = rst_xline
+        env.filters.update(filter_plugins)
+
         env.tests['list'] = test_list
         templates['plugin'] = env.get_template('plugin.rst.j2')
         templates['galaxy.yml'] = env.get_template('galaxy.yml.j2')
@@ -538,7 +549,7 @@ def process_plugins(module_map, templates, outputname, output_dir, ansible_versi
 #            # jinja2 < 2.10's indent filter indents blank lines.  Cleanup
 #            text = re.sub(' +\n', '\n', text)
 
-        log.debug('doc: %s', pprint.pformat(doc))
+        # log.debug('doc: %s', pprint.pformat(doc))
 
         collection_namespace = 'ansible'
         collection_name = '%s_%s' % (plugin_type, module)
@@ -551,7 +562,11 @@ def process_plugins(module_map, templates, outputname, output_dir, ansible_versi
                                       collection_name)
         os.makedirs(collection_dir, exist_ok=True)
 
-        plugin_collection_dir = os.path.join(collection_dir, 'plugins', plugin_type)
+        if plugin_type == 'module':
+            plugin_collection_dir = os.path.join(collection_dir, 'modules')
+        else:
+            plugin_collection_dir = os.path.join(collection_dir, 'plugins', plugin_type)
+
         os.makedirs(plugin_collection_dir, exist_ok=True)
 
         log.debug('collection_dir: %s, collection_name: %s', collection_dir, collection_name)
@@ -588,16 +603,55 @@ def process_categories(plugin_info, categories, templates, output_dir, output_na
         category_title = category_name.title()
 
         subcategories = dict((k, v) for k, v in module_map.items() if k != '_modules')
+        log.debug('subcat: %s', pprint.pformat(subcategories))
+
+        def collection_name(plugin_type_, plugin_name):
+            return '%s.%s_%s' % (ANSIBLE_GALAXY_NAMESPACE, plugin_type_, plugin_name)
+
+        requirements = []
+        log.debug('module deps: %s', module_map.get('_modules', []))
+        requirements.extend([collection_name(plugin_type, x) for x in module_map.get('_modules', [])])
+
+        for subcat in subcategories:
+            log.debug('subcat: %s', subcat)
+            for subcat_key, subcat_item in subcategories[subcat].items():
+                log.debug('subcat_keys: %s subcat_item: %s', subcat_key, subcat_item)
+                for sub_sub_cat_item in subcat_item:
+                    requirements.append(collection_name(plugin_type, sub_sub_cat_item))
+
+        # requirements = ['%s.module_%s' % (ANSIBLE_GALAXY_NAMESPACE, subgategories.get('_modules') for k in subcategories]
         template_data = {'title': category_title,
                          'category_name': category_name,
                          'category': module_map,
                          'subcategories': subcategories,
                          'module_info': plugin_info,
-                         'plugin_type': plugin_type
+                         'plugin_type': plugin_type,
+                         'requirements': requirements,
                          }
 
-        text = templates['list_of_CATEGORY_modules'].render(template_data)
-        write_data(text, output_dir, category_filename)
+        # log.debug('rendering %s: %s', category_name, pprint.pformat(template_data))
+        log.debug('module_map: %s', pprint.pformat(module_map))
+        log.debug('requirements: %s', pprint.pformat(requirements))
+        cat_name = 'module_set_%s' % category_name
+        cat_collection_name = '%s.%s' % (ANSIBLE_GALAXY_NAMESPACE, cat_name)
+        galaxy = {'name': cat_collection_name,
+                  'version': '2.8.0dev',
+                  'description': '%s modules' % category_title,
+                  'author': ['ansible_galaxy@invalid.com'],
+                  'license': 'GPL-3.0-or-later',
+                  'requirements': requirements}
+
+        # TODO: build a dict of the info in galaxy.yml and just yaml serializei
+        collection_dir = os.path.join(output_dir,
+                                      cat_name)
+        os.makedirs(collection_dir, exist_ok=True)
+        galaxy_path = os.path.join(collection_dir, 'galaxy.yml')
+        with open(galaxy_path, 'w') as gfd:
+            log.debug('writing yaml to galaxy_path: %s', galaxy_path)
+            yaml.safe_dump(galaxy, stream=gfd, default_flow_style=False)
+
+        # text = templates['list_of_CATEGORY_modules'].render(template_data)
+        # write_data(text, output_dir, category_filename)
 
 
 def process_support_levels(plugin_info, templates, output_dir, plugin_type):
