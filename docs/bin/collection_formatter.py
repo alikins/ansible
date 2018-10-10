@@ -121,6 +121,10 @@ def do_max(seq):
     return max(seq)
 
 
+def slugify(value):
+    return re.sub(r'[^\w-]', '_', value).lower().lstrip('_')
+
+
 def rst_ify(text):
     ''' convert symbols like I(this is in italics) to valid restructured text '''
 
@@ -625,6 +629,7 @@ def process_categories(plugin_info, categories, templates, output_dir, output_na
 
         category_name = category.replace("_", " ")
         category_title = category_name.title()
+        category_slug = slugify(category)
 
         subcategories = dict((k, v) for k, v in module_map.items() if k != '_modules')
         log.debug('subcat: %s', pprint.pformat(subcategories))
@@ -656,7 +661,7 @@ def process_categories(plugin_info, categories, templates, output_dir, output_na
         # log.debug('rendering %s: %s', category_name, pprint.pformat(template_data))
         log.debug('module_map: %s', pprint.pformat(module_map))
         log.debug('requirements: %s', pprint.pformat(requirements))
-        cat_coll_name = 'module_category_%s' % category_name
+        cat_coll_name = 'module_category_%s' % category_slug
         cat_coll_name_full = '%s.%s' % (ANSIBLE_GALAXY_NAMESPACE, cat_coll_name)
         galaxy = {'name': cat_coll_name_full,
                   'version': '2.8.0',
@@ -841,14 +846,15 @@ def main():
     if plugin_type == 'module':
         # trim trailing s off of plugin_type for plugin_type=='modules'. ie 'copy_module.rst'
         outputname = '%s_' + '%s.rst' % plugin_type
-        output_dir = options.output_dir
+        # output_dir = options.output_dir
     else:
         # for plugins, just use 'ssh.rst' vs 'ssh_module.rst'
         outputname = '%s.rst'
         # output_dir = '%s/plugins/%s' % (options.output_dir, plugin_type)
-        os.makedirs('%s/content/%s' % (options.output_dir, collection_namespace), exist_ok=True)
-        output_dir = '%s/content/%s' % (options.output_dir, collection_namespace)
-        # output_dir = '%s/content/ansible/%s' % (options.output_dir, plugin_type)
+
+    os.makedirs('%s/content/%s' % (options.output_dir, collection_namespace), exist_ok=True)
+    output_dir = '%s/content/%s' % (options.output_dir, collection_namespace)
+    # output_dir = '%s/content/ansible/%s' % (options.output_dir, plugin_type)
 
     display.vv('output name: %s' % outputname)
     display.vv('output dir: %s' % output_dir)
