@@ -156,6 +156,20 @@ def html_ify(text):
     return t.strip()
 
 
+def plain_ify(text):
+    ''' convert symbols to plain text, mostly removing any markup '''
+
+    t = _ITALIC.sub(r"\1", text)
+    t = _BOLD.sub(r"\1", t)
+    # t = _MODULE.sub(r"<span class='module'>\1</span>", t)
+    t = _MODULE.sub(r"\1", t)
+    t = _URL.sub(r"\1", t)
+    t = _LINK.sub(r"\1", t)
+    t = _CONST.sub(r"\1", t)
+    t = _RULER.sub(r"", t)
+    return t.strip()
+
+
 def rst_fmt(text, fmt):
     ''' helper for Jinja2 to do format strings '''
 
@@ -180,6 +194,16 @@ def normalize_options(value):
         except TypeError:
             pass
     return value
+
+
+def yaml_dump_stylish(data, stream=None, *args, **kwargs):
+    style_kwargs = {'default_flow_style': False,
+                    'default_style': None,
+                    'indent': 4}
+    style_kwargs.update(kwargs)
+    log.debug('style_kwargs: %s', style_kwargs)
+
+    return yaml.safe_dump(data, *args, stream=stream, **style_kwargs)
 
 
 def write_data(text, output_dir, outputname, module=None):
@@ -556,7 +580,7 @@ def process_plugins(module_map, templates, outputname, output_dir, ansible_versi
         doc['collection_namespace'] = collection_namespace
         doc['collection_name'] = collection_name
         doc['collection_version'] = '2.8.0'
-        doc['collection_description'] = doc['short_description']
+        doc['collection_description'] = plain_ify(doc['short_description'])
 
         collection_dir = os.path.join(output_dir,
                                       collection_name)
@@ -632,23 +656,25 @@ def process_categories(plugin_info, categories, templates, output_dir, output_na
         # log.debug('rendering %s: %s', category_name, pprint.pformat(template_data))
         log.debug('module_map: %s', pprint.pformat(module_map))
         log.debug('requirements: %s', pprint.pformat(requirements))
-        cat_name = 'module_set_%s' % category_name
-        cat_collection_name = '%s.%s' % (ANSIBLE_GALAXY_NAMESPACE, cat_name)
-        galaxy = {'name': cat_collection_name,
-                  'version': '2.8.0dev',
+        cat_coll_name = 'module_category_%s' % category_name
+        cat_coll_name_full = '%s.%s' % (ANSIBLE_GALAXY_NAMESPACE, cat_coll_name)
+        galaxy = {'name': cat_coll_name_full,
+                  'version': '2.8.0',
                   'description': '%s modules' % category_title,
-                  'author': ['ansible_galaxy@invalid.com'],
+                  'authors': ['ansible_galaxy@invalid.com'],
                   'license': 'GPL-3.0-or-later',
                   'requirements': requirements}
 
         # TODO: build a dict of the info in galaxy.yml and just yaml serializei
         collection_dir = os.path.join(output_dir,
-                                      cat_name)
+                                      cat_coll_name)
         os.makedirs(collection_dir, exist_ok=True)
         galaxy_path = os.path.join(collection_dir, 'galaxy.yml')
         with open(galaxy_path, 'w') as gfd:
             log.debug('writing yaml to galaxy_path: %s', galaxy_path)
-            yaml.safe_dump(galaxy, stream=gfd, default_flow_style=False)
+            yaml_dump_stylish(galaxy, stream=gfd)
+            # yaml.safe_dump(galaxy, stream=gfd,
+            #               default_flow_style=False, indent=2)
 
         # text = templates['list_of_CATEGORY_modules'].render(template_data)
         # write_data(text, output_dir, category_filename)
@@ -717,16 +743,69 @@ These modules are currently shipped with Ansible, but will most likely be shippe
         else:
             raise AnsibleError('Unknown supported_by value: %s' % info['metadata']['supported_by'])
 
+    # log.debug('plugin_info: %s', plugin_info)
+    log.debug('supported_by: %s', pprint.pformat(supported_by))
     # Render the module lists
     for maintainers, data in supported_by.items():
-        template_data = {'maintainers': maintainers,
-                         'modules': data['modules'],
-                         'slug': data['slug'],
-                         'module_info': plugin_info,
-                         'plugin_type': plugin_type
-                         }
-        text = templates['support_list'].render(template_data)
-        write_data(text, output_dir, data['output'])
+
+        # template_data = {'maintainers': maintainers,
+        #                 'modules': data['modules'],
+        #                 'slug': data['slug'],
+        #                 'module_info': plugin_info,
+        #                 'plugin_type': plugin_type
+        #                 }
+        # text = templates['support_list'].render(template_data)
+        # write_data(text, output_dir, data['output'])
+
+        support_slug = data['slug']
+        support_coll_name = 'module_support_%s' % support_slug
+        support_coll_name_full = '%s.%s' % (ANSIBLE_GALAXY_NAMESPACE, support_coll_name)
+
+        description = plain_ify(data['blurb'])
+        authors = ['ansible_galaxy_meta_collection@invalid.com']
+        options = {}
+
+        # FIXME: This should likely be 'requirements' in galaxy.yml
+        dependencies = list(['%s.%s_%s' % (ANSIBLE_GALAXY_NAMESPACE, plugin_type, plugin_name) for plugin_name in data['modules']])
+        log.debug('dependencies: %s', dependencies)
+
+        readme_desc = '%s\n\nThis will pull in as requirements:\n- %s' % (description, '\n- '.join(dependencies))
+        readme_data = {'plugin_type': plugin_type,
+                       'collection_namespace': ANSIBLE_GALAXY_NAMESPACE,
+                       'collection_name': support_coll_name,
+                       'short_description': '%s maintained by %s' % (plugin_type, maintainers),
+                       'description': readme_desc.splitlines(),
+                       # FIXME: templates for support/cat readmes without options
+                       'options': options,
+                       'examples': [],
+                       'author': authors}
+
+        galaxy = {'name': support_coll_name_full,
+                  'version': '2.8.0',
+                  'description': description,
+                  'authors': authors,
+                  'license': 'GPL-3.0-or-later',
+                  'dependencies': dependencies,
+                  # 'requirements': requirements,
+                  }
+
+        log.debug('galaxy: %s', pprint.pformat(galaxy))
+
+        collection_dir = os.path.join(output_dir,
+                                      support_coll_name)
+
+        os.makedirs(collection_dir, exist_ok=True)
+        galaxy_path = os.path.join(collection_dir, 'galaxy.yml')
+
+        with open(galaxy_path, 'w') as gfd:
+            log.debug('writing yaml to galaxy_path: %s', galaxy_path)
+            yaml_dump_stylish(galaxy, stream=gfd)
+            # yaml.safe_dump(galaxy, stream=gfd,
+            #               default_flow_style=False, indent=2)
+
+        readme_text = templates['plugin_README.md'].render(readme_data)
+        log.debug('writing readme to %s/%s', collection_dir, 'README.md')
+        write_data(readme_text, collection_dir, 'README.md')
 
 
 def validate_options(options):
