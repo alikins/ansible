@@ -983,6 +983,9 @@ class ActionBase(with_metaclass(ABCMeta, object)):
             os.chdir(self._loader.get_basedir())
         try:
             rc, stdout, stderr = self._connection.exec_command(cmd, in_data=in_data, sudoable=sudoable)
+            pid = os.getpid()
+            print('%s: stdout: %s' % (pid, stdout))
+            print('%s: stderr: %s' % (pid, stderr))
         finally:
             if self._connection.transport == 'local':
                 os.chdir(cwd)

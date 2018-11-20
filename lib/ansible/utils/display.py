@@ -18,6 +18,8 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+print('start of display module load')
+
 import errno
 import fcntl
 import getpass
@@ -29,6 +31,7 @@ import subprocess
 import sys
 import textwrap
 import time
+import traceback
 
 from struct import unpack, pack
 from termios import TIOCGWINSZ
@@ -38,6 +41,9 @@ from ansible.errors import AnsibleError
 from ansible.module_utils._text import to_bytes, to_text
 from ansible.utils.color import stringc
 
+print('just before setting display_context=None')
+global display_context
+display_context = None
 
 try:
     # Python 2
@@ -77,46 +83,85 @@ b_COW_PATHS = (
 )
 
 
-class Display:
+def get_column_width():
+    tty_size = 0
+    if os.isatty(0):
+        tty_size = unpack('HHHH', fcntl.ioctl(0, TIOCGWINSZ, pack('HHHH', 0, 0, 0, 0)))[1]
+    columns = max(79, tty_size - 1)
+    return columns
 
+
+def get_cowsay_path():
+    b_cowsay = None
+
+    if C.ANSIBLE_NOCOWS:
+        return None
+
+    if C.ANSIBLE_COW_PATH:
+        b_cowsay = C.ANSIBLE_COW_PATH
+        return b_cowsay
+
+    for b_cow_path in b_COW_PATHS:
+        if os.path.exists(b_cow_path):
+            return b_cow_path
+
+    return b_cowsay
+
+
+def get_cows_available(b_cowsay):
+    try:
+        cmd = subprocess.Popen([b_cowsay, "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (out, err) = cmd.communicate()
+        cows_available = set([to_text(c) for c in out.split()])
+        if C.ANSIBLE_COW_WHITELIST:
+            cows_available = set(C.ANSIBLE_COW_WHITELIST).intersection(cows_available)
+        return cows_available
+    except:
+        # cowsay exec failed
+        return None
+
+
+class DisplayContext:
     def __init__(self, verbosity=0):
-
-        self.columns = None
         self.verbosity = verbosity
 
-        # list of all deprecation messages to prevent duplicate display
-        self._deprecations = {}
-        self._warns = {}
-        self._errors = {}
+        self.deprecations = {}
+        self.warns = {}
+        self.errors = {}
 
-        self.b_cowsay = None
-        self.noncow = C.ANSIBLE_COW_SELECTION
+        self.b_cowsay = get_cowsay_path()
+        self.cows_available = get_cows_available(self.b_cowsay)
+        self.cow_selected = C.ANSIBLE_COW_SELECTION
 
-        self.set_cowsay_info()
+        self.columns = get_column_width()
 
-        if self.b_cowsay:
-            try:
-                cmd = subprocess.Popen([self.b_cowsay, "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                (out, err) = cmd.communicate()
-                self.cows_available = set([to_text(c) for c in out.split()])
-                if C.ANSIBLE_COW_WHITELIST:
-                    self.cows_available = set(C.ANSIBLE_COW_WHITELIST).intersection(self.cows_available)
-            except:
-                # could not execute cowsay for some reason
-                self.b_cowsay = False
 
-        self._set_column_width()
+# import traceback
+print('just before checking if display_context is None')
+# traceback.print_stack()
+if display_context is None:
+    print('display_context is None, initing display_context %r' % display_context)
+    display_context = DisplayContext()
+    print('inited display_context %r' % display_context)
 
-    def set_cowsay_info(self):
-        if C.ANSIBLE_NOCOWS:
-            return
 
-        if C.ANSIBLE_COW_PATH:
-            self.b_cowsay = C.ANSIBLE_COW_PATH
-        else:
-            for b_cow_path in b_COW_PATHS:
-                if os.path.exists(b_cow_path):
-                    self.b_cowsay = b_cow_path
+class Display:
+    def __init__(self, context=None, verbosity=0):
+        # defualt to the global display_context
+        print('Display init: %r verbosity: %s' % (self, verbosity))
+        self.context = context or display_context
+        # traceback.print_stack()
+        print('Display init context: %r' % (self.context))
+
+    @property
+    def verbosity(self):
+        return self.context.verbosity
+
+    @verbosity.setter
+    def verbosity(self, value):
+        print('setting context.verbosity = %s' % value)
+        traceback.print_stack()
+        self.context.verbosity = value
 
     def display(self, msg, color=None, stderr=False, screen_only=False, log_only=False):
         """ Display a message to the user
@@ -124,6 +169,7 @@ class Display:
         Note: msg *must* be a unicode string to prevent UnicodeError tracebacks.
         """
 
+        msg = '(d_c: %r pid: %s) ' % (self.context, os.getpid()) + msg
         nocolor = msg
         if color:
             msg = stringc(msg, color)
@@ -199,7 +245,7 @@ class Display:
                 self.display("%6d %0.5f [%s]: %s" % (os.getpid(), time.time(), host, msg), color=C.COLOR_DEBUG)
 
     def verbose(self, msg, host=None, caplevel=2):
-        if self.verbosity > caplevel:
+        if self.context.verbosity > caplevel:
             if host is None:
                 self.display(msg, color=C.COLOR_VERBOSE)
             else:
@@ -220,25 +266,25 @@ class Display:
         else:
             raise AnsibleError("[DEPRECATED]: %s.\nPlease update your playbooks." % msg)
 
-        wrapped = textwrap.wrap(new_msg, self.columns, drop_whitespace=False)
+        wrapped = textwrap.wrap(new_msg, self.context.columns, drop_whitespace=False)
         new_msg = "\n".join(wrapped) + "\n"
 
-        if new_msg not in self._deprecations:
+        if new_msg not in self.context.deprecations:
             self.display(new_msg.strip(), color=C.COLOR_DEPRECATE, stderr=True)
-            self._deprecations[new_msg] = 1
+            self.context.deprecations[new_msg] = 1
 
     def warning(self, msg, formatted=False):
 
         if not formatted:
             new_msg = "\n[WARNING]: %s" % msg
-            wrapped = textwrap.wrap(new_msg, self.columns)
+            wrapped = textwrap.wrap(new_msg, self.context.columns)
             new_msg = "\n".join(wrapped) + "\n"
         else:
             new_msg = "\n[WARNING]: \n%s" % msg
 
-        if new_msg not in self._warns:
+        if new_msg not in self.context.warns:
             self.display(new_msg, color=C.COLOR_WARN, stderr=True)
-            self._warns[new_msg] = 1
+            self.context.warns[new_msg] = 1
 
     def system_warning(self, msg):
         if C.SYSTEM_WARNINGS:
@@ -248,7 +294,7 @@ class Display:
         '''
         Prints a header-looking line with cowsay or stars wit hlength depending on terminal width (3 minimum)
         '''
-        if self.b_cowsay and cows:
+        if self.context.b_cowsay and cows:
             try:
                 self.banner_cowsay(msg)
                 return
@@ -256,22 +302,25 @@ class Display:
                 self.warning("somebody cleverly deleted cowsay or something during the PB run.  heh.")
 
         msg = msg.strip()
-        star_len = self.columns - len(msg)
+        star_len = self.context.columns - len(msg)
         if star_len <= 3:
             star_len = 3
         stars = u"*" * star_len
         self.display(u"\n%s %s" % (msg, stars), color=color)
 
+    # TODO: most this doesn't need to be method of Display, just
+    # needs a DisplayContext passed in and to return the text
     def banner_cowsay(self, msg, color=None):
         if u": [" in msg:
             msg = msg.replace(u"[", u"")
             if msg.endswith(u"]"):
                 msg = msg[:-1]
-        runcmd = [self.b_cowsay, b"-W", b"60"]
-        if self.noncow:
-            thecow = self.noncow
+        runcmd = [self.context.b_cowsay, b"-W", b"60"]
+        # TODO: could be a DisplayContext.cow_selected property?
+        if self.context.cow_selected:
+            thecow = self.context.cow_selected
             if thecow == 'random':
-                thecow = random.choice(list(self.cows_available))
+                thecow = random.choice(list(self.context.cows_available))
             runcmd.append(b'-f')
             runcmd.append(to_bytes(thecow))
         runcmd.append(to_bytes(msg))
@@ -282,13 +331,13 @@ class Display:
     def error(self, msg, wrap_text=True):
         if wrap_text:
             new_msg = u"\n[ERROR]: %s" % msg
-            wrapped = textwrap.wrap(new_msg, self.columns)
+            wrapped = textwrap.wrap(new_msg, self.context.columns)
             new_msg = u"\n".join(wrapped) + u"\n"
         else:
             new_msg = u"ERROR! %s" % msg
-        if new_msg not in self._errors:
+        if new_msg not in self.context.errors:
             self.display(new_msg, color=C.COLOR_ERROR, stderr=True)
-            self._errors[new_msg] = 1
+            self.context.errors[new_msg] = 1
 
     @staticmethod
     def prompt(msg, private=False):
@@ -353,9 +402,12 @@ class Display:
             encoding = 'utf-8'
         return encoding
 
-    def _set_column_width(self):
-        if os.isatty(0):
-            tty_size = unpack('HHHH', fcntl.ioctl(0, TIOCGWINSZ, pack('HHHH', 0, 0, 0, 0)))[1]
-        else:
-            tty_size = 0
-        self.columns = max(79, tty_size - 1)
+
+# import traceback
+# print('just before checking if display_ is None')
+# traceback.print_stack()
+# if display_ is None:
+#    print('display_ is None, initing display_ %r' % display_)
+#    display_ = Display()
+#    print('inited display_ %r' % display_)
+print('end of display module load')

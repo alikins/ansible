@@ -53,20 +53,24 @@ class LastResort(object):
 
 if __name__ == '__main__':
 
-    display = LastResort()
+    lr_display = LastResort()
 
-    try:  # bad ANSIBLE_CONFIG or config options can force ugly stacktrace
-        import ansible.constants as C
-        from ansible.utils.display import Display
-    except AnsibleOptionsError as e:
-        display.error(to_text(e), wrap_text=False)
-        sys.exit(5)
+    from ansible.utils.display import Display
+    display = Display()
+
+    from ansible import constants as C
+#    try:  # bad ANSIBLE_CONFIG or config options can force ugly stacktrace
+#        import ansible.constants as C
+#        from ansible.utils.display import Display
+#    except AnsibleOptionsError as e:
+#        display.error(to_text(e), wrap_text=False)
+#        sys.exit(5)
 
     cli = None
     me = os.path.basename(sys.argv[0])
 
     try:
-        display = Display()
+        # display = Display()
         display.debug("starting run")
 
         sub = None

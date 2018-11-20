@@ -27,11 +27,8 @@ from ansible.utils.unsafe_proxy import UnsafeProxy, wrap_var
 from ansible.vars.clean import namespace_facts, clean_facts
 from ansible.utils.vars import combine_vars
 
-try:
-    from __main__ import display
-except ImportError:
-    from ansible.utils.display import Display
-    display = Display()
+from ansible.utils.display import Display
+display = Display()
 
 
 __all__ = ['TaskExecutor']
@@ -142,6 +139,8 @@ class TaskExecutor:
             else:
                 display.debug("calling self._execute()")
                 res = self._execute()
+                # print('res: %s', res)
+                display.display('disp res: %s' % res)
                 display.debug("_execute() done")
 
             # make sure changed is set in the result, if it's not present
