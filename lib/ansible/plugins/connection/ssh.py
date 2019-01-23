@@ -353,10 +353,9 @@ def _handle_error(remaining_retries, command, return_tuple, no_log, host, displa
             else:
                 msg = '{0} {1}'.format(msg, to_native(return_tuple[2]).rstrip())
             raise AnsibleConnectionFailure(msg,
-                                           error_data={connection_stderr=return_tuple[3],
-                                                       connection_plugin='ssh',
-                                                       connection_return_code=return_tuple[0]})
-
+                                           error_data={'connection_stderr': return_tuple[3],
+                                                       'connection_plugin': 'ssh',
+                                                       'connection_return_code': return_tuple[0]})
 
     # For other errors, no execption is raised so the connection is retried and we only log the messages
     if 1 <= return_tuple[0] <= 254:
