@@ -78,7 +78,6 @@ def main():
         ping=module.params['data'],
     )
 
-    37/0
     module.exit_json(**result)
 
 
