@@ -1027,7 +1027,13 @@ class Connection(ConnectionBase):
         b_connection_stderr = b''
         # on error, check stashed ssh dir output and
         if p.returncode == 255 and self.stderr_dest or True:
-            b_connection_stderr = open(self.stderr_dest, 'rb').read()
+            try:
+                with open(self.stderr_dest, 'rb') as error_fd:
+                    b_connection_stderr = error_fd.read()
+            except OSError as e:
+                b_connection_stderr = b_stderr
+                display.warning('Unable to open the ssh error file expected at %s: %s' % (self.stderr_dest, to_text(e)))
+
             # print('connection_stderr: %s' % to_text(b_connection_stderr))
 
         # If we find a broken pipe because of ControlPersist timeout expiring (see #16731),
