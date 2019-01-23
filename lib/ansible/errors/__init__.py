@@ -253,6 +253,8 @@ class AnsibleSSHConnectionFailure(AnsibleConnectionFailure):
 
 class AnsibleCallbackError(AnsibleRuntimeError):
     ''' a callback failure '''
+    pass
+
 
 class AnsibleTemplateError(AnsibleRuntimeError):
     '''A template related errror'''
