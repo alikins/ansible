@@ -23,7 +23,6 @@ import difflib
 import json
 import os
 import sys
-import warnings
 
 from copy import deepcopy
 
@@ -123,7 +122,7 @@ class CallbackBase(AnsiblePlugin):
         module_stderr = abridged_result.pop('module_stderr', None)
         error_data = abridged_result.get('error_data', {})
         connection_stderr = error_data.get('connection_stderr', None)
-        
+
         try:
             jsonified_results = json.dumps(abridged_result, cls=AnsibleJSONEncoder, indent=indent, ensure_ascii=False, sort_keys=sort_keys)
         except TypeError:
@@ -144,6 +143,7 @@ class CallbackBase(AnsiblePlugin):
             out = '%s\nconnection_stderr:\n%s' % (out, connection_stderr)
 
         return out
+
     def _handle_warnings(self, res):
         ''' display warnings, if enabled and any exist in the result '''
         if C.ACTION_WARNINGS:
@@ -162,7 +162,6 @@ class CallbackBase(AnsiblePlugin):
             msg = "An exception occurred during task execution. "
             if self._display.verbosity < 3:
                 # extract just the actual error message from the exception text
-                print(error)
                 error = result['exception'].strip().split('\n')[-1]
                 msg += "To see the full traceback, use -vvv. The error was: %s" % error
             else:
