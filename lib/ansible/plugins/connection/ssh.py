@@ -365,8 +365,6 @@ def _handle_error(remaining_retries, command, return_tuple, no_log, host, displa
         else:
             msg = '{0} {1}'.format(msg, to_native(return_tuple[2]).rstrip())
         display.vvv(msg, host=host)
-        
-
 
 
 def _ssh_retry(func):
