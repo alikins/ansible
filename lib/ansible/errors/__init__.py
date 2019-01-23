@@ -222,33 +222,9 @@ class AnsibleConnectionFailure(AnsibleError):
         self.error_data = error_data or {}
 
 
-
-
 class AnsibleAuthenticationFailure(AnsibleConnectionFailure):
     '''invalid username/password/key'''
     pass
-
-
-class AnsibleCallbackError(AnsibleRuntimeError):
-    ''' a callback failure '''
-
-
-class AnsibleSSHConnectionFailure(AnsibleConnectionFailure):
-    pass
-
-    def sdfsd__init__(self, message="", obj=None, show_content=True,
-                 suppress_extended_error=False, orig_exc=None,
-                 error_data=None,
-                 connection_stderr=None):
-        super(AnsibleSSHConnectionFailure, self).__init__(message=message,
-                                                          obj=obj,
-                                                          show_content=show_content,
-                                                          suppress_extended_error=suppress_extended_error,
-                                                          orig_exc=orig_exc)
-
-        self.error_data = error_data or {}
-        self.connection_stderr = connection_stderr
-        self.error_data['connection_stderr'] = self.connection_stderr
 
 
 class AnsibleCallbackError(AnsibleRuntimeError):
