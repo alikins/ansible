@@ -9,6 +9,7 @@ __metaclass__ = type
 
 import glob
 import imp
+import logging
 import os
 import os.path
 import pkgutil
@@ -28,7 +29,6 @@ from ansible.plugins import get_plugin_class, MODULE_CACHE, PATH_CACHE, PLUGIN_P
 from ansible.utils.collection_loader import AnsibleCollectionLoader, AnsibleFlatMapLoader
 from ansible.utils.display import Display
 from ansible.utils.plugin_docs import add_fragments
-
 
 display = Display()
 
@@ -122,6 +122,10 @@ class PluginLoader:
 
         self._extra_dirs = []
         self._searched_paths = set()
+
+        self.log = logging.getLogger('%s.%s(%s)' %
+                                     (__name__, self.__class__.__name__,
+                                      self.class_name))
 
     def __setstate__(self, data):
         '''
@@ -283,6 +287,8 @@ class PluginLoader:
                 display.debug('Added %s to loader search path' % (directory))
 
     def _find_fq_plugin(self, fq_name, extension):
+        self.log.debug('find fq_name=%s extension=%s', fq_name, extension)
+
         # prefix our extension Python namespace if it isn't already there
         if not fq_name.startswith('ansible_collections.'):
             fq_name = 'ansible_collections.' + fq_name
@@ -368,6 +374,7 @@ class PluginLoader:
 
     def _find_plugin(self, name, mod_type='', ignore_deprecated=False, check_aliases=False, collection_list=None):
         ''' Find a plugin named name '''
+        # self.log.debug('name=%s mod_type=%s', name, mod_type)
 
         global _PLUGIN_FILTERS
         if name in _PLUGIN_FILTERS[self.package]:
@@ -421,7 +428,9 @@ class PluginLoader:
         # requested mod_type
         pull_cache = self._plugin_path_cache[suffix]
         try:
-            return pull_cache[name]
+            found = pull_cache[name]
+            self.log.debug('found1: %s', found)
+            return found
         except KeyError:
             # Cache miss.  Now let's find the plugin
             pass
@@ -469,7 +478,9 @@ class PluginLoader:
 
             self._searched_paths.add(path)
             try:
-                return pull_cache[name]
+                found = pull_cache[name]
+                # self.log.debug('found2: %s', found)
+                return found
             except KeyError:
                 # Didn't find the plugin in this directory. Load modules from the next one
                 pass
@@ -483,12 +494,16 @@ class PluginLoader:
                     # FIXME: this is not always the case, some are just aliases
                     display.deprecated('%s is kept for backwards compatibility but usage is discouraged. '  # pylint: disable=ansible-deprecated-no-version
                                        'The module documentation details page may explain more about this rationale.' % name.lstrip('_'))
-                return pull_cache[alias_name]
+                # return pull_cache[alias_name]
+                found = pull_cache[name]
+                # self.log.debug('found3: %s', found)
+                return found
 
         return None
 
     def find_plugin(self, name, mod_type='', ignore_deprecated=False, check_aliases=False, collection_list=None):
         ''' Find a plugin named name '''
+        # self.log.debug('name: %s, mod_type: %s', name, mod_type)
 
         # Import here to avoid circular import
         from ansible.vars.reserved import is_reserved_name
@@ -536,6 +551,7 @@ class PluginLoader:
 
     def get(self, name, *args, **kwargs):
         ''' instantiates a plugin of the given name using arguments '''
+        self.log.debug('get() name: %s, args: %r, kwargs: %r', name, args, kwargs)
 
         found_in_cache = True
         class_only = kwargs.pop('class_only', False)
@@ -708,6 +724,7 @@ class Jinja2Loader(PluginLoader):
         # Nothing using Jinja2Loader use this method.  We can't use the base class version because
         # we deduplicate differently than the base class
         if '.' in name:
+            self.log.debug('using super (PluginLoader) find_plugin(%s)', name)
             return super(Jinja2Loader, self).find_plugin(name, collection_list=collection_list)
 
         raise AnsibleError('No code should call find_plugin for Jinja2Loaders (Not implemented)')
@@ -740,11 +757,14 @@ class Jinja2Loader(PluginLoader):
         # We don't deduplicate ansible plugin names.  Instead, calling code deduplicates jinja2
         # plugin names.
         kwargs['_dedupe'] = False
-
+        self.log.debug('args: %r, kwargs: %r', args, kwargs)
         # We have to instantiate a list of all plugins so that we can reverse it.  We reverse it so
         # that calling code will deduplicate this correctly.
         plugins = [p for p in super(Jinja2Loader, self).all(*args, **kwargs)]
         plugins.reverse()
+
+        import pprint
+        self.log.debug('found jinja plugins: %s', pprint.pformat(plugins))
 
         return plugins
 
