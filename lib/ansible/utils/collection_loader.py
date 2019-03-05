@@ -4,6 +4,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import logging
 import os.path
 import pkgutil
 import re
@@ -16,6 +17,8 @@ from ansible import constants as C
 from ansible.module_utils._text import to_native
 from ansible.module_utils.six import iteritems, string_types
 
+log = logging.getLogger(__name__)
+
 _SYNTHETIC_PACKAGES = {
     'ansible_collections.ansible': dict(type='pkg_only'),
     'ansible_collections.ansible.core': dict(type='pkg_only'),
@@ -26,6 +29,7 @@ _SYNTHETIC_PACKAGES = {
 
 # TODO: tighten this up to subset Python identifier requirements
 _collection_role_name_re = re.compile(r'^(\w+)\.(\w+)\.(\w+)$')
+
 
 # FIXME: exception handling/error logging
 class AnsibleCollectionLoader(object):
@@ -41,6 +45,12 @@ class AnsibleCollectionLoader(object):
         self._configured_paths = [os.path.expanduser(p) for p in self._configured_paths]
 
         self._playbook_paths = []
+
+        self.log = logging.getLogger('%s.%s' %
+                                     (__name__, self.__class__.__name__))
+
+        self.log.debug('ACL self._configured_paths: %s', self._configured_paths)
+
         # pre-inject grafted package maps so we can force them to use the right loader instead of potentially delegating to a "normal" loader
         for p in (p for p in iteritems(_SYNTHETIC_PACKAGES) if p[1].get('graft')):
             pkg_name = p[0]
@@ -58,7 +68,6 @@ class AnsibleCollectionLoader(object):
             newmod.__path__ = []
 
             sys.modules[pkg_name] = newmod
-
 
     @property
     def _collection_paths(self):
@@ -196,9 +205,14 @@ class AnsibleCollectionLoader(object):
 
 class AnsibleFlatMapLoader(object):
     _extension_blacklist = ['.pyc', '.pyo']
+
     def __init__(self, root_package):
         self._root_package = root_package
         self._dirtree = None
+
+        self.log = logging.getLogger('%s.%s' %
+                                     (__name__, self.__class__.__name__))
+        self.log.debug('root_package: %s', self._root_package)
 
     def _init_dirtree(self):
         # FIXME: thread safety
@@ -236,6 +250,7 @@ class AnsibleFlatMapLoader(object):
             return filepath
         except Exception as ex:
             print("bang")
+            log.debug('band: %s', ex)
             raise
 
     def get_data(self, filename):
@@ -293,6 +308,7 @@ def get_collection_role_path(role_name, collection_list=[]):
         except IOError:
             continue
         except Exception as ex:
+            log.debug('role loading exc: %s', ex)
             # FIXME: pick out typical import errors first, then error logging
             continue
 
