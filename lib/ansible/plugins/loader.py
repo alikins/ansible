@@ -13,6 +13,7 @@ import logging
 import os
 import os.path
 import pkgutil
+import pprint
 import importlib
 import sys
 import warnings
@@ -31,6 +32,8 @@ from ansible.utils.display import Display
 from ansible.utils.plugin_docs import add_fragments
 
 display = Display()
+
+log = logging.getLogger(__name__)
 
 
 def get_all_plugin_loaders():
@@ -363,6 +366,8 @@ class PluginLoader:
         ext_blacklist = ['.pyc', '.pyo']
         found_files = [f for f in glob.iglob(os.path.join(pkg_path, resource) + '.*') if os.path.isfile(f) and os.path.splitext(f)[1] not in ext_blacklist]
 
+        self.log.debug('found_files: %s', pprint.pformat(found_files))
+
         if not found_files:
             return None
 
@@ -411,6 +416,7 @@ class PluginLoader:
                 except Exception as ex:
                     errors.append(to_native(ex))
 
+                    self.log.exception(ex)
             if errors:
                 raise Exception('; '.join(errors))
             return None
@@ -522,7 +528,9 @@ class PluginLoader:
         try:
             return self.find_plugin(name, collection_list=collection_list) is not None
         # TODO: limit this to only plugin load/resolution errors
-        except:
+        except Exception as ex:
+            self.log.exception(ex)
+            self.log.debug('find_plugin(name=%s, collection_list=%s) raised %s', name, collection_list, ex)
             pass
 
     __contains__ = has_plugin
