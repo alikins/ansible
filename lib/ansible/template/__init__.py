@@ -20,15 +20,15 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import ast
-import contextlib
 import datetime
+import importlib
 import os
+import pkgutil
 import pwd
 import re
 import time
 
 from functools import wraps
-from io import StringIO
 from numbers import Number
 
 try:
@@ -47,7 +47,7 @@ from jinja2.runtime import Context, StrictUndefined
 
 from ansible import constants as C
 from ansible.errors import AnsibleError, AnsibleFilterError, AnsibleUndefinedVariable, AnsibleAssertionError
-from ansible.module_utils.six import string_types, text_type
+from ansible.module_utils.six import iteritems, string_types, text_type
 from ansible.module_utils._text import to_native, to_text, to_bytes
 from ansible.module_utils.common._collections_compat import Sequence, Mapping
 from ansible.plugins.loader import filter_loader, lookup_loader, test_loader
@@ -268,9 +268,15 @@ class JinjaPluginIntercept(MutableMapping):
 
         if self._pluginloader.class_name == 'FilterModule':
             self._method_map_name = "filters"
+            self._dirname = 'filter'
         elif self._pluginloader.class_name == 'TestModule':
             self._method_map_name = "tests"
+            self._dirname = 'test'
 
+        self._collection_jinja_func_cache = {}
+
+    # FUTURE: we can cache FQ filter/test calls for the entire duration of a run, since a given collection's impl's
+    # aren't supposed to change during a run
     def __getitem__(self, key):
         if not isinstance(key, string_types):
             raise ValueError('key must be a string')
@@ -280,20 +286,39 @@ class JinjaPluginIntercept(MutableMapping):
         if '.' not in key:  # might be a built-in value, delegate to base dict
             return self._delegatee.__getitem__(key)
 
-        components = key.rsplit('.', 1)
+        func = self._collection_jinja_func_cache.get(key)
 
-        if len(components) != 2:
+        if func:
+            return func
+
+        components = key.split('.')
+
+        if len(components) != 3:
             raise KeyError('invalid plugin name: {0}'.format(key))
 
-        fq_plugin = components[0]
-        function_name = components[1]
+        collection_name = '.'.join(components[0:2])
+        collection_pkg = 'ansible_collections.{0}.plugins.{1}'.format(collection_name, self._dirname)
 
-        # TODO: error handling for bogus plugin name, bogus impl, bogus filter/test
-        plugin_impl = self._pluginloader.get(fq_plugin)
+        # FIXME: error handling for bogus plugin name, bogus impl, bogus filter/test
 
-        method_map = getattr(plugin_impl, self._method_map_name)
+        # FIXME: move this capability into the Jinja plugin loader
+        pkg = importlib.import_module(collection_pkg)
 
-        function_impl = method_map().get(function_name)
+        for _, module_name, ispkg in pkgutil.iter_modules(pkg.__path__, prefix=collection_name+'.'):
+            if ispkg:
+                continue
+
+            plugin_impl = self._pluginloader.get(module_name)
+
+            method_map = getattr(plugin_impl, self._method_map_name)
+
+            for f in iteritems(method_map()):
+                fq_name = '.'.join((collection_name, f[0]))
+                self._collection_jinja_func_cache[fq_name] = f[1]
+
+            function_impl = self._collection_jinja_func_cache[key]
+
+        # FIXME: detect/warn on intra-collection function name collisions
 
         return function_impl
 
