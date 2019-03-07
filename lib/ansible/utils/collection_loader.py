@@ -187,7 +187,7 @@ class AnsibleCollectionLoader(object):
     def _extend_path_with_ns(path, ns):
         ns_path_add = ns.rsplit('.', 1)[-1]
 
-        return os.path.join(path, ns_path_add)
+        return os.path.join(os.path.expanduser(path), ns_path_add)
 
     def get_data(self, filename):
         with open(filename, 'rb') as fd:
