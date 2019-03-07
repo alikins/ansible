@@ -292,6 +292,9 @@ class PluginLoader:
     def _find_fq_plugin(self, fq_name, extension):
         self.log.debug('find fq_name=%s extension=%s', fq_name, extension)
 
+        if fq_name in ('alikins.collection',):
+            self.log.debug('fq_name=%s', fq_name, stack_info=True)
+
         # prefix our extension Python namespace if it isn't already there
         if not fq_name.startswith('ansible_collections.'):
             fq_name = 'ansible_collections.' + fq_name
@@ -305,6 +308,8 @@ class PluginLoader:
 
         append_plugin_type = self.class_name or self.subdir
 
+        self.log.debug('package: %s resource: %s append_plugin_type: %s', package, resource, append_plugin_type)
+
         if append_plugin_type:
             # only current non-class special case, module_utils don't use this loader method
             if append_plugin_type == 'library':
@@ -316,7 +321,9 @@ class PluginLoader:
         if extension:
             resource += extension
 
-        #plugin_content = None
+        self.log.debug('package2: %s resource2: %s', package, resource)
+
+        # plugin_content = None
 
         # try:
         #     # FIXME: now that we're doing custom loader magic, get rid of the get_data reverse-engineering and directly
@@ -336,14 +343,22 @@ class PluginLoader:
         #     if extension:
         #         return None  # extension was specified and we didn't find it, move on
 
+        # import pprint
+        self.log.debug('ansible_collection sys.modules: %s', pprint.pformat(dict([x for x in sys.modules.items() if x[0].startswith('ansible_collection')])))
+        self.log.debug('sys.path: %s', pprint.pformat(sys.path))
+        self.log.debug('sys.meta_path: %s', sys.meta_path)
+
         pkg = sys.modules.get(package)
         if not pkg:
             # FIXME: there must be cheaper/safer way to do this
+            self.log.debug('About to try an import_module(%s)', package)
             pkg = importlib.import_module(package)
+            self.log.debug('import_module(%s) found %s', package, pkg)
 
         # if the package is one of our flatmaps, we need to consult its loader to find the path, since the file could be
         # anywhere in the tree
         if hasattr(pkg, '__loader__') and isinstance(pkg.__loader__, AnsibleFlatMapLoader):
+            self.log.debug('pkg.__loader__: %s', pkg.__loader__)
             try:
                 file_path = pkg.__loader__.find_file(resource)
                 return file_path
@@ -352,6 +367,7 @@ class PluginLoader:
                 return None
 
         pkg_path = os.path.dirname(pkg.__file__)
+        self.log.debug('pkg_path: %s', pkg_path)
 
         #if plugin_content:  # we found it earlier, just return the reconstructed path
         #    return os.path.join(pkg_path, resource)
