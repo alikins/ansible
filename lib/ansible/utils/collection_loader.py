@@ -138,6 +138,8 @@ class AnsibleCollectionLoader(object):
         else:  # subpackage; search in all subpaths (we'll limit later inside a collection)
             package_paths = [self._extend_path_with_ns(p, fullname) for p in parent_pkg.__path__]
 
+        package_paths = [os.path.expanduser(os.path.expandvars(x)) for x in package_paths]
+
         for candidate_child_path in package_paths:
             source = None
             is_package = True
