@@ -150,13 +150,17 @@ class AnsibleCollectionLoader(object):
         else:  # subpackage; search in all subpaths (we'll limit later inside a collection)
             package_paths = [self._extend_path_with_ns(p, fullname) for p in parent_pkg.__path__]
 
+        log.debug('pp1: %s', package_paths)
         package_paths = [os.path.expanduser(os.path.expandvars(x)) for x in package_paths]
+        log.debug('pp2: %s', package_paths)
 
         for candidate_child_path in package_paths:
             source = None
             is_package = True
             location = None
             # check for implicit sub-package first
+            log.debug('candidate_child_path: %s', candidate_child_path)
+
             if os.path.isdir(candidate_child_path):
                 # Py3.x implicit namespace packages don't have a file location, so they don't support get_data
                 # (which assumes the parent dir or that the loader has an internal mapping); so we have to provide
