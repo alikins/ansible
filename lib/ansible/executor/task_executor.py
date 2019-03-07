@@ -1015,7 +1015,7 @@ class TaskExecutor:
         # let action plugin override module, fallback to 'normal' action plugin otherwise
         if self._shared_loader_obj.action_loader.has_plugin(self._task.action, collection_list=self._task.collections):
             handler_name = self._task.action
-        elif all((module_prefix in C.NETWORK_GROUP_MODULES, module_prefix in self._shared_loader_obj.action_loader)):
+        elif module_prefix in C.NETWORK_GROUP_MODULES and module_prefix in self._shared_loader_obj.action_loader:
             handler_name = module_prefix
         else:
             # FIXME: once we have ansible.core, preface this action with it so we don't allow it to be hijacked
