@@ -69,6 +69,9 @@ class AnsibleCollectionLoader(object):
 
             sys.modules[pkg_name] = newmod
 
+    def __repr__(self):
+        return '<%s at %x _configured_paths=%s, _playbook_paths=%s>' % (self.__class__.__name__, id(self), self._configured_paths, self._playbook_paths)
+
     @property
     def _collection_paths(self):
         return self._playbook_paths + self._configured_paths
@@ -213,6 +216,9 @@ class AnsibleFlatMapLoader(object):
         self.log = logging.getLogger('%s.%s' %
                                      (__name__, self.__class__.__name__))
         self.log.debug('root_package: %s', self._root_package)
+
+    def __repr__(self):
+        return '<%s at %x root_package=%s, _dirtree=%s)' % (self.__class__.__name__, id(self), self._root_package, self._dirtree)
 
     def _init_dirtree(self):
         # FIXME: thread safety
