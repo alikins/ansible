@@ -738,6 +738,10 @@ def _find_module_utils(module_name, b_module_data, module_path, module_args, tas
     elif b'from ansible.module_utils.' in b_module_data:
         module_style = 'new'
         module_substyle = 'python'
+    elif b'from ansible_collections.' in b_module_data:
+        # For cases where we use collection local module_utils only
+        module_style = 'new'
+        module_substyle = 'python'
     elif REPLACER_WINDOWS in b_module_data:
         module_style = 'new'
         module_substyle = 'powershell'
