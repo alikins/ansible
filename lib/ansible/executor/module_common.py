@@ -560,9 +560,9 @@ def recursive_finder(name, data, py_module_names, py_module_cache, zf):
             try:
                 # FIXME: this won't support full package import, but do we actually want it to?
                 module_info = pkgutil.get_data(package_name, resource_name)
-            except FileNotFoundError:
+            except OSError as exc:
                 # FIXME: implement package fallback code
-                raise AnsibleError('unable to load collection-hosted module_util {0}.{1}'.format(package_name, resource_name))
+                raise AnsibleError('Unable to load collection-hosted module_util {0}.{1}, {2}'.format(package_name, resource_name, str(exc)))
         else:
             # Check whether either the last or the second to last identifier is
             # a module name
