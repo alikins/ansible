@@ -315,10 +315,14 @@ class CollectionRequirement:
                 resp = json.load(open_url(n_version_v3_url, validate_certs=api.validate_certs, headers=headers))
                 # /api/v3/ exists, use it
                 collection_url_paths[2] = 'v3'
+            except json.JSONDecodeError as err:
+                display.debug(err)
             except urllib_error.HTTPError as err:
-                if err.code == 404:
-                    continue
-                raise
+                display.debug(err)
+                # pass
+                # if err.code == 404:
+                #    continue
+                # raise
 
             is_single = False
             if not (requirement == '*' or requirement.startswith('<') or requirement.startswith('>') or
