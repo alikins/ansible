@@ -420,11 +420,7 @@ def publish_collection(collection_path, api, wait):
 
     n_v3_version_url = _urljoin(api.api_server, 'api', 'v3')
 
-    data, content_type = _get_mime_data(b_collection_path)
-    headers = {
-        'Content-type': content_type,
-        'Content-length': len(data),
-    }
+    headers = {}
     headers.update(api._auth_header())
 
     try:
@@ -434,6 +430,12 @@ def publish_collection(collection_path, api, wait):
     except (json.JSONDecodeError, urllib_error.HTTPError) as err:
         n_url = _urljoin(api.api_server, 'api', 'v2', 'collections')
         display.debug(err)
+
+    data, content_type = _get_mime_data(b_collection_path)
+    headers.update({
+        'Content-type': content_type,
+        'Content-length': len(data),
+    })
 
     try:
         resp = json.load(open_url(n_url, data=data, headers=headers, method='POST', validate_certs=api.validate_certs))
