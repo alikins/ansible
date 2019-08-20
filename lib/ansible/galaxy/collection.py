@@ -306,6 +306,20 @@ class CollectionRequirement:
             collection_url_paths = [api.api_server, 'api', 'v2', 'collections', namespace, name, 'versions']
             headers = api._auth_header(required=False)
 
+            # See if this server supports v3 api
+            # Try v3/automation hub api version first before falling back to v2
+
+            version_v3_url_paths = [api.api_server, 'api', 'v3']
+            n_version_v3_url = _urljoin(*version_v3_url_paths)
+            try:
+                resp = json.load(open_url(n_version_v3_url, validate_certs=api.validate_certs, headers=headers))
+                # /api/v3/ exists, use it
+                collection_url_paths[2] = 'v3'
+            except urllib_error.HTTPError as err:
+                if err.code == 404:
+                    continue
+                raise
+
             is_single = False
             if not (requirement == '*' or requirement.startswith('<') or requirement.startswith('>') or
                     requirement.startswith('!=')):
