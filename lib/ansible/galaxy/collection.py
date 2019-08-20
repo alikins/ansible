@@ -418,7 +418,7 @@ def publish_collection(collection_path, api, wait):
 
     display.display("Publishing collection artifact '%s' to %s %s" % (collection_path, api.name, api.api_server))
 
-    n_url = _urljoin(api.api_server, 'api', 'v2', 'collections')
+    n_v3_version_url = _urljoin(api.api_server, 'api', 'v3')
 
     data, content_type = _get_mime_data(b_collection_path)
     headers = {
@@ -426,6 +426,14 @@ def publish_collection(collection_path, api, wait):
         'Content-length': len(data),
     }
     headers.update(api._auth_header())
+
+    try:
+        resp = json.load(open_url(n_v3_version_url, validate_certs=api.validate_certs, headers=headers))
+        # /api/v3/ exists, use it
+        n_url = _urljoin(api.api_server, 'api', 'v3', 'artifacts', 'collections')
+    except (json.JSONDecodeError, urllib_error.HTTPError) as err:
+        n_url = _urljoin(api.api_server, 'api', 'v2', 'collections')
+        display.debug(err)
 
     try:
         resp = json.load(open_url(n_url, data=data, headers=headers, method='POST', validate_certs=api.validate_certs))
