@@ -56,11 +56,10 @@ def artifact_json(namespace, name, version, dependencies, server):
     return to_text(json_str)
 
 
-def artifact_versions_json(namespace, name, versions, galaxy_api, available_api_versions=None):
+def artifact_versions_json(namespace, name, versions, galaxy_api):
     results = []
-    available_api_versions = available_api_versions or {}
     api_version = 'v2'
-    if 'v3' in available_api_versions:
+    if 'v3' in galaxy_api.available_api_versions:
         api_version = 'v3'
     for version in versions:
         results.append({
@@ -88,14 +87,13 @@ def artifact_versions_json(namespace, name, versions, galaxy_api, available_api_
     return to_text(json_str)
 
 
-def error_json(galaxy_api, errors_to_return=None, available_api_versions=None):
+def error_json(galaxy_api, errors_to_return=None):
     errors_to_return = errors_to_return or []
-    available_api_versions = available_api_versions or {}
 
     response = {}
 
     api_version = 'v2'
-    if 'v3' in available_api_versions:
+    if 'v3' in galaxy_api.available_api_versions:
         api_version = 'v3'
 
     if api_version == 'v2':
@@ -295,12 +293,9 @@ def test_build_requirement_from_tar_invalid_manifest(tmp_path_factory):
     ('v3', '/api/v3/collections/namespace/collection/versions/')
 ])
 def test_build_requirement_from_name(api_version, exp_api_url, galaxy_server, monkeypatch):
-    mock_avail_ver = MagicMock()
-    avail_api_versions = {api_version: '/api/%s' % api_version}
-    mock_avail_ver.return_value = avail_api_versions
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
+    galaxy_server.available_api_versions = {api_version: ''}
 
-    json_str = artifact_versions_json('namespace', 'collection', ['2.1.9', '2.1.10'], galaxy_server, avail_api_versions)
+    json_str = artifact_versions_json('namespace', 'collection', ['2.1.9', '2.1.10'], galaxy_server)
     mock_open = MagicMock()
     mock_open.return_value = StringIO(json_str)
 
@@ -327,13 +322,9 @@ def test_build_requirement_from_name(api_version, exp_api_url, galaxy_server, mo
     ('v3', '/api/v3/collections/namespace/collection/versions/')
 ])
 def test_build_requirement_from_name_with_prerelease(api_version, exp_api_url, galaxy_server, monkeypatch):
-    mock_avail_ver = MagicMock()
-    avail_api_versions = {api_version: '/api/%s' % api_version}
-    mock_avail_ver.return_value = avail_api_versions
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
-
+    galaxy_server.available_api_versions = {api_version: ''}
     json_str = artifact_versions_json('namespace', 'collection', ['1.0.1', '2.0.1-beta.1', '2.0.1'],
-                                      galaxy_server, avail_api_versions)
+                                      galaxy_server)
     mock_open = MagicMock()
     mock_open.return_value = StringIO(json_str)
 
@@ -360,11 +351,7 @@ def test_build_requirement_from_name_with_prerelease(api_version, exp_api_url, g
     ('v3', '/api/v3/collections/namespace/collection/versions/2.0.1-beta.1/')
 ])
 def test_build_requirment_from_name_with_prerelease_explicit(api_version, exp_api_url, galaxy_server, monkeypatch):
-    mock_avail_ver = MagicMock()
-    avail_api_versions = {api_version: '/api/%s' % api_version}
-    mock_avail_ver.return_value = avail_api_versions
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
-
+    galaxy_server.available_api_versions = {api_version: ''}
     json_str = artifact_json('namespace', 'collection', '2.0.1-beta.1', {}, galaxy_server.api_server)
     mock_open = MagicMock()
     mock_open.side_effect = (
@@ -395,12 +382,8 @@ def test_build_requirment_from_name_with_prerelease_explicit(api_version, exp_ap
     ('v3', '/api/v3/collections/namespace/collection/versions/')
 ])
 def test_build_requirement_from_name_second_server(api_version, exp_api_url, galaxy_server, monkeypatch):
-    mock_avail_ver = MagicMock()
-    avail_api_versions = {api_version: '/api/%s' % api_version}
-    mock_avail_ver.return_value = avail_api_versions
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
-
-    json_str = artifact_versions_json('namespace', 'collection', ['1.0.1', '1.0.2', '1.0.3'], galaxy_server, avail_api_versions)
+    galaxy_server.available_api_versions = {api_version: ''}
+    json_str = artifact_versions_json('namespace', 'collection', ['1.0.1', '1.0.2', '1.0.3'], galaxy_server)
     mock_open = MagicMock()
     mock_open.side_effect = (
         urllib_error.HTTPError('https://galaxy.server.com', 404, 'msg', {}, None),
@@ -435,10 +418,6 @@ def test_build_requirement_from_name_missing(galaxy_server, monkeypatch):
 
     monkeypatch.setattr(collection, 'open_url', mock_open)
 
-    mock_avail_ver = MagicMock()
-    mock_avail_ver.return_value = {'v2': '/api/v2'}
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
-
     expected = "Failed to find collection namespace.collection:*"
     with pytest.raises(AnsibleError, match=expected):
         collection.CollectionRequirement.from_name('namespace.collection',
@@ -460,12 +439,9 @@ def test_build_requirement_from_name_missing(galaxy_server, monkeypatch):
      'Error fetching info for .*\\..* \\(HTTP Code: 400, Message: "easy" is not a valid query param Code: invalid_param\\)'),
 ])
 def test_build_requirement_from_name_400_bad_request(api_version, errors_to_return, expected, galaxy_server, monkeypatch):
-    mock_avail_ver = MagicMock()
-    available_api_versions = {api_version: '/api/%s' % api_version}
-    mock_avail_ver.return_value = available_api_versions
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
+    galaxy_server.available_api_versions = {api_version: ''}
 
-    json_str = error_json(galaxy_server, errors_to_return=errors_to_return, available_api_versions=available_api_versions)
+    json_str = error_json(galaxy_server, errors_to_return=errors_to_return)
 
     mock_open = MagicMock()
     monkeypatch.setattr(collection, 'open_url', mock_open)
@@ -482,10 +458,6 @@ def test_build_requirement_from_name_single_version(galaxy_server, monkeypatch):
     mock_open.return_value = StringIO(json_str)
 
     monkeypatch.setattr(collection, 'open_url', mock_open)
-
-    mock_avail_ver = MagicMock()
-    mock_avail_ver.return_value = {'v2': '/api/v2'}
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
 
     actual = collection.CollectionRequirement.from_name('namespace.collection', [galaxy_server], '2.0.0', True, True)
 
@@ -512,10 +484,6 @@ def test_build_requirement_from_name_multiple_versions_one_match(galaxy_server, 
     mock_open.side_effect = (StringIO(json_str1), StringIO(json_str2))
 
     monkeypatch.setattr(collection, 'open_url', mock_open)
-
-    mock_avail_ver = MagicMock()
-    mock_avail_ver.return_value = {'v2': '/api/v2'}
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
 
     actual = collection.CollectionRequirement.from_name('namespace.collection', [galaxy_server], '>=2.0.1,<2.0.2',
                                                         True, True)
@@ -581,10 +549,6 @@ def test_build_requirement_from_name_multiple_version_results(galaxy_server, mon
     mock_open.side_effect = (StringIO(to_text(json_str1)), StringIO(to_text(json_str2)))
 
     monkeypatch.setattr(collection, 'open_url', mock_open)
-
-    mock_avail_ver = MagicMock()
-    mock_avail_ver.return_value = {'v2': '/api/v2'}
-    monkeypatch.setattr(collection, 'get_available_api_versions', mock_avail_ver)
 
     actual = collection.CollectionRequirement.from_name('namespace.collection', [galaxy_server], '!=2.0.2',
                                                         True, True)
