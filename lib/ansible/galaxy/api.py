@@ -291,6 +291,11 @@ class GalaxyAPI(object):
             raise AnsibleError("Failed to download the %s list: %s" % (what, to_native(error)))
 
     @g_connect
+    def get_resource(self, url, error_context_msg=None):
+        data = self.__call_galaxy(url, method='GET', error_context_msg=error_context_msg)
+        return data
+
+    @g_connect
     def search_roles(self, search, **kwargs):
 
         search_url = _urljoin(self.baseurl, "search", "roles", "?")[:-1]

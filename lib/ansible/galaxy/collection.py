@@ -317,6 +317,7 @@ class CollectionRequirement:
                 # /api/v3/ exists, use it
                 collection_url_paths[2] = 'v3'
 
+
             is_single = False
             if not (requirement == '*' or requirement.startswith('<') or requirement.startswith('>') or
                     requirement.startswith('!=')):
@@ -328,7 +329,9 @@ class CollectionRequirement:
 
             n_collection_url = _urljoin(*collection_url_paths)
             try:
-                resp = json.load(open_url(n_collection_url, validate_certs=api.validate_certs, headers=headers))
+                error_context_msg = 'Error fetching info for %s from %s (%s)' % (collection, api.name, api.api_server)
+                # resp = api.get_collection_version_list(namespace, name, requirement)
+                resp = api.get_resource(n_collection_url, error_context_msg=error_context_msg)
             except urllib_error.HTTPError as err:
 
                 if err.code == 404:
@@ -359,8 +362,11 @@ class CollectionRequirement:
                     if next_link is None:
                         break
 
-                    resp = json.load(open_url(to_native(next_link, errors='surrogate_or_strict'),
-                                              validate_certs=api.validate_certs, headers=headers))
+                    error_context_msg = 'Error fetching info from %s (%s)' % next_link
+                    resp = api.get_resource(to_native(next_link, errors='surrogate_or_strict'),
+                                            error_context_msg=error_context_msg)
+                    # resp = json.load(open_url(to_native(next_link, errors='surrogate_or_strict'),
+                    #                          validate_certs=api.validate_certs, headers=headers))
 
             display.vvv("Collection '%s' obtained from server %s %s" % (collection, api.name, api.api_server))
             break
