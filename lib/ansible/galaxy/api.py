@@ -24,6 +24,8 @@ __metaclass__ = type
 
 import base64
 import json
+import os
+import uuid
 
 from ansible import context
 from ansible.errors import AnsibleError
@@ -33,6 +35,7 @@ from ansible.module_utils.six.moves.urllib.parse import quote as urlquote, urlen
 from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.module_utils.urls import open_url
 from ansible.utils.display import Display
+from ansible.utils.hashing import secure_hash_s
 
 display = Display()
 
@@ -74,6 +77,7 @@ class GalaxyAPI(object):
         self.username = username
         self.password = password
         self.token = token
+        self.token_type = 'Token'
         self.api_server = url
         self.validate_certs = not context.CLIARGS['ignore_certs']
         self.baseurl = None
@@ -83,11 +87,19 @@ class GalaxyAPI(object):
 
         display.debug('Validate TLS certificates for %s: %s' % (self.api_server, self.validate_certs))
 
-    def _auth_header(self, required=True):
+    def _auth_header(self, required=True, token_type=None):
+        '''Generate the Authorization header.
+
+        Valid token_type values are 'Token' (galaxy v2) and 'Bearer' (galaxy v3)
+        or None (default)'''
         token = self.token.get() if self.token else None
 
+        # TODO: choose an 'auth' type
+        # 'Token' for v2 api, 'Bearer' for v3
+        token_type = token_type or self.token_type
+
         if token:
-            return {'Authorization': "Token %s" % token}
+            return {'Authorization': "%s %s" % (token_type, token)}
         elif self.username:
             token = "%s:%s" % (to_text(self.username, errors='surrogate_or_strict'),
                                to_text(self.password, errors='surrogate_or_strict', nonstring='passthru') or '')
@@ -100,7 +112,7 @@ class GalaxyAPI(object):
             return {}
 
     @g_connect
-    def __call_galaxy(self, url, args=None, headers=None, method=None):
+    def __call_galaxy(self, url, args=None, headers=None, method=None, error_context_msg=None):
         if args and not headers:
             headers = self._auth_header()
         try:
@@ -108,9 +120,8 @@ class GalaxyAPI(object):
             resp = open_url(url, data=args, validate_certs=self.validate_certs, headers=headers, method=method,
                             timeout=20)
             data = json.loads(to_text(resp.read(), errors='surrogate_or_strict'))
-        except HTTPError as e:
-            res = json.loads(to_text(e.fp.read(), errors='surrogate_or_strict'))
-            raise AnsibleError(res['detail'])
+        except HTTPError as http_error:
+            handle_http_error(http_error, self, error_context_msg)
         return data
 
     def _get_server_api_version(self):
@@ -118,9 +129,29 @@ class GalaxyAPI(object):
         Fetches the Galaxy API current version to ensure
         the API server is up and reachable.
         """
+        headers = {}
+        # use any auth setup
+        headers.update(self._auth_header(required=False))
+
         url = _urljoin(self.api_server, "api")
         try:
-            return_data = open_url(url, validate_certs=self.validate_certs)
+            return_data = open_url(url, headers=headers, validate_certs=self.validate_certs)
+        except HTTPError as err:
+            if err.code != 401:
+                handle_http_error(err, self, {},
+                                  "Error when finding available api versions from %s (%s)" %
+                                  (self.name, self.api_server))
+
+            # assume this is v3 and auth is required.
+            headers = {}
+            headers.update(self._auth_header(token_type='Bearer', required=True))
+            # try again with auth
+            try:
+                return_data = open_url(url, headers=headers, validate_certs=self.validate_certs)
+            except HTTPError as authed_err:
+                handle_http_error(authed_err, self, {},
+                                  "Error when finding available api versions from %s using auth (%s)" %
+                                  (self.name, self.api_server))
         except Exception as e:
             raise AnsibleError("Failed to get data from the API server (%s): %s " % (url, to_native(e)))
 
@@ -241,7 +272,8 @@ class GalaxyAPI(object):
                 results += data['results']
                 done = (data.get('next_link', None) is None)
         except Exception as e:
-            display.vvvv("Unable to retrive role (id=%s) data (%s), but this is not fatal so we continue: %s" % (role_id, related, to_text(e)))
+            display.vvvv("Unable to retrive role (id=%s) data (%s), but this is not fatal so we continue: %s" %
+                         (role_id, related, to_text(e)))
         return results
 
     @g_connect
@@ -327,3 +359,84 @@ class GalaxyAPI(object):
         url = _urljoin(self.baseurl, "removerole", "?github_user=%s&github_repo=%s" % (github_user, github_repo))[:-1]
         data = self.__call_galaxy(url, headers=self._auth_header(), method='DELETE')
         return data
+
+    @g_connect
+    def publish_collection_artifact(self, b_collection_artifact_path):
+
+        headers = {}
+        headers.update(self._auth_header())
+
+        n_url = _urljoin(self.api_server, 'api', 'v2', 'collections')
+        if 'v3' in self.available_api_versions:
+            n_url = _urljoin(self.api_server, 'api', 'v3', 'artifacts', 'collections')
+
+        data, content_type = _get_mime_data(b_collection_artifact_path)
+        headers.update({
+            'Content-type': content_type,
+            'Content-length': len(data),
+        })
+
+        error_context_msg = "Error when publishing collection to %s (%s)" % (self.name, self.api_server)
+        response_data = self.__call_galaxy(n_url, args=data, headers=headers, method='POST',
+                                           error_context_msg=error_context_msg)
+        return response_data
+
+
+def handle_http_error(http_error, api, context_error_message):
+    try:
+        err_info = json.load(http_error)
+    except (AttributeError, ValueError):
+        err_info = {}
+
+    if 'v3' in api.available_api_versions:
+        message_lines = []
+        errors = err_info.get('errors', None)
+
+        if not errors:
+            errors = [{'detail': 'Unknown error returned by Galaxy server.',
+                       'code': 'Unknown'}]
+
+        for error in errors:
+            error_msg = error.get('detail') or error.get('title') or 'Unknown error returned by Galaxy server.'
+            error_code = error.get('code') or 'Unknown'
+            message_line = "(HTTP Code: %d, Message: %s Code: %s)" % (http_error.code, error_msg, error_code)
+            message_lines.append(message_line)
+
+        full_error_msg = "%s %s" % (context_error_message, ', '.join(message_lines))
+        raise AnsibleError(full_error_msg)
+
+    if 'v2' in api.available_api_versions:
+        code = to_native(err_info.get('code', 'Unknown'))
+        message = to_native(err_info.get('message', 'Unknown error returned by Galaxy server.'))
+        full_error_msg = "%s (HTTP Code: %d, Message: %s Code: %s)" \
+            % (context_error_message, http_error.code, message, code)
+        raise AnsibleError(full_error_msg)
+
+    # v1 style errors
+    # res = json.loads(to_text(http_error.fp.read(), errors='surrogate_or_strict'))
+    raise AnsibleError(err_info['detail'])
+
+
+def _get_mime_data(b_collection_path):
+    with open(b_collection_path, 'rb') as collection_tar:
+        data = collection_tar.read()
+
+    boundary = '--------------------------%s' % uuid.uuid4().hex
+    b_file_name = os.path.basename(b_collection_path)
+    part_boundary = b"--" + to_bytes(boundary, errors='surrogate_or_strict')
+
+    form = [
+        part_boundary,
+        b"Content-Disposition: form-data; name=\"sha256\"",
+        to_bytes(secure_hash_s(data), errors='surrogate_or_strict'),
+        part_boundary,
+        b"Content-Disposition: file; name=\"file\"; filename=\"%s\"" % b_file_name,
+        b"Content-Type: application/octet-stream",
+        b"",
+        data,
+        b"%s--" % part_boundary,
+    ]
+
+    content_type = 'multipart/form-data; boundary=%s' % boundary
+
+    return b"\r\n".join(form), content_type

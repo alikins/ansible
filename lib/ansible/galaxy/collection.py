@@ -13,7 +13,6 @@ import tarfile
 import tempfile
 import threading
 import time
-import uuid
 import yaml
 
 from contextlib import contextmanager
@@ -31,6 +30,8 @@ import ansible.constants as C
 from ansible.errors import AnsibleError
 from ansible.galaxy import get_collections_galaxy_meta_info
 from ansible.galaxy.api import _urljoin
+# FIXME: rm use of handle_http_error here
+from ansible.galaxy.api import handle_http_error
 from ansible.module_utils._text import to_bytes, to_native, to_text
 from ansible.module_utils import six
 from ansible.utils.collection_loader import AnsibleCollectionRef
@@ -333,7 +334,7 @@ class CollectionRequirement:
                 if err.code == 404:
                     display.vvv("Collection '%s' is not available from server %s %s" % (collection, api.name, api.api_server))
                     continue
-                _handle_http_error(err, api, 'Error fetching info for %s from %s (%s)' % (collection, api.name, api.api_server))
+                handle_http_error(err, api, 'Error fetching info for %s from %s (%s)' % (collection, api.name, api.api_server))
 
             if is_single:
                 galaxy_info = resp
@@ -425,23 +426,7 @@ def publish_collection(collection_path, api, wait, timeout):
 
     display.display("Publishing collection artifact '%s' to %s %s" % (collection_path, api.name, api.api_server))
 
-    headers = {}
-    headers.update(api._auth_header())
-
-    n_url = _urljoin(api.api_server, 'api', 'v2', 'collections')
-    if 'v3' in api.available_api_versions:
-        n_url = _urljoin(api.api_server, 'api', 'v3', 'artifacts', 'collections')
-
-    data, content_type = _get_mime_data(b_collection_path)
-    headers.update({
-        'Content-type': content_type,
-        'Content-length': len(data),
-    })
-
-    try:
-        resp = json.load(open_url(n_url, data=data, headers=headers, method='POST', validate_certs=api.validate_certs))
-    except urllib_error.HTTPError as err:
-        _handle_http_error(err, api, "Error when publishing collection to %s (%s)" % (api.name, api.api_server))
+    resp = api.publish_collection_artifact(b_collection_path)
 
     import_uri = resp['task']
     if wait:
@@ -788,31 +773,6 @@ def _build_collection_tar(b_collection_path, b_tar_path, collection_manifest, fi
         display.display('Created collection for %s at %s' % (collection_name, to_text(b_tar_path)))
 
 
-def _get_mime_data(b_collection_path):
-    with open(b_collection_path, 'rb') as collection_tar:
-        data = collection_tar.read()
-
-    boundary = '--------------------------%s' % uuid.uuid4().hex
-    b_file_name = os.path.basename(b_collection_path)
-    part_boundary = b"--" + to_bytes(boundary, errors='surrogate_or_strict')
-
-    form = [
-        part_boundary,
-        b"Content-Disposition: form-data; name=\"sha256\"",
-        to_bytes(secure_hash_s(data), errors='surrogate_or_strict'),
-        part_boundary,
-        b"Content-Disposition: file; name=\"file\"; filename=\"%s\"" % b_file_name,
-        b"Content-Type: application/octet-stream",
-        b"",
-        data,
-        b"%s--" % part_boundary,
-    ]
-
-    content_type = 'multipart/form-data; boundary=%s' % boundary
-
-    return b"\r\n".join(form), content_type
-
-
 def _wait_import(task_url, api, timeout):
     headers = api._auth_header()
 
@@ -1027,33 +987,3 @@ def _extract_tar_file(tar, filename, b_dest, b_temp_path, expected_hash=None):
             os.makedirs(b_parent_dir)
 
         shutil.move(to_bytes(tmpfile_obj.name, errors='surrogate_or_strict'), b_dest_filepath)
-
-
-def _handle_http_error(http_error, api, context_error_message):
-    try:
-        err_info = json.load(http_error)
-    except (AttributeError, ValueError):
-        err_info = {}
-
-    if 'v3' in api.available_api_versions:
-        message_lines = []
-        errors = err_info.get('errors', None)
-
-        if not errors:
-            errors = [{'detail': 'Unknown error returned by Galaxy server.',
-                       'code': 'Unknown'}]
-
-        for error in errors:
-            error_msg = error.get('detail') or error.get('title') or 'Unknown error returned by Galaxy server.'
-            error_code = error.get('code') or 'Unknown'
-            message_line = "(HTTP Code: %d, Message: %s Code: %s)" % (http_error.code, error_msg, error_code)
-            message_lines.append(message_line)
-
-        full_error_msg = "%s %s" % (context_error_message, ', '.join(message_lines))
-    else:
-        code = to_native(err_info.get('code', 'Unknown'))
-        message = to_native(err_info.get('message', 'Unknown error returned by Galaxy server.'))
-        full_error_msg = "%s (HTTP Code: %d, Message: %s Code: %s)" \
-            % (context_error_message, http_error.code, message, code)
-
-    raise AnsibleError(full_error_msg)
