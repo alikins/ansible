@@ -188,10 +188,15 @@ class CollectionRequirement:
         if self._metadata:
             return
 
-        n_collection_url = _urljoin(self.api.api_server, 'api', 'v2', 'collections', self.namespace, self.name,
-                                    'versions', self.latest_version)
-        details = json.load(open_url(n_collection_url, validate_certs=self.api.validate_certs,
-                                     headers=self.api._auth_header(required=False)))
+        api_version = 'v2'
+        if 'v3' in self.api.available_api_versions:
+            api_version = 'v3'
+        collection_url_paths = [self.api.api_server, 'api', api_version, 'collections',
+                                self.namespace, self.name, 'versions', self.latest_version]
+        n_collection_url = _urljoin(*collection_url_paths)
+
+        details = self.api.get_resource(n_collection_url)
+
         self._galaxy_info = details
         self._metadata = details['metadata']
 
@@ -365,8 +370,6 @@ class CollectionRequirement:
                     error_context_msg = 'Error fetching info from %s (%s)' % next_link
                     resp = api.get_resource(to_native(next_link, errors='surrogate_or_strict'),
                                             error_context_msg=error_context_msg)
-                    # resp = json.load(open_url(to_native(next_link, errors='surrogate_or_strict'),
-                    #                          validate_certs=api.validate_certs, headers=headers))
 
             display.vvv("Collection '%s' obtained from server %s %s" % (collection, api.name, api.api_server))
             break
