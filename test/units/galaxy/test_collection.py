@@ -59,7 +59,8 @@ def collection_input(tmp_path_factory):
 def collection_artifact(monkeypatch, tmp_path_factory):
     ''' Creates a temp collection artifact and mocked open_url instance for publishing tests '''
     mock_open = MagicMock()
-    monkeypatch.setattr(collection, 'open_url', mock_open)
+    # monkeypatch.setattr(collection, 'open_url', mock_open)
+    monkeypatch.setattr(api, 'open_url', mock_open)
 
     mock_uuid = MagicMock()
     mock_uuid.return_value.hex = 'uuid'
@@ -116,6 +117,31 @@ def galaxy_server():
     galaxy_api = api.GalaxyAPI(None, 'test_server', 'https://galaxy.ansible.com',
                                token=token.GalaxyToken(token='key'))
     return galaxy_api
+
+
+def server_api_info(api_version):
+    available_versions = {}
+    available_versions[api_version] = '/api/%s' % api_version
+
+    success_obj = {
+        "description": "GALAXY REST API",
+        "current_version": "v3",
+        "available_versions": available_versions,
+        "server_version": "3.2.4",
+        "version_name": "Doin' it Right",
+        "team_members": [
+            "chouseknecht",
+            "cutwater",
+            "alikins",
+            "newswangerd",
+            "awcrosby",
+            "tima",
+            "gregdek"
+        ]
+    }
+
+    success_response = StringIO(to_text(json.dumps(success_obj)))
+    return success_response
 
 
 def test_build_collection_no_galaxy_yaml():
@@ -490,7 +516,7 @@ def test_publish_failure_with_json_info(galaxy_server, collection_artifact):
     ('v3',)
 ])
 def test_publish_with_wait(api_version, galaxy_server, collection_artifact, monkeypatch):
-    galaxy_server.available_api_versions = {api_version: ''}
+    # galaxy_server.available_api_versions = {api_version: ''}
 
     mock_display = MagicMock()
     monkeypatch.setattr(Display, 'display', mock_display)
@@ -500,6 +526,7 @@ def test_publish_with_wait(api_version, galaxy_server, collection_artifact, monk
     artifact_path, mock_open = collection_artifact
 
     mock_open.side_effect = (
+        server_api_info(api_version),
         StringIO(u'{"task":"%s"}' % fake_import_uri),
         StringIO(u'{"finished_at":"some_time","state":"success"}')
     )
@@ -767,7 +794,7 @@ def test_publish_failure_v3_with_json_info_409_conflict(galaxy_server, collectio
 
 
 def test_publish_failure_v3_with_json_info_multiple_errors(galaxy_server, collection_artifact):
-    galaxy_server.available_api_versions = {'v3': ''}
+    # galaxy_server.available_api_versions = {'v3': ''}
     artifact_path, mock_open = collection_artifact
 
     error_response = {
@@ -788,8 +815,13 @@ def test_publish_failure_v3_with_json_info_multiple_errors(galaxy_server, collec
     }
 
     return_content = StringIO(to_text(json.dumps(error_response)))
-    mock_open.side_effect = urllib_error.HTTPError('https://galaxy.server.com', 400, 'msg', {}, return_content)
+    sinfo = server_api_info('v3')
+    print('sinfo: %s', sinfo)
 
+    mock_open.side_effect = [
+                sinfo,
+                urllib_error.HTTPError('https://galaxy.server.com', 400, 'msg', {}, return_content),
+    ]
     expected = 'Error when publishing collection to test_server (https://galaxy.ansible.com) ' \
                '(HTTP Code: 400, Message: Collection "mynamespace-mycollection-4.1.1"' \
                ' already exists. Code: conflict.collection_exists),' \

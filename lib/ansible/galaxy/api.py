@@ -45,14 +45,26 @@ def g_connect(method):
     def wrapped(self, *args, **kwargs):
         if not self.initialized:
             display.vvvv("Initial connection to galaxy_server: %s" % self.api_server)
-            server_version = self._get_server_api_version()
+            server_info = self._get_server_api_info()
+
+            if 'current_version' not in server_info:
+                raise AnsibleError("Missing required 'current_version' from server API info response")
+
+            server_version = server_info['current_version']
 
             if server_version not in self.SUPPORTED_VERSIONS:
                 raise AnsibleError("Unsupported Galaxy server API version: %s" % server_version)
 
             self.baseurl = _urljoin(self.api_server, "api", server_version)
 
-            available_api_versions = self.get_available_api_versions()
+            available_api_versions = server_info.get('available_versions',
+                                                     {})
+
+            # FIXME: kluge around that prod galaxy is actually 'v2' but claims to be 'v1'
+            if 'v3' not in available_api_versions:
+                available_api_versions = {'v1': '/api/v1',
+                                          'v2': '/api/v2'}
+
             self.version = server_version  # for future use
             self.available_api_versions = available_api_versions
 
@@ -124,7 +136,7 @@ class GalaxyAPI(object):
             handle_http_error(http_error, self, error_context_msg)
         return data
 
-    def _get_server_api_version(self):
+    def _get_server_api_info(self):
         """
         Fetches the Galaxy API current version to ensure
         the API server is up and reachable.
@@ -138,8 +150,8 @@ class GalaxyAPI(object):
             return_data = open_url(url, headers=headers, validate_certs=self.validate_certs)
         except HTTPError as err:
             if err.code != 401:
-                handle_http_error(err, self, {},
-                                  "Error when finding available api versions from %s (%s)" %
+                handle_http_error(err, self,
+                                  "Error when finding available api info from %s (%s)" %
                                   (self.name, self.api_server))
 
             # assume this is v3 and auth is required.
@@ -149,8 +161,8 @@ class GalaxyAPI(object):
             try:
                 return_data = open_url(url, headers=headers, validate_certs=self.validate_certs)
             except HTTPError as authed_err:
-                handle_http_error(authed_err, self, {},
-                                  "Error when finding available api versions from %s using auth (%s)" %
+                handle_http_error(authed_err, self,
+                                  "Error when finding available api info from %s using auth (%s)" %
                                   (self.name, self.api_server))
         except Exception as e:
             raise AnsibleError("Failed to get data from the API server (%s): %s " % (url, to_native(e)))
@@ -160,29 +172,7 @@ class GalaxyAPI(object):
         except Exception as e:
             raise AnsibleError("Could not process data from the API server (%s): %s " % (url, to_native(e)))
 
-        available_versions = data.get('available_versions',
-                                      {'v1': '/api/v1',
-                                       'v2': '/api/v2'})
-
-        return available_versions
-
-    def get_available_api_versions(self):
-        url = _urljoin(self.api_server, "api")
-        try:
-            return_data = open_url(url, validate_certs=self.validate_certs)
-        except Exception as e:
-            raise AnsibleError("Failed to get data from the API server (%s): %s " % (url, to_native(e)))
-
-        try:
-            data = json.loads(to_text(return_data.read(), errors='surrogate_or_strict'))
-        except Exception as e:
-            raise AnsibleError("Could not process data from the API server (%s): %s " % (url, to_native(e)))
-
-        available_versions = data.get('available_versions',
-                                      {'v1': '/api/v1',
-                                       'v2': '/api/v2'})
-
-        return available_versions
+        return data
 
     @g_connect
     def authenticate(self, github_token):
@@ -414,7 +404,7 @@ def handle_http_error(http_error, api, context_error_message):
 
     # v1 style errors
     # res = json.loads(to_text(http_error.fp.read(), errors='surrogate_or_strict'))
-    raise AnsibleError(err_info['detail'])
+    raise AnsibleError(err_info.get('detail', 'Unknown error'))
 
 
 def _get_mime_data(b_collection_path):
