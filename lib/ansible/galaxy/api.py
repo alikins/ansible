@@ -50,7 +50,7 @@ def g_connect(versions):
 
                     # Assume this is v3 (Automation Hub) and auth is required
                     headers = {}
-                    self._add_auth_token(headers, n_url, token_type='Bearer', required=True)
+                    # self._add_auth_token(headers, n_url, token_type='Bearer', required=True)
                     data = self._call_galaxy(n_url, headers=headers, method='GET', error_context_msg=error_context_msg)
 
                 # Default to only supporting v1, if only v1 is returned we also assume that v2 is available even though
@@ -187,17 +187,26 @@ class GalaxyAPI:
 
     def _add_auth_token(self, headers, url, token_type=None, required=False):
         # Don't add the auth token if one is already present
+
+        if not required:
+            return
+
         if 'Authorization' in headers:
             return
 
-        token = self.token.get() if self.token else None
+        if self.token is None:
+            raise AnsibleError("No access token or username set. A token can be set with --api-key, with "
+                               "'ansible-galaxy login', or set in ansible.cfg.")
+
+        # token = self.token.get() if self.token else None
 
         # 'Token' for v2 api, 'Bearer' for v3 but still allow someone to override the token if necessary.
         is_v3 = 'v3' in url.split('/')
         token_type = token_type or ('Bearer' if is_v3 else 'Token')
 
-        if token:
-            headers['Authorization'] = '%s %s' % (token_type, token)
+        if self.token:
+            # headers['Authorization'] = '%s %s' % (token_type, token)
+            headers.update(self.token.headers())
         elif self.username:
             token = "%s:%s" % (to_text(self.username, errors='surrogate_or_strict'),
                                to_text(self.password, errors='surrogate_or_strict', nonstring='passthru') or '')
