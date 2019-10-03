@@ -200,21 +200,16 @@ class GalaxyAPI:
 
         # token = self.token.get() if self.token else None
 
+        # TODO: could maybe keep this as a failsafe if someone configures a
+        #       v3 server but without an 'auth_url' to avoid potentially confusing
+        #       errors
         # 'Token' for v2 api, 'Bearer' for v3 but still allow someone to override the token if necessary.
-        is_v3 = 'v3' in url.split('/')
-        token_type = token_type or ('Bearer' if is_v3 else 'Token')
+        # is_v3 = 'v3' in url.split('/')
+        # token_type = token_type or ('Bearer' if is_v3 else 'Token')
 
         if self.token:
             # headers['Authorization'] = '%s %s' % (token_type, token)
             headers.update(self.token.headers())
-        elif self.username:
-            token = "%s:%s" % (to_text(self.username, errors='surrogate_or_strict'),
-                               to_text(self.password, errors='surrogate_or_strict', nonstring='passthru') or '')
-            b64_val = base64.b64encode(to_bytes(token, encoding='utf-8', errors='surrogate_or_strict'))
-            headers['Authorization'] = 'Basic %s' % to_text(b64_val)
-        elif required:
-            raise AnsibleError("No access token or username set. A token can be set with --api-key, with "
-                               "'ansible-galaxy login', or set in ansible.cfg.")
 
     @g_connect(['v1'])
     def authenticate(self, github_token):

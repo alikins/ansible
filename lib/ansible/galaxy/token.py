@@ -21,6 +21,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import base64
 import os
 import json
 from stat import S_IRUSR, S_IWUSR
@@ -63,6 +64,9 @@ class KeycloakToken(object):
         if self._token:
             return self._token
 
+        if self.access_token is NoTokenSentinel:
+            return None
+
         # - build a request to POST to auth_url
         #  - body is form encoded
         #    - 'request_token' is the offline token stored in ansible.cfg
@@ -88,8 +92,13 @@ class KeycloakToken(object):
         return self._token
 
     def headers(self):
+        token_val = self.get()
         headers = {}
-        headers['Authorization'] = '%s %s' % (self.token_type, self.get())
+
+        if token_val:
+            headers['Authorization'] = '%s %s' % (self.token_type, token_val)
+
+        # TODO: raise an exception if not valid?
         return headers
 
 
@@ -145,3 +154,35 @@ class GalaxyToken(object):
         headers = {}
         headers['Authorization'] = '%s %s' % (self.token_type, self.get())
         return headers
+
+
+class BasicAuthToken(object):
+    token_type = 'Basic'
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+        self._token = None
+
+    def __repr__(self):
+        return '%s(username="%s",password="<redacted>")' % \
+            (self.__class__.__name__, self.username)
+
+    @staticmethod
+    def _encode_token(username, password):
+        token = "%s:%s" % (to_text(username, errors='surrogate_or_strict'),
+                           to_text(password, errors='surrogate_or_strict', nonstring='passthru') or '')
+        b64_val = base64.b64encode(to_bytes(token, encoding='utf-8', errors='surrogate_or_strict'))
+        return to_text(b64_val)
+
+    def get(self):
+        if self._token:
+            return self._token
+
+        self._token = self._encode_token(self.username, self.password)
+
+        return self._token
+
+    def headers(self):
+        headers = {}
+        headers['Authorization'] = '%s %s' % (self.token_type, self.get())
