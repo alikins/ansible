@@ -166,12 +166,13 @@ class GalaxyAPI:
 
     def _call_galaxy(self, url, args=None, headers=None, method=None, auth_required=False, error_context_msg=None):
         headers = headers or {}
+
         self._add_auth_token(headers, url, required=auth_required)
 
         try:
             display.vvvv("Calling Galaxy at %s" % url)
             resp = open_url(to_native(url), data=args, validate_certs=self.validate_certs, headers=headers,
-                            method=method, timeout=20, unredirected_headers=['Authorization'])
+                            method=method, timeout=20)
         except HTTPError as e:
             raise GalaxyError(e, error_context_msg)
         except Exception as e:
@@ -505,13 +506,18 @@ class GalaxyAPI:
         :param version: Optional version of the collection to get the information for.
         :return: CollectionVersionMetadata about the collection at the version requested.
         """
-        api_path = self.available_api_versions.get('v3', self.available_api_versions.get('v2'))
+        if 'v3' in self.available_api_versions:
+            api_path = self.available_api_versions['v3']
+            auth_required = True
+        else:
+            api_path = self.available_api_versions['v2']
+            auth_required = False
         url_paths = [self.api_server, api_path, 'collections', namespace, name, 'versions', version]
 
         n_collection_url = _urljoin(*url_paths)
         error_context_msg = 'Error when getting collection version metadata for %s.%s:%s from %s (%s)' \
                             % (namespace, name, version, self.name, self.api_server)
-        data = self._call_galaxy(n_collection_url, error_context_msg=error_context_msg)
+        data = self._call_galaxy(n_collection_url, error_context_msg=error_context_msg, auth_required=auth_required)
 
         return CollectionVersionMetadata(data['namespace']['name'], data['collection']['name'], data['version'],
                                          data['download_url'], data['artifact']['sha256'],
@@ -526,20 +532,24 @@ class GalaxyAPI:
         :param name: The collection name.
         :return: A list of versions that are available.
         """
+        log.debug('namespace=%s, name=%s', namespace, name)
+
         if 'v3' in self.available_api_versions:
             api_path = self.available_api_versions['v3']
             results_key = 'data'
             pagination_path = ['links', 'next']
+            auth_required = True
         else:
             api_path = self.available_api_versions['v2']
             results_key = 'results'
             pagination_path = ['next']
+            auth_required = False
 
         n_url = _urljoin(self.api_server, api_path, 'collections', namespace, name, 'versions')
 
         error_context_msg = 'Error when getting available collection versions for %s.%s from %s (%s)' \
                             % (namespace, name, self.name, self.api_server)
-        data = self._call_galaxy(n_url, error_context_msg=error_context_msg)
+        data = self._call_galaxy(n_url, error_context_msg=error_context_msg, auth_required=auth_required)
 
         versions = []
         while True:
