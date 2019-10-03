@@ -51,7 +51,8 @@ def g_connect(versions):
                     # Assume this is v3 (Automation Hub) and auth is required
                     headers = {}
                     # self._add_auth_token(headers, n_url, token_type='Bearer', required=True)
-                    data = self._call_galaxy(n_url, headers=headers, method='GET', error_context_msg=error_context_msg)
+                    data = self._call_galaxy(n_url, headers=headers, method='GET',
+                                             error_context_msg=error_context_msg, auth_required=True)
 
                 # Default to only supporting v1, if only v1 is returned we also assume that v2 is available even though
                 # it isn't returned in the available_versions dict.
