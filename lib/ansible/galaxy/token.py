@@ -186,3 +186,4 @@ class BasicAuthToken(object):
     def headers(self):
         headers = {}
         headers['Authorization'] = '%s %s' % (self.token_type, self.get())
+        return headers
