@@ -34,6 +34,10 @@ from ansible.playbook.role.requirement import RoleRequirement
 from ansible.utils.display import Display
 from ansible.utils.plugin_docs import get_versioned_doclink
 
+import json
+import logging
+log = logging.getLogger(__name__)
+
 display = Display()
 
 
@@ -294,12 +298,7 @@ class GalaxyCLI(CLI):
         display.verbosity = options.verbosity
         return options
 
-    def run(self):
-
-        super(GalaxyCLI, self).run()
-
-        self.galaxy = Galaxy()
-
+    def load_server_configs(self):
         def server_config_def(section, key, required):
             return {
                 'description': 'The %s of the %s Galaxy server' % (key, section),
@@ -317,7 +316,7 @@ class GalaxyCLI(CLI):
         server_def = [('url', True), ('username', False), ('password', False), ('token', False),
                       ('auth_url', False)]
 
-        config_servers = []
+        server_config_list = []
         for server_key in (C.GALAXY_SERVER_LIST or []):
             # Config definitions are looked up dynamically based on the C.GALAXY_SERVER_LIST entry. We look up the
             # section [galaxy_server.<server>] for the values url, username, password, and token.
@@ -326,8 +325,28 @@ class GalaxyCLI(CLI):
             C.config.initialize_plugin_configuration_definitions('galaxy_server', server_key, defs)
 
             server_options = C.config.get_plugin_options('galaxy_server', server_key)
+
+            # default case if no auth info is provided.
+            server_options['token'] = None
+
+            server_config_list.append((server_key, server_options))
+
+        log.debug('server_config_list: %s', json.dumps(server_config_list, indent=4))
+        return server_config_list
+
+    def run(self):
+
+        super(GalaxyCLI, self).run()
+
+        self.galaxy = Galaxy()
+
+        server_configs = self.load_server_configs()
+
+        galaxy_servers = []
+        for server_key, server_options in server_configs:
             # auth_url is used to create the token, but not directly by GalaxyAPI, so
             # it doesn't need to be passed as kwarg to GalaxyApi
+            log.debug('server_options: %s', server_options)
             auth_url = server_options.pop('auth_url', None)
             token_val = server_options['token'] or NoTokenSentinel
             username = server_options['username']
@@ -348,20 +367,25 @@ class GalaxyCLI(CLI):
                         # The galaxy v1 / github / django / 'Token'
                         server_options['token'] = GalaxyToken(token=token_val)
 
-            config_servers.append(GalaxyAPI(self.galaxy, server_key, **server_options))
+            galaxy_servers.append(GalaxyAPI(self.galaxy, server_key, **server_options))
 
         cmd_server = context.CLIARGS['api_server']
         cmd_token = GalaxyToken(token=context.CLIARGS['api_key'])
         if cmd_server:
             # Cmd args take precedence over the config entry but fist check if the arg was a name and use that config
             # entry, otherwise create a new API entry for the server specified.
-            config_server = next((s for s in config_servers if s.name == cmd_server), None)
+            # config_server = next((s for s in server_configs if s[0] == cmd_server), None)
+            config_server = next((s for s in galaxy_servers if s.name == cmd_server), None)
+
+            import pprint
+            log.debug('config_server: %s', pprint.pformat(config_server))
+
             if config_server:
                 self.api_servers.append(config_server)
             else:
                 self.api_servers.append(GalaxyAPI(self.galaxy, 'cmd_arg', cmd_server, token=cmd_token))
         else:
-            self.api_servers = config_servers
+            self.api_servers = galaxy_servers
 
         # Default to C.GALAXY_SERVER if no servers were defined
         if len(self.api_servers) == 0:
